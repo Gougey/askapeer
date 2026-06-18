@@ -4,46 +4,74 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-This repository is for a **global, verified-only community platform for physiotherapists** — a Sermo-like network (Sermo is a verified clinician social network for doctors) adapted for physiotherapy. The core trust proposition is that only licensed/registered physiotherapists can post, comment, or message. Optional anonymity is supported per post/comment, with the platform retaining true identity for moderation.
+**Askapeer** is a verified-only, pseudonymous professional network for sports medicine practitioners — *"The No Ego Sports Medicine Network"*. The core thesis: every member is a qualified, registered professional, but no one knows whether they are a senior consultant or a first-year graduate. Ideas win on merit, not rank.
 
-No code exists yet — the repository is currently in the planning/requirements phase.
+The platform launches UK-first (web), with native iOS/Android and international expansion in later phases.
+
+No code exists yet — the repository is in the planning/requirements phase.
+
+**Founding team**: Adrian Hall (technical lead), Paul Gouge (business & technical), Andrew Renshaw (clinical domain expert & originator).
 
 ## Key documents
 
-- `docs/physio-network-requirements-spec.md` — Full MVP + phased requirements specification: verification workflow, post types, case discussion rules, moderation, monetization options, NFRs, acceptance criteria, and epics.
-- `docs/sermo-derived-feature-inventory.md` — Feature-by-feature mapping from Sermo's publicly described model to physiotherapy context.
+- `docs/askapeer-prd-v0.1.md` — **Source of truth.** Full PRD v0.1 (June 2026): problem statement, personas, MVP scope (MoSCoW), verification model, pseudonymity framework, case discussion policy, monetisation, phased roadmap, KPIs, risks, and 8 open stakeholder decisions (FD-1 through FD-8).
+- `docs/archive/` — Earlier working documents retained for context: original requirements spec, Sermo feature inventory, and Andrew Renshaw's founding concept document. Not authoritative — superseded by the PRD.
 
 ## Domain constraints that must inform every design decision
 
-**Verification states**: `pending` → `approved_verified` / `rejected` / `suspended` / `needs_more_info`. Only `approved_verified` users can access community content.
+**Pseudonymity is mandatory, not optional.** Every member participates under a pseudonymous handle of their choosing. Real name, employer, specialty, grade, and location are never visible to other members. There is no opt-in/opt-out — all community activity is attributed to the handle only.
 
-**Anonymity**: users can post/comment anonymously, but the platform must always retain the real author identity. Moderators/admins can reveal identity with an auditable reason. Other members never see the real identity.
+**Zero-tolerance anonymity rule.** Any attempt to reveal or identify themselves or another member (in a post, reply, or off-platform colluding) results in immediate permanent expulsion with no exceptions. This is stated at registration, during onboarding, and surfaced in the posting UI.
 
-**Case discussions** (`case_discussion` post type) require:
-1. Completion of a de-identification checklist (no names, DOB must be age-banded, dates must be relative, no facility names if uniquely identifying, EXIF metadata stripped from images).
-2. Mandatory attestation before publishing.
-3. Priority moderation queue for "Identifiable patient info" reports.
+**Verification states**: `pending` → `approved_verified` / `rejected` / `suspended` / `needs_more_info`. Only `approved_verified` members can access community content. All other states see a holding page only.
 
-**Audit logs are immutable** for: verification decisions, moderation actions, and any "reveal anonymous author" events.
+**Moderation access to identity** is permitted solely for: investigating a reported policy violation, responding to a lawful legal request, or acting on a credible safety escalation. Every access is immutably logged with moderator identity, reason, timestamp, and action taken.
 
-**No PHI**: the platform must never store or encourage submission of identifiable patient data.
+**Case discussions** require:
+1. Completion of a mandatory de-identification checklist (no names, DOB age-banded, dates relative, no uniquely identifying facility names, EXIF stripped from images).
+2. Mandatory attestation before publish — recorded with timestamp linked to the member's verified identity.
+3. Priority moderation queue for "Identifiable patient information" reports.
 
-## MVP scope (agreed)
+**Audit logs are immutable** for: verification decisions, moderation actions, and all moderator access to real identity.
 
-Core epics for launch:
-- **EPIC-A**: Registration + Verification + Admin review queue
-- **EPIC-B**: Profile + Preferences
-- **EPIC-C**: Topics/Feed + Posting/Commenting + Reactions
-- **EPIC-D**: Anonymity + Auditability
-- **EPIC-E**: Case Discussions + De-identification enforcement
-- **EPIC-F**: Search + Saved
-- **EPIC-G**: Moderation (reporting, queues, actions, appeals)
+**No PHI**: the platform must never store or encourage submission of identifiable patient data. Legal basis: UK GDPR, Data Protection Act 2018, common law duty of confidentiality.
 
-Out of scope for MVP: patient-facing features, clinical decision support as a medical device, paid surveys, sponsored content, private groups, multi-language UI, CE/CPD tracking.
+## MVP scope
 
-## Monetization (undecided — two options documented)
+The MVP proves the core thesis — that verified, pseudonymous peer discussion is valuable enough to pay for — before adding complexity. UK-only, web-only.
 
-- **M1 (Sermo-like)**: Free to members; revenue from paid surveys/market research and sponsored content. Requires targeting/segmentation and consent mechanics early.
-- **M2 (Subscription/hybrid)**: Free Verified tier + Pro subscription. Simpler trust narrative, clearer unit economics.
+| Epic | Description |
+|---|---|
+| **EPIC-A** | Registration, identity verification, admin review queue |
+| **EPIC-B** | Pseudonymous handle and profile system |
+| **EPIC-C** | Forum: posting, commenting, tagging, search |
+| **EPIC-D** | Kudos system and answer ranking |
+| **EPIC-E** | Case discussions with de-identification enforcement |
+| **EPIC-F** | Content reporting and moderation tools |
+| **EPIC-G** | Notifications (in-app and email) |
+| **EPIC-H** | Subscription and payment processing |
 
-The choice between M1 and M2 is a pending product decision and affects what gets built in Phase 2.
+**Out of scope for MVP**: 1:1 private messaging, native iOS/Android apps, private/closed groups, multi-language UI, paid surveys, CE/CPD tracking, patient-facing features, employer/organisation pages.
+
+## Monetisation (decided)
+
+Subscription-only. Members pay for access; the platform's only obligation is to those paying members. No advertising, no pharmaceutical industry relationships, no member data sold.
+
+**Working example** (pricing is open — see FD-2): £19.99/month; 3-month free trial; annual plan TBD.
+
+The Sermo-style survey/sponsored-content model is explicitly not being pursued — incompatible with the trust proposition.
+
+## Open stakeholder decisions (FD items)
+
+These are unresolved and must not be assumed closed. See Section 15 of the PRD for full context on each.
+
+| ID | Decision |
+|---|---|
+| FD-1 | Professional scope at launch — physio-only MVP vs. all UK registered practitioners |
+| FD-2 | Subscription pricing, trial length, and whether an annual plan is offered at launch |
+| FD-3 | Platform sequencing — confirm web-first; evaluate counter-argument for mobile-first |
+| FD-4 | Forum organisation — body-area taxonomy vs. tagging vs. hybrid (recommendation: hybrid) |
+| FD-5 | 1:1 private messaging — defer to Phase 2 (recommendation) or include in MVP |
+| FD-6 | University partnership as early-adopter seeding strategy (Andrew Renshaw to confirm status) |
+| FD-7 | Brand name "Askapeer" and .com domain — trademark search required |
+| FD-8 | Competitive landscape refresh before committing to development investment |
