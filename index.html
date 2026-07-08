@@ -3,15 +3,30 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-<title>Askapeer — prototype</title>
+<meta name="theme-color" content="#001f52" />
+<title>AskaPeer — prototype</title>
+<link rel="icon" type="image/png" href="assets/favicon.png" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="apple-mobile-web-app-title" content="AskaPeer" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
 <style>
   :root {
-    --teal: #1a5f7a;
-    --teal-dark: #12485c;
-    --teal-tint: #e8f1f4;
-    --teal-tint-2: #f2f7f9;
+    /* Brand — navy primary + red spark accent (from the AskaPeer logo) */
+    --navy: #001f52;
+    --navy-dark: #001640;
+    --navy-tint: #e6ebf2;
+    --navy-tint-2: #f2f5f9;
+    --red: #ed1b24;
+    --red-dark: #c00f18;
+    --red-tint: #fdecec;
     --kudos: #d98a1f;
     --kudos-tint: #fbf0dc;
+    /* aliases: the former teal palette now resolves to the brand navy */
+    --teal: var(--navy);
+    --teal-dark: var(--navy-dark);
+    --teal-tint: var(--navy-tint);
+    --teal-tint-2: var(--navy-tint-2);
     --bg: #eef1f4;
     --surface: #ffffff;
     --text: #14212b;
@@ -76,13 +91,9 @@
     z-index: 30;
   }
   #appbar .title { font-size: 18px; font-weight: 700; letter-spacing: -.02em; color: var(--text); }
-  #appbar .title b { color: var(--teal); font-weight: 800; }
-  #appbar .brandrow { display: flex; align-items: center; gap: 7px; }
-  #appbar .mark {
-    width: 26px; height: 26px; border-radius: 8px;
-    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
-    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 15px;
-  }
+  #appbar .title b { color: var(--red); font-weight: 800; }
+  #appbar .brandrow { display: flex; align-items: center; gap: 9px; }
+  #appbar .mark { height: 30px; width: auto; display: block; }
   #appbar .actions { display: flex; align-items: center; gap: 2px; }
   .iconbtn {
     width: 38px; height: 38px; border: none; background: transparent; border-radius: 50%;
@@ -274,8 +285,8 @@
 
   .tab.ask .fab {
     width: 52px; height: 52px; border-radius: 18px; margin-top: -4px;
-    background: linear-gradient(135deg, var(--teal), var(--teal-dark)); color: #fff;
-    display: grid; place-items: center; box-shadow: 0 6px 16px rgba(26,95,122,.4); border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--red), var(--red-dark)); color: #fff;
+    display: grid; place-items: center; box-shadow: 0 6px 16px rgba(237,27,36,.4); border: none; cursor: pointer;
   }
   .tab.ask .fab svg { width: 26px; height: 26px; }
 
@@ -333,8 +344,8 @@
   <!-- ============ HEADER ============ -->
   <header id="appbar">
     <div class="brandrow">
-      <div class="mark">a</div>
-      <div class="title">ask<b>a</b>peer</div>
+      <img class="mark" src="assets/logo-mark.png" alt="" />
+      <div class="title">Ask<b>a</b>Peer</div>
     </div>
     <div class="actions">
       <button class="iconbtn" aria-label="Search">
