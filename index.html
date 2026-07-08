@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<title>Askapeer — prototype</title>
+<style>
+  :root {
+    --teal: #1a5f7a;
+    --teal-dark: #12485c;
+    --teal-tint: #e8f1f4;
+    --teal-tint-2: #f2f7f9;
+    --kudos: #d98a1f;
+    --kudos-tint: #fbf0dc;
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --text: #14212b;
+    --muted: #64757f;
+    --faint: #93a1a9;
+    --border: #e5ebee;
+    --border-strong: #d7e0e4;
+    --verify: #2e8b6f;
+    --danger: #c0492f;
+    --shadow: 0 1px 2px rgba(20,33,43,.06), 0 4px 16px rgba(20,33,43,.05);
+    --radius: 16px;
+    --nav-h: 62px;
+    --header-h: 52px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; scrollbar-width: none; -ms-overflow-style: none; }
+  *::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: #d4dbe0;
+    color: var(--text);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* --- Phone frame for desktop; full-bleed on real mobile --- */
+  #phone {
+    position: relative;
+    width: 100%;
+    max-width: 430px;
+    height: 100dvh;
+    margin: 0 auto;
+    background: var(--bg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  @media (min-width: 500px) {
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px 0; }
+    #phone {
+      height: 900px;
+      max-height: calc(100vh - 48px);
+      border-radius: 44px;
+      border: 12px solid #0d1519;
+      box-shadow: 0 30px 80px rgba(0,0,0,.35);
+    }
+  }
+
+  /* --- Header --- */
+  header#appbar {
+    height: var(--header-h);
+    flex: 0 0 auto;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px 0 16px;
+    padding-top: env(safe-area-inset-top);
+    z-index: 30;
+  }
+  #appbar .title { font-size: 18px; font-weight: 700; letter-spacing: -.02em; color: var(--text); }
+  #appbar .title b { color: var(--teal); font-weight: 800; }
+  #appbar .brandrow { display: flex; align-items: center; gap: 7px; }
+  #appbar .mark {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 15px;
+  }
+  #appbar .actions { display: flex; align-items: center; gap: 2px; }
+  .iconbtn {
+    width: 38px; height: 38px; border: none; background: transparent; border-radius: 50%;
+    display: grid; place-items: center; color: var(--muted); cursor: pointer; position: relative;
+  }
+  .iconbtn:active { background: var(--teal-tint); }
+  .iconbtn svg { width: 22px; height: 22px; }
+
+  /* --- Content area (holds pager + thread overlay) --- */
+  #content { flex: 1 1 auto; position: relative; overflow: hidden; }
+
+  /* --- Horizontal pager --- */
+  #pager {
+    position: absolute; inset: 0;
+    display: flex;
+    overflow-x: auto; overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+  }
+  .pane {
+    flex: 0 0 100%; width: 100%; height: 100%;
+    overflow-y: auto;
+    scroll-snap-align: start; scroll-snap-stop: always;
+    padding-bottom: 24px;
+  }
+
+  /* section sub-header inside a pane */
+  .subhead { padding: 16px 16px 4px; }
+  .subhead h2 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+  .subhead p { margin: 3px 0 0; font-size: 13px; color: var(--muted); }
+
+  /* --- Filter chips row --- */
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px 10px; }
+  .chip {
+    flex: 0 0 auto; border: 1px solid var(--border-strong); background: var(--surface);
+    color: var(--muted); font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 999px;
+    cursor: pointer; white-space: nowrap; transition: all .12s;
+  }
+  .chip.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+
+  /* --- Cards --- */
+  .list { padding: 4px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px; box-shadow: var(--shadow); cursor: pointer; transition: transform .08s;
+  }
+  .card:active { transform: scale(.992); }
+
+  .tagrow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 9px; }
+  .tag { font-size: 11px; font-weight: 700; letter-spacing: .01em; padding: 3px 9px; border-radius: 6px; background: var(--teal-tint); color: var(--teal-dark); }
+  .tag.topic { background: #eef0f2; color: #556; }
+  .tag.pill-muted { background: transparent; color: var(--faint); font-weight: 600; }
+
+  .article h3 { margin: 0 0 6px; font-size: 16px; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; }
+  .article p.snip { margin: 0 0 12px; font-size: 13.5px; color: var(--muted); }
+  .article .meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--faint); }
+  .article .meta .src { font-weight: 600; color: var(--muted); }
+
+  .disc h3 { margin: 0 0 6px; font-size: 15.5px; font-weight: 700; line-height: 1.32; letter-spacing: -.01em; }
+  .disc .snip { margin: 0 0 12px; font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .disc .foot { display: flex; align-items: center; justify-content: space-between; }
+  .stat { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .stat svg { width: 15px; height: 15px; }
+  .stat.kudos { color: var(--kudos); }
+  .stats { display: flex; gap: 14px; }
+  .who { display: flex; align-items: center; gap: 8px; }
+
+  .ava { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; flex: 0 0 auto; }
+  .ava.sm { width: 26px; height: 26px; font-size: 12px; border-radius: 8px; }
+  .ava.lg { width: 72px; height: 72px; font-size: 30px; border-radius: 20px; }
+  .handle { font-size: 12.5px; font-weight: 700; color: var(--text); }
+  .handle .since { font-weight: 500; color: var(--faint); font-size: 11px; }
+
+  .answered-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color: var(--verify); }
+  .answered-badge svg { width: 14px; height: 14px; }
+
+  /* --- Thread detail overlay --- */
+  #thread {
+    position: absolute; inset: 0; background: var(--bg); z-index: 40;
+    transform: translateX(100%); transition: transform .24s ease;
+    display: flex; flex-direction: column; visibility: hidden;
+  }
+  #thread.open { transform: translateX(0); visibility: visible; }
+  .thread-bar {
+    height: var(--header-h); flex: 0 0 auto; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px; padding: 0 8px 0 4px;
+  }
+  .thread-bar .ttl { font-size: 15px; font-weight: 700; }
+  .thread-scroll { flex: 1 1 auto; overflow-y: auto; padding: 14px 14px 90px; }
+
+  .qblock { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .qblock h1 { margin: 8px 0 12px; font-size: 19px; font-weight: 800; line-height: 1.28; letter-spacing: -.02em; }
+  .casefields { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 4px; }
+  .casefield { padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .casefield:last-child { border-bottom: none; }
+  .casefield .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); margin-bottom: 2px; }
+  .casefield .val { font-size: 13.5px; color: var(--text); }
+  .deident-flag { display: flex; align-items: center; gap: 7px; margin-top: 12px; padding: 9px 11px; background: var(--teal-tint-2); border-radius: 10px; font-size: 12px; color: var(--teal-dark); font-weight: 600; }
+  .deident-flag svg { width: 16px; height: 16px; flex: 0 0 auto; }
+
+  .answers-head { display: flex; align-items: center; justify-content: space-between; margin: 20px 4px 8px; }
+  .answers-head h4 { margin: 0; font-size: 14px; font-weight: 800; }
+  .answers-head .sortsel { font-size: 12.5px; color: var(--teal); font-weight: 700; }
+
+  .answer { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 13px 14px; margin-bottom: 10px; }
+  .answer.top { border-color: #cfe6dc; box-shadow: 0 0 0 1px #e4f2eb inset; }
+  .answer .ahead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .answer .body { font-size: 14px; color: #23323c; }
+  .best { display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; color: var(--verify); background:#e4f2eb; padding:3px 7px; border-radius:6px; }
+  .best svg{width:12px;height:12px;}
+  .kudos-btn {
+    display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-strong);
+    background: var(--surface); color: var(--muted); font-weight: 700; font-size: 12.5px;
+    padding: 6px 11px; border-radius: 999px; cursor: pointer; margin-top: 10px; transition: all .12s;
+  }
+  .kudos-btn svg { width: 15px; height: 15px; }
+  .kudos-btn.given { background: var(--kudos-tint); border-color: #e6cf9c; color: var(--kudos); }
+
+  .reply-dock {
+    position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--border);
+    padding: 10px 12px; display: flex; gap: 8px; align-items: center;
+  }
+  .reply-dock input { flex: 1; border: 1px solid var(--border-strong); border-radius: 999px; padding: 11px 15px; font-size: 14px; font-family: var(--font); outline: none; }
+  .reply-dock input:focus { border-color: var(--teal); }
+  .reply-dock .send { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--teal); color: #fff; display: grid; place-items: center; cursor: pointer; flex: 0 0 auto; }
+  .reply-dock .send svg { width: 20px; height: 20px; }
+
+  /* --- Activity screen --- */
+  .segmented { display: flex; background: #e3e9ec; border-radius: 11px; padding: 3px; margin: 12px 16px; }
+  .segmented button { flex: 1; border: none; background: transparent; padding: 8px; font-size: 13px; font-weight: 700; color: var(--muted); border-radius: 8px; cursor: pointer; }
+  .segmented button.active { background: var(--surface); color: var(--teal); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .seg-panel { display: none; }
+  .seg-panel.active { display: block; }
+
+  .notif { display: flex; gap: 12px; align-items: flex-start; padding: 13px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .notif.unread { background: var(--teal-tint-2); }
+  .notif .ntext { font-size: 13.5px; color: var(--text); }
+  .notif .ntext b { font-weight: 700; }
+  .notif .ntime { font-size: 11.5px; color: var(--faint); margin-top: 3px; }
+  .notif .nicon { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
+  .nicon.k { background: var(--kudos-tint); color: var(--kudos); }
+  .nicon.r { background: var(--teal-tint); color: var(--teal); }
+  .nicon.m { background: #ede8f6; color: #6b52b0; }
+  .nicon svg { width: 18px; height: 18px; }
+
+  /* --- Profile screen --- */
+  .profile-head { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 22px 16px 8px; }
+  .profile-head .ph-handle { font-size: 21px; font-weight: 800; margin-top: 12px; letter-spacing: -.02em; }
+  .profile-head .ph-since { font-size: 12.5px; color: var(--faint); margin-top: 2px; }
+  .kudos-hero { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; background: var(--kudos-tint); border: 1px solid #ecd6a6; color: var(--kudos); font-weight: 800; font-size: 15px; padding: 8px 16px; border-radius: 999px; }
+  .kudos-hero svg { width: 18px; height: 18px; }
+  .kudos-hero small { font-weight: 600; color: #9a6b1c; font-size: 12px; }
+
+  .profile-stats { display: flex; margin: 16px 16px 6px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .pstat { flex: 1; text-align: center; padding: 14px 6px; }
+  .pstat + .pstat { border-left: 1px solid var(--border); }
+  .pstat .num { font-size: 20px; font-weight: 800; }
+  .pstat .lbl { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
+  .anon-card { margin: 12px 16px; padding: 14px; background: var(--teal-tint-2); border: 1px solid #d6e7ec; border-radius: var(--radius); display: flex; gap: 11px; align-items: flex-start; }
+  .anon-card svg { width: 26px; height: 26px; color: var(--teal); flex: 0 0 auto; }
+  .anon-card .at { font-size: 13px; font-weight: 700; color: var(--teal-dark); }
+  .anon-card .ad { font-size: 12.5px; color: #47606b; margin-top: 3px; }
+
+  .prof-section-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); margin: 18px 16px 8px; }
+  .followed { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px; }
+  .followed .chip { cursor: default; }
+  .followed .chip.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+
+  .settings { margin: 8px 16px 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .setrow { display: flex; align-items: center; gap: 12px; padding: 14px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 600; cursor: pointer; }
+  .setrow:last-child { border-bottom: none; }
+  .setrow svg { width: 20px; height: 20px; color: var(--muted); flex: 0 0 auto; }
+  .setrow .chev { margin-left: auto; color: var(--faint); }
+  .setrow.danger { color: var(--danger); }
+  .setrow.danger svg { color: var(--danger); }
+
+  /* --- Bottom nav --- */
+  nav#tabbar {
+    flex: 0 0 auto; height: calc(var(--nav-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: #ffffff;
+    border-top: 1px solid var(--border); display: flex; align-items: stretch; z-index: 30;
+  }
+  .tab { flex: 1; border: none; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--faint); cursor: pointer; font-family: var(--font); position: relative; }
+  .tab svg { width: 25px; height: 25px; }
+  .tab span.lbl { font-size: 10px; font-weight: 600; letter-spacing: .01em; }
+  .tab.active { color: var(--teal); }
+  .tab .tdot { position: absolute; top: 8px; left: 50%; margin-left: 6px; width: 7px; height: 7px; background: var(--danger); border-radius: 50%; border: 1.5px solid #fff; }
+
+  .tab.ask .fab {
+    width: 52px; height: 52px; border-radius: 18px; margin-top: -4px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark)); color: #fff;
+    display: grid; place-items: center; box-shadow: 0 6px 16px rgba(26,95,122,.4); border: none; cursor: pointer;
+  }
+  .tab.ask .fab svg { width: 26px; height: 26px; }
+
+  /* --- Compose sheet --- */
+  .scrim { position: absolute; inset: 0; background: rgba(15,25,32,.4); opacity: 0; pointer-events: none; transition: opacity .22s; z-index: 45; }
+  .scrim.show { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 46;
+    background: var(--surface); border-radius: 22px 22px 0 0; transform: translateY(100%);
+    transition: transform .28s cubic-bezier(.32,.72,0,1); max-height: 92%; display: flex; flex-direction: column;
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet-grab { width: 40px; height: 5px; background: #d3dbe0; border-radius: 3px; margin: 9px auto 4px; }
+  .sheet-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px 12px; border-bottom: 1px solid var(--border); }
+  .sheet-bar .cancel { border: none; background: none; color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer; }
+  .sheet-bar h3 { margin: 0; font-size: 16px; font-weight: 800; }
+  .sheet-bar .post { border: none; background: var(--teal); color: #fff; font-size: 14px; font-weight: 700; padding: 8px 16px; border-radius: 999px; cursor: pointer; }
+  .sheet-bar .post:disabled { background: #c3ccd1; cursor: not-allowed; }
+  .sheet-body { padding: 14px 16px 22px; overflow-y: auto; }
+
+  .mode-toggle { display: flex; background: #e3e9ec; border-radius: 11px; padding: 3px; margin-bottom: 16px; }
+  .mode-toggle button { flex: 1; border: none; background: transparent; padding: 9px; font-size: 13px; font-weight: 700; color: var(--muted); border-radius: 8px; cursor: pointer; }
+  .mode-toggle button.active { background: var(--surface); color: var(--teal); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .03em; }
+  .field input, .field textarea, .field select {
+    width: 100%; border: 1px solid var(--border-strong); border-radius: 12px; padding: 12px 13px;
+    font-size: 15px; font-family: var(--font); outline: none; resize: none; background: #fbfcfd;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--teal); background: #fff; }
+  .field .hint { font-size: 11.5px; color: var(--faint); margin-top: 5px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+  .checklist { background: var(--teal-tint-2); border: 1px solid var(--border); border-radius: 14px; padding: 6px 14px; margin-bottom: 14px; }
+  .checklist .chead { display: flex; align-items: center; gap: 7px; padding: 10px 0 6px; font-size: 13px; font-weight: 800; color: var(--teal-dark); }
+  .checklist .chead svg { width: 17px; height: 17px; }
+  .checkitem { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid #dfe8ec; cursor: pointer; }
+  .checkitem input { margin-top: 2px; width: 18px; height: 18px; accent-color: var(--teal); flex: 0 0 auto; }
+  .checkitem span { font-size: 12.5px; color: #2c3c45; }
+  .attest { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid #e6cf9c; background: var(--kudos-tint); border-radius: 12px; margin-bottom: 4px; }
+  .attest input { margin-top: 2px; width: 18px; height: 18px; accent-color: var(--kudos); flex: 0 0 auto; }
+  .attest span { font-size: 12px; color: #6b4d15; font-style: italic; }
+
+  .toast {
+    position: absolute; left: 50%; bottom: calc(var(--nav-h) + 20px); transform: translate(-50%, 20px);
+    background: #14212b; color: #fff; font-size: 13px; font-weight: 600; padding: 11px 18px; border-radius: 999px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 60; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<div id="phone">
+
+  <!-- ============ HEADER ============ -->
+  <header id="appbar">
+    <div class="brandrow">
+      <div class="mark">a</div>
+      <div class="title">ask<b>a</b>peer</div>
+    </div>
+    <div class="actions">
+      <button class="iconbtn" aria-label="Search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ CONTENT (pager + thread) ============ -->
+  <div id="content">
+    <div id="pager">
+
+      <!-- ---------- FEED ---------- -->
+      <section class="pane" id="pane-feed">
+        <div class="subhead">
+          <h2>Your feed</h2>
+          <p>Peer-reviewed reads for the areas you follow</p>
+        </div>
+        <div class="chips">
+          <button class="chip active">All</button>
+          <button class="chip">Shoulder</button>
+          <button class="chip">Knee</button>
+          <button class="chip">Hamstring</button>
+          <button class="chip">Ankle &amp; Foot</button>
+          <button class="chip">Spine</button>
+          <button class="chip">Concussion</button>
+          <button class="chip">Research</button>
+        </div>
+        <div class="list">
+          <article class="card article">
+            <div class="tagrow"><span class="tag">Knee</span><span class="tag topic">Research</span></div>
+            <h3>Blood-flow restriction after ACL reconstruction: what the 2025 RCTs actually show</h3>
+            <p class="snip">Three new trials complicate the early-loading consensus. A pragmatic read of who benefits, and where the evidence is still thin.</p>
+            <div class="meta"><span class="src">Evidence digest</span><span>·</span><span>6 min read</span><span>·</span><span class="stat kudos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>142</span></div>
+          </article>
+          <article class="card article">
+            <div class="tagrow"><span class="tag">Hamstring</span></div>
+            <h3>Nordic vs Askling: the eternal hamstring debate, revisited</h3>
+            <p class="snip">Both reduce reinjury. The interesting question is sequencing and in-season load — a summary of where practitioners actually disagree.</p>
+            <div class="meta"><span class="src">Technique</span><span>·</span><span>4 min read</span><span>·</span><span class="stat kudos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>98</span></div>
+          </article>
+          <article class="card article">
+            <div class="tagrow"><span class="tag">Concussion</span><span class="tag topic">Return to play</span></div>
+            <h3>Graded return-to-play: applying the 2025 consensus pitchside</h3>
+            <p class="snip">The protocol is clear on paper and messy in the changing room. Practical decision points for when you don't have a doctor on site.</p>
+            <div class="meta"><span class="src">Consensus in practice</span><span>·</span><span>7 min read</span><span>·</span><span class="stat kudos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>211</span></div>
+          </article>
+          <article class="card article">
+            <div class="tagrow"><span class="tag">Shoulder</span></div>
+            <h3>Reconsidering scapular dyskinesis as a clinical target</h3>
+            <p class="snip">Is it a cause, a consequence, or a red herring? A measured argument for treating the symptom, not the scapula.</p>
+            <div class="meta"><span class="src">Evidence digest</span><span>·</span><span>5 min read</span><span>·</span><span class="stat kudos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>76</span></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ---------- DISCUSSIONS ---------- -->
+      <section class="pane" id="pane-disc">
+        <div class="subhead">
+          <h2>Discussions</h2>
+          <p>Live questions from verified peers</p>
+        </div>
+        <div class="chips">
+          <button class="chip active">Active</button>
+          <button class="chip">Unanswered</button>
+          <button class="chip">Top this week</button>
+          <button class="chip">Case discussions</button>
+        </div>
+        <div class="list">
+          <article class="card disc" onclick="openThread()">
+            <div class="tagrow"><span class="tag">Ankle &amp; Foot</span><span class="tag pill-muted">Case discussion</span></div>
+            <h3>Recreational runner, 3 weeks post lateral ankle sprain — persistent instability despite full ROM. Push proprioception or image?</h3>
+            <p class="snip">Full weight-bearing, ROM restored, but subjective giving-way on uneven ground. Torn between progressing proprioceptive loading vs requesting imaging to rule out…</p>
+            <div class="foot">
+              <div class="who"><span class="ava sm" style="background:#7a6cae">RR</span><span class="handle">RestedRunner</span></div>
+              <div class="stats">
+                <span class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>12</span>
+                <span class="stat kudos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>34</span>
+              </div>
+            </div>
+          </article>
+          <article class="card disc" onclick="openThread()">
+            <div class="tagrow"><span class="tag">Concussion</span></div>
+            <h3>Pitchside: when do you actually pull a player for suspected concussion vs monitor?</h3>
+            <p class="snip">Grassroots setting, no doctor on site. Interested in how others draw the line in practice when the signs are ambiguous and there's pressure to keep them on.</p>
+            <div class="foot">
+              <div class="who"><span class="ava sm" style="background:#b5762f">PO</span><span class="handle">PitchsideOwl</span></div>
+              <div class="stats">
+                <span class="stat answered-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>Answered</span>
+                <span class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>34</span>
+              </div>
+            </div>
+          </article>
+          <article class="card disc" onclick="openThread()">
+            <div class="tagrow"><span class="tag">Knee</span></div>
+            <h3>Anterior knee pain, all imaging clear — how are you framing this to patients without catastrophising?</h3>
+            <p class="snip">Looking for language and analogies that land. The imaging-negative conversation is where I lose people, and I suspect I'm making it worse.</p>
+            <div class="foot">
+              <div class="who"><span class="ava sm" style="background:#3f8f76">CP</span><span class="handle">CalmPatella</span></div>
+              <div class="stats">
+                <span class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>21</span>
+                <span class="stat kudos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>58</span>
+              </div>
+            </div>
+          </article>
+          <article class="card disc" onclick="openThread()">
+            <div class="tagrow"><span class="tag">Achilles</span><span class="tag pill-muted">Unanswered</span></div>
+            <h3>Anyone using isometrics for insertional Achilles tendinopathy in-season? Load parameters?</h3>
+            <p class="snip">Mid-season, can't offload fully. Curious what dose others land on for pain modulation without compromising training availability.</p>
+            <div class="foot">
+              <div class="who"><span class="ava sm" style="background:#5c6f9e">NN</span><span class="handle">NorthernNordic</span></div>
+              <div class="stats">
+                <span class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>0</span>
+                <span class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>2h</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ---------- ACTIVITY ---------- -->
+      <section class="pane" id="pane-activity">
+        <div class="subhead">
+          <h2>Your activity</h2>
+          <p>Your questions and what's coming back</p>
+        </div>
+        <div class="segmented" id="act-seg">
+          <button class="active" data-seg="questions">My questions</button>
+          <button data-seg="notifs">Notifications</button>
+        </div>
+        <div class="seg-panel active" id="seg-questions">
+          <div class="list">
+            <article class="card disc" onclick="openThread()">
+              <div class="tagrow"><span class="tag">Ankle &amp; Foot</span><span class="tag pill-muted">Case discussion</span></div>
+              <h3>Recreational runner, 3 weeks post lateral ankle sprain — persistent instability. Push proprioception or image?</h3>
+              <div class="foot">
+                <div class="stat answered-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>3 new responses</div>
+                <div class="stats">
+                  <span class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>12</span>
+                  <span class="stat kudos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>34</span>
+                </div>
+              </div>
+            </article>
+            <article class="card disc" onclick="openThread()">
+              <div class="tagrow"><span class="tag">Shoulder</span></div>
+              <h3>Post-op cuff repair — patient anxious about sleeping position at 4 weeks. How prescriptive do you get?</h3>
+              <div class="foot">
+                <div class="stat" style="color:var(--faint)">No new responses</div>
+                <div class="stats">
+                  <span class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>5</span>
+                  <span class="stat kudos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>19</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+        <div class="seg-panel" id="seg-notifs">
+          <div class="notif unread">
+            <div class="nicon k"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg></div>
+            <div><div class="ntext"><b>SilentScapula</b> and 4 others gave kudos to your answer on <b>anterior knee pain</b></div><div class="ntime">18 minutes ago</div></div>
+          </div>
+          <div class="notif unread">
+            <div class="nicon r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+            <div><div class="ntext"><b>TibiaTraveller</b> responded to your case <b>persistent ankle instability</b></div><div class="ntime">1 hour ago</div></div>
+          </div>
+          <div class="notif">
+            <div class="nicon m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H5.2L4 17.2z"/></svg></div>
+            <div><div class="ntext"><b>QuietMoraine</b> mentioned your handle in <b>in-season Achilles loading</b></div><div class="ntime">Yesterday</div></div>
+          </div>
+          <div class="notif">
+            <div class="nicon k"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg></div>
+            <div><div class="ntext">Your total kudos passed <b>500</b> — you're in the top 8% of contributors</div><div class="ntime">2 days ago</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- PROFILE ---------- -->
+      <section class="pane" id="pane-profile">
+        <div class="profile-head">
+          <span class="ava lg" style="background:#4b7f96">RR</span>
+          <div class="ph-handle">RestedRunner</div>
+          <div class="ph-since">Verified member · since 2025</div>
+          <div class="kudos-hero">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>
+            512 kudos <small>· top 8%</small>
+          </div>
+        </div>
+
+        <div class="profile-stats">
+          <div class="pstat"><div class="num">14</div><div class="lbl">Questions</div></div>
+          <div class="pstat"><div class="num">83</div><div class="lbl">Responses</div></div>
+          <div class="pstat"><div class="num">6</div><div class="lbl">Best answers</div></div>
+        </div>
+
+        <div class="anon-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          <div>
+            <div class="at">You are anonymous to your peers</div>
+            <div class="ad">Members only ever see <b>RestedRunner</b> and your kudos. Your real name, profession, and employer are never shown.</div>
+          </div>
+        </div>
+
+        <div class="prof-section-lbl">Areas you follow</div>
+        <div class="followed">
+          <span class="chip active">Ankle &amp; Foot</span>
+          <span class="chip active">Knee</span>
+          <span class="chip active">Shoulder</span>
+          <span class="chip active">Concussion</span>
+          <span class="chip">+ Add</span>
+        </div>
+
+        <div class="prof-section-lbl">Settings</div>
+        <div class="settings">
+          <div class="setrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            Notifications <span class="chev">›</span>
+          </div>
+          <div class="setrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Privacy &amp; anonymity <span class="chev">›</span>
+          </div>
+          <div class="setrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+            Community guidelines <span class="chev">›</span>
+          </div>
+          <div class="setrow danger">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+            Sign out
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /pager -->
+
+    <!-- ---------- THREAD DETAIL (overlay) ---------- -->
+    <div id="thread">
+      <div class="thread-bar">
+        <button class="iconbtn" onclick="closeThread()" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="ttl">Case discussion</div>
+      </div>
+      <div class="thread-scroll">
+        <div class="qblock">
+          <div class="tagrow"><span class="tag">Ankle &amp; Foot</span><span class="tag topic">Return to play</span></div>
+          <div class="who"><span class="ava" style="background:#7a6cae">RR</span><div><div class="handle">RestedRunner <span class="since">· Member since 2025</span></div><div class="since" style="font-size:11px">Asked 4 hours ago</div></div></div>
+          <h1>Recreational runner, 3 weeks post lateral ankle sprain — persistent instability despite full ROM. Push proprioception or image?</h1>
+          <div class="casefields">
+            <div class="casefield"><div class="lbl">Presenting complaint</div><div class="val">Persistent subjective instability after a grade II lateral ankle sprain. Full weight-bearing achieved.</div></div>
+            <div class="casefield"><div class="lbl">Patient (de-identified)</div><div class="val">Male, age band 30–39. Recreational runner, ~30km/week pre-injury.</div></div>
+            <div class="casefield"><div class="lbl">Timeline</div><div class="val">3 weeks post-injury. Inversion mechanism on uneven ground.</div></div>
+            <div class="casefield"><div class="lbl">Objective findings</div><div class="val">ROM restored and symmetrical. Anterior drawer mild laxity, no bony tenderness (Ottawa negative at presentation). Single-leg balance markedly reduced vs contralateral.</div></div>
+            <div class="casefield"><div class="lbl">Question to the community</div><div class="val">Progress proprioceptive loading and hold off imaging, or is the persistent giving-way a flag to image now?</div></div>
+          </div>
+          <div class="deident-flag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+            De-identification checklist completed &amp; attested
+          </div>
+        </div>
+
+        <div class="answers-head">
+          <h4>9 responses</h4>
+          <span class="sortsel">Top kudos ▾</span>
+        </div>
+
+        <div class="answer top">
+          <div class="ahead">
+            <div class="who"><span class="ava sm" style="background:#3f8f76">TT</span><span class="handle">TibiaTraveller</span></div>
+            <span class="best"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>Best answer</span>
+          </div>
+          <div class="body">Full ROM at 3 weeks with negative Ottawa at presentation — I'd hold off imaging and treat the giving-way as a neuromuscular control deficit, not a structural one. Single-leg balance asymmetry is doing the talking here. Progress proprioceptive loading under fatigue and on unstable surfaces; re-assess at 2 weeks. If instability persists <em>with</em> a stiffening block or night pain, then image.</div>
+          <button class="kudos-btn given" onclick="toggleKudos(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg><span class="kn">27</span></button>
+        </div>
+
+        <div class="answer">
+          <div class="ahead">
+            <div class="who"><span class="ava sm" style="background:#8a5cae">SS</span><span class="handle">SilentScapula</span></div>
+          </div>
+          <div class="body">Agree on delaying imaging. One addition: check peroneal reaction time specifically, not just static balance. Plenty of these feel "unstable" because of delayed peroneal firing rather than true mechanical laxity — and that's very trainable.</div>
+          <button class="kudos-btn" onclick="toggleKudos(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg><span class="kn">14</span></button>
+        </div>
+
+        <div class="answer">
+          <div class="ahead">
+            <div class="who"><span class="ava sm" style="background:#b5762f">QM</span><span class="handle">QuietMoraine</span></div>
+          </div>
+          <div class="body">Contrarian view worth considering: if he's a runner and keen to return, a one-off ultrasound is cheap reassurance and rules out an ATFL avulsion you can't feel on drawer. Not because I expect pathology — because it changes <em>his</em> confidence, which is half the rehab battle.</div>
+          <button class="kudos-btn" onclick="toggleKudos(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg><span class="kn">9</span></button>
+        </div>
+      </div>
+
+      <div class="reply-dock">
+        <input type="text" placeholder="Add your response…" />
+        <button class="send" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">Question posted to Discussions</div>
+  </div><!-- /content -->
+
+  <!-- ============ COMPOSE SHEET ============ -->
+  <div class="scrim" id="scrim" onclick="closeCompose()"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-grab"></div>
+    <div class="sheet-bar">
+      <button class="cancel" onclick="closeCompose()">Cancel</button>
+      <h3>Ask a peer</h3>
+      <button class="post" id="postBtn" onclick="submitCompose()">Post</button>
+    </div>
+    <div class="sheet-body">
+      <div class="mode-toggle" id="modeToggle">
+        <button class="active" data-mode="question">Quick question</button>
+        <button data-mode="case">Case discussion</button>
+      </div>
+      <div class="field">
+        <label>Body area</label>
+        <select>
+          <option>Ankle &amp; Foot</option><option>Knee</option><option>Shoulder</option>
+          <option>Hamstring</option><option>Spine</option><option>Hip &amp; Groin</option>
+          <option>Achilles / Calf</option><option>Concussion</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Your question</label>
+        <input type="text" placeholder="Summarise it in one line…" />
+        <div class="hint">Posted under your handle only. No name, employer, or specialty is ever shown.</div>
+      </div>
+      <div class="field">
+        <label id="detailLabel">Detail</label>
+        <textarea rows="4" placeholder="Add context that helps peers answer well."></textarea>
+      </div>
+      <div id="caseBlock" style="display:none">
+        <div class="checklist" id="checklist">
+          <div class="chead">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            De-identification checklist
+          </div>
+          <label class="checkitem"><input type="checkbox" class="ck"><span>No patient names, initials, or aliases</span></label>
+          <label class="checkitem"><input type="checkbox" class="ck"><span>No address, postcode, or identifying location</span></label>
+          <label class="checkitem"><input type="checkbox" class="ck"><span>Age given as a band (e.g. 30–39), not a date of birth</span></label>
+          <label class="checkitem"><input type="checkbox" class="ck"><span>Timelines relative (e.g. "3 weeks post-injury"), not exact dates</span></label>
+          <label class="checkitem"><input type="checkbox" class="ck"><span>No club, team, or facility that could identify the patient</span></label>
+          <label class="checkitem"><input type="checkbox" class="ck"><span>No images showing faces, tattoos, scars, or identifying features</span></label>
+        </div>
+        <div class="attest">
+          <input type="checkbox" id="attestBox">
+          <span>I confirm this case is de-identified per Askapeer's patient-privacy policy, and understand a breach may result in removal and referral to my regulator.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BOTTOM NAV ============ -->
+  <nav id="tabbar">
+    <button class="tab active" data-screen="feed" onclick="goTo('feed')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+      <span class="lbl">Feed</span>
+    </button>
+    <button class="tab" data-screen="disc" onclick="goTo('disc')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 21l1.9-4.5A8.4 8.4 0 0 1 3 11.5a8.5 8.5 0 0 1 9-8.4 8.5 8.5 0 0 1 9 8.4z"/></svg>
+      <span class="lbl">Discussions</span>
+    </button>
+    <button class="tab ask" onclick="openCompose()" aria-label="Ask a peer">
+      <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+    </button>
+    <button class="tab" data-screen="activity" onclick="goTo('activity')">
+      <span style="position:relative;display:grid;place-items:center">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        <span class="tdot"></span>
+      </span>
+      <span class="lbl">Activity</span>
+    </button>
+    <button class="tab" data-screen="profile" onclick="goTo('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span class="lbl">Profile</span>
+    </button>
+  </nav>
+
+</div>
+
+<script>
+  const pager = document.getElementById('pager');
+  const panes = ['feed','disc','activity','profile'];
+
+  function setActiveTab(name){
+    document.querySelectorAll('#tabbar .tab[data-screen]').forEach(t=>{
+      t.classList.toggle('active', t.dataset.screen === name);
+    });
+  }
+
+  // Nav tap: always close overlays, then move to the pane. Works from anywhere.
+  function goTo(name){
+    closeThread();
+    closeCompose();
+    const idx = panes.indexOf(name);
+    pager.scrollLeft = idx * pager.clientWidth;
+    setActiveTab(name);
+  }
+
+  // Swipe between panes → light up the matching nav icon.
+  let scrollTimer;
+  pager.addEventListener('scroll', ()=>{
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(()=>{
+      const idx = Math.round(pager.scrollLeft / pager.clientWidth);
+      setActiveTab(panes[idx]);
+    }, 50);
+  });
+
+  // filter chips (visual only)
+  document.querySelectorAll('.chips').forEach(row=>{
+    row.addEventListener('click', e=>{
+      const c = e.target.closest('.chip'); if(!c) return;
+      row.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+
+  // activity segmented control
+  document.getElementById('act-seg').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    document.querySelectorAll('#act-seg button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.seg-panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('seg-'+b.dataset.seg).classList.add('active');
+  });
+
+  // thread
+  function openThread(){ document.getElementById('thread').classList.add('open'); }
+  function closeThread(){ document.getElementById('thread').classList.remove('open'); }
+
+  // kudos toggle
+  function toggleKudos(btn){
+    const n = btn.querySelector('.kn'); let v = parseInt(n.textContent,10);
+    if(btn.classList.contains('given')){ btn.classList.remove('given'); n.textContent = v-1; }
+    else { btn.classList.add('given'); n.textContent = v+1; }
+  }
+
+  // compose
+  const sheet = document.getElementById('sheet'), scrim = document.getElementById('scrim');
+  function openCompose(){ scrim.classList.add('show'); sheet.classList.add('open'); }
+  function closeCompose(){ scrim.classList.remove('show'); sheet.classList.remove('open'); }
+
+  let mode = 'question';
+  document.getElementById('modeToggle').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    document.querySelectorAll('#modeToggle button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); mode = b.dataset.mode;
+    document.getElementById('caseBlock').style.display = mode==='case' ? 'block':'none';
+    document.getElementById('detailLabel').textContent = mode==='case' ? 'Case detail' : 'Detail';
+    updatePost();
+  });
+
+  function caseReady(){
+    const checks = [...document.querySelectorAll('#checklist .ck')];
+    return checks.every(c=>c.checked) && document.getElementById('attestBox').checked;
+  }
+  function updatePost(){
+    document.getElementById('postBtn').disabled = (mode==='case') && !caseReady();
+  }
+  document.getElementById('caseBlock').addEventListener('change', updatePost);
+
+  function submitCompose(){
+    closeCompose();
+    const t = document.getElementById('toast');
+    t.textContent = mode==='case' ? 'Case discussion posted' : 'Question posted to Discussions';
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2200);
+    setTimeout(()=>{
+      document.querySelectorAll('#checklist .ck').forEach(c=>c.checked=false);
+      document.getElementById('attestBox').checked=false; updatePost();
+    }, 400);
+  }
+</script>
+</body>
+</html>

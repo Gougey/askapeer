@@ -1,0 +1,10 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
+
+# Node (for when the real build lands)
+node_modules/
+dist/
+.env
+.env.*
