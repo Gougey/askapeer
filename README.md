@@ -15,12 +15,12 @@ Pre-sign-off. The [PRD](docs/askapeer-prd-v0.1.md) is in stakeholder review, wit
 | `docs/askapeer-prd-v0.1.md` | The PRD — single source of truth for scope, personas, verification/pseudonymity model, monetisation, roadmap, and open decisions. |
 | `docs/archive/` | Earlier working documents, superseded by the PRD. |
 | `docs/AHP_Research_Feed_Design_Conversation.md` | Design discussion behind the research-feed prototype below. |
-| `prototypes/mobile-lookfeel/` | **Mobile look-and-feel prototype** — static HTML, mock content only. No backend, auth, verification, or payment. |
-| `prototypes/research-feed/` | **Research feed proof of concept** — a working Node app pulling live literature from Europe PMC + OpenAlex, rule-based tagging, and explainable ranking against a member's interest tags. Deployed at https://askapeer-research-feed.fly.dev/. |
+| `prototypes/mobile-lookfeel/` | **Mobile look-and-feel prototype** — static HTML, mock content only, no live data. No backend, auth, verification, or payment. |
+| `prototypes/research-feed/` | **The same mobile prototype, with a live "Your feed"** — a Node app pulling real literature from Europe PMC + OpenAlex, rule-based tagging, and explainable ranking against interest tags picked on the Profile pane. Deployed at https://askapeer-research-feed.fly.dev/. |
 
 ## Running the prototypes
 
-### Mobile look-and-feel prototype
+### Mobile look-and-feel prototype (static, no live data)
 
 ```bash
 cd prototypes/mobile-lookfeel
@@ -29,14 +29,14 @@ python -m http.server 5178
 
 Visit http://localhost:5178 — best viewed in a mobile viewport. See `prototypes/mobile-lookfeel/README.md` for the interaction design it validates (anonymity shown rather than stated, no photos or specialty labels, kudos as the only status signal, and a case-discussion flow that can't be posted until de-identification and attestation are complete).
 
-### Research feed prototype
+### Mobile prototype with live research feed
 
 ```bash
 cd prototypes/research-feed
 node server.js
 ```
 
-See `prototypes/research-feed/README.md` for what it demonstrates, its known limitations, and how to redeploy it.
+Same mobile shell as above, but "Your feed" and "Areas you follow" are wired to real data. See `prototypes/research-feed/README.md` for what it demonstrates, its known limitations, and how to redeploy it.
 
 ## Open decisions
 
