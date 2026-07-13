@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Askapeer — Research Feed Prototype</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Askapeer <span class="subtle">Research Feed</span></h1>
+    <p class="tagline">Proof of concept — personalised sports medicine &amp; physiotherapy literature feed</p>
+  </header>
+
+  <main>
+    <section class="panel" id="tag-panel">
+      <h2>Your interests</h2>
+      <p class="hint">Pick a few topics. The feed pulls live from Europe PMC and OpenAlex, tags each article, and ranks it against your selections.</p>
+      <div id="tag-groups"></div>
+      <button id="load-feed">Get my feed</button>
+    </section>
+
+    <section class="panel feed-panel">
+      <div class="feed-header">
+        <h2>Your feed</h2>
+        <span id="feed-status" class="status"></span>
+      </div>
+      <div id="feed"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Prototype only — not connected to Askapeer's member accounts or subscription data. Sources: Europe PMC, OpenAlex.</p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

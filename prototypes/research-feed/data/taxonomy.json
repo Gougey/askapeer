@@ -1,0 +1,40 @@
+{
+  "clinicalAreas": [
+    "Musculoskeletal",
+    "Sports Rehabilitation",
+    "Concussion & Head Injury",
+    "Female Athlete Health",
+    "Paediatric Sport"
+  ],
+  "conditions": [
+    "ACL Injury",
+    "Low Back Pain",
+    "Tendinopathy",
+    "Osteoarthritis",
+    "Hamstring Strain",
+    "Shoulder Impingement",
+    "Stress Fracture",
+    "Ankle Sprain",
+    "Concussion"
+  ],
+  "interventions": [
+    "Exercise Therapy",
+    "Manual Therapy",
+    "Strength Training",
+    "Blood Flow Restriction Training",
+    "Plyometrics",
+    "Return to Play Protocols",
+    "Load Management",
+    "Patient Education"
+  ],
+  "evidenceTypeWeights": {
+    "Systematic Review": 1.0,
+    "Meta-Analysis": 1.0,
+    "Guideline": 0.9,
+    "Randomised Controlled Trial": 0.8,
+    "Cohort Study": 0.5,
+    "Case Report": 0.2,
+    "Preprint": 0.1,
+    "Journal Article": 0.3
+  }
+}
