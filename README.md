@@ -2,36 +2,43 @@
 
 A verified-only, pseudonymous professional network for sports medicine practitioners — *"the no-ego sports medicine network."* Every member is a qualified, registered professional, but no one knows whether they're a senior consultant or a first-year graduate. Ideas win on merit, not rank.
 
-## This repo
+**Founding team**: Adrian Hall (technical lead), Paul Gouge (business & technical), Andrew Renshaw (clinical domain expert & originator).
 
-An early **look-and-feel prototype** of the mobile web experience. It is a self-contained, static HTML file with mock content — **no backend, authentication, identity verification, or payment**. The goal at this stage is to validate the shape and feel of the app before building anything real.
+## Status
 
-### The three areas
+Pre-sign-off. The [PRD](docs/askapeer-prd-v0.1.md) is in stakeholder review, with 8 open decisions (FD-1 through FD-8, see PRD §15). No production build exists yet — this repo currently holds the PRD and two early, disposable prototypes built to validate feel and technical concept ahead of any committed build.
 
-Modelled on the LinkedIn feed / messages / notifications split:
+## What's in this repo
 
-- **Feed** — peer-reviewed articles filtered to the body areas you follow.
-- **Discussions** — live Q&A threads from verified peers, ranked by kudos, including structured de-identified case discussions.
-- **Activity** — your own questions and the responses coming back.
+| Path | What it is |
+|---|---|
+| `docs/askapeer-prd-v0.1.md` | The PRD — single source of truth for scope, personas, verification/pseudonymity model, monetisation, roadmap, and open decisions. |
+| `docs/archive/` | Earlier working documents, superseded by the PRD. |
+| `docs/AHP_Research_Feed_Design_Conversation.md` | Design discussion behind the research-feed prototype below. |
+| `index.html`, `manifest.webmanifest`, `assets/` | **Mobile look-and-feel prototype** — static HTML, mock content only. No backend, auth, verification, or payment. |
+| `prototypes/research-feed/` | **Research feed proof of concept** — a working Node app pulling live literature from Europe PMC + OpenAlex, rule-based tagging, and explainable ranking against a member's interest tags. Deployed at https://askapeer-research-feed.fly.dev/. |
 
-Plus a central **Ask** action to post a question or a de-identified case, and a pseudonymous **Profile**.
+## Running the prototypes
 
-### Design principles reflected in the prototype
+### Mobile look-and-feel prototype
 
-- **Anonymity shown, not stated** — no photos anywhere; handles use monogram tiles; no specialty, grade, or employer is ever displayed. Kudos is the only status signal.
-- **Mobile-first** — bottom tab bar, thumb-reachable Ask button, horizontal swipe between sections.
-- **Patient safety by design** — a case discussion cannot be posted until every de-identification checklist item and the attestation are complete.
-
-## Running it
-
-It's a single static file. Open `index.html` directly, or serve the folder:
+Single static file at the repo root:
 
 ```bash
 python -m http.server 5178
 ```
 
-Then visit http://localhost:5178 — best viewed in a mobile viewport.
+Visit http://localhost:5178 — best viewed in a mobile viewport. Modelled on a feed / discussions / activity split (see `index.html` for the current interaction design: anonymity shown rather than stated, no photos or specialty labels, kudos as the only status signal, and a case-discussion flow that can't be posted until de-identification and attestation are complete).
 
-## Status
+### Research feed prototype
 
-Pre-sign-off prototype. See the product requirements document (PRD v0.1) for full scope, personas, verification/trust model, and the open stakeholder decisions (FD-1 to FD-8).
+```bash
+cd prototypes/research-feed
+node server.js
+```
+
+See `prototypes/research-feed/README.md` for what it demonstrates, its known limitations, and how to redeploy it.
+
+## Open decisions
+
+See PRD §15 (FD-1 through FD-8) — none of these are assumed closed. Andrew Renshaw's input is particularly needed on FD-1 and FD-6.

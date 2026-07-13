@@ -8,14 +8,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The platform launches UK-first (web), with native iOS/Android and international expansion in later phases.
 
-No code exists yet — the repository is in the planning/requirements phase.
+See `README.md` for what currently exists in this repo (the PRD plus two early, disposable prototypes — a mobile look-and-feel prototype and a research-feed proof of concept) and how to run each. Neither prototype is the production build; production architecture is still undecided.
 
 **Founding team**: Adrian Hall (technical lead), Paul Gouge (business & technical), Andrew Renshaw (clinical domain expert & originator).
 
 ## Key documents
 
-- `docs/askapeer-prd-v0.1.md` — **Source of truth.** Full PRD v0.1 (June 2026): problem statement, personas, MVP scope (MoSCoW), verification model, pseudonymity framework, case discussion policy, monetisation, phased roadmap, KPIs, risks, and 8 open stakeholder decisions (FD-1 through FD-8).
+- `docs/askapeer-prd-v0.1.md` — **Source of truth.** Full PRD v0.1 (June 2026): problem statement, personas, MVP scope (MoSCoW), verification model, pseudonymity framework, case discussion policy, monetisation, phased roadmap, KPIs, risks, and 8 open stakeholder decisions (FD-1 through FD-8). The MVP scope, monetisation, and FD tables below are condensed from this document for quick reference — if they ever diverge, the PRD wins.
 - `docs/archive/` — Earlier working documents retained for context: original requirements spec, Sermo feature inventory, and Andrew Renshaw's founding concept document. Not authoritative — superseded by the PRD.
+- `docs/AHP_Research_Feed_Design_Conversation.md` — design discussion behind the research-feed prototype in `prototypes/research-feed/`.
+- `README.md` — human-facing repo overview: what's here, how to run the prototypes. This file (`CLAUDE.md`) covers domain constraints and condensed PRD reference for AI-assisted development instead of repeating that overview.
 
 ## Domain constraints that must inform every design decision
 
