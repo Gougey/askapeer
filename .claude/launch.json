@@ -5,6 +5,7 @@
       "name": "askapeer",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "5178"],
+      "cwd": "prototypes/mobile-lookfeel",
       "port": 5178
     }
   ]
