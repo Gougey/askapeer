@@ -794,13 +794,17 @@
   // prototypes/research-feed/data/taxonomy.json exactly — this is a
   // provisional stand-in for the forum's real taxonomy, which is still an
   // open stakeholder decision (PRD FD-4).
-  const ALL_TAGS = ['ACL Injury','Low Back Pain','Tendinopathy','Osteoarthritis','Hamstring Strain','Shoulder Impingement','Stress Fracture','Ankle Sprain','Concussion'];
-  const DEFAULT_FOLLOWED = ['ACL Injury','Low Back Pain','Tendinopathy','Concussion'];
+  const ALL_TAGS = ['Lumbar spine','Abdominal','Pelvis','Hip','Groin','Knee','Ankle','Foot','Hamstring','Quadriceps','Adductor','Calf','Anterior cruciate ligament','Osteochondral','Tendinopathy','Achilles'];
+  const DEFAULT_FOLLOWED = ALL_TAGS.slice();
 
   function loadFollowed(){
     try {
       const s = JSON.parse(localStorage.getItem('askapeer_followed'));
-      return Array.isArray(s) && s.length ? s : DEFAULT_FOLLOWED.slice();
+      // Filter out anything from a previous tag vocabulary (localStorage
+      // persists across deploys, so a returning browser could still hold
+      // tags that no longer exist in ALL_TAGS).
+      const valid = Array.isArray(s) ? s.filter(t => ALL_TAGS.includes(t)) : [];
+      return valid.length ? valid : DEFAULT_FOLLOWED.slice();
     } catch(e){ return DEFAULT_FOLLOWED.slice(); }
   }
   function saveFollowed(tags){ localStorage.setItem('askapeer_followed', JSON.stringify(tags)); }

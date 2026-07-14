@@ -11,7 +11,7 @@ const taxonomy = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'taxonomy.js
 // Query one tag at a time (not OR-batched) so every tag is guaranteed
 // some cached coverage — a batched OR query lets common tags crowd rarer
 // ones out of the fixed page size, leaving some tags with zero results.
-const allTags = [...taxonomy.clinicalAreas, ...taxonomy.conditions, ...taxonomy.interventions];
+const allTags = [...taxonomy.conditions];
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));

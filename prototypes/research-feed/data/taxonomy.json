@@ -1,31 +1,21 @@
 {
-  "clinicalAreas": [
-    "Musculoskeletal",
-    "Sports Rehabilitation",
-    "Concussion & Head Injury",
-    "Female Athlete Health",
-    "Paediatric Sport"
-  ],
   "conditions": [
-    "ACL Injury",
-    "Low Back Pain",
+    "Lumbar spine",
+    "Abdominal",
+    "Pelvis",
+    "Hip",
+    "Groin",
+    "Knee",
+    "Ankle",
+    "Foot",
+    "Hamstring",
+    "Quadriceps",
+    "Adductor",
+    "Calf",
+    "Anterior cruciate ligament",
+    "Osteochondral",
     "Tendinopathy",
-    "Osteoarthritis",
-    "Hamstring Strain",
-    "Shoulder Impingement",
-    "Stress Fracture",
-    "Ankle Sprain",
-    "Concussion"
-  ],
-  "interventions": [
-    "Exercise Therapy",
-    "Manual Therapy",
-    "Strength Training",
-    "Blood Flow Restriction Training",
-    "Plyometrics",
-    "Return to Play Protocols",
-    "Load Management",
-    "Patient Education"
+    "Achilles"
   ],
   "evidenceTypeWeights": {
     "Systematic Review": 1.0,
