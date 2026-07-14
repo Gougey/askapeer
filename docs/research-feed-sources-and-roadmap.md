@@ -1,6 +1,6 @@
 # Research Feed — What's in the Demo, and What's Possible
 
-*Briefing document for stakeholder discussion (Dave). Companion to the live demo at
+*Briefing document for stakeholder discussion (Andy). Companion to the live demo at
 `prototypes/research-feed/` / https://askapeer-research-feed.fly.dev/.*
 
 ## What's actually running in this demo

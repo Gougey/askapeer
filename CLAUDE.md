@@ -77,3 +77,6 @@ These are unresolved and must not be assumed closed. See Section 15 of the PRD f
 | FD-6 | University partnership as early-adopter seeding strategy (Andrew Renshaw to confirm status) |
 | FD-7 | Brand name "Askapeer" and .com domain — trademark search required |
 | FD-8 | Competitive landscape refresh before committing to development investment |
+
+## Rules
+Whenever writing or amending a .md file, always created a .pdf in the same location
