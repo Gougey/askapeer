@@ -61,8 +61,8 @@ community.moderation_actions           -- immutable: INSERT-only grant
 |---|---|---|
 | `remove_content` | `community.posts`/`comments.status = removed` | EPIC-C |
 | `warn` | No status change; a logged, immutable record a member received a formal warning | This epic |
-| `suspend` | `community.handles.status = suspended`; also see Section 7 for the parallel `identity.members` question | EPIC-B (status), Section 7 (identity linkage) |
-| `expel` | `community.handles.status = expelled`, permanent | EPIC-B (status), Section 7 (identity linkage) |
+| `suspend` | `community.handles.status = suspended`; see Section 7 for whether this should also touch `identity.members` | EPIC-B (status) |
+| `expel` | `community.handles.status = expelled` **and** `identity.members.verification_status = expelled`, both in the same transaction; permanent | EPIC-B (status), Section 7 (identity linkage — resolved) |
 | `request_correction` | Case discussion returns to an editable/unpublished state for resubmission | EPIC-E |
 | `rename_handle` | `community.handles.handle_name` changed, old name recorded in `community.handle_name_history` | EPIC-B |
 
@@ -117,15 +117,17 @@ POST   /v1/admin/handles/:handle_id/reveal-identity   -- Section 5
 
 ---
 
-## 7. The expulsion/re-registration gap
+## 7. The expulsion/re-registration gap — resolved
 
-Flagging here rather than silently resolving it, since it spans three specs (EPIC-A, EPIC-B, and this one) and is exactly the kind of cross-epic conflict you asked to review together once everything's written:
+This section originally flagged a real gap spanning three specs (EPIC-A, EPIC-B, and this one); Adrian resolved it on 2026-07-14 and it's kept here, marked resolved, for the history rather than deleted:
 
-- `identity.members.verification_status` (architecture spec, Section 4.1) is `pending | needs_more_info | approved_verified | rejected | suspended` — **no `expelled` value**.
-- `community.handles.status` (Section 4.2) is `active | suspended | expelled` — **no `rejected`/`needs_more_info` value**, and its `suspended` isn't necessarily the same event as the identity-side `suspended` (EPIC-A's status covers "lapsed registration or policy violation" at the verification level; this epic's `suspend` action is a handle-level moderation action — the two may or may not be intended to be the same underlying state).
-- **The consequence** (first identified in the EPIC-B spec, Section 10): when this epic's `expel` action sets `community.handles.status = expelled`, nothing currently updates `identity.members.verification_status`. Since EPIC-A's own duplicate-registration check (its spec, Section 2) only blocks re-registration for members who are *not* `rejected`, a permanently expelled real person's professional registration is still sitting at `approved_verified` (or whatever it was) — nothing stops them re-registering with the same credentials and receiving a brand-new handle, which seems to directly undermine "immediate and permanent expulsion."
+- `identity.members.verification_status` (architecture spec, Section 4.1) was `pending | needs_more_info | approved_verified | rejected | suspended` — no `expelled` value existed.
+- `community.handles.status` (Section 4.2) is `active | suspended | expelled` — no `rejected`/`needs_more_info` value, and its `suspended` isn't necessarily the same event as the identity-side `suspended` (that question — whether this epic's `suspend` action should also touch `identity.members` — remains genuinely open; see Section 10).
+- **The consequence**: when this epic's `expel` action set `community.handles.status = expelled`, nothing updated `identity.members.verification_status`, so a permanently expelled person's registration was still sitting at `approved_verified` — nothing stopped them re-registering with the same credentials.
 
-**This spec's proposed fix** (to be confirmed, not unilaterally adopted): the `expel` action should also write an `identity.verification_decisions` transition — which requires either adding an `expelled` value to `identity.members.verification_status`, or introducing a separate boolean/flag on `identity.members` that EPIC-A's registration check consults regardless of `verification_status`. Either closes the gap; which one is cleaner is a genuine design choice, not something this spec should decide alone given it touches two already-committed specs. Full write-up deferred to the consolidated review.
+**Decision**: `identity.members.verification_status` gains an `expelled` value (architecture spec amended, Section 4.1). This epic's `expel` action now writes an `identity.verification_decisions` transition to `expelled` in the same transaction as the `community.handles` update (Section 3's table, above). EPIC-A's uniqueness constraint already blocks any non-`rejected` status by construction (its spec, Section 2), so `expelled` is covered automatically — and per Adrian's direction, a blocked reapplication attempt is additionally logged to `identity.reapplication_attempts` and surfaced for admin review (EPIC-A's spec, Section 6), not just silently rejected. Full history in `docs/2026-07-14-technical-specs-open-questions.md`, Section 2.
+
+**Still open**: whether `suspend` should similarly write to `identity.members` (see Section 10) — suspension's temporary/reversible nature makes this a less clear-cut case than expulsion's permanence.
 
 ---
 
@@ -143,13 +145,15 @@ Flagging here rather than silently resolving it, since it spans three specs (EPI
 - **Identity reveal is separately logged**: viewing a report never itself produces an `identity_access_log` row; only `POST .../reveal-identity` does, and it requires a `reason_code`.
 - **Action immutability**: no `UPDATE`/`DELETE` grant exists on `community.moderation_actions` at the database-role level (mirrors the EPIC-A spec's equivalent test for `identity.verification_decisions`).
 - **New action types**: `request_correction` correctly unpublishes the target case discussion (coordinating with EPIC-E's flow); `rename_handle` writes `handle_name_history` and validates against the same blocklist/uniqueness rules as ordinary handle creation (EPIC-B, Section 3).
+- **`expel` writes both statuses atomically**: `community.handles.status = expelled` and `identity.members.verification_status = expelled` both land, or neither does, on a forced failure of either write (same pattern as EPIC-A's Section 10 test for the verification state machine); a subsequent registration attempt using the expelled member's credentials is blocked and logged (EPIC-A spec, Section 10).
 
 ---
 
 ## 10. Open questions
 
 - **`anonymity_violation` as a priority category** (Section 4): proposed here but not a PRD-stated requirement — needs explicit confirmation given the PRD only names patient-information reports as priority.
-- **The expulsion/re-registration gap** (Section 7): needs a cross-epic decision spanning EPIC-A, EPIC-B, and this spec — flagged for the consolidated review rather than resolved here.
+- ~~**The expulsion/re-registration gap**~~ — **resolved 2026-07-14**, see Section 7 above.
+- **Should `suspend` also write to `identity.members.verification_status`** (Section 7): unlike `expel`, this is genuinely unresolved — a handle-level suspension (this epic's action) and the identity-level `suspended` status (EPIC-A's, covering lapsed registration) may or may not be intended as the same event. Needs a decision, though it's lower-stakes than the expulsion case since suspension is reversible either way.
 - **`rename_handle` and `request_correction` as new action types**: proposed here as the natural resolution of two other specs' forward-references (Section 3) — worth a final check that EPIC-B and EPIC-E's specs should indeed be read as pointing here, rather than wanting their own bespoke handling.
 - **No numeric moderation-response SLA** (Section 8): the PRD's KPIs name "must be fast" without a figure — worth a concrete target before building alerting/staffing plans around it.
 - **Full report-category list** (Section 4): `harassment`, `spam`, `other` alongside the two priority categories is this spec's own proposal, not confirmed against the PRD (which doesn't enumerate a full list) — worth a sanity check with Andrew Renshaw given his domain familiarity with what reports are likely to actually look like in practice.

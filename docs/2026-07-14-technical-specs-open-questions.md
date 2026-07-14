@@ -4,12 +4,12 @@
 **Date**: 14 July 2026
 **Author**: Adrian Hall (Technical Lead), compiled with Claude Code
 
-Every open question and flagged conflict from the architecture spec and all nine per-epic technical specs (`docs/superpowers/specs/`), gathered into one place for review. Nothing here has been decided — this document exists so Adrian, Paul, and Andrew can work through them together rather than hunting across ten documents. Each item names its source spec/section so the fuller reasoning can be looked up if needed.
+Every open question and flagged conflict from the architecture spec and all nine per-epic technical specs (`docs/superpowers/specs/`), gathered into one place for review. This document exists so Adrian, Paul, and Andrew can work through them together rather than hunting across ten documents. Each item names its source spec/section so the fuller reasoning can be looked up if needed. Items get moved to Section 2 as they're decided, rather than deleted, so the document also serves as a decision log.
 
 Organised in four parts:
 
 1. [Cross-epic conflicts and gaps](#1-cross-epic-conflicts-and-gaps) — issues that span more than one spec and need a single coordinated answer
-2. [Already resolved](#2-already-resolved) — for traceability, decisions made before this document was compiled
+2. [Already resolved](#2-already-resolved) — decided, kept here for traceability
 3. [Per-epic open questions](#3-per-epic-open-questions) — smaller items local to one spec
 4. [Standing PRD/business items](#4-standing-prdbusiness-items) — carried over from the architecture spec, not new
 
@@ -19,15 +19,7 @@ Organised in four parts:
 
 These are the items most worth discussing as a group, since a decision on one may constrain the others.
 
-### 1.1 The expulsion / re-registration gap
-
-`identity.members.verification_status` (EPIC-A) is `pending | needs_more_info | approved_verified | rejected | suspended`. `community.handles.status` (EPIC-B) is `active | suspended | expelled`. The two enums don't line up: identity has no `expelled` value, and handles has no `rejected`/`needs_more_info` value. Consequence: when EPIC-F's `expel` action sets a handle to `expelled`, nothing updates the identity-side status — so as specced today, a permanently expelled practitioner could re-register with the same professional credentials and receive a brand-new handle, which appears to directly undermine the PRD's "immediate and permanent expulsion" rule (Section 9.3).
-
-**Needs**: a decision on whether to add an `expelled` value to `identity.members.verification_status`, or a separate flag EPIC-A's registration check consults regardless of verification status.
-
-*Source: EPIC-B spec §10, EPIC-F spec §7 (first identified in EPIC-B, fullest write-up in EPIC-F).*
-
-### 1.2 The missing tag-follow mechanism
+### 1.1 The missing tag-follow mechanism
 
 Three separate PRD features assume a member can "follow a tag," but no spec actually builds this:
 - EPIC-C's Should-have "Personalised feed" — "home view based on tags **and handles** followed" (PRD §6.1)
@@ -38,15 +30,15 @@ Three separate PRD features assume a member can "follow a tag," but no spec actu
 
 *Source: EPIC-G spec §7, cross-referenced from EPIC-I spec §4/§9.*
 
-### 1.3 `member_interests` vs. tag-follow — possible duplicate concepts
+### 1.2 `member_interests` vs. tag-follow — possible duplicate concepts
 
-Related to 1.2 but distinct: EPIC-I's `community.member_interests` (a *weighted* interest signal used to score research-article relevance) and the *missing* tag-follow feature (a binary "follow this tag" relationship for forum content) are both, conceptually, "a member's interest in a topic." They could be unified into one mechanism feeding both the research feed and the forum's personalised feed, or deliberately kept separate since they serve different content types with different scoring needs.
+Related to 1.1 but distinct: EPIC-I's `community.member_interests` (a *weighted* interest signal used to score research-article relevance) and the *missing* tag-follow feature (a binary "follow this tag" relationship for forum content) are both, conceptually, "a member's interest in a topic." They could be unified into one mechanism feeding both the research feed and the forum's personalised feed, or deliberately kept separate since they serve different content types with different scoring needs.
 
-**Needs**: a deliberate choice, once 1.2 is resolved — not an assumption either way.
+**Needs**: a deliberate choice, once 1.1 is resolved — not an assumption either way.
 
 *Source: EPIC-I spec §4.*
 
-### 1.4 Taxonomy unification (three unreconciled vocabularies)
+### 1.3 Taxonomy unification (three unreconciled vocabularies)
 
 The forum's category/tag taxonomy (EPIC-C, FD-4's hybrid model), Andrew Renshaw's existing body-area list (referenced in PRD §15/FD-4), and the research-feed prototype's `taxonomy.json` (`prototypes/research-feed/data/taxonomy.json`, whose own README already flags it as "a starting point... not the final FD-4 forum taxonomy") are three overlapping-but-not-identical lists right now. EPIC-I's `member_interests.tag` depends on whichever vocabulary EPIC-C settles on.
 
@@ -54,19 +46,19 @@ The forum's category/tag taxonomy (EPIC-C, FD-4's hybrid model), Andrew Renshaw'
 
 *Source: EPIC-C spec §3 and §11, EPIC-I spec §5.*
 
-### 1.5 Cross-spec schema amendments needed for EPIC-E
+### 1.4 Cross-spec schema amendments needed for EPIC-E
 
 Writing EPIC-E surfaced two small but real changes to specs that were already committed before EPIC-E was drafted:
 - **EPIC-C's `community.posts.status` enum** (currently `published, removed`) needs a `draft` value added, to support case discussions' multi-step publish flow (fill template → checklist → attestation → publish). Ordinary forum posts don't need this; case discussions do.
 - **EPIC-F's moderation `action_type` enum** needs a `request_correction` value, to match PRD §10.4's "request a corrected resubmission" for case discussions with de-identification problems.
 
-**Status**: EPIC-F's spec has already proposed adding `request_correction` (and, separately, `rename_handle` — see 1.6) to its own action-type enum, which would resolve the second bullet. The `draft` status addition to EPIC-C is not yet reflected back into EPIC-C's committed spec.
+**Status**: EPIC-F's spec has already proposed adding `request_correction` (and, separately, `rename_handle` — see 1.5) to its own action-type enum, which would resolve the second bullet. The `draft` status addition to EPIC-C is not yet reflected back into EPIC-C's committed spec.
 
 **Needs**: confirmation that EPIC-F's proposed resolution is accepted, and a decision on whether to amend EPIC-C's spec directly or treat `draft` as an EPIC-E-specific extension.
 
 *Source: EPIC-E spec §9, EPIC-F spec §3.*
 
-### 1.6 Moderator-forced handle rename — where does it live?
+### 1.5 Moderator-forced handle rename — where does it live?
 
 EPIC-B's spec originally proposed a bespoke `POST /v1/admin/handles/:handle_id/rename` endpoint for the case where a handle name itself turns out to be identifying or impersonating. EPIC-F's spec later proposed folding this into its own moderation `action_type` enum as `rename_handle`, on the grounds that a moderator-initiated rename is a moderation action in substance.
 
@@ -74,7 +66,7 @@ EPIC-B's spec originally proposed a bespoke `POST /v1/admin/handles/:handle_id/r
 
 *Source: EPIC-B spec §13, EPIC-F spec §3/§10.*
 
-### 1.7 Two independent access-control gates: moderation status and billing status
+### 1.6 Two independent access-control gates: moderation status and billing status
 
 EPIC-H proposes that community access requires **both** a `community.handles.status` of `active` (EPIC-B/F's concern) **and** a non-lapsed `billing.subscriptions.status` (EPIC-H's concern) — deliberately kept as two separate gates rather than one combined status, on the reasoning that a moderation suspension and a billing lapse are different in kind (resolved by an appeal vs. resolved by paying). This is new design not anticipated by the architecture spec.
 
@@ -86,9 +78,10 @@ EPIC-H proposes that community access requires **both** a `community.handles.sta
 
 ## 2. Already resolved
 
-For the record — decided in this conversation, ahead of this consolidated review:
+Decided, kept here for the record rather than deleted.
 
-- **FD-5 professional contact link**: confirmed **not** to build a LinkedIn/contact-link field on the handle profile. EPIC-B's spec had already flagged that the PRD's FD-5 discussion (recommending such a field, §16) directly conflicts with the PRD's own zero-tolerance anonymity rule (§9.3, "deliberately identifying yourself" is an expulsion offence). Decision: leave it out. *(EPIC-B spec §1, §13 — should be read as resolved, not open.)*
+- **The expulsion/re-registration gap — resolved 2026-07-14.** `identity.members.verification_status` (EPIC-A) had no `expelled` value, while `community.handles.status` (EPIC-B) does — so when EPIC-F's `expel` action set a handle to `expelled`, nothing updated the identity-side status, and as specced a permanently expelled practitioner could re-register with the same professional credentials and get a brand-new handle. **Adrian's decision**: add an `expelled` value to `identity.members.verification_status`; if an expelled member attempts to re-register, the attempt must be prevented *and* logged/reviewed, not just silently rejected. Implemented as: the architecture spec's `identity.members` schema now includes `expelled` (Section 4.1, amended); EPIC-F's `expel` action writes both `community.handles.status = expelled` and an `identity.verification_decisions` transition to `expelled`, atomically (its spec, §3, §7); EPIC-A's existing uniqueness constraint blocks any non-`rejected` status by construction, so `expelled` is covered automatically, and a blocked attempt now additionally writes to a new `identity.reapplication_attempts` table, surfaced via `GET /v1/admin/reapplication-attempts` for admin review (EPIC-A spec, §2, §6, §8). One related sub-question remains open — see EPIC-F's per-epic list in Section 3, and the exact applicant-facing rejection wording — see EPIC-A's per-epic list in Section 3. *(Architecture spec — amendment note above §1; EPIC-A spec §2/§6/§8/§10/§11; EPIC-B spec §10/§13; EPIC-F spec §3/§7/§9/§10.)*
+- **FD-5 professional contact link**: confirmed **not** to build a LinkedIn/contact-link field on the handle profile. EPIC-B's spec had already flagged that the PRD's FD-5 discussion (recommending such a field, §16) directly conflicts with the PRD's own zero-tolerance anonymity rule (§9.3, "deliberately identifying yourself" is an expulsion offence). Decision: leave it out. *(EPIC-B spec §1, §13.)*
 
 ---
 
@@ -102,19 +95,20 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 - **Appeals process**: the PRD doesn't describe one beyond reapplying from scratch — worth confirming whether MVP needs something more formal.
 - **Onfido webhook timeout**: 72 hours is this spec's own placeholder, not sourced from Onfido's actual typical turnaround.
 - **Identity-access-log boundary**: confirm that routine admin verification-queue review is correctly *not* treated as an `identity_access_log` event — this is an interpretation of PRD §9.4, not an explicit statement.
+- **Exact applicant-facing rejection wording for the expelled-reapplication case** (§2 above): this spec proposes a generic message that doesn't confirm expelled status to the applicant — worth a final check that this is the right call versus a legal/compliance preference for more explicit language.
 
 ### EPIC-B — Handles/Profile
 - **Handle length/character rules**: the 3–30 character, alphanumeric-plus-underscore/hyphen proposal is a placeholder needing a real decision (no architectural weight either way).
 - **Blocklist storage/maintenance**: config table vs. code constant — implementation detail, needs picking before build.
 
-*(EPIC-B's other two open items — moderator-forced rename, and the expulsion/re-registration gap — are covered in §1.6 and §1.1 above.)*
+*(EPIC-B's other flagged item, moderator-forced rename, is covered in §1.5 above. The expulsion/re-registration gap is resolved — see §2.)*
 
 ### EPIC-C — Forum
 - **Search's PRD hedge**: the PRD lists full-text search as Must-have but flags it "(to be discussed/confirmed)" in the same table row — worth checking whether that hedge is still live or was resolved verbally and never updated in the document.
 - **Edit/delete policy**: entirely this spec's own proposal (15-minute no-marker edit window, case-discussion delete restriction, whether kudos-bearing comments should be edit-restricted) — needs sign-off, no PRD basis.
 - **Could-have scope confirmation**: whether best-answer marker, image attachments, or polls are actually being built for MVP, or deferred — a sequencing/resourcing question, not architectural.
 
-*(Taxonomy unification is covered in §1.4 above.)*
+*(Taxonomy unification is covered in §1.3 above.)*
 
 ### EPIC-D — Kudos
 - **Idempotency of a repeated award**: should awarding kudos twice 409, or silently no-op? Minor, but affects client error-handling.
@@ -128,21 +122,22 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 - **Corrected resubmission mechanics**: does a correction create a new post, or unpublish/re-edit/re-attest the same one? The PRD names the action, not the mechanics.
 - **Draft visibility to moderators**: should an unattested, in-progress draft ever be visible to moderation (e.g. a safety escalation before publish)? Likely no, but not addressed by the PRD.
 
-*(The two schema-amendment items are covered in §1.5 above.)*
+*(The two schema-amendment items are covered in §1.4 above.)*
 
 ### EPIC-F — Moderation
 - **`anonymity_violation` as a priority report category**: proposed by this spec (on the reasoning that the zero-tolerance anonymity rule is at least as serious as the patient-information rule, which *is* explicitly named as priority in PRD §10.4) but not a PRD-stated requirement — needs explicit confirmation.
+- **Should `suspend` also write to `identity.members.verification_status`**: unlike the now-resolved `expel` case (§2 above), this is genuinely open — a handle-level suspension (this epic's action) and the identity-level `suspended` status (EPIC-A's, covering lapsed registration) may or may not be intended as the same event. Lower-stakes than expulsion since suspension is reversible either way, but still needs a decision.
 - **No numeric moderation-response SLA**: the PRD's KPIs say response time "must be fast" without a figure — needed before building alerting/staffing plans.
 - **Full report-category list**: `harassment`, `spam`, `other` alongside the two priority categories is this spec's own proposal — worth sanity-checking with Andrew given his domain familiarity with what reports will actually look like in practice.
 
-*(The expulsion/re-registration gap and the new action-type additions are covered in §1.1, §1.5, and §1.6 above.)*
+*(The new action-type additions — `request_correction`, `rename_handle` — are covered in §1.4 and §1.5 above. The expulsion/re-registration gap is resolved — see §2.)*
 
 ### EPIC-G — Notifications
 - **Column-level hardening of `NotificationService`'s identity access**: should a database view restrict it to `email` only (rather than relying on application discipline over a full-table grant on `identity.members`)? Recommended, not yet built.
 - **Non-optional `verification_status_change` email**: this spec proposes members can't disable this one notification channel, since it's account-critical — needs confirmation that removing member control here is acceptable.
-- **Digest cadence/unsubscribe mechanics**: assumed weekly, email-only per the PRD's own naming — no further design done pending the tag-follow gap (§1.2) being resolved first.
+- **Digest cadence/unsubscribe mechanics**: assumed weekly, email-only per the PRD's own naming — no further design done pending the tag-follow gap (§1.1) being resolved first.
 
-*(The tag-follow gap itself is covered in §1.2 above.)*
+*(The tag-follow gap itself is covered in §1.1 above.)*
 
 ### EPIC-H — Subscription/Payments
 - **FD-2 itself**: pricing, trial length, and processor choice (Stripe vs. WorldPay) all still formally open — this spec is written to be indifferent to the outcome, but a concrete choice is needed to actually build against.
@@ -150,13 +145,13 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 - **Cancellation access timing**: this spec proposes access continues until the end of the paid period, not immediate revocation — standard SaaS practice, but needs confirming as a deliberate choice.
 - **Trial-length configurability**: the data model allows a per-cohort trial length (relevant to the university-partnership idea, FD-6), but no invite-code/cohort feature is designed — needs a decision once FD-6 is confirmed one way or the other.
 
-*(The billing-lapse access-gating design is covered in §1.7 above.)*
+*(The billing-lapse access-gating design is covered in §1.6 above.)*
 
 ### EPIC-I — Research Feed
 - **PRD update still pending**: EPIC-I needs adding to PRD §6.1's MoSCoW list — a standing item, not new.
 - **Three carried-forward pre-launch items** (unchanged from the architecture spec): DOAJ integration (predatory-journal check), Retraction Watch/Crossref integration (withdrawn-paper flagging), and a direct enquiry to PEDro about API access. Plus an unresolved abstract-redistribution licensing review, relevant only if a commercial source (Elsevier/Scopus/Cochrane) is ever added.
 
-*(The `member_interests`/tag-follow and taxonomy questions are covered in §1.3 and §1.4 above.)*
+*(The `member_interests`/tag-follow and taxonomy questions are covered in §1.2 and §1.3 above.)*
 
 ---
 

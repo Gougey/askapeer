@@ -54,12 +54,30 @@ identity.members
                                                 -- for the international-expansion
                                                 -- goal without needing a migration
   verification_status   enum(pending, needs_more_info, approved_verified,
-                              rejected, suspended)
+                              rejected, suspended, expelled)
   status_updated_at     timestamptz
   created_at            timestamptz
 
   unique(professional_body, registration_number, registration_country)
-    -- prevents the same real-world registration being used to create two accounts
+    where verification_status != 'rejected'
+    -- prevents the same real-world registration being used to create two accounts.
+    -- Deliberately a blacklist (excludes only 'rejected'), not a whitelist of the
+    -- statuses that should block re-registration — so any status added to the enum
+    -- in future (expelled included) is blocked by default without a constraint
+    -- change. This is the fix for the expulsion/re-registration gap identified
+    -- while drafting EPIC-B/EPIC-F: see Section 8 and
+    -- docs/2026-07-14-technical-specs-open-questions.md, Section 2.
+
+identity.reapplication_attempts        -- immutable: INSERT-only grant
+  id                    uuid PK
+  matched_member_id     uuid FK -> identity.members   -- the existing row that
+                                                          blocked the attempt
+  attempted_legal_name  text
+  attempted_email       text
+  professional_body     enum(hcpc, gmc, basrat, sst)
+  registration_number   text
+  registration_country  text
+  created_at            timestamptz
 
 identity.verification_evidence
   id            uuid PK
@@ -82,7 +100,9 @@ identity.verification_decisions        -- immutable: INSERT-only grant
 
 **Why a uniqueness constraint on `(professional_body, registration_number, registration_country)`**: the PRD doesn't mention duplicate-registration abuse directly, but the trust proposition ("every member is a qualified professional") is undermined if one real registration can back multiple pseudonymous handles — that would let a single practitioner run sockpuppet accounts to manufacture apparent consensus. Enforced at the database level, not just application logic, consistent with the architecture spec's general approach of using schema constraints over code discipline.
 
-No new table is needed for the admin review queue itself — it's a filtered view over `identity.members` (Section 6), not separate storage.
+**Expelled-member reapplication is deliberately more than a silent 409.** Adrian's decision (2026-07-14, resolving the gap flagged in the EPIC-B and EPIC-F specs): an expelled member attempting to re-register must be prevented *and* the attempt logged and reviewed, not just quietly rejected like an ordinary duplicate-registration case. When `POST /v1/auth/register`'s uniqueness check fails specifically because the matched row is `expelled` (as opposed to `pending`/`approved_verified`/`suspended`, which are ordinary "you already have an account in progress" cases), the API additionally writes an `identity.reapplication_attempts` row and surfaces it to admins (Section 6). The applicant-facing response is a generic registration-rejected message in either case — it deliberately does not confirm to the applicant that the system recognised them as previously expelled, since doing so would hand a bad-faith actor confirmation their identity was detected. This distinction (generic response to the applicant, specific logging internally) is this spec's own proposal, flagged in Section 11 alongside the exact wording question.
+
+No new table is needed for the admin review queue itself — it's a filtered view over `identity.members` (Section 6), not separate storage. `identity.reapplication_attempts` (above) is a separate, append-only log reviewed the same way (Section 6).
 
 ---
 
@@ -121,12 +141,19 @@ No new table is needed for the admin review queue itself — it's a filtered vie
           |
           v
      suspended
+
+          (also, from approved_verified, via EPIC-F's `expel` moderation
+           action rather than anything internal to this epic's own worker)
+          |
+          v
+      expelled   -- terminal; see Section 8 for the reapplication block
 ```
 
 Rules:
 - Every transition is written as an `identity.verification_decisions` row (`from_status`, `to_status`, `decided_by`, `reason`) — no status field update happens without a corresponding decision row in the same database transaction. This is what makes the audit trail authoritative rather than incidental.
 - `needs_more_info` is a sub-state reachable only from the admin queue, not from the automated path directly — automated checks either resolve cleanly (both pass) or fall through to manual review; only a human admin decides that a specific applicant should be asked for more evidence rather than being outright rejected or escalated further.
 - `suspended` is reachable from `approved_verified` only, per PRD Section 8.1 Step 4 (lapsed registration or policy violation) — always admin/system-initiated, never self-service.
+- **`expelled` is reachable from `approved_verified` only, is terminal (no transition out), and is written by EPIC-F's `expel` moderation action, not by anything in this epic's own verification worker.** It's distinct from `suspended`: suspension is framed by the PRD (Section 8.1) as potentially temporary (a lapsed registration can be corrected), while expulsion is the zero-tolerance rule's permanent outcome (PRD Section 9.3) — the two must not be conflated into one status, which is exactly the mistake the original architecture spec made by not having an `expelled` value at all. See EPIC-F's spec, Section 3, for the write path.
 - There is no path back to `pending` — `needs_more_info` is the only "still in progress" state after the initial automated pass, keeping the state machine's "still awaiting a human decision" states to one, not two overlapping ones.
 
 ---
@@ -203,6 +230,8 @@ A view over `identity.members` where `verification_status IN (pending, needs_mor
 
 Verification is founder-led at MVP scale (PRD Section 8.3) — this queue is designed for a handful of admins reviewing a low volume of edge cases per day, not a high-throughput ops tool. A dedicated verification-operations function, if the platform scales, is a staffing decision, not something this spec needs to design ahead of.
 
+**A separate admin view, `GET /v1/admin/reapplication-attempts`, lists `identity.reapplication_attempts` rows for review** — distinct from the verification queue above, since these aren't applicants awaiting a decision (the registration was already blocked automatically) but flagged events an admin should be aware of, e.g. to judge whether a repeat or aggressive reapplication pattern warrants escalation beyond the automatic block (a legal referral, for instance, if the PRD's underlying policy violation was serious enough). No ordering/priority logic beyond newest-first is specified here, since volume is expected to be very low.
+
 ---
 
 ## 7. Authentication handoff
@@ -223,6 +252,7 @@ This spec does not define the handle-creation endpoint itself (`community.handle
 - **BASRAT/SST have no confirmed public lookup API** (see Section 11) — until confirmed, these two professional bodies route every applicant straight to manual review regardless of Onfido outcome. This is a deliberate, explicit fallback, not a silent gap.
 - **Onfido webhook never arrives** (delivery failure, applicant abandons the document-upload step): job has a timeout (proposed: 72 hours) after which it's surfaced in the admin queue as `needs_more_info` with an automatic reason of "identity check not completed," rather than leaving the applicant in `pending` indefinitely with no visible next step.
 - **Duplicate registration attempt** on an already-`rejected` member: the unique constraint in Section 2 only blocks non-rejected rows, so a genuinely rejected applicant isn't permanently locked out of ever reapplying (e.g. after resolving a registration lapse) — a fresh registration attempt creates a new `identity.members` row. Whether this needs a cooldown period or admin awareness of the prior rejection is an open question (Section 11).
+- **Duplicate registration attempt on an `expelled` member**: resolved (2026-07-14) — the same unique constraint blocks it, since `expelled` isn't `rejected` (Section 2), and the attempt is additionally logged to `identity.reapplication_attempts` for admin review (Section 6). This was previously a real gap (identified while drafting the EPIC-B and EPIC-F specs, where `identity.members` had no `expelled` value at all and expulsion never touched this table) — see `docs/2026-07-14-technical-specs-open-questions.md`, Section 2, for the history.
 - **Applicant emails don't match register-held contact details**: not a verification signal — the register lookup matches on `legal_name` + `registration_number`, not email, since professional registers don't reliably expose a queryable email field.
 
 ---
@@ -238,7 +268,8 @@ This spec does not define the handle-creation endpoint itself (`community.handle
 ## 10. Test plan
 
 - **State machine**: every transition in Section 3 has a corresponding test; explicitly test that no transition exists that skips writing a `verification_decisions` row (e.g. by asserting the two writes happen in one database transaction and a forced failure of either rolls back both).
-- **Uniqueness constraint**: registering the same `(professional_body, registration_number, registration_country)` twice while the first is `pending`/`approved_verified`/`needs_more_info`/`suspended` is rejected; while `rejected`, a new row is allowed.
+- **Uniqueness constraint**: registering the same `(professional_body, registration_number, registration_country)` twice while the first is `pending`/`approved_verified`/`needs_more_info`/`suspended`/`expelled` is rejected; while `rejected`, a new row is allowed.
+- **Expelled reapplication logging**: a blocked registration attempt matching an `expelled` row writes exactly one `identity.reapplication_attempts` record with the correct `matched_member_id`, and the applicant-facing response is indistinguishable from an ordinary duplicate-registration rejection (no confirmation of expelled status leaks to the caller).
 - **Worker decision table**: each row of the Section 5 table covered by a test with mocked register-lookup and Onfido responses, including the "register unavailable" case.
 - **Access-control regression** (extends the architecture spec's Section 9 cross-schema test): confirm no EPIC-A endpoint response DTO includes `legal_name` or raw `identity.members` fields beyond `member_id` and `verification_status`.
 - **Timeout handling**: simulate an Onfido webhook that never arrives and assert the applicant surfaces in the admin queue after the timeout window, not stuck silently in `pending`.
@@ -252,3 +283,4 @@ This spec does not define the handle-creation endpoint itself (`community.handle
 - **Appeals process**: PRD Section 8.1 says a rejection reason is provided but doesn't describe an appeals mechanism beyond reapplying from scratch. Worth confirming with Andrew Renshaw/Paul Gouge whether MVP needs anything more formal.
 - **Onfido webhook timeout value**: 72 hours is this spec's proposal, not a PRD-specified figure — worth a sanity check against Onfido's own typical turnaround time before committing to it.
 - **Identity-access-log boundary (Section 9)**: confirm the reasoning that routine admin verification-queue review is not an `identity_access_log` event is correct before build — it's a meaningful interpretation of PRD Section 9.4, not an explicit PRD statement.
+- **Exact applicant-facing rejection wording for the expelled-reapplication case** (Section 2): this spec proposes a generic message that doesn't confirm expelled status to the applicant — worth a final check that this is the right call versus, say, a legal/compliance preference for more explicit language.

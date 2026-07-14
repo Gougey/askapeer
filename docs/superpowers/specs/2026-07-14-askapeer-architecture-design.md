@@ -7,6 +7,8 @@
 
 Source of truth for product requirements: `docs/askapeer-prd-v0.1.md`.
 
+**Amendment, 14 July 2026 (post-approval)**: `identity.members.verification_status` (Section 4.1) gains an `expelled` value, resolving a gap identified while drafting the EPIC-B and EPIC-F specs — see `docs/2026-07-14-technical-specs-open-questions.md`, Section 2, for the full history.
+
 ---
 
 ## Contents
@@ -154,7 +156,7 @@ identity.members
   professional_body     enum(hcpc, gmc, basrat, sst)
   registration_number   text
   registration_country  text
-  verification_status   enum(pending, needs_more_info, approved_verified, rejected, suspended)
+  verification_status   enum(pending, needs_more_info, approved_verified, rejected, suspended, expelled)
   status_updated_at     timestamptz
   created_at            timestamptz
 
