@@ -14,7 +14,7 @@ Source of truth: the architecture spec's Section 8 (`docs/superpowers/specs/2026
 1. [Scope](#1-scope)
 2. [Data model (as already specified)](#2-data-model-as-already-specified)
 3. [Member-facing interest management](#3-member-facing-interest-management)
-4. [`member_interests` vs. the missing tag-follow feature](#4-member_interests-vs-the-missing-tag-follow-feature)
+4. [`member_interests` vs. EPIC-B's `community.follows`](#4-member_interests-vs-epic-bs-communityfollows)
 5. [Taxonomy dependency on EPIC-C](#5-taxonomy-dependency-on-epic-c)
 6. [API endpoints](#6-api-endpoints)
 7. [Carried-forward open items](#7-carried-forward-open-items)
@@ -63,9 +63,9 @@ DELETE /v1/research-feed/interests/:tag
 
 ---
 
-## 4. `member_interests` vs. the missing tag-follow feature
+## 4. `member_interests` vs. EPIC-B's `community.follows`
 
-Worth flagging precisely because it's easy to conflate: `community.member_interests` (this epic, weighted, used to score research-literature relevance) and the tag-follow mechanism EPIC-G's spec identified as missing (its Section 7, needed for the forum's Should-have "personalised feed" and "email digest") are **two different concepts that happen to both be "a member's interest in a tag."** One is a weighted relevance signal for an external content stream (research articles); the other would be a binary follow relationship for internal content (forum posts). They could plausibly be unified into a single `community.tag_interests`-style concept feeding both the research feed and the forum's personalised feed — or they could legitimately stay separate given they serve different content types with different scoring needs. This is a real design choice worth making deliberately once EPIC-C/EPIC-G's gap is addressed, not something this spec should resolve unilaterally by either building a duplicate mechanism or assuming unification. Flagged in Section 9 and cross-referenced from EPIC-G's spec.
+Worth flagging precisely because it's easy to conflate: `community.member_interests` (this epic, weighted, used to score research-literature relevance) and `community.follows` (EPIC-B, binary, `target_type = tag` — the unified handle/tag follow mechanism resolved 2026-07-14; see EPIC-B's spec, Section 8, and `docs/2026-07-14-technical-specs-open-questions.md`, Section 2) are **two different concepts that happen to both be "a member's interest in a tag."** One is a weighted relevance signal for an external content stream (research articles); the other is a binary follow relationship, now built, for internal content (forum posts, via EPIC-C's personalised feed and EPIC-G's digest). They could plausibly be unified into a single mechanism feeding both the research feed and the forum's personalised feed — or they could legitimately stay separate given they serve different content types with different scoring needs. This spec deliberately doesn't resolve that unilaterally by either building a duplicate mechanism or assuming unification — flagged in Section 9 as still open, now that the tag-follow side of the question is no longer a gap but an actual table to weigh unification against.
 
 ---
 
@@ -109,6 +109,6 @@ These are already identified in the architecture spec's Section 11 as EPIC-I pre
 ## 9. Open questions
 
 - **PRD update**: EPIC-I still needs adding to Section 6.1's MoSCoW list — a standing item from the architecture spec, restated here since it's this epic specifically that's affected.
-- **`member_interests` vs. tag-follow unification** (Section 4): a genuine design choice spanning this epic, EPIC-C, and EPIC-G — needs a decision once the tag-follow gap (EPIC-G's Section 7) is addressed.
+- **`member_interests` vs. `community.follows` unification** (Section 4): a genuine design choice spanning this epic, EPIC-B, EPIC-C, and EPIC-G — the tag-follow mechanism itself is no longer missing (resolved 2026-07-14), but whether it should be unified with this epic's weighted interests remains open.
 - **Taxonomy reconciliation** (Section 5): depends entirely on EPIC-C's Section 3 resolution — this epic has no independent path to resolving it.
 - **The three carried-forward items** (Section 7): DOAJ/Retraction Watch integration, PEDro enquiry, and licensing review all remain open pre-launch work, unchanged from the architecture spec's own assessment.

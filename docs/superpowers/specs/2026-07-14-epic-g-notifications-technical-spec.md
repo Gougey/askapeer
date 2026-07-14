@@ -17,7 +17,7 @@ Source of truth: `docs/askapeer-prd-v0.1.md`, the Must-have "Notifications" row 
 4. [The pre-handle notification gap](#4-the-pre-handle-notification-gap)
 5. [Notification types and triggers](#5-notification-types-and-triggers)
 6. [Preferences — and what can't be disabled](#6-preferences--and-what-cant-be-disabled)
-7. [Weekly digest and the missing tag-follow feature](#7-weekly-digest-and-the-missing-tag-follow-feature)
+7. [Weekly digest, built on EPIC-B's unified follows table](#7-weekly-digest-built-on-epic-bs-unified-follows-table)
 8. [API endpoints](#8-api-endpoints)
 9. [Non-functional notes specific to EPIC-G](#9-non-functional-notes-specific-to-epic-g)
 10. [Test plan](#10-test-plan)
@@ -89,11 +89,11 @@ Each of the first three is delivered via a BullMQ worker job reacting to the tri
 
 ---
 
-## 7. Weekly digest and the missing tag-follow feature
+## 7. Weekly digest, built on EPIC-B's unified follows table
 
-The PRD's Should-have digest (Section 6.1) is "a weekly digest of top-kudos content in **followed tags**." This surfaces a gap: EPIC-B's spec (already written) only specifies `community.handle_follows` (following a handle), not following a *tag*. The PRD's other Should-have, "Personalised feed" (Section 6.1: "Home view based on tags **and handles** followed"), makes the same assumption. **Neither EPIC-B's spec nor any other written spec currently defines a tag-follow mechanism** — this is a genuine gap across two Should-have features (this epic's digest and EPIC-C's personalised feed), not something this spec can resolve alone since it belongs more naturally in EPIC-B (which owns `handle_follows`) or EPIC-C (which owns tags). Flagged prominently for the consolidated review rather than silently added here.
+**Resolved 2026-07-14** — this section originally flagged a gap: the PRD's Should-have digest (Section 6.1, "top-kudos content in **followed tags**") and EPIC-C's Should-have personalised feed (Section 6.1, "tags **and handles** followed") both assumed a tag-follow mechanism that no spec had built, since EPIC-B originally only specified handle-follows. Adrian's decision (see `docs/2026-07-14-technical-specs-open-questions.md`, Section 2): rather than add a separate tag-follow table, EPIC-B's `community.handle_follows` was generalised into `community.follows` (`target_type` enum of `handle`/`tag`, same discriminator pattern as `community.kudos`/`community.reports`) — see EPIC-B's spec, Section 8.
 
-If it existed, this spec would build the digest as a scheduled BullMQ job querying each member's followed tags (and/or handles) joined against the prior week's kudos-ranked content, delivered by email only (a weekly digest has no obvious in-app equivalent) — but that's contingent on the underlying follow mechanism being specified first.
+This epic builds the digest as a scheduled BullMQ job querying each member's `community.follows` rows (both `target_type = tag` and `target_type = handle`) joined against the prior week's kudos-ranked content, delivered by email only (a weekly digest has no obvious in-app equivalent). This epic is a read-only consumer of `community.follows`, same as EPIC-C's personalised feed (its spec, Section 8) — neither epic owns or duplicates the table.
 
 ---
 
@@ -133,5 +133,5 @@ PUT   /v1/notification-preferences        { type, in_app_enabled, email_enabled 
 
 - **Column-level hardening of `NotificationService`'s identity access** (Section 3): should this be enforced by a database view exposing only `email`, rather than relying on application discipline over a full-table grant? Recommended, not yet built.
 - **Non-optional `verification_status_change` email** (Section 6): needs confirmation — is it acceptable to remove member control over this one notification channel?
-- **Missing tag-follow mechanism** (Section 7): blocks both this epic's weekly digest and EPIC-C's personalised feed as specified in the PRD; needs a decision on which epic owns `community.tag_follows` (or equivalent) before either Should-have can be built as described.
-- **Digest cadence/unsubscribe mechanics**: this spec assumes weekly, email-only, per the PRD's own naming — no further design done here pending the tag-follow gap being resolved first, since building the query logic before the underlying follow relationship exists would be premature.
+- ~~**Missing tag-follow mechanism**~~ — **resolved 2026-07-14**, see Section 7 above and EPIC-B's spec, Section 8.
+- **Digest cadence/unsubscribe mechanics**: this spec assumes weekly, email-only, per the PRD's own naming — no further design beyond that assumption has been done here.

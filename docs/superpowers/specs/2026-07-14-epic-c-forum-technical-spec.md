@@ -18,10 +18,11 @@ Source of truth: `docs/askapeer-prd-v0.1.md`, Section 6.1 (Must/Should/Could fea
 5. [API endpoints](#5-api-endpoints)
 6. [Edit/delete policy](#6-editdelete-policy)
 7. [Could-have features (Section 6.1)](#7-could-have-features-section-61)
-8. [Boundaries with other epics](#8-boundaries-with-other-epics)
-9. [Non-functional notes specific to EPIC-C](#9-non-functional-notes-specific-to-epic-c)
-10. [Test plan](#10-test-plan)
-11. [Open questions](#11-open-questions)
+8. [Personalised feed (Should-have)](#8-personalised-feed-should-have)
+9. [Boundaries with other epics](#9-boundaries-with-other-epics)
+10. [Non-functional notes specific to EPIC-C](#10-non-functional-notes-specific-to-epic-c)
+11. [Test plan](#11-test-plan)
+12. [Open questions](#12-open-questions)
 
 ---
 
@@ -153,8 +154,29 @@ None of these three should be assumed in the MVP build plan — flagged in Secti
 
 ---
 
-## 8. Boundaries with other epics
+## 8. Personalised feed (Should-have)
 
+PRD Section 6.1: "Home view based on tags and handles followed, with a trending/top view as fallback." This depends entirely on `community.follows` — the unified handle-and-tag follow mechanism EPIC-B's spec now owns (its Section 8, generalised 2026-07-14 from an earlier handle-only design; see `docs/2026-07-14-technical-specs-open-questions.md`, Section 2, for that history). This epic doesn't own or duplicate that table — it's a read-only consumer:
+
+```
+GET /v1/feed?cursor=...
+  -> posts whose category/tags match the caller's tag-follows (community.follows,
+     target_type = tag), or whose author matches the caller's handle-follows
+     (target_type = handle), ranked by recency (not kudos — kudos ranks answers
+     within a thread, per EPIC-D, a different question from ranking a feed of
+     distinct posts)
+  -> falls back to a "trending/top" view (e.g. most-kudos posts in the last N
+     days, platform-wide) when the caller follows nothing yet or the followed-
+     content result set is thin — per the PRD's own "fallback" language
+```
+
+No new schema is introduced here — `community.follows` (EPIC-B) and `community.posts`/`post_tags` (this epic, Section 2) are sufficient to build this query. "Trending" itself isn't otherwise defined by the PRD (a simple kudos-in-a-time-window heuristic is this spec's own proposal, flagged in Section 12).
+
+---
+
+## 9. Boundaries with other epics
+
+- **EPIC-B (follows)** owns `community.follows`; this epic reads it (Section 8) filtering both `target_type = tag` and `target_type = handle` for the personalised feed — a read-only consumer, not a second copy of the relationship.
 - **EPIC-E (case discussions)** writes `type = case_discussion` posts through this epic's own `POST /v1/posts` path, but only after its own de-identification checklist and attestation gate — EPIC-E's spec should treat this epic's endpoint as the underlying mechanism it wraps, not duplicate it.
 - **EPIC-D (kudos)** determines comment *display order* within a thread; this epic's `GET /v1/posts/:post_id` response includes comments in whatever order EPIC-D's ranking specifies, treating it as an injected ordering rather than this epic's own `created_at` ordering.
 - **EPIC-F (moderation)** is the only actor that can set `status = removed` on someone else's content, and is what `community.moderation_actions` (architecture spec, Section 4.2) already logs.
@@ -162,7 +184,7 @@ None of these three should be assumed in the MVP build plan — flagged in Secti
 
 ---
 
-## 9. Non-functional notes specific to EPIC-C
+## 10. Non-functional notes specific to EPIC-C
 
 - **Rate limiting on posting/commenting**: not called out specifically in the architecture spec's Section 5.3 (which names auth and reporting endpoints) — worth extending that Redis-backed rate limiting to posting endpoints too, since a forum is an obvious spam target once real users exist.
 - **@mention parsing** must resolve to a `handle_id`, never leak whether a mentioned handle exists if it's `expelled` (mentioning an expelled handle should behave identically to mentioning a nonexistent one, not reveal status).
@@ -170,19 +192,21 @@ None of these three should be assumed in the MVP build plan — flagged in Secti
 
 ---
 
-## 10. Test plan
+## 11. Test plan
 
 - **Category/tag integrity**: a post always has exactly one `category_id` (not nullable); zero-or-more tags.
 - **Soft delete**: deleting a post sets `status = removed`, doesn't cascade-delete comments; a `removed` post's comments remain readable in-thread but the post body is replaced with a removal notice (or however EPIC-F's spec eventually defines display — flagged for reconciliation there).
 - **Search ranking**: a query matching a tag name surfaces the tagged post even when the exact phrase isn't in the body (Section 4).
 - **Edit window**: a comment edited within the proposed 15-minute window shows no `edited_at` marker; after, it does.
 - **Case-discussion delete restriction**: an attested case discussion (once EPIC-E exists to create one) cannot be author-deleted, only moderator-removed.
+- **Personalised feed composition**: a post tagged with a followed tag, or authored by a followed handle, appears in the feed (Section 8); a post matching neither doesn't; the trending fallback activates when the caller follows nothing.
 
 ---
 
-## 11. Open questions
+## 12. Open questions
 
 - **Taxonomy unification** (Section 3): the forum's `category`/`tag` vocabulary, Andrew Renshaw's body-area list, and the research feed's `taxonomy.json` are three overlapping-but-not-identical vocabularies right now. Needs a single controlled vocabulary decided before build, and FD-4 needs formal closure regardless (it's still an open stakeholder decision, not just an implementation detail).
 - **Search's "(to be discussed/confirmed)" hedge** (Section 4): the PRD lists full-text search as Must-have but flags it for discussion in the same breath — worth Adrian confirming with Paul/Andrew whether that hedge is still live or was resolved verbally and just never updated in the document.
 - **Edit/delete policy** (Section 6): entirely this spec's proposal, not a PRD requirement — the 15-minute window, the case-discussion delete restriction, and whether comments with kudos already awarded should be edit-restricted too, all need sign-off.
 - **Could-have scope confirmation** (Section 7): whether any of best-answer marker, image attachments, or polls are actually being built for MVP launch, or deferred — affects sequencing/resourcing, not architecture.
+- **"Trending" definition** (Section 8): a kudos-in-a-time-window heuristic is this spec's own placeholder for the PRD's unspecified fallback view — needs a concrete definition (window length, whether it's platform-wide or category-scoped) before build.

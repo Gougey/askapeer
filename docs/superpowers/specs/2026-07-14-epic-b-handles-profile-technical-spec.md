@@ -18,7 +18,7 @@ Source of truth for product requirements: `docs/askapeer-prd-v0.1.md`, Section 9
 5. [API endpoints](#5-api-endpoints)
 6. [Handle immutability](#6-handle-immutability)
 7. [Status effects (suspended/expelled)](#7-status-effects-suspendedexpelled)
-8. [Follow handles (Should-have)](#8-follow-handles-should-have)
+8. [Follows — handles and tags (Should-have)](#8-follows--handles-and-tags-should-have)
 9. [Boundaries with other epics](#9-boundaries-with-other-epics)
 10. [Failure modes and edge cases](#10-failure-modes-and-edge-cases)
 11. [Non-functional notes specific to EPIC-B](#11-non-functional-notes-specific-to-epic-b)
@@ -29,7 +29,7 @@ Source of truth for product requirements: `docs/askapeer-prd-v0.1.md`, Section 9
 
 ## 1. Scope
 
-**In scope**: handle creation immediately after `approved_verified` (the EPIC-A → EPIC-B handoff), handle-name validation rules, the public profile view (handle, kudos total, membership duration, post history), handle immutability policy, and the effect of suspension/expulsion on a profile's visibility. Also specifies the Should-have "follow handles" feature (PRD Section 6.1) since it's a thin, purely-additive extension of the same `community.handles` table.
+**In scope**: handle creation immediately after `approved_verified` (the EPIC-A → EPIC-B handoff), handle-name validation rules, the public profile view (handle, kudos total, membership duration, post history), handle immutability policy, and the effect of suspension/expulsion on a profile's visibility. Also specifies the Should-have "follow" mechanism (PRD Section 6.1) — generalised (2026-07-14) to cover both following a handle and following a tag, resolving a gap identified across the EPIC-C/EPIC-G specs; see Section 8.
 
 **Out of scope for this spec** (owned elsewhere):
 - Awarding/counting kudos itself — EPIC-D. This spec only owns the `kudos_total` *column* on the handle record; EPIC-D owns writing to it (Section 9).
@@ -155,27 +155,33 @@ Reuses the `community.handles.status` enum already defined in the architecture s
 
 ---
 
-## 8. Follow handles (Should-have)
+## 8. Follows — handles and tags (Should-have)
 
-PRD Section 6.1 lists this as a Should-have, not Must-have, but it's specified here since it's a thin addition to this epic's own table, not a separate module:
+PRD Section 6.1 lists two Should-have features that both turn out to be the same underlying mechanism: "Personalised feed" (EPIC-C) is explicit that its home view is based on "**tags and handles** followed," and "Email digest" (EPIC-G) is a weekly digest of "top-kudos content in **followed tags**." The PRD's own language already treats following a person and following a topic as the same verb applied to two target types — this spec follows that lead rather than building two separate mechanisms (which an earlier draft of this section did, specifying only handle-follows and leaving tag-follows as a gap other specs had to flag; see `docs/2026-07-14-technical-specs-open-questions.md`, Section 2, for that history).
 
 ```
-community.handle_follows
+community.follows
   follower_handle_id   uuid FK -> community.handles
-  followed_handle_id   uuid FK -> community.handles
+  target_type          enum(handle, tag)
+  target_id            uuid          -- a handle_id or a community.tags.id,
+                                        depending on target_type
   created_at           timestamptz
-  primary key (follower_handle_id, followed_handle_id)
+  primary key (follower_handle_id, target_type, target_id)
 ```
 
+This is the same `target_type`/`target_id` discriminator pattern already used elsewhere in the schema — `community.kudos` and `community.reports` both reference targets in another epic's tables (posts/comments, owned by EPIC-C) the same way `target_type = tag` here references `community.tags` (also EPIC-C-owned) without requiring a single foreign key. It's not a new modelling idiom, just the existing one applied to this case. **EPIC-B keeps ownership** of this table (as it did of the narrower `handle_follows` it replaces) since the natural owner of a follow relationship is the follower, a handle — EPIC-C and EPIC-G are read-only consumers, filtering `WHERE target_type = 'tag'` for their own purposes (personalised feed, digest respectively), the same "one epic owns the write path, others read" pattern used for kudos and notification preferences elsewhere in these specs.
+
 ```
-POST   /v1/handles/:handle_id/follow      auth: handle-scoped token
-DELETE /v1/handles/:handle_id/follow      auth: handle-scoped token
-GET    /v1/handles/me/following           -> list of followed handle_ids
+POST   /v1/follows                    { target_type, target_id }   auth: handle-scoped token
+DELETE /v1/follows/:target_type/:target_id                          auth: handle-scoped token
+GET    /v1/follows/me?target_type=     -> list of followed target_ids, optionally filtered
 ```
 
-Consistent with the PRD's framing ("You follow their ideas, not their identity") — following is purely a `handle_id`-to-`handle_id` relationship; nothing here differs from any other community-schema interaction in terms of the identity boundary. The personalised-feed use of this table (PRD Section 6.1's other Should-have, "Personalised feed") is EPIC-C's concern, not this spec's; this section only owns the follow relationship's existence and storage.
+Consistent with the PRD's framing for handle-follows ("You follow their ideas, not their identity") — following a handle is purely a `handle_id`-to-`handle_id` relationship, and following a tag is purely a `handle_id`-to-`tag_id` relationship; nothing here differs from any other community-schema interaction in terms of the identity boundary.
 
-Self-follow (`follower_handle_id = followed_handle_id`) is rejected at the API layer — not a meaningful action, and cheap to exclude.
+Self-follow (`target_type = handle` and `target_id` = the caller's own `handle_id`) is rejected at the API layer — not a meaningful action, and cheap to exclude. No equivalent restriction applies to tags, obviously.
+
+**Relationship to EPIC-I's `member_interests`**: EPIC-I's `community.member_interests` (a *weighted* interest signal scoring research-article relevance) remains a deliberately separate mechanism from this *binary* follows table — they serve different purposes (relevance scoring vs. notification/feed inclusion) and this spec doesn't merge them. See EPIC-I's spec, Section 4, for that reasoning.
 
 ---
 
@@ -187,6 +193,7 @@ Several fields and behaviors on `community.handles` are written by other epics; 
 - **`status`**: EPIC-F's write path (moderation decisions). EPIC-B defines the enum and its profile-visibility consequences (Section 7); EPIC-F is the only writer.
 - **Post/answer history**: entirely EPIC-C's data (`community.posts`/`community.comments` keyed by `handle_id`); EPIC-B's profile endpoint only references it.
 - **Notification preferences surfaced on `/v1/handles/me`**: EPIC-G's data; included in that endpoint's response for convenience, not owned here.
+- **`community.follows` (Section 8)**: EPIC-B owns the table and write path (`POST`/`DELETE /v1/follows`); EPIC-C (personalised feed) and EPIC-G (weekly digest) are read-only consumers filtering on `target_type = 'tag'`. `target_type = 'tag'` rows reference `community.tags.id`, an EPIC-C-owned table — the same cross-epic reference pattern EPIC-D's kudos and EPIC-F's reports already use against EPIC-C's `posts`/`comments`.
 
 ---
 
@@ -214,12 +221,13 @@ Several fields and behaviors on `community.handles` are written by other epics; 
 - **Profile field boundary**: an automated test asserting the `GET /v1/handles/:handle_id` response DTO has no path to `member_id`, `legal_name`, or any other `identity`-schema field — mirrors the EPIC-A spec's Section 10 approach.
 - **`member_since` display**: confirm the API/display layer truncates to year even though the stored value is a full date; a regression test on this specifically, since it's a privacy-relevant behavior that a well-intentioned future refactor could quietly "fix" by exposing the full date.
 - **Status-gated interactions**: a `suspended` or `expelled` handle cannot be followed or kudos'd (once EPIC-D exists to test against), but its existing profile and history remain readable.
+- **Unified follows table**: following a tag and following a handle both write to `community.follows` with the correct `target_type`; self-follow rejection applies only when `target_type = handle`; `GET /v1/follows/me?target_type=tag` returns only tag follows, not a mixed list.
 
 ---
 
 ## 13. Open questions
 
-- **The FD-5 professional-contact-link tension** (Section 1): PRD Section 16 (FD-5) recommends letting members add a LinkedIn URL to their profile as a DM alternative, but PRD Section 9.3 lists "deliberately identifying yourself" as an immediate-expulsion offence. These two sections of the same document appear to be in direct tension. Needs Paul Gouge/Andrew Renshaw's attention before FD-5 is closed — flagging here since EPIC-B's data model is the place this would land if resolved in favour of building it, and right now it deliberately isn't built.
+- ~~**The FD-5 professional-contact-link tension**~~ — **resolved 2026-07-14**: confirmed not to build it, given the direct conflict with PRD Section 9.3's zero-tolerance rule. See `docs/2026-07-14-technical-specs-open-questions.md`, Section 2.
 - **Handle length/character rules** (Section 3): the 3–30 character, alphanumeric-plus-underscore/hyphen proposal is this spec's own placeholder, not a PRD requirement — needs a real decision, though it has no architectural consequence either way.
 - **Moderator-forced rename as a first-class moderation action**: should `POST /v1/admin/handles/:handle_id/rename` (Section 5) actually live in EPIC-F's action-type enum (`remove_content`, `warn`, `suspend`, `expel` per the architecture spec, Section 7.2) rather than as a separate EPIC-B-only endpoint? Flagged for reconciliation once the EPIC-F spec is written.
 - ~~**Expelled-member re-registration gap**~~ — **resolved 2026-07-14**, see Section 10 above and EPIC-A/EPIC-F's specs.
