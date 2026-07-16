@@ -116,7 +116,8 @@ No new table is needed for the admin review queue itself — it's a filtered vie
               |  pending  |<------------------+
               +-----+-----+                   |
                     |                          |
-     automated checks run (worker)             |
+     automated checks run (worker, Section 5:  |
+     register lookup + Onfido identity check)  |
                     |                          |
          +----------+-----------+              |
          |                      |               
@@ -151,7 +152,7 @@ No new table is needed for the admin review queue itself — it's a filtered vie
 
 Rules:
 - Every transition is written as an `identity.verification_decisions` row (`from_status`, `to_status`, `decided_by`, `reason`) — no status field update happens without a corresponding decision row in the same database transaction. This is what makes the audit trail authoritative rather than incidental.
-- `needs_more_info` is a sub-state reachable only from the admin queue, not from the automated path directly — automated checks either resolve cleanly (both pass) or fall through to manual review; only a human admin decides that a specific applicant should be asked for more evidence rather than being outright rejected or escalated further.
+- `needs_more_info` is a sub-state reachable only from the admin queue, not from the automated path directly — the two automated checks (the professional-register lookup and the Onfido identity check, defined in Section 5 below) either resolve cleanly (both pass) or fall through to manual review; only a human admin decides that a specific applicant should be asked for more evidence rather than being outright rejected or escalated further.
 - `suspended` is reachable from `approved_verified` only, per PRD Section 8.1 Step 4 (lapsed registration or policy violation) — always admin/system-initiated, never self-service.
 - **`expelled` is reachable from `approved_verified` only, is terminal (no transition out), and is written by EPIC-F's `expel` moderation action, not by anything in this epic's own verification worker.** It's distinct from `suspended`: suspension is framed by the PRD (Section 8.1) as potentially temporary (a lapsed registration can be corrected), while expulsion is the zero-tolerance rule's permanent outcome (PRD Section 9.3) — the two must not be conflated into one status, which is exactly the mistake the original architecture spec made by not having an `expelled` value at all. See EPIC-F's spec, Section 3, for the write path.
 - There is no path back to `pending` — `needs_more_info` is the only "still in progress" state after the initial automated pass, keeping the state machine's "still awaiting a human decision" states to one, not two overlapping ones.

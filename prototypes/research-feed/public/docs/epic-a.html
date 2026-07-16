@@ -166,7 +166,8 @@ is a separate, append-only log reviewed the same way (Section 6).</p>
               |  pending  |&lt;------------------+
               +-----+-----+                   |
                     |                          |
-     automated checks run (worker)             |
+     automated checks run (worker, Section 5:  |
+     register lookup + Onfido identity check)  |
                     |                          |
          +----------+-----------+              |
          |                      |               
@@ -204,14 +205,16 @@ is a separate, append-only log reviewed the same way (Section 6).</p>
 happens without a corresponding decision row in the same database
 transaction. This is what makes the audit trail authoritative rather
 than incidental. - <code>needs_more_info</code> is a sub-state reachable
-only from the admin queue, not from the automated path directly —
-automated checks either resolve cleanly (both pass) or fall through to
-manual review; only a human admin decides that a specific applicant
-should be asked for more evidence rather than being outright rejected or
-escalated further. - <code>suspended</code> is reachable from
-<code>approved_verified</code> only, per PRD Section 8.1 Step 4 (lapsed
-registration or policy violation) — always admin/system-initiated, never
-self-service. - <strong><code>expelled</code> is reachable from
+only from the admin queue, not from the automated path directly — the
+two automated checks (the professional-register lookup and the Onfido
+identity check, defined in Section 5 below) either resolve cleanly (both
+pass) or fall through to manual review; only a human admin decides that
+a specific applicant should be asked for more evidence rather than being
+outright rejected or escalated further. - <code>suspended</code> is
+reachable from <code>approved_verified</code> only, per PRD Section 8.1
+Step 4 (lapsed registration or policy violation) — always
+admin/system-initiated, never self-service. -
+<strong><code>expelled</code> is reachable from
 <code>approved_verified</code> only, is terminal (no transition out),
 and is written by EPIC-F’s <code>expel</code> moderation action, not by
 anything in this epic’s own verification worker.</strong> It’s distinct
