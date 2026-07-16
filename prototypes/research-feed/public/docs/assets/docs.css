@@ -74,12 +74,23 @@ a { color: var(--link); }
 
 p, li { max-width: 100%; }
 
+/* Code blocks and tables can be wider than the 46em reading column (schema
+   definitions with inline comments run to ~110 chars). Rather than clipping
+   them — which looks like truncation on macOS where scrollbars are hidden
+   until you scroll — let them grow to their natural width, centered on the
+   column, capped at the viewport. Only genuinely-too-narrow screens fall
+   back to horizontal scrolling. The margin-left/translate pair is a no-op
+   for blocks that already fit (width == 100% => net zero shift). */
 table {
   border-collapse: collapse;
   margin: 1.2em 0;
-  width: 100%;
   display: block;
   overflow-x: auto;
+  width: fit-content;
+  min-width: 100%;
+  max-width: calc(100vw - 48px);
+  margin-left: 50%;
+  transform: translateX(-50%);
 }
 
 th, td {
@@ -104,6 +115,11 @@ pre {
   padding: 12px 14px;
   border-radius: 6px;
   overflow-x: auto;
+  width: fit-content;
+  min-width: 100%;
+  max-width: calc(100vw - 48px);
+  margin-left: 50%;
+  transform: translateX(-50%);
 }
 
 pre code {
