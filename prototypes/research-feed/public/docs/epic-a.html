@@ -40,16 +40,16 @@ feature requires an authenticated handle.</p>
 <li><a href="#scope">Scope</a></li>
 <li><a href="#data-model">Data model</a></li>
 <li><a href="#state-machine">State machine</a></li>
-<li><a href="#api-endpoints">API endpoints</a></li>
-<li><a href="#verification-worker">Verification worker</a></li>
-<li><a href="#admin-review-queue">Admin review queue</a></li>
-<li><a href="#authentication-handoff">Authentication handoff</a></li>
-<li><a href="#failure-modes-and-edge-cases">Failure modes and edge
+<li><a href="#transition-rules-per-status">API endpoints</a></li>
+<li><a href="#rules-that-apply-across-the-whole-machine">Verification worker</a></li>
+<li><a href="#api-endpoints">Admin review queue</a></li>
+<li><a href="#verification-worker">Authentication handoff</a></li>
+<li><a href="#admin-review-queue">Failure modes and edge
 cases</a></li>
-<li><a href="#non-functional-notes-specific-to-epic-a">Non-functional
+<li><a href="#authentication-handoff">Non-functional
 notes specific to EPIC-A</a></li>
-<li><a href="#test-plan">Test plan</a></li>
-<li><a href="#open-questions">Open questions</a></li>
+<li><a href="#failure-modes-and-edge-cases">Test plan</a></li>
+<li><a href="#non-functional-notes-specific-to-epic-a">Open questions</a></li>
 </ol>
 <hr />
 <h2 id="scope">1. Scope</h2>
@@ -198,36 +198,94 @@ is a separate, append-only log reviewed the same way (Section 6).</p>
           |
           v
       expelled   -- terminal; see Section 8 for the reapplication block</code></pre>
-<p>Rules: - Every transition is written as an
-<code>identity.verification_decisions</code> row
+<h3 id="transition-rules-per-status">Transition rules, per status</h3>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Status</th>
+<th>Entered from</th>
+<th>Set by</th>
+<th>Exits to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pending</code></td>
+<td>— (initial state on registration)</td>
+<td><code>POST /v1/auth/register</code></td>
+<td><code>approved_verified</code> (auto), or held in
+<code>pending</code> for admin review</td>
+</tr>
+<tr>
+<td><code>needs_more_info</code></td>
+<td>admin review queue <strong>only</strong></td>
+<td>a human admin requesting further evidence — the automated checks
+never set this (Section 5’s two checks either both pass cleanly or fall
+through to manual review)</td>
+<td><code>approved_verified</code> or <code>rejected</code>, by admin
+decision</td>
+</tr>
+<tr>
+<td><code>approved_verified</code></td>
+<td><code>pending</code> or <code>needs_more_info</code></td>
+<td>auto-approve (both Section 5 checks pass: register lookup + Onfido
+identity check) or admin approval</td>
+<td><code>suspended</code> or <code>expelled</code></td>
+</tr>
+<tr>
+<td><code>rejected</code></td>
+<td><code>pending</code> or <code>needs_more_info</code></td>
+<td>admin decision, <code>reason</code> required</td>
+<td>terminal — though a fresh registration attempt is permitted (Section
+2)</td>
+</tr>
+<tr>
+<td><code>suspended</code></td>
+<td><code>approved_verified</code> <strong>only</strong></td>
+<td>admin/system — lapsed registration or policy violation (PRD Section
+8.1, Step 4); never self-service</td>
+<td>potentially temporary per the PRD; reinstatement mechanics are not
+defined in this spec</td>
+</tr>
+<tr>
+<td><code>expelled</code></td>
+<td><code>approved_verified</code> <strong>only</strong></td>
+<td>EPIC-F’s <code>expel</code> moderation action (its spec, Section 3)
+— never this epic’s own verification worker</td>
+<td>terminal, no transition out — re-registration is blocked and the
+attempt logged (Sections 2, 6, 8)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rules-that-apply-across-the-whole-machine">Rules that apply
+across the whole machine</h3>
+<ul>
+<li><strong>Every transition writes an audit row.</strong> Each status
+change writes an <code>identity.verification_decisions</code> row
 (<code>from_status</code>, <code>to_status</code>,
-<code>decided_by</code>, <code>reason</code>) — no status field update
-happens without a corresponding decision row in the same database
-transaction. This is what makes the audit trail authoritative rather
-than incidental. - <code>needs_more_info</code> is a sub-state reachable
-only from the admin queue, not from the automated path directly — the
-two automated checks (the professional-register lookup and the Onfido
-identity check, defined in Section 5 below) either resolve cleanly (both
-pass) or fall through to manual review; only a human admin decides that
-a specific applicant should be asked for more evidence rather than being
-outright rejected or escalated further. - <code>suspended</code> is
-reachable from <code>approved_verified</code> only, per PRD Section 8.1
-Step 4 (lapsed registration or policy violation) — always
-admin/system-initiated, never self-service. -
-<strong><code>expelled</code> is reachable from
-<code>approved_verified</code> only, is terminal (no transition out),
-and is written by EPIC-F’s <code>expel</code> moderation action, not by
-anything in this epic’s own verification worker.</strong> It’s distinct
-from <code>suspended</code>: suspension is framed by the PRD (Section
-8.1) as potentially temporary (a lapsed registration can be corrected),
-while expulsion is the zero-tolerance rule’s permanent outcome (PRD
-Section 9.3) — the two must not be conflated into one status, which is
-exactly the mistake the original architecture spec made by not having an
-<code>expelled</code> value at all. See EPIC-F’s spec, Section 3, for
-the write path. - There is no path back to <code>pending</code> —
-<code>needs_more_info</code> is the only “still in progress” state after
-the initial automated pass, keeping the state machine’s “still awaiting
-a human decision” states to one, not two overlapping ones.</p>
+<code>decided_by</code>, <code>reason</code>) in the same database
+transaction as the status update — no status field ever changes without
+a corresponding decision row. This is what makes the audit trail
+authoritative rather than incidental.</li>
+<li><strong>There is no path back to <code>pending</code>.</strong>
+After the initial automated pass, <code>needs_more_info</code> is the
+only “still awaiting a human decision” state — keeping that to one
+state, not two overlapping ones.</li>
+<li><strong><code>suspended</code> and <code>expelled</code> are
+deliberately distinct.</strong> Suspension is framed by the PRD (Section
+8.1) as potentially temporary — a lapsed registration can be corrected.
+Expulsion is the zero-tolerance rule’s permanent outcome (PRD Section
+9.3). Conflating them into one status is exactly the mistake the
+original architecture spec made by having no <code>expelled</code> value
+at all (since fixed — see the amendment note at the top of that
+spec).</li>
+</ul>
 <hr />
 <h2 id="api-endpoints">4. API endpoints</h2>
 <p>Builds directly on the architecture spec, Section 5.1’s registration

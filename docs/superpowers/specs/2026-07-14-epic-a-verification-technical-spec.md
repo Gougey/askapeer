@@ -150,12 +150,22 @@ No new table is needed for the admin review queue itself — it's a filtered vie
       expelled   -- terminal; see Section 8 for the reapplication block
 ```
 
-Rules:
-- Every transition is written as an `identity.verification_decisions` row (`from_status`, `to_status`, `decided_by`, `reason`) — no status field update happens without a corresponding decision row in the same database transaction. This is what makes the audit trail authoritative rather than incidental.
-- `needs_more_info` is a sub-state reachable only from the admin queue, not from the automated path directly — the two automated checks (the professional-register lookup and the Onfido identity check, defined in Section 5 below) either resolve cleanly (both pass) or fall through to manual review; only a human admin decides that a specific applicant should be asked for more evidence rather than being outright rejected or escalated further.
-- `suspended` is reachable from `approved_verified` only, per PRD Section 8.1 Step 4 (lapsed registration or policy violation) — always admin/system-initiated, never self-service.
-- **`expelled` is reachable from `approved_verified` only, is terminal (no transition out), and is written by EPIC-F's `expel` moderation action, not by anything in this epic's own verification worker.** It's distinct from `suspended`: suspension is framed by the PRD (Section 8.1) as potentially temporary (a lapsed registration can be corrected), while expulsion is the zero-tolerance rule's permanent outcome (PRD Section 9.3) — the two must not be conflated into one status, which is exactly the mistake the original architecture spec made by not having an `expelled` value at all. See EPIC-F's spec, Section 3, for the write path.
-- There is no path back to `pending` — `needs_more_info` is the only "still in progress" state after the initial automated pass, keeping the state machine's "still awaiting a human decision" states to one, not two overlapping ones.
+### Transition rules, per status
+
+| Status | Entered from | Set by | Exits to |
+|---|---|---|---|
+| `pending` | — (initial state on registration) | `POST /v1/auth/register` | `approved_verified` (auto), or held in `pending` for admin review |
+| `needs_more_info` | admin review queue **only** | a human admin requesting further evidence — the automated checks never set this (Section 5's two checks either both pass cleanly or fall through to manual review) | `approved_verified` or `rejected`, by admin decision |
+| `approved_verified` | `pending` or `needs_more_info` | auto-approve (both Section 5 checks pass: register lookup + Onfido identity check) or admin approval | `suspended` or `expelled` |
+| `rejected` | `pending` or `needs_more_info` | admin decision, `reason` required | terminal — though a fresh registration attempt is permitted (Section 2) |
+| `suspended` | `approved_verified` **only** | admin/system — lapsed registration or policy violation (PRD Section 8.1, Step 4); never self-service | potentially temporary per the PRD; reinstatement mechanics are not defined in this spec |
+| `expelled` | `approved_verified` **only** | EPIC-F's `expel` moderation action (its spec, Section 3) — never this epic's own verification worker | terminal, no transition out — re-registration is blocked and the attempt logged (Sections 2, 6, 8) |
+
+### Rules that apply across the whole machine
+
+- **Every transition writes an audit row.** Each status change writes an `identity.verification_decisions` row (`from_status`, `to_status`, `decided_by`, `reason`) in the same database transaction as the status update — no status field ever changes without a corresponding decision row. This is what makes the audit trail authoritative rather than incidental.
+- **There is no path back to `pending`.** After the initial automated pass, `needs_more_info` is the only "still awaiting a human decision" state — keeping that to one state, not two overlapping ones.
+- **`suspended` and `expelled` are deliberately distinct.** Suspension is framed by the PRD (Section 8.1) as potentially temporary — a lapsed registration can be corrected. Expulsion is the zero-tolerance rule's permanent outcome (PRD Section 9.3). Conflating them into one status is exactly the mistake the original architecture spec made by having no `expelled` value at all (since fixed — see the amendment note at the top of that spec).
 
 ---
 
