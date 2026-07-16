@@ -79,4 +79,4 @@ These are unresolved and must not be assumed closed. See Section 15 of the PRD f
 | FD-8 | Competitive landscape refresh before committing to development investment |
 
 ## Rules
-Whenever writing or amending a .md file, always created a .pdf in the same location
+Whenever writing or amending a .md file, always create an html version and add it to the docs html site, amending the front index page if necessary
