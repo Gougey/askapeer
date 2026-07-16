@@ -151,27 +151,51 @@ identifying features</li>
 automatically; content compliance confirmed</li>
 <li>No uploaded documents contain patient identifiers</li>
 </ol>
-<p><strong>Enforcement is attestation-based, not structurally
-validated</strong>, for items 1, 2, 5, and 8 — the platform cannot
-algorithmically detect a patient name or a uniquely-identifying facility
-name in free text (the same limitation the EPIC-B spec notes for handle
-names attempting to encode a real identity). Items 3 and 4 are
-different: these are candidates for <strong>structural
-enforcement</strong>, not just a checkbox — e.g. an age-band selector (a
-fixed set of bands, not a free date-of-birth field) and a
-relative-timeline input (a “X weeks/months post-injury” structured
-field) in the <code>community.case_details</code> template itself,
-rather than trusting an author to remember to phrase a free-text field
-as a band. This spec proposes structural enforcement for items 3/4 as a
-meaningfully stronger safeguard than the PRD’s own wording implies
-(which frames all eight as checklist items) — flagged as a
-recommendation for confirmation in Section 12, not assumed authorised
-unilaterally.</p>
-<p>Items 6 and 7 depend on <strong>image attachment support existing at
-all</strong>, which is currently a Could-have in EPIC-C’s spec (Section
-7 there), not a committed MVP feature — a real gap between what this
-checklist assumes exists and what’s confirmed to ship. Flagged
-prominently in Section 12.</p>
+<p>How each item can actually be enforced differs — the PRD frames all
+eight as checklist items, but they fall into three groups:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Items</th>
+<th>Enforcement</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1, 2, 5, 8 (names, locations, facility names, document
+identifiers)</td>
+<td><strong>Attestation only</strong> — checkbox plus the member’s
+signed declaration</td>
+<td>The platform cannot algorithmically detect a patient name or a
+uniquely-identifying facility name in free text (the same limitation the
+EPIC-B spec notes for handle names encoding a real identity)</td>
+</tr>
+<tr>
+<td>3, 4 (age bands, relative dates)</td>
+<td><strong>Structural enforcement proposed</strong> — an age-band
+selector (fixed set of bands, no free date-of-birth field) and a
+relative-timeline input (“X weeks post-injury”) built into the
+<code>community.case_details</code> template</td>
+<td>Meaningfully stronger than trusting an author to remember to phrase
+a free-text field as a band. A stronger safeguard than the PRD’s wording
+implies — flagged for confirmation in Section 12, not assumed
+authorised</td>
+</tr>
+<tr>
+<td>6, 7 (image content, EXIF)</td>
+<td><strong>Depends on image attachments existing at all</strong></td>
+<td>Currently only a Could-have in EPIC-C (Section 7 there) — a real gap
+between what this checklist assumes and what’s confirmed to ship.
+Flagged prominently in Section 12</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="the-attestation">5. The attestation</h2>
 <p>Exact wording, PRD Section 10.3:</p>
@@ -182,16 +206,16 @@ breach of patient confidentiality is a serious professional and legal
 matter and may result in permanent removal from the platform and
 referral to my professional regulatory body.”</em></p>
 </blockquote>
-<p>The API stores this exact text in <code>attestation_text</code> (not
-just a boolean “attested = true”) — if the wording is ever revised,
-historical attestations remain an accurate record of what the member
-actually agreed to at the time, consistent with the architecture spec’s
-general audit-immutability philosophy (Section 4.4).
-<code>ip_address</code> is captured server-side from the request, per
-the PRD’s “recorded with timestamp and linked to the member’s verified
-identity” requirement — this is exactly the scenario the architecture
-spec’s Section 4.3 “deliberate exception” describes, so no new reasoning
-is needed here beyond pointing at it.</p>
+<p>Implementation points: - <strong>The exact text is stored</strong> in
+<code>attestation_text</code>, not just a boolean “attested = true” — if
+the wording is ever revised, historical attestations remain an accurate
+record of what the member actually agreed to at the time (architecture
+spec’s audit-immutability philosophy, Section 4.4). -
+<strong><code>ip_address</code> is captured server-side</strong> from
+the request, per the PRD’s “recorded with timestamp and linked to the
+member’s verified identity” requirement. - This is exactly the scenario
+the architecture spec’s Section 4.3 “deliberate exception” describes —
+no new identity-boundary reasoning is needed beyond pointing at it.</p>
 <hr />
 <h2 id="api-endpoints">6. API endpoints</h2>
 <p>Already laid out in Section 3’s flow; reproduced as a flat list for
@@ -234,17 +258,20 @@ themselves belong to EPIC-F.</p>
 <hr />
 <h2 id="post-publish-editing">8. Post-publish editing</h2>
 <p><strong>Proposed: published case discussions are not
-author-editable.</strong> The attestation (Section 5) is tied to a
-specific <code>checklist_snapshot</code> at a specific moment — allowing
-free edits after publish would let the actual content diverge from what
-was attested to, silently invalidating the record’s meaning. If a
-correction is genuinely needed (PRD Section 10.4 names “request a
-corrected resubmission” as a moderation action), this spec proposes that
-goes through EPIC-F as a moderator-initiated action, likely requiring
-the case to be unpublished and re-attested against a fresh checklist
-rather than a live in-place edit. This is this spec’s own design
-position, not a PRD requirement, and is flagged in Section 12 alongside
-the specific new moderation-action type it implies for EPIC-F.</p>
+author-editable.</strong> (This spec’s own design position, not a PRD
+requirement — flagged in Section 12 alongside the new moderation-action
+type it implies for EPIC-F.)</p>
+<ul>
+<li><strong>Why</strong>: the attestation (Section 5) is tied to a
+specific <code>checklist_snapshot</code> at a specific moment. Free
+edits after publish would let the content diverge from what was attested
+to, silently invalidating the record’s meaning.</li>
+<li><strong>When a correction is genuinely needed</strong>: PRD Section
+10.4 already names “request a corrected resubmission” as a moderation
+action — this spec proposes that path, via EPIC-F, likely by
+unpublishing the case and re-attesting against a fresh checklist rather
+than a live in-place edit.</li>
+</ul>
 <hr />
 <h2 id="cross-epic-dependencies-introduced-by-this-spec">9. Cross-epic
 dependencies introduced by this spec</h2>

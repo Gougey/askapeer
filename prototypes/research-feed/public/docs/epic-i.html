@@ -99,40 +99,67 @@ involvement, consistent with everything else in that schema.</p>
 <h2 id="member_interests-vs.-epic-bs-community.follows">4.
 <code>member_interests</code> vs. EPIC-B’s
 <code>community.follows</code></h2>
-<p>Worth flagging precisely because it’s easy to conflate:
-<code>community.member_interests</code> (this epic, weighted, used to
-score research-literature relevance) and <code>community.follows</code>
-(EPIC-B, binary, <code>target_type = tag</code> — the unified handle/tag
-follow mechanism resolved 2026-07-14; see EPIC-B’s spec, Section 8, and
-<code>docs/2026-07-14-technical-specs-open-questions.md</code>, Section
-2) are <strong>two different concepts that happen to both be “a member’s
-interest in a tag.”</strong> One is a weighted relevance signal for an
-external content stream (research articles); the other is a binary
-follow relationship, now built, for internal content (forum posts, via
-EPIC-C’s personalised feed and EPIC-G’s digest). They could plausibly be
-unified into a single mechanism feeding both the research feed and the
-forum’s personalised feed — or they could legitimately stay separate
-given they serve different content types with different scoring needs.
-This spec deliberately doesn’t resolve that unilaterally by either
-building a duplicate mechanism or assuming unification — flagged in
-Section 9 as still open, now that the tag-follow side of the question is
-no longer a gap but an actual table to weigh unification against.</p>
+<p>Worth flagging precisely because it’s easy to conflate — these are
+<strong>two different concepts that happen to both be “a member’s
+interest in a tag”</strong>:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th><code>community.member_interests</code> (this epic)</th>
+<th><code>community.follows</code>, <code>target_type = tag</code>
+(EPIC-B)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Signal</td>
+<td><strong>Weighted</strong> relevance score</td>
+<td><strong>Binary</strong> follow relationship</td>
+</tr>
+<tr>
+<td>Feeds</td>
+<td>The research feed (external content — articles)</td>
+<td>Forum personalised feed (EPIC-C) and weekly digest (EPIC-G) —
+internal content</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Specified here</td>
+<td>Built — the unified handle/tag follow mechanism, resolved 2026-07-14
+(EPIC-B spec §8; open-questions doc, Section 2)</td>
+</tr>
+</tbody>
+</table>
+<p>They could plausibly be unified into a single mechanism feeding both,
+or legitimately stay separate given they serve different content types
+with different scoring needs. This spec deliberately doesn’t resolve
+that unilaterally — flagged in Section 9 as still open, now that the
+tag-follow side is no longer a gap but an actual table to weigh
+unification against.</p>
 <hr />
 <h2 id="taxonomy-dependency-on-epic-c">5. Taxonomy dependency on
 EPIC-C</h2>
-<p>EPIC-C’s spec (Section 3) already flags that the forum’s category/tag
-taxonomy, Andrew Renshaw’s body-area list, and the research feed
-prototype’s <code>taxonomy.json</code> are three
-overlapping-but-not-unified vocabularies. This epic depends on that
-reconciliation directly: <code>member_interests.tag</code> and the
-classification taxonomy the architecture spec’s Section 8 describes
-should end up being <strong>the same controlled vocabulary</strong> as
-whatever EPIC-C settles on for forum tags, not a separately-maintained
-list — otherwise a member’s forum tag-following and their research-feed
+<p>EPIC-C’s spec (Section 3) already flags that three vocabularies — the
+forum’s category/tag taxonomy, Andrew Renshaw’s body-area list, and the
+research feed prototype’s <code>taxonomy.json</code> — overlap without
+being unified. This epic depends on that reconciliation directly:</p>
+<ul>
+<li><code>member_interests.tag</code> and the classification taxonomy
+(architecture spec, Section 8) should end up being <strong>the same
+controlled vocabulary</strong> as whatever EPIC-C settles on for forum
+tags — not a separately-maintained list.</li>
+<li>Otherwise a member’s forum tag-following and their research-feed
 interests would use different, possibly inconsistent vocabularies for
-what a member experiences as “topics I care about.” No new work is
-proposed here beyond restating this dependency clearly, since EPIC-C’s
-spec already owns resolving it.</p>
+what they experience as one thing: “topics I care about.”</li>
+<li>No new work is proposed here — EPIC-C’s spec owns resolving it; this
+section just states the dependency.</li>
+</ul>
 <hr />
 <h2 id="api-endpoints">6. API endpoints</h2>
 <pre><code>GET /v1/research-feed?cursor=...     -- already specified, architecture spec Section 8:

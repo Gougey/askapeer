@@ -127,32 +127,57 @@ identity.verification_decisions        -- immutable: INSERT-only grant
   created_at    timestamptz</code></pre>
 <p><strong>Why a uniqueness constraint on
 <code>(professional_body, registration_number, registration_country)</code></strong>:
-the PRD doesn’t mention duplicate-registration abuse directly, but the
+- The PRD doesn’t mention duplicate-registration abuse directly, but the
 trust proposition (“every member is a qualified professional”) is
 undermined if one real registration can back multiple pseudonymous
-handles — that would let a single practitioner run sockpuppet accounts
-to manufacture apparent consensus. Enforced at the database level, not
+handles — a single practitioner could run sockpuppet accounts to
+manufacture apparent consensus. - Enforced at the database level, not
 just application logic, consistent with the architecture spec’s general
 approach of using schema constraints over code discipline.</p>
 <p><strong>Expelled-member reapplication is deliberately more than a
-silent 409.</strong> Adrian’s decision (2026-07-14, resolving the gap
-flagged in the EPIC-B and EPIC-F specs): an expelled member attempting
-to re-register must be prevented <em>and</em> the attempt logged and
-reviewed, not just quietly rejected like an ordinary
-duplicate-registration case. When <code>POST /v1/auth/register</code>’s
-uniqueness check fails specifically because the matched row is
-<code>expelled</code> (as opposed to
-<code>pending</code>/<code>approved_verified</code>/<code>suspended</code>,
-which are ordinary “you already have an account in progress” cases), the
-API additionally writes an <code>identity.reapplication_attempts</code>
-row and surfaces it to admins (Section 6). The applicant-facing response
-is a generic registration-rejected message in either case — it
-deliberately does not confirm to the applicant that the system
-recognised them as previously expelled, since doing so would hand a
+silent 409</strong> (Adrian’s decision, 2026-07-14, resolving the gap
+flagged in the EPIC-B and EPIC-F specs):</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>Ordinary duplicate
+(<code>pending</code>/<code>approved_verified</code>/<code>suspended</code>
+match)</th>
+<th>Expelled member reapplying (<code>expelled</code> match)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registration blocked?</td>
+<td>Yes — unique constraint</td>
+<td>Yes — same constraint</td>
+</tr>
+<tr>
+<td>Logged for review?</td>
+<td>No — just “you already have an account in progress”</td>
+<td>Yes — writes an <code>identity.reapplication_attempts</code> row,
+surfaced to admins (Section 6)</td>
+</tr>
+<tr>
+<td>Applicant-facing response</td>
+<td>Generic registration-rejected message</td>
+<td><strong>The same generic message</strong> — deliberately
+identical</td>
+</tr>
+</tbody>
+</table>
+<p>The identical response is intentional: confirming to the applicant
+that the system recognised them as previously expelled would hand a
 bad-faith actor confirmation their identity was detected. This
-distinction (generic response to the applicant, specific logging
-internally) is this spec’s own proposal, flagged in Section 11 alongside
-the exact wording question.</p>
+distinction (generic response externally, specific logging internally)
+is this spec’s own proposal — flagged in Section 11 alongside the exact
+wording question.</p>
 <p>No new table is needed for the admin review queue itself — it’s a
 filtered view over <code>identity.members</code> (Section 6), not
 separate storage. <code>identity.reapplication_attempts</code> (above)
@@ -461,67 +486,97 @@ applicant’s own client beyond the initial registration response).</p>
 <hr />
 <h2 id="failure-modes-and-edge-cases">8. Failure modes and edge
 cases</h2>
-<ul>
-<li><strong>Register API down or rate-limited</strong>: worker marks the
-<code>register_lookup</code> evidence row
-<code>outcome = needs_review</code> with the raw error in
-<code>raw_result</code>, routes to admin queue rather than retrying
-indefinitely and leaving the applicant in limbo. PRD’s risk register
-(Section 13) already names this as a medium-likelihood risk with manual
-review as the designed mitigation.</li>
-<li><strong>BASRAT/SST have no confirmed public lookup API</strong> (see
-Section 11) — until confirmed, these two professional bodies route every
-applicant straight to manual review regardless of Onfido outcome. This
-is a deliberate, explicit fallback, not a silent gap.</li>
-<li><strong>Onfido webhook never arrives</strong> (delivery failure,
-applicant abandons the document-upload step): job has a timeout
-(proposed: 72 hours) after which it’s surfaced in the admin queue as
-<code>needs_more_info</code> with an automatic reason of “identity check
-not completed,” rather than leaving the applicant in
-<code>pending</code> indefinitely with no visible next step.</li>
-<li><strong>Duplicate registration attempt</strong> on an
-already-<code>rejected</code> member: the unique constraint in Section 2
-only blocks non-rejected rows, so a genuinely rejected applicant isn’t
-permanently locked out of ever reapplying (e.g. after resolving a
-registration lapse) — a fresh registration attempt creates a new
-<code>identity.members</code> row. Whether this needs a cooldown period
-or admin awareness of the prior rejection is an open question (Section
-11).</li>
-<li><strong>Duplicate registration attempt on an <code>expelled</code>
-member</strong>: resolved (2026-07-14) — the same unique constraint
-blocks it, since <code>expelled</code> isn’t <code>rejected</code>
-(Section 2), and the attempt is additionally logged to
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Handling</th>
+<th>Why / notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Register API down or rate-limited</td>
+<td>Worker marks the <code>register_lookup</code> evidence row
+<code>outcome = needs_review</code> (raw error in
+<code>raw_result</code>) and routes to the admin queue</td>
+<td>Better than retrying indefinitely with the applicant in limbo; the
+PRD’s risk register (Section 13) already names this risk with manual
+review as the designed mitigation</td>
+</tr>
+<tr>
+<td>BASRAT/SST have no confirmed public lookup API (Section 11)</td>
+<td>Every applicant from these two bodies routes straight to manual
+review, regardless of Onfido outcome</td>
+<td>A deliberate, explicit fallback until API access is confirmed — not
+a silent gap</td>
+</tr>
+<tr>
+<td>Onfido webhook never arrives (delivery failure, or applicant
+abandons the document upload)</td>
+<td>Job timeout (proposed: 72 hours), after which the applicant surfaces
+in the admin queue as <code>needs_more_info</code> with automatic reason
+“identity check not completed”</td>
+<td>Avoids leaving the applicant in <code>pending</code> indefinitely
+with no visible next step</td>
+</tr>
+<tr>
+<td>Reapplication by a <code>rejected</code> member</td>
+<td>Permitted — the unique constraint only blocks
+non-<code>rejected</code> rows; a fresh attempt creates a new
+<code>identity.members</code> row</td>
+<td>A genuinely rejected applicant isn’t locked out forever (e.g. after
+resolving a registration lapse). Cooldown / admin visibility of the
+prior rejection is an open question (Section 11)</td>
+</tr>
+<tr>
+<td>Reapplication by an <code>expelled</code> member</td>
+<td>Blocked by the same constraint (<code>expelled</code> ≠
+<code>rejected</code>), and logged to
 <code>identity.reapplication_attempts</code> for admin review (Section
-6). This was previously a real gap (identified while drafting the EPIC-B
-and EPIC-F specs, where <code>identity.members</code> had no
-<code>expelled</code> value at all and expulsion never touched this
-table) — see
+6)</td>
+<td>Resolved 2026-07-14 — previously a real gap (no
+<code>expelled</code> value existed on <code>identity.members</code>);
+history in
 <code>docs/2026-07-14-technical-specs-open-questions.md</code>, Section
-2, for the history.</li>
-<li><strong>Applicant emails don’t match register-held contact
-details</strong>: not a verification signal — the register lookup
-matches on <code>legal_name</code> + <code>registration_number</code>,
-not email, since professional registers don’t reliably expose a
-queryable email field.</li>
-</ul>
+2</td>
+</tr>
+<tr>
+<td>Applicant email doesn’t match register-held contact details</td>
+<td>Not treated as a verification signal</td>
+<td>The register lookup matches on <code>legal_name</code> +
+<code>registration_number</code>, not email — professional registers
+don’t reliably expose a queryable email field</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="non-functional-notes-specific-to-epic-a">9. Non-functional notes
 specific to EPIC-A</h2>
 <ul>
 <li><strong>Why admin queue reads aren’t
-<code>identity_access_log</code> events</strong>: the architecture spec,
-Section 4.4, draws the line at “routine automated system access”
-vs. moderator-initiated identity access. Reviewing a <em>pending
-verification applicant’s own submitted evidence</em> is the core,
-ordinary function <code>IdentityService</code> exists to perform — it is
-meaningfully different from a moderator looking up an <em>existing
-verified member’s</em> real identity behind their handle (which the
-PRD’s Section 9.4 access rule and the architecture spec’s
-<code>identity_access_log</code> are protecting against). Conflating the
-two would make routine verification work indistinguishable from a
-genuine identity-access event in the audit trail, undermining the log’s
-value as a trust artifact. If this reading is wrong, it needs correcting
-before build, not after — flagged in Section 11.</li>
+<code>identity_access_log</code> events</strong> (flagged for
+confirmation in Section 11 — if this reading is wrong it needs
+correcting before build, not after):
+<ul>
+<li>The architecture spec (Section 4.4) draws the line at “routine
+automated system access” vs. moderator-initiated identity access.</li>
+<li>Reviewing a <em>pending applicant’s own submitted evidence</em> is
+the core, ordinary function <code>IdentityService</code> exists to
+perform.</li>
+<li>That is meaningfully different from a moderator looking up an
+<em>existing verified member’s</em> real identity behind their handle —
+which is what PRD Section 9.4’s access rule and
+<code>identity_access_log</code> protect against.</li>
+<li>Conflating the two would make routine verification work
+indistinguishable from genuine identity-access events, undermining the
+log’s value as a trust artifact.</li>
+</ul></li>
 <li><strong>PII handling in transit/rest</strong>:
 <code>legal_name</code>, <code>raw_result</code> (which may embed
 applicant-submitted document data from Onfido), and

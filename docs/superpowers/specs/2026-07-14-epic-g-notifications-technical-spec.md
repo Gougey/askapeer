@@ -53,7 +53,10 @@ No new tables are needed for the in-app/email mechanics themselves; this spec's 
 
 The architecture spec (Section 4.1) grants `NotificationService` — alone among community-facing services, alongside `IdentityService` and `BillingService` — a database role with access to the `identity` schema, specifically to read `identity.members.email` for sending mail. This is worth being precise about in this spec, since it's the one place this epic touches the identity boundary at all:
 
-**`NotificationService` should read only `email` from `identity.members`, never `legal_name`.** Nothing in the architecture spec technically prevents a wider read, since the grant is at the schema/table level, not column level — but every email template this service sends must address the member by their **handle**, never their real name, even though the service technically has the database access to do otherwise. This is an application-level discipline point worth stating explicitly rather than assuming it falls out of the schema separation automatically, since — unlike the general `identity`/`community` boundary, which the architecture spec enforces structurally (Section 4, via role grants) — this specific narrower constraint (email-yes, name-no) is *within* a single already-granted role, and structural enforcement (e.g., a view exposing only `email`) is a cheap and worthwhile hardening step to actually build, not just document as a norm. Flagged in Section 11.
+**`NotificationService` should read only `email` from `identity.members`, never `legal_name`.**
+- Every email template this service sends must address the member by their **handle**, never their real name — even though the service technically has database access to do otherwise.
+- Nothing in the architecture spec structurally prevents a wider read: the grant is at the schema/table level, not column level. So unlike the general `identity`/`community` boundary (which Section 4 of that spec enforces via role grants), this narrower email-yes/name-no constraint is currently application discipline *within* an already-granted role.
+- **Recommended hardening**: a database view exposing only `email` — cheap to build, turns the norm into a structural guarantee. Flagged in Section 11.
 
 This routine access is not an `identity_access_log` event, per the architecture spec's Section 4.4 distinction (routine automated access vs. moderator-initiated identity lookup) — consistent with what that section already states about sending a notification email.
 
@@ -61,11 +64,16 @@ This routine access is not an `identity_access_log` event, per the architecture 
 
 ## 4. The pre-handle notification gap
 
-**`community.notifications` is keyed by `handle_id`** — but `verification_status_change` (one of the five notification types the architecture spec names in Section 7.3) needs to reach applicants in `pending`, `needs_more_info`, or `rejected` status, none of whom have a handle yet (per the EPIC-A/EPIC-B handoff: a handle is only created once `approved_verified` is reached). A rejected applicant, by definition, **never** gets a handle at all.
+**The problem**: `community.notifications` is keyed by `handle_id`, but `verification_status_change` (one of the five notification types, architecture spec Section 7.3) needs to reach applicants in `pending`, `needs_more_info`, or `rejected` status — none of whom have a handle yet (a handle is only created at `approved_verified`, per the EPIC-A/EPIC-B handoff). A rejected applicant, by definition, **never** gets one.
 
-This means `verification_status_change` notifications for a not-yet-verified applicant cannot be stored in `community.notifications` — there's no `handle_id` to attach them to. This spec proposes: for these pre-handle cases, the notification is **email-only**, sent directly by `NotificationService` reading `identity.members.email`, with no `community.notifications` row created at all. Once a member reaches `approved_verified` and has a handle, subsequent status-relevant events (e.g. a later suspension) can use the normal handle-scoped in-app-plus-email path like any other notification type.
+**This spec's proposal** — `verification_status_change` is really two mechanisms depending on whether a handle exists yet:
 
-This is a genuine structural asymmetry among the five notification types worth surfacing clearly rather than quietly special-casing in code with no documentation trail — `verification_status_change` is really two different mechanisms depending on whether a handle exists yet, not one mechanism with a shared table.
+| Applicant state | Delivery | Storage |
+|---|---|---|
+| Pre-handle (`pending`, `needs_more_info`, `rejected`) | **Email only**, sent directly by `NotificationService` reading `identity.members.email` | No `community.notifications` row at all — there's no `handle_id` to attach one to |
+| Post-handle (later status changes, e.g. suspension) | Normal in-app + email path | Ordinary handle-scoped `community.notifications` row |
+
+Surfaced here explicitly rather than quietly special-cased in code with no documentation trail — it's a genuine structural asymmetry among the five notification types.
 
 ---
 
@@ -85,7 +93,11 @@ Each of the first three is delivered via a BullMQ worker job reacting to the tri
 
 ## 6. Preferences — and what can't be disabled
 
-`community.notification_preferences` lets a member configure `in_app_enabled`/`email_enabled` **per type** — but this spec proposes that `verification_status_change` is not fully configurable: a member cannot disable the **email** channel for this type, even though they could disable email for `reply` or `kudos_received`. Account-status events (verification decisions, and — once EPIC-F exists — suspension/expulsion notices) are not engagement content a member should be able to silently opt out of; a member needs to know their access has changed regardless of their notification preferences. In-app is moot for the pre-handle cases (Section 4), and for post-handle status changes there's no strong reason to force in-app specifically, only to guarantee email delivery. Flagged in Section 11 as a proposal, not a confirmed policy.
+`community.notification_preferences` lets a member configure `in_app_enabled`/`email_enabled` **per type** — with one proposed exception (flagged in Section 11 as a proposal, not confirmed policy):
+
+- **`verification_status_change` email cannot be disabled**, even though a member can disable email for `reply` or `kudos_received`.
+- **Why**: account-status events (verification decisions, and — via EPIC-F — suspension/expulsion notices) are not engagement content to opt out of; a member needs to know their access has changed regardless of preferences.
+- Only the **email** channel is forced: in-app is moot for the pre-handle cases (Section 4), and for post-handle status changes there's no strong reason to force in-app specifically — only to guarantee delivery somewhere.
 
 ---
 

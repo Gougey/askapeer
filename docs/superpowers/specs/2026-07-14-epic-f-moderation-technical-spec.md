@@ -36,7 +36,10 @@ This epic is where the platform's two highest-stakes policies — zero-tolerance
 
 ## 2. Data model
 
-Reuses `community.reports` and `community.moderation_actions`, defined in the architecture spec, Section 4.2, with one addition: **`target_type` needs a `handle` value**, not just `post`/`comment`. The PRD's zero-tolerance rule (Section 9.3) explicitly covers "collusion to de-anonymise members on or off the platform" — a report about a pattern of behaviour or an off-platform incident may have no specific post or comment to attach to, only a handle. Restricting reports to content-only targets would leave no way to file exactly the kind of report the platform's most serious rule anticipates.
+Reuses `community.reports` and `community.moderation_actions`, defined in the architecture spec, Section 4.2, with one addition: **`target_type` needs a `handle` value**, not just `post`/`comment`. Why:
+- The PRD's zero-tolerance rule (Section 9.3) explicitly covers "collusion to de-anonymise members on or off the platform."
+- A report about a pattern of behaviour, or an off-platform incident, may have no specific post or comment to attach to — only a handle.
+- Restricting reports to content-only targets would leave no way to file exactly the kind of report the platform's most serious rule anticipates.
 
 ```
 community.reports
@@ -51,7 +54,9 @@ community.moderation_actions           -- immutable: INSERT-only grant
   moderator_id, reason, created_at
 ```
 
-`action_type` gains **two values beyond the architecture spec's original four**: `request_correction` (resolves EPIC-E's Section 9 dependency — the "request a corrected resubmission" action PRD Section 10.4 names for case discussions) and `rename_handle` (resolves EPIC-B's Section 13 open question — a moderator-forced handle rename, when a handle name itself turns out to be identifying or impersonating, is a moderation action in substance and belongs in this enum rather than as a bespoke EPIC-B-only endpoint). Both additions are proposed here as the natural home for these actions, since this spec is where the action-type vocabulary is actually owned — but see Section 10 for confirmation status.
+`action_type` gains **two values beyond the architecture spec's original four** (both proposed here as the natural home, since this spec owns the action-type vocabulary — see Section 10 for confirmation status):
+- **`request_correction`** — resolves EPIC-E's Section 9 dependency: the "request a corrected resubmission" action PRD Section 10.4 names for case discussions.
+- **`rename_handle`** — resolves EPIC-B's Section 13 open question: a moderator-forced handle rename (when the name itself is identifying or impersonating) is a moderation action in substance, so it belongs in this enum rather than as a bespoke EPIC-B-only endpoint.
 
 ---
 
@@ -72,15 +77,17 @@ Every action writes one `community.moderation_actions` row regardless of type �
 
 ## 4. Report categories and queue ordering
 
-The PRD names one specific category explicitly — `identifiable_patient_information` (Section 10.4), which "trigger[s] a priority review flag and are actioned before other report types." It does not enumerate a full category list. This spec proposes the following, since a report form needs *some* fixed set of categories to be usable, but the full list is this spec's own construction, not a PRD requirement:
+The PRD names one specific category explicitly — `identifiable_patient_information` (Section 10.4), which "trigger[s] a priority review flag and are actioned before other report types." It does not enumerate a full list. This spec proposes the following, since a report form needs *some* fixed set of categories to be usable — but the full list is this spec's own construction, not a PRD requirement:
 
-- `identifiable_patient_information` — **priority** (explicit PRD requirement)
-- `anonymity_violation` — attempting to reveal one's own or another's identity (PRD Section 9.3/9.5). **This spec proposes priority status for this category too**, even though the PRD only explicitly names patient-information reports as priority — the zero-tolerance rule around anonymity is described in equally or more severe terms ("immediate and permanent expulsion... no exceptions") than the patient-privacy policy, and it would be an odd asymmetry for the platform's other founding guarantee to sit in the ordinary queue. Flagged for explicit confirmation in Section 10 rather than assumed.
-- `harassment`
-- `spam`
-- `other`
+| Category | Priority? | Basis |
+|---|---|---|
+| `identifiable_patient_information` | **Yes** | Explicit PRD requirement (Section 10.4) |
+| `anonymity_violation` — attempting to reveal one's own or another's identity | **Yes — proposed** (needs confirmation, Section 10) | Not PRD-stated, but the zero-tolerance rule (Sections 9.3/9.5) is described in equally or more severe terms ("immediate and permanent expulsion... no exceptions") than the patient-privacy policy — an odd asymmetry if the platform's other founding guarantee sat in the ordinary queue |
+| `harassment` | No | This spec's proposal |
+| `spam` | No | This spec's proposal |
+| `other` | No | This spec's proposal |
 
-Queue ordering: priority categories (`identifiable_patient_information`, `anonymity_violation`) first, then by report age within each tier — the same pattern the EPIC-A spec already established for its own (structurally separate) verification queue, Section 6 there.
+**Queue ordering**: priority categories first, then by report age within each tier — the same pattern the EPIC-A spec established for its (structurally separate) verification queue, Section 6 there.
 
 ---
 

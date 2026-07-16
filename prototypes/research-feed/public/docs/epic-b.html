@@ -109,17 +109,16 @@ community.handle_name_history            -- new: append-only, admin/support use 
   previous_name text
   changed_by    text            -- &#39;system&#39; (first creation) or an admin&#39;s member_id
   changed_at    timestamptz</code></pre>
-<p><strong>Why <code>handle_name_history</code> exists</strong> even
+<p><strong>Why <code>handle_name_history</code> exists</strong>, even
 though Section 6 concludes handles shouldn’t be freely
-self-service-changeable: the one legitimate case for a handle name
-changing at all is a moderator-forced rename (e.g. a handle name itself
-turns out to be identifying, or impersonates staff — see Section 3).
-When that happens, the <em>old</em> name must not simply vanish
-untraceably, since a moderator action changing a member-facing
-identifier is exactly the kind of thing the architecture spec’s
-audit-logging philosophy (Section 4.4) says should leave a trail —
-otherwise a renamed handle’s post history would look like it belonged to
-two different people with no record of why.</p>
+self-service-changeable: - The one legitimate case for a handle name
+ever changing is a moderator-forced rename (e.g. the name turns out to
+be identifying, or impersonates staff — see Section 3). - When that
+happens, the old name must not vanish untraceably — a moderator action
+changing a member-facing identifier is exactly what the architecture
+spec’s audit-logging philosophy (Section 4.4) says should leave a trail.
+- Without it, a renamed handle’s post history would look like it
+belonged to two different people, with no record of why.</p>
 <p>No new schema is introduced — this all lives in
 <code>community</code>, consistent with the architecture spec’s
 principle that pseudonymous, peer-facing data never touches
@@ -168,27 +167,53 @@ confuse other members about who they’re now talking to.</li>
 <hr />
 <h2 id="profile-whats-visible-what-isnt">4. Profile — what’s visible,
 what isn’t</h2>
-<p>Directly implements PRD Section 9.2’s two lists. <strong>Visible to
-peers</strong>: <code>handle_name</code>, <code>kudos_total</code>, an
-approximate membership duration, and post/answer history (owned by
-EPIC-C, surfaced here by reference). <strong>Never visible</strong>:
-real name, employer/institution, geographic location, specialty, grade,
-or years of experience — none of which exist anywhere in the
+<p>Directly implements PRD Section 9.2’s two lists:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Visible to peers</th>
+<th>Never visible</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>handle_name</code></td>
+<td>Real name, employer/institution</td>
+</tr>
+<tr>
+<td><code>kudos_total</code></td>
+<td>Geographic location</td>
+</tr>
+<tr>
+<td>Approximate membership duration (year only — see below)</td>
+<td>Specialty, grade, years of experience</td>
+</tr>
+<tr>
+<td>Post/answer history (owned by EPIC-C, surfaced by reference)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The “never visible” fields don’t exist anywhere in the
 <code>community</code> schema in the first place (architecture spec,
-Section 4.2), so there’s no field to accidentally leak; the guarantee is
-structural, not a display-layer filter over data that could be requested
-some other way.</p>
+Section 4.2), so there’s no field to accidentally leak — the guarantee
+is <strong>structural</strong>, not a display-layer filter over data
+that could be requested some other way.</p>
 <p><strong><code>member_since</code> display is year-only</strong>
 (e.g. “Member since 2025”), even though the stored column is a full
-<code>date</code>. This isn’t cosmetic: PRD Section 9.2’s own example
-uses year granularity, and a precise join date is a plausible
-<strong>correlation vector</strong> — if a real person is known (from
-off-platform context) to have started a new job or finished registration
-on a specific date, an exact <code>member_since</code> timestamp narrows
-the search for which handle is theirs far more than a year does. Storing
-the full date (for internal/analytics use, e.g. KPI reporting in PRD
-Section 12) while only ever displaying the year is a deliberate
-storage/display split, not an oversight.</p>
+<code>date</code>. This isn’t cosmetic: - PRD Section 9.2’s own example
+uses year granularity. - A precise join date is a plausible
+<strong>correlation vector</strong>: if a real person is known (from
+off-platform context) to have started a new job or completed
+registration on a specific date, an exact <code>member_since</code>
+timestamp narrows the search for which handle is theirs far more than a
+year does. - The full date is still stored for internal/analytics use
+(e.g. KPI reporting, PRD Section 12) — a deliberate storage/display
+split, not an oversight.</p>
 <p><strong>Post/answer history</strong> on a profile is exactly the
 posts EPIC-C already attributes to that <code>handle_id</code> — this
 spec doesn’t duplicate that data, it specifies that the profile endpoint
@@ -231,26 +256,28 @@ POST /v1/admin/handles/:handle_id/rename
 <hr />
 <h2 id="handle-immutability">6. Handle immutability</h2>
 <p><strong>Members cannot self-service rename their handle after
-creation.</strong> This isn’t explicitly stated in the PRD, but follows
-from the anonymity model’s own logic: kudos, post history, and “member
-since” are all reputation signals <em>of the handle</em>, and a freely
-renameable handle would let a member launder a damaged reputation
+creation.</strong> Not explicitly stated in the PRD, but it follows from
+the anonymity model’s own logic:</p>
+<ul>
+<li><strong>Reputation laundering</strong>: kudos, post history, and
+“member since” are all reputation signals <em>of the handle</em>. A
+freely renameable handle would let a member shed a damaged reputation
 (e.g. after public disagreement or a formal warning short of expulsion)
-by simply picking a new name while keeping the same underlying
-<code>member_id</code> — undermining the “ideas win on merit” thesis the
-PRD’s introduction states as the platform’s core value, since merit is
-tracked per-handle. It also removes a legitimate concern the
-architecture spec doesn’t otherwise address: if renaming were
-self-service, a rename would need its own audit trail for exactly the
-reasons Section 2’s <code>handle_name_history</code> table exists, but
-for a much higher volume of events.</p>
-<p>The one exception (Section 5) is a moderator-forced rename, when the
-handle name itself becomes a problem (e.g. later found to be
-identifying, or an impersonation attempt that slipped past the Section 3
-blocklist). This is a moderation action in substance and probably
-belongs in the moderation queue’s action types (EPIC-F) rather than
-being a bespoke EPIC-B-only workflow — flagged in Section 13 as a
-boundary to confirm with the EPIC-F spec once it’s written.</p>
+just by picking a new name while keeping the same <code>member_id</code>
+— undermining the “ideas win on merit” thesis, since merit is tracked
+per-handle.</li>
+<li><strong>Audit volume</strong>: if renaming were self-service, every
+rename would need the audit trail Section 2’s
+<code>handle_name_history</code> table provides — but at a much higher
+volume of events than the rare moderator-forced case it was designed
+for.</li>
+</ul>
+<p><strong>The one exception</strong> (Section 5) is a moderator-forced
+rename, when the handle name itself becomes a problem — later found to
+be identifying, or an impersonation attempt that slipped past the
+Section 3 blocklist. This is a moderation action in substance and
+probably belongs in EPIC-F’s action types rather than a bespoke
+EPIC-B-only workflow — flagged in Section 13.</p>
 <hr />
 <h2 id="status-effects-suspendedexpelled">7. Status effects
 (suspended/expelled)</h2>
@@ -304,18 +331,18 @@ archive.</p>
 <hr />
 <h2 id="follows-handles-and-tags-should-have">8. Follows — handles and
 tags (Should-have)</h2>
-<p>PRD Section 6.1 lists two Should-have features that both turn out to
-be the same underlying mechanism: “Personalised feed” (EPIC-C) is
-explicit that its home view is based on “<strong>tags and
-handles</strong> followed,” and “Email digest” (EPIC-G) is a weekly
-digest of “top-kudos content in <strong>followed tags</strong>.” The
-PRD’s own language already treats following a person and following a
-topic as the same verb applied to two target types — this spec follows
-that lead rather than building two separate mechanisms (which an earlier
-draft of this section did, specifying only handle-follows and leaving
-tag-follows as a gap other specs had to flag; see
+<p>Two of PRD Section 6.1’s Should-have features turn out to need the
+same underlying mechanism: - <strong>“Personalised feed”</strong>
+(EPIC-C) — home view based on “<strong>tags and handles</strong>
+followed” - <strong>“Email digest”</strong> (EPIC-G) — weekly digest of
+“top-kudos content in <strong>followed tags</strong>”</p>
+<p>The PRD’s own language already treats following a person and
+following a topic as one verb applied to two target types — this spec
+follows that lead rather than building two separate mechanisms. (An
+earlier draft specified only handle-follows, leaving tag-follows as a
+gap other specs had to flag; see
 <code>docs/2026-07-14-technical-specs-open-questions.md</code>, Section
-2, for that history).</p>
+2, for that history.)</p>
 <pre><code>community.follows
   follower_handle_id   uuid FK -&gt; community.handles
   target_type          enum(handle, tag)
@@ -323,21 +350,19 @@ tag-follows as a gap other specs had to flag; see
                                         depending on target_type
   created_at           timestamptz
   primary key (follower_handle_id, target_type, target_id)</code></pre>
-<p>This is the same <code>target_type</code>/<code>target_id</code>
-discriminator pattern already used elsewhere in the schema —
-<code>community.kudos</code> and <code>community.reports</code> both
-reference targets in another epic’s tables (posts/comments, owned by
-EPIC-C) the same way <code>target_type = tag</code> here references
-<code>community.tags</code> (also EPIC-C-owned) without requiring a
-single foreign key. It’s not a new modelling idiom, just the existing
-one applied to this case. <strong>EPIC-B keeps ownership</strong> of
-this table (as it did of the narrower <code>handle_follows</code> it
-replaces) since the natural owner of a follow relationship is the
-follower, a handle — EPIC-C and EPIC-G are read-only consumers,
-filtering <code>WHERE target_type = 'tag'</code> for their own purposes
-(personalised feed, digest respectively), the same “one epic owns the
-write path, others read” pattern used for kudos and notification
-preferences elsewhere in these specs.</p>
+<p>Design notes: - <strong>Not a new modelling idiom</strong>: the
+<code>target_type</code>/<code>target_id</code> discriminator is the
+same pattern <code>community.kudos</code> and
+<code>community.reports</code> already use to reference another epic’s
+tables without a single foreign key. - <strong>EPIC-B keeps
+ownership</strong> of the table and write path (as it did for the
+narrower <code>handle_follows</code> this replaces) — the natural owner
+of a follow relationship is the follower, a handle. - <strong>EPIC-C and
+EPIC-G are read-only consumers</strong>, filtering
+<code>WHERE target_type = 'tag'</code> for the personalised feed and
+digest respectively — the same “one epic owns the write path, others
+read” pattern used for kudos and notification preferences elsewhere in
+these specs.</p>
 <pre><code>POST   /v1/follows                    { target_type, target_id }   auth: handle-scoped token
 DELETE /v1/follows/:target_type/:target_id                          auth: handle-scoped token
 GET    /v1/follows/me?target_type=     -&gt; list of followed target_ids, optionally filtered</code></pre>
@@ -394,36 +419,55 @@ use against EPIC-C’s <code>posts</code>/<code>comments</code>.</li>
 <hr />
 <h2 id="failure-modes-and-edge-cases">10. Failure modes and edge
 cases</h2>
-<ul>
-<li><strong>Two applicants race to claim the same handle name</strong>:
-the database’s case-insensitive unique constraint (Section 2/3) is the
-actual source of truth — the API returning 409 on a race is expected and
-the client should offer alternatives, not retry blindly.</li>
-<li><strong>A moderator-forced rename collides with an existing
-handle</strong>: the rename endpoint (Section 5) runs the same
-blocklist/uniqueness validation as creation; a rename that would collide
-is rejected, requiring the admin to pick a different replacement
-name.</li>
-<li><strong>An expelled member re-registers under EPIC-A with the same
-professional registration</strong>: <strong>resolved 2026-07-14</strong>
-— <code>identity.members.verification_status</code> now has an
-<code>expelled</code> value (architecture spec amendment; see EPIC-A’s
-spec, Section 2, and EPIC-F’s spec, Section 3, for the write path) and
-EPIC-A’s uniqueness constraint blocks any non-<code>rejected</code>
-status by construction, so <code>expelled</code> is blocked
-automatically. EPIC-A additionally logs the blocked attempt to
-<code>identity.reapplication_attempts</code> for admin review, per
-Adrian’s direction that this be prevented <em>and</em> reviewed, not
-silently rejected. See
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Handling</th>
+<th>Why / notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Two applicants race to claim the same handle name</td>
+<td>The case-insensitive unique constraint (Sections 2/3) is the source
+of truth; the API 409s on the race</td>
+<td>Expected behaviour — the client should offer alternatives, not retry
+blindly</td>
+</tr>
+<tr>
+<td>A moderator-forced rename collides with an existing handle</td>
+<td>The rename endpoint (Section 5) runs the same blocklist/uniqueness
+validation as creation and rejects the collision</td>
+<td>The admin picks a different replacement name</td>
+</tr>
+<tr>
+<td>An expelled member re-registers under EPIC-A with the same
+registration</td>
+<td>Blocked — <code>identity.members.verification_status</code> now has
+an <code>expelled</code> value and EPIC-A’s constraint blocks any
+non-<code>rejected</code> status; the attempt is logged to
+<code>identity.reapplication_attempts</code> for admin review</td>
+<td><strong>Resolved 2026-07-14</strong> per Adrian’s direction
+(prevented <em>and</em> reviewed, not silently rejected); history in
 <code>docs/2026-07-14-technical-specs-open-questions.md</code>, Section
-2, for the full history of this gap.</li>
-<li><strong>Handle deleted mid-session</strong> (e.g. moderator expels
-while the member is actively posting): the existing access token remains
-valid for up to its ~15-minute lifetime (same mechanic the architecture
-spec, Section 7.2, already describes for suspension/expulsion
-generally); no EPIC-B-specific handling needed beyond what that section
-already establishes.</li>
-</ul>
+2</td>
+</tr>
+<tr>
+<td>Handle expelled mid-session (moderator expels while the member is
+actively posting)</td>
+<td>Existing access token stays valid up to its ~15-minute lifetime,
+then the refresh fails</td>
+<td>Same mechanic the architecture spec (Section 7.2) already describes
+— no EPIC-B-specific handling needed</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="non-functional-notes-specific-to-epic-b">11. Non-functional
 notes specific to EPIC-B</h2>

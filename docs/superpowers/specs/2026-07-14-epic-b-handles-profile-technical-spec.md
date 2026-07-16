@@ -65,7 +65,10 @@ community.handle_name_history            -- new: append-only, admin/support use 
   changed_at    timestamptz
 ```
 
-**Why `handle_name_history` exists** even though Section 6 concludes handles shouldn't be freely self-service-changeable: the one legitimate case for a handle name changing at all is a moderator-forced rename (e.g. a handle name itself turns out to be identifying, or impersonates staff — see Section 3). When that happens, the *old* name must not simply vanish untraceably, since a moderator action changing a member-facing identifier is exactly the kind of thing the architecture spec's audit-logging philosophy (Section 4.4) says should leave a trail — otherwise a renamed handle's post history would look like it belonged to two different people with no record of why.
+**Why `handle_name_history` exists**, even though Section 6 concludes handles shouldn't be freely self-service-changeable:
+- The one legitimate case for a handle name ever changing is a moderator-forced rename (e.g. the name turns out to be identifying, or impersonates staff — see Section 3).
+- When that happens, the old name must not vanish untraceably — a moderator action changing a member-facing identifier is exactly what the architecture spec's audit-logging philosophy (Section 4.4) says should leave a trail.
+- Without it, a renamed handle's post history would look like it belonged to two different people, with no record of why.
 
 No new schema is introduced — this all lives in `community`, consistent with the architecture spec's principle that pseudonymous, peer-facing data never touches `identity`.
 
@@ -87,9 +90,21 @@ Continues directly from the EPIC-A spec, Section 7: the moment `identity.members
 
 ## 4. Profile — what's visible, what isn't
 
-Directly implements PRD Section 9.2's two lists. **Visible to peers**: `handle_name`, `kudos_total`, an approximate membership duration, and post/answer history (owned by EPIC-C, surfaced here by reference). **Never visible**: real name, employer/institution, geographic location, specialty, grade, or years of experience — none of which exist anywhere in the `community` schema in the first place (architecture spec, Section 4.2), so there's no field to accidentally leak; the guarantee is structural, not a display-layer filter over data that could be requested some other way.
+Directly implements PRD Section 9.2's two lists:
 
-**`member_since` display is year-only** (e.g. "Member since 2025"), even though the stored column is a full `date`. This isn't cosmetic: PRD Section 9.2's own example uses year granularity, and a precise join date is a plausible **correlation vector** — if a real person is known (from off-platform context) to have started a new job or finished registration on a specific date, an exact `member_since` timestamp narrows the search for which handle is theirs far more than a year does. Storing the full date (for internal/analytics use, e.g. KPI reporting in PRD Section 12) while only ever displaying the year is a deliberate storage/display split, not an oversight.
+| Visible to peers | Never visible |
+|---|---|
+| `handle_name` | Real name, employer/institution |
+| `kudos_total` | Geographic location |
+| Approximate membership duration (year only — see below) | Specialty, grade, years of experience |
+| Post/answer history (owned by EPIC-C, surfaced by reference) | |
+
+The "never visible" fields don't exist anywhere in the `community` schema in the first place (architecture spec, Section 4.2), so there's no field to accidentally leak — the guarantee is **structural**, not a display-layer filter over data that could be requested some other way.
+
+**`member_since` display is year-only** (e.g. "Member since 2025"), even though the stored column is a full `date`. This isn't cosmetic:
+- PRD Section 9.2's own example uses year granularity.
+- A precise join date is a plausible **correlation vector**: if a real person is known (from off-platform context) to have started a new job or completed registration on a specific date, an exact `member_since` timestamp narrows the search for which handle is theirs far more than a year does.
+- The full date is still stored for internal/analytics use (e.g. KPI reporting, PRD Section 12) — a deliberate storage/display split, not an oversight.
 
 **Post/answer history** on a profile is exactly the posts EPIC-C already attributes to that `handle_id` — this spec doesn't duplicate that data, it specifies that the profile endpoint (Section 5) includes a reference to it.
 
@@ -135,9 +150,12 @@ POST /v1/admin/handles/:handle_id/rename
 
 ## 6. Handle immutability
 
-**Members cannot self-service rename their handle after creation.** This isn't explicitly stated in the PRD, but follows from the anonymity model's own logic: kudos, post history, and "member since" are all reputation signals *of the handle*, and a freely renameable handle would let a member launder a damaged reputation (e.g. after public disagreement or a formal warning short of expulsion) by simply picking a new name while keeping the same underlying `member_id` — undermining the "ideas win on merit" thesis the PRD's introduction states as the platform's core value, since merit is tracked per-handle. It also removes a legitimate concern the architecture spec doesn't otherwise address: if renaming were self-service, a rename would need its own audit trail for exactly the reasons Section 2's `handle_name_history` table exists, but for a much higher volume of events.
+**Members cannot self-service rename their handle after creation.** Not explicitly stated in the PRD, but it follows from the anonymity model's own logic:
 
-The one exception (Section 5) is a moderator-forced rename, when the handle name itself becomes a problem (e.g. later found to be identifying, or an impersonation attempt that slipped past the Section 3 blocklist). This is a moderation action in substance and probably belongs in the moderation queue's action types (EPIC-F) rather than being a bespoke EPIC-B-only workflow — flagged in Section 13 as a boundary to confirm with the EPIC-F spec once it's written.
+- **Reputation laundering**: kudos, post history, and "member since" are all reputation signals *of the handle*. A freely renameable handle would let a member shed a damaged reputation (e.g. after public disagreement or a formal warning short of expulsion) just by picking a new name while keeping the same `member_id` — undermining the "ideas win on merit" thesis, since merit is tracked per-handle.
+- **Audit volume**: if renaming were self-service, every rename would need the audit trail Section 2's `handle_name_history` table provides — but at a much higher volume of events than the rare moderator-forced case it was designed for.
+
+**The one exception** (Section 5) is a moderator-forced rename, when the handle name itself becomes a problem — later found to be identifying, or an impersonation attempt that slipped past the Section 3 blocklist. This is a moderation action in substance and probably belongs in EPIC-F's action types rather than a bespoke EPIC-B-only workflow — flagged in Section 13.
 
 ---
 
@@ -157,7 +175,11 @@ Reuses the `community.handles.status` enum already defined in the architecture s
 
 ## 8. Follows — handles and tags (Should-have)
 
-PRD Section 6.1 lists two Should-have features that both turn out to be the same underlying mechanism: "Personalised feed" (EPIC-C) is explicit that its home view is based on "**tags and handles** followed," and "Email digest" (EPIC-G) is a weekly digest of "top-kudos content in **followed tags**." The PRD's own language already treats following a person and following a topic as the same verb applied to two target types — this spec follows that lead rather than building two separate mechanisms (which an earlier draft of this section did, specifying only handle-follows and leaving tag-follows as a gap other specs had to flag; see `docs/2026-07-14-technical-specs-open-questions.md`, Section 2, for that history).
+Two of PRD Section 6.1's Should-have features turn out to need the same underlying mechanism:
+- **"Personalised feed"** (EPIC-C) — home view based on "**tags and handles** followed"
+- **"Email digest"** (EPIC-G) — weekly digest of "top-kudos content in **followed tags**"
+
+The PRD's own language already treats following a person and following a topic as one verb applied to two target types — this spec follows that lead rather than building two separate mechanisms. (An earlier draft specified only handle-follows, leaving tag-follows as a gap other specs had to flag; see `docs/2026-07-14-technical-specs-open-questions.md`, Section 2, for that history.)
 
 ```
 community.follows
@@ -169,7 +191,10 @@ community.follows
   primary key (follower_handle_id, target_type, target_id)
 ```
 
-This is the same `target_type`/`target_id` discriminator pattern already used elsewhere in the schema — `community.kudos` and `community.reports` both reference targets in another epic's tables (posts/comments, owned by EPIC-C) the same way `target_type = tag` here references `community.tags` (also EPIC-C-owned) without requiring a single foreign key. It's not a new modelling idiom, just the existing one applied to this case. **EPIC-B keeps ownership** of this table (as it did of the narrower `handle_follows` it replaces) since the natural owner of a follow relationship is the follower, a handle — EPIC-C and EPIC-G are read-only consumers, filtering `WHERE target_type = 'tag'` for their own purposes (personalised feed, digest respectively), the same "one epic owns the write path, others read" pattern used for kudos and notification preferences elsewhere in these specs.
+Design notes:
+- **Not a new modelling idiom**: the `target_type`/`target_id` discriminator is the same pattern `community.kudos` and `community.reports` already use to reference another epic's tables without a single foreign key.
+- **EPIC-B keeps ownership** of the table and write path (as it did for the narrower `handle_follows` this replaces) — the natural owner of a follow relationship is the follower, a handle.
+- **EPIC-C and EPIC-G are read-only consumers**, filtering `WHERE target_type = 'tag'` for the personalised feed and digest respectively — the same "one epic owns the write path, others read" pattern used for kudos and notification preferences elsewhere in these specs.
 
 ```
 POST   /v1/follows                    { target_type, target_id }   auth: handle-scoped token
@@ -199,10 +224,12 @@ Several fields and behaviors on `community.handles` are written by other epics; 
 
 ## 10. Failure modes and edge cases
 
-- **Two applicants race to claim the same handle name**: the database's case-insensitive unique constraint (Section 2/3) is the actual source of truth — the API returning 409 on a race is expected and the client should offer alternatives, not retry blindly.
-- **A moderator-forced rename collides with an existing handle**: the rename endpoint (Section 5) runs the same blocklist/uniqueness validation as creation; a rename that would collide is rejected, requiring the admin to pick a different replacement name.
-- **An expelled member re-registers under EPIC-A with the same professional registration**: **resolved 2026-07-14** — `identity.members.verification_status` now has an `expelled` value (architecture spec amendment; see EPIC-A's spec, Section 2, and EPIC-F's spec, Section 3, for the write path) and EPIC-A's uniqueness constraint blocks any non-`rejected` status by construction, so `expelled` is blocked automatically. EPIC-A additionally logs the blocked attempt to `identity.reapplication_attempts` for admin review, per Adrian's direction that this be prevented *and* reviewed, not silently rejected. See `docs/2026-07-14-technical-specs-open-questions.md`, Section 2, for the full history of this gap.
-- **Handle deleted mid-session** (e.g. moderator expels while the member is actively posting): the existing access token remains valid for up to its ~15-minute lifetime (same mechanic the architecture spec, Section 7.2, already describes for suspension/expulsion generally); no EPIC-B-specific handling needed beyond what that section already establishes.
+| Scenario | Handling | Why / notes |
+|---|---|---|
+| Two applicants race to claim the same handle name | The case-insensitive unique constraint (Sections 2/3) is the source of truth; the API 409s on the race | Expected behaviour — the client should offer alternatives, not retry blindly |
+| A moderator-forced rename collides with an existing handle | The rename endpoint (Section 5) runs the same blocklist/uniqueness validation as creation and rejects the collision | The admin picks a different replacement name |
+| An expelled member re-registers under EPIC-A with the same registration | Blocked — `identity.members.verification_status` now has an `expelled` value and EPIC-A's constraint blocks any non-`rejected` status; the attempt is logged to `identity.reapplication_attempts` for admin review | **Resolved 2026-07-14** per Adrian's direction (prevented *and* reviewed, not silently rejected); history in `docs/2026-07-14-technical-specs-open-questions.md`, Section 2 |
+| Handle expelled mid-session (moderator expels while the member is actively posting) | Existing access token stays valid up to its ~15-minute lifetime, then the refresh fails | Same mechanic the architecture spec (Section 7.2) already describes — no EPIC-B-specific handling needed |
 
 ---
 

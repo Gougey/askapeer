@@ -113,9 +113,13 @@ The eight items are exactly PRD Section 10.2's list — this spec doesn't add or
 7. Images reviewed for embedded metadata — platform strips EXIF automatically; content compliance confirmed
 8. No uploaded documents contain patient identifiers
 
-**Enforcement is attestation-based, not structurally validated**, for items 1, 2, 5, and 8 — the platform cannot algorithmically detect a patient name or a uniquely-identifying facility name in free text (the same limitation the EPIC-B spec notes for handle names attempting to encode a real identity). Items 3 and 4 are different: these are candidates for **structural enforcement**, not just a checkbox — e.g. an age-band selector (a fixed set of bands, not a free date-of-birth field) and a relative-timeline input (a "X weeks/months post-injury" structured field) in the `community.case_details` template itself, rather than trusting an author to remember to phrase a free-text field as a band. This spec proposes structural enforcement for items 3/4 as a meaningfully stronger safeguard than the PRD's own wording implies (which frames all eight as checklist items) — flagged as a recommendation for confirmation in Section 12, not assumed authorised unilaterally.
+How each item can actually be enforced differs — the PRD frames all eight as checklist items, but they fall into three groups:
 
-Items 6 and 7 depend on **image attachment support existing at all**, which is currently a Could-have in EPIC-C's spec (Section 7 there), not a committed MVP feature — a real gap between what this checklist assumes exists and what's confirmed to ship. Flagged prominently in Section 12.
+| Items | Enforcement | Why |
+|---|---|---|
+| 1, 2, 5, 8 (names, locations, facility names, document identifiers) | **Attestation only** — checkbox plus the member's signed declaration | The platform cannot algorithmically detect a patient name or a uniquely-identifying facility name in free text (the same limitation the EPIC-B spec notes for handle names encoding a real identity) |
+| 3, 4 (age bands, relative dates) | **Structural enforcement proposed** — an age-band selector (fixed set of bands, no free date-of-birth field) and a relative-timeline input ("X weeks post-injury") built into the `community.case_details` template | Meaningfully stronger than trusting an author to remember to phrase a free-text field as a band. A stronger safeguard than the PRD's wording implies — flagged for confirmation in Section 12, not assumed authorised |
+| 6, 7 (image content, EXIF) | **Depends on image attachments existing at all** | Currently only a Could-have in EPIC-C (Section 7 there) — a real gap between what this checklist assumes and what's confirmed to ship. Flagged prominently in Section 12 |
 
 ---
 
@@ -125,7 +129,10 @@ Exact wording, PRD Section 10.3:
 
 > *"I confirm that this case discussion is de-identified in accordance with Askapeer's patient privacy policy. I understand that any breach of patient confidentiality is a serious professional and legal matter and may result in permanent removal from the platform and referral to my professional regulatory body."*
 
-The API stores this exact text in `attestation_text` (not just a boolean "attested = true") — if the wording is ever revised, historical attestations remain an accurate record of what the member actually agreed to at the time, consistent with the architecture spec's general audit-immutability philosophy (Section 4.4). `ip_address` is captured server-side from the request, per the PRD's "recorded with timestamp and linked to the member's verified identity" requirement — this is exactly the scenario the architecture spec's Section 4.3 "deliberate exception" describes, so no new reasoning is needed here beyond pointing at it.
+Implementation points:
+- **The exact text is stored** in `attestation_text`, not just a boolean "attested = true" — if the wording is ever revised, historical attestations remain an accurate record of what the member actually agreed to at the time (architecture spec's audit-immutability philosophy, Section 4.4).
+- **`ip_address` is captured server-side** from the request, per the PRD's "recorded with timestamp and linked to the member's verified identity" requirement.
+- This is exactly the scenario the architecture spec's Section 4.3 "deliberate exception" describes — no new identity-boundary reasoning is needed beyond pointing at it.
 
 ---
 
@@ -163,7 +170,10 @@ This is static content rendered by the client on any `type = case_discussion` po
 
 ## 8. Post-publish editing
 
-**Proposed: published case discussions are not author-editable.** The attestation (Section 5) is tied to a specific `checklist_snapshot` at a specific moment — allowing free edits after publish would let the actual content diverge from what was attested to, silently invalidating the record's meaning. If a correction is genuinely needed (PRD Section 10.4 names "request a corrected resubmission" as a moderation action), this spec proposes that goes through EPIC-F as a moderator-initiated action, likely requiring the case to be unpublished and re-attested against a fresh checklist rather than a live in-place edit. This is this spec's own design position, not a PRD requirement, and is flagged in Section 12 alongside the specific new moderation-action type it implies for EPIC-F.
+**Proposed: published case discussions are not author-editable.** (This spec's own design position, not a PRD requirement — flagged in Section 12 alongside the new moderation-action type it implies for EPIC-F.)
+
+- **Why**: the attestation (Section 5) is tied to a specific `checklist_snapshot` at a specific moment. Free edits after publish would let the content diverge from what was attested to, silently invalidating the record's meaning.
+- **When a correction is genuinely needed**: PRD Section 10.4 already names "request a corrected resubmission" as a moderation action — this spec proposes that path, via EPIC-F, likely by unpublishing the case and re-attesting against a fresh checklist rather than a live in-place edit.
 
 ---
 

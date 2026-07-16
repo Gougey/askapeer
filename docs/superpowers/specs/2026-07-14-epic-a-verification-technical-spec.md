@@ -98,9 +98,19 @@ identity.verification_decisions        -- immutable: INSERT-only grant
   created_at    timestamptz
 ```
 
-**Why a uniqueness constraint on `(professional_body, registration_number, registration_country)`**: the PRD doesn't mention duplicate-registration abuse directly, but the trust proposition ("every member is a qualified professional") is undermined if one real registration can back multiple pseudonymous handles — that would let a single practitioner run sockpuppet accounts to manufacture apparent consensus. Enforced at the database level, not just application logic, consistent with the architecture spec's general approach of using schema constraints over code discipline.
+**Why a uniqueness constraint on `(professional_body, registration_number, registration_country)`**:
+- The PRD doesn't mention duplicate-registration abuse directly, but the trust proposition ("every member is a qualified professional") is undermined if one real registration can back multiple pseudonymous handles — a single practitioner could run sockpuppet accounts to manufacture apparent consensus.
+- Enforced at the database level, not just application logic, consistent with the architecture spec's general approach of using schema constraints over code discipline.
 
-**Expelled-member reapplication is deliberately more than a silent 409.** Adrian's decision (2026-07-14, resolving the gap flagged in the EPIC-B and EPIC-F specs): an expelled member attempting to re-register must be prevented *and* the attempt logged and reviewed, not just quietly rejected like an ordinary duplicate-registration case. When `POST /v1/auth/register`'s uniqueness check fails specifically because the matched row is `expelled` (as opposed to `pending`/`approved_verified`/`suspended`, which are ordinary "you already have an account in progress" cases), the API additionally writes an `identity.reapplication_attempts` row and surfaces it to admins (Section 6). The applicant-facing response is a generic registration-rejected message in either case — it deliberately does not confirm to the applicant that the system recognised them as previously expelled, since doing so would hand a bad-faith actor confirmation their identity was detected. This distinction (generic response to the applicant, specific logging internally) is this spec's own proposal, flagged in Section 11 alongside the exact wording question.
+**Expelled-member reapplication is deliberately more than a silent 409** (Adrian's decision, 2026-07-14, resolving the gap flagged in the EPIC-B and EPIC-F specs):
+
+| | Ordinary duplicate (`pending`/`approved_verified`/`suspended` match) | Expelled member reapplying (`expelled` match) |
+|---|---|---|
+| Registration blocked? | Yes — unique constraint | Yes — same constraint |
+| Logged for review? | No — just "you already have an account in progress" | Yes — writes an `identity.reapplication_attempts` row, surfaced to admins (Section 6) |
+| Applicant-facing response | Generic registration-rejected message | **The same generic message** — deliberately identical |
+
+The identical response is intentional: confirming to the applicant that the system recognised them as previously expelled would hand a bad-faith actor confirmation their identity was detected. This distinction (generic response externally, specific logging internally) is this spec's own proposal — flagged in Section 11 alongside the exact wording question.
 
 No new table is needed for the admin review queue itself — it's a filtered view over `identity.members` (Section 6), not separate storage. `identity.reapplication_attempts` (above) is a separate, append-only log reviewed the same way (Section 6).
 
@@ -259,18 +269,24 @@ This spec does not define the handle-creation endpoint itself (`community.handle
 
 ## 8. Failure modes and edge cases
 
-- **Register API down or rate-limited**: worker marks the `register_lookup` evidence row `outcome = needs_review` with the raw error in `raw_result`, routes to admin queue rather than retrying indefinitely and leaving the applicant in limbo. PRD's risk register (Section 13) already names this as a medium-likelihood risk with manual review as the designed mitigation.
-- **BASRAT/SST have no confirmed public lookup API** (see Section 11) — until confirmed, these two professional bodies route every applicant straight to manual review regardless of Onfido outcome. This is a deliberate, explicit fallback, not a silent gap.
-- **Onfido webhook never arrives** (delivery failure, applicant abandons the document-upload step): job has a timeout (proposed: 72 hours) after which it's surfaced in the admin queue as `needs_more_info` with an automatic reason of "identity check not completed," rather than leaving the applicant in `pending` indefinitely with no visible next step.
-- **Duplicate registration attempt** on an already-`rejected` member: the unique constraint in Section 2 only blocks non-rejected rows, so a genuinely rejected applicant isn't permanently locked out of ever reapplying (e.g. after resolving a registration lapse) — a fresh registration attempt creates a new `identity.members` row. Whether this needs a cooldown period or admin awareness of the prior rejection is an open question (Section 11).
-- **Duplicate registration attempt on an `expelled` member**: resolved (2026-07-14) — the same unique constraint blocks it, since `expelled` isn't `rejected` (Section 2), and the attempt is additionally logged to `identity.reapplication_attempts` for admin review (Section 6). This was previously a real gap (identified while drafting the EPIC-B and EPIC-F specs, where `identity.members` had no `expelled` value at all and expulsion never touched this table) — see `docs/2026-07-14-technical-specs-open-questions.md`, Section 2, for the history.
-- **Applicant emails don't match register-held contact details**: not a verification signal — the register lookup matches on `legal_name` + `registration_number`, not email, since professional registers don't reliably expose a queryable email field.
+| Scenario | Handling | Why / notes |
+|---|---|---|
+| Register API down or rate-limited | Worker marks the `register_lookup` evidence row `outcome = needs_review` (raw error in `raw_result`) and routes to the admin queue | Better than retrying indefinitely with the applicant in limbo; the PRD's risk register (Section 13) already names this risk with manual review as the designed mitigation |
+| BASRAT/SST have no confirmed public lookup API (Section 11) | Every applicant from these two bodies routes straight to manual review, regardless of Onfido outcome | A deliberate, explicit fallback until API access is confirmed — not a silent gap |
+| Onfido webhook never arrives (delivery failure, or applicant abandons the document upload) | Job timeout (proposed: 72 hours), after which the applicant surfaces in the admin queue as `needs_more_info` with automatic reason "identity check not completed" | Avoids leaving the applicant in `pending` indefinitely with no visible next step |
+| Reapplication by a `rejected` member | Permitted — the unique constraint only blocks non-`rejected` rows; a fresh attempt creates a new `identity.members` row | A genuinely rejected applicant isn't locked out forever (e.g. after resolving a registration lapse). Cooldown / admin visibility of the prior rejection is an open question (Section 11) |
+| Reapplication by an `expelled` member | Blocked by the same constraint (`expelled` ≠ `rejected`), and logged to `identity.reapplication_attempts` for admin review (Section 6) | Resolved 2026-07-14 — previously a real gap (no `expelled` value existed on `identity.members`); history in `docs/2026-07-14-technical-specs-open-questions.md`, Section 2 |
+| Applicant email doesn't match register-held contact details | Not treated as a verification signal | The register lookup matches on `legal_name` + `registration_number`, not email — professional registers don't reliably expose a queryable email field |
 
 ---
 
 ## 9. Non-functional notes specific to EPIC-A
 
-- **Why admin queue reads aren't `identity_access_log` events**: the architecture spec, Section 4.4, draws the line at "routine automated system access" vs. moderator-initiated identity access. Reviewing a *pending verification applicant's own submitted evidence* is the core, ordinary function `IdentityService` exists to perform — it is meaningfully different from a moderator looking up an *existing verified member's* real identity behind their handle (which the PRD's Section 9.4 access rule and the architecture spec's `identity_access_log` are protecting against). Conflating the two would make routine verification work indistinguishable from a genuine identity-access event in the audit trail, undermining the log's value as a trust artifact. If this reading is wrong, it needs correcting before build, not after — flagged in Section 11.
+- **Why admin queue reads aren't `identity_access_log` events** (flagged for confirmation in Section 11 — if this reading is wrong it needs correcting before build, not after):
+  - The architecture spec (Section 4.4) draws the line at "routine automated system access" vs. moderator-initiated identity access.
+  - Reviewing a *pending applicant's own submitted evidence* is the core, ordinary function `IdentityService` exists to perform.
+  - That is meaningfully different from a moderator looking up an *existing verified member's* real identity behind their handle — which is what PRD Section 9.4's access rule and `identity_access_log` protect against.
+  - Conflating the two would make routine verification work indistinguishable from genuine identity-access events, undermining the log's value as a trust artifact.
 - **PII handling in transit/rest**: `legal_name`, `raw_result` (which may embed applicant-submitted document data from Onfido), and `registration_number` are exactly the category of data the architecture spec's `identity` schema access grants exist to protect — no change needed here beyond confirming this epic's code paths only ever run under the `IdentityService` database role.
 - **Rate limiting**: `POST /v1/auth/register` and `POST /v1/auth/request-link` are the two endpoints explicitly called out in the architecture spec, Section 5.3, for Redis-backed per-IP rate limiting — registration is an obvious target for automated abuse (e.g. scripted submission of stolen registration numbers to probe the register-lookup step).
 

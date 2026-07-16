@@ -71,13 +71,13 @@ epic only specifies the data and actions those routes operate on.</p>
 <code>community.moderation_actions</code>, defined in the architecture
 spec, Section 4.2, with one addition: <strong><code>target_type</code>
 needs a <code>handle</code> value</strong>, not just
-<code>post</code>/<code>comment</code>. The PRD’s zero-tolerance rule
-(Section 9.3) explicitly covers “collusion to de-anonymise members on or
-off the platform” — a report about a pattern of behaviour or an
-off-platform incident may have no specific post or comment to attach to,
-only a handle. Restricting reports to content-only targets would leave
-no way to file exactly the kind of report the platform’s most serious
-rule anticipates.</p>
+<code>post</code>/<code>comment</code>. Why: - The PRD’s zero-tolerance
+rule (Section 9.3) explicitly covers “collusion to de-anonymise members
+on or off the platform.” - A report about a pattern of behaviour, or an
+off-platform incident, may have no specific post or comment to attach to
+— only a handle. - Restricting reports to content-only targets would
+leave no way to file exactly the kind of report the platform’s most
+serious rule anticipates.</p>
 <pre><code>community.reports
   id, reporter_handle_id, target_type enum(post, comment, handle),
   target_id, category, priority boolean generated from category,
@@ -89,17 +89,17 @@ community.moderation_actions           -- immutable: INSERT-only grant
                     request_correction, rename_handle),
   moderator_id, reason, created_at</code></pre>
 <p><code>action_type</code> gains <strong>two values beyond the
-architecture spec’s original four</strong>:
-<code>request_correction</code> (resolves EPIC-E’s Section 9 dependency
-— the “request a corrected resubmission” action PRD Section 10.4 names
-for case discussions) and <code>rename_handle</code> (resolves EPIC-B’s
-Section 13 open question — a moderator-forced handle rename, when a
-handle name itself turns out to be identifying or impersonating, is a
-moderation action in substance and belongs in this enum rather than as a
-bespoke EPIC-B-only endpoint). Both additions are proposed here as the
-natural home for these actions, since this spec is where the action-type
-vocabulary is actually owned — but see Section 10 for confirmation
-status.</p>
+architecture spec’s original four</strong> (both proposed here as the
+natural home, since this spec owns the action-type vocabulary — see
+Section 10 for confirmation status): -
+<strong><code>request_correction</code></strong> — resolves EPIC-E’s
+Section 9 dependency: the “request a corrected resubmission” action PRD
+Section 10.4 names for case discussions. -
+<strong><code>rename_handle</code></strong> — resolves EPIC-B’s Section
+13 open question: a moderator-forced handle rename (when the name itself
+is identifying or impersonating) is a moderation action in substance, so
+it belongs in this enum rather than as a bespoke EPIC-B-only
+endpoint.</p>
 <hr />
 <h2 id="moderation-action-types">3. Moderation action types</h2>
 <table>
@@ -165,32 +165,61 @@ queue ordering</h2>
 <p>The PRD names one specific category explicitly —
 <code>identifiable_patient_information</code> (Section 10.4), which
 “trigger[s] a priority review flag and are actioned before other report
-types.” It does not enumerate a full category list. This spec proposes
-the following, since a report form needs <em>some</em> fixed set of
-categories to be usable, but the full list is this spec’s own
+types.” It does not enumerate a full list. This spec proposes the
+following, since a report form needs <em>some</em> fixed set of
+categories to be usable — but the full list is this spec’s own
 construction, not a PRD requirement:</p>
-<ul>
-<li><code>identifiable_patient_information</code> —
-<strong>priority</strong> (explicit PRD requirement)</li>
-<li><code>anonymity_violation</code> — attempting to reveal one’s own or
-another’s identity (PRD Section 9.3/9.5). <strong>This spec proposes
-priority status for this category too</strong>, even though the PRD only
-explicitly names patient-information reports as priority — the
-zero-tolerance rule around anonymity is described in equally or more
-severe terms (“immediate and permanent expulsion… no exceptions”) than
-the patient-privacy policy, and it would be an odd asymmetry for the
-platform’s other founding guarantee to sit in the ordinary queue.
-Flagged for explicit confirmation in Section 10 rather than
-assumed.</li>
-<li><code>harassment</code></li>
-<li><code>spam</code></li>
-<li><code>other</code></li>
-</ul>
-<p>Queue ordering: priority categories
-(<code>identifiable_patient_information</code>,
-<code>anonymity_violation</code>) first, then by report age within each
-tier — the same pattern the EPIC-A spec already established for its own
-(structurally separate) verification queue, Section 6 there.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Category</th>
+<th>Priority?</th>
+<th>Basis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>identifiable_patient_information</code></td>
+<td><strong>Yes</strong></td>
+<td>Explicit PRD requirement (Section 10.4)</td>
+</tr>
+<tr>
+<td><code>anonymity_violation</code> — attempting to reveal one’s own or
+another’s identity</td>
+<td><strong>Yes — proposed</strong> (needs confirmation, Section
+10)</td>
+<td>Not PRD-stated, but the zero-tolerance rule (Sections 9.3/9.5) is
+described in equally or more severe terms (“immediate and permanent
+expulsion… no exceptions”) than the patient-privacy policy — an odd
+asymmetry if the platform’s other founding guarantee sat in the ordinary
+queue</td>
+</tr>
+<tr>
+<td><code>harassment</code></td>
+<td>No</td>
+<td>This spec’s proposal</td>
+</tr>
+<tr>
+<td><code>spam</code></td>
+<td>No</td>
+<td>This spec’s proposal</td>
+</tr>
+<tr>
+<td><code>other</code></td>
+<td>No</td>
+<td>This spec’s proposal</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Queue ordering</strong>: priority categories first, then by
+report age within each tier — the same pattern the EPIC-A spec
+established for its (structurally separate) verification queue, Section
+6 there.</p>
 <hr />
 <h2 id="viewing-real-identity-the-audited-exception">5. Viewing real
 identity — the audited exception</h2>

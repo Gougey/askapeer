@@ -110,7 +110,10 @@ cancelled  (access continues until current_period_end, then restricted — Secti
 - Issued when `billing.subscriptions.status` moves to `cancelled` (immediately) or `past_due` beyond a **grace period** (proposed: 7 days from the first failed payment, chosen arbitrarily and flagged in Section 10 — a `past_due` subscription still gets a short window since payment failures are often transient, e.g. an expired card, not a deliberate lapse).
 - Takes effect within one access-token lifetime (~15 minutes), reusing exactly the revocable-refresh-token mechanism the architecture spec already describes for suspension/expulsion (Section 7.2) — no new session-invalidation mechanism needed, only a new reason a refresh can be downgraded.
 
-**This is deliberately a separate gating dimension from `community.handles.status`** (EPIC-B/EPIC-F's moderation states). A billing lapse and a moderation suspension are different in kind — one is resolved by paying, the other by an appeal or a fixed suspension period — and conflating them into one status field would make "why can't I access the platform" ambiguous both to the member and to support staff. Keeping them as two independently-checked gates (handle status AND subscription status, both must permit access) is this spec's proposed resolution, flagged for confirmation since it's a real architectural decision with no PRD precedent either way.
+**This is deliberately a separate gating dimension from `community.handles.status`** (EPIC-B/EPIC-F's moderation states) — flagged for confirmation, since it's a real architectural decision with no PRD precedent either way:
+- A billing lapse and a moderation suspension are **different in kind**: one is resolved by paying, the other by an appeal or a fixed suspension period.
+- Conflating them into one status field would make "why can't I access the platform" ambiguous to both the member and support staff.
+- So: **two independently-checked gates** — handle status AND subscription status, both must permit access.
 
 ---
 
@@ -153,7 +156,11 @@ POST /v1/billing/webhook           -- Section 5, no session auth (processor-sign
 
 ## 7. Trial length flexibility
 
-PRD Section 11.3 raises the possibility of a **longer trial for the initial launch cohort** (e.g. 6 months, vs. the illustrative 3-month figure elsewhere) specifically to address the content-seeding chicken-and-egg problem, and separately floats a university-partnership cohort (FD-6) that might need its own trial terms. This spec proposes `trial_end` be set per-subscription at creation time from a configurable value (not a hardcoded constant), so a different cohort (e.g. an invite-code-driven university trial) can receive a different trial length without a schema change — cheap to build in from the start, expensive to retrofit if trial length turns out to need to vary. No invite-code/cohort mechanism is designed further here since none is confirmed scope; this section only ensures the data model doesn't foreclose it.
+Two PRD signals suggest trial length will need to vary:
+- **Section 11.3** raises a longer trial for the initial launch cohort (e.g. 6 months vs. the illustrative 3) to address the content-seeding chicken-and-egg problem.
+- **FD-6** floats a university-partnership cohort that might need its own trial terms.
+
+**This spec's proposal**: `trial_end` is set per-subscription at creation time from a configurable value, not a hardcoded constant — so a different cohort (e.g. an invite-code-driven university trial) can get a different trial length without a schema change. Cheap to build in from the start, expensive to retrofit. No invite-code/cohort mechanism is designed further here, since none is confirmed scope — this section only ensures the data model doesn't foreclose it.
 
 ---
 

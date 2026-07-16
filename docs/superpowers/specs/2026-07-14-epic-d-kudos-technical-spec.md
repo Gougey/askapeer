@@ -44,7 +44,9 @@ community.kudos
   unique(target_type, target_id, given_by_handle_id)   -- one kudos per handle per item
 ```
 
-No new table is needed. This epic's only schema-level responsibility is the write path into `community.handles.kudos_total` (owned column, EPIC-B spec Section 9) — implemented as a same-transaction increment/decrement alongside the `community.kudos` insert/delete, not a separately-scheduled recomputation. Keeping the write atomic with the triggering action is what makes `kudos_total` trustworthy as a reputation figure — a batch-recompute job would introduce a window where a profile's displayed total lags reality, which matters more here than it would for a less identity-adjacent number, precisely because kudos is one of the few things a peer can see about a handle at all (PRD Section 9.2).
+No new table is needed. This epic's only schema-level responsibility is the write path into `community.handles.kudos_total` (owned column, EPIC-B spec Section 9):
+- Implemented as a **same-transaction increment/decrement** alongside the `community.kudos` insert/delete — not a separately-scheduled recomputation.
+- **Why atomic matters here**: a batch-recompute job would introduce a window where a profile's displayed total lags reality. That matters more for kudos than for a less identity-adjacent number, because kudos is one of the few things a peer can see about a handle at all (PRD Section 9.2) — it has to be trustworthy as a reputation figure.
 
 ---
 
@@ -59,11 +61,13 @@ No new table is needed. This epic's only schema-level responsibility is the writ
 
 ## 4. Answer ranking
 
-Within a single post's thread, top-level comments (answers) are ordered by kudos count, descending, per PRD Section 6.1 ("Answers within a thread are ranked by kudos, highest first"). Ties are broken by `created_at` ascending — earliest answer wins a tie. This is this spec's own proposal, not a PRD-specified rule, but it's a defensible default: it doesn't reward being first outright (kudos count still dominates), only breaks genuine ties in favour of whoever contributed the answer earliest, which seems more defensible than an arbitrary/random tiebreak or than favouring the most recent (which would reward answer-sniping a popular thread just before it's viewed).
+| What | Ordering | Why |
+|---|---|---|
+| Top-level comments (answers) | Kudos count, descending | PRD Section 6.1: "Answers within a thread are ranked by kudos, highest first" |
+| Ties between answers | `created_at` ascending — earliest wins | This spec's proposal, not PRD-specified. Kudos still dominates; the tiebreak just favours whoever contributed earliest, which beats a random tiebreak or favouring the most recent (which would reward answer-sniping a popular thread just before it's viewed) |
+| Nested replies (via `parent_comment_id`) | Chronological within their parent — **not** kudos-ranked | The PRD's ranking language is about "answers within a thread" (top-level responses), not every nesting level. Kudos-ranking nested replies would fragment genuine back-and-forth conversation |
 
-**Nested replies** (replies to a comment, via `parent_comment_id`) are ordered chronologically within their parent, not kudos-ranked — the PRD's ranking language is specifically about "answers within a thread," i.e. top-level responses to the original question, not every level of nested discussion. Ranking every nesting level by kudos would fragment genuine back-and-forth conversation threads in a way the PRD's framing doesn't ask for.
-
-Ranking is computed at read time from `community.comments` joined against `community.kudos` counts (or the cached `kudos_total`-equivalent per comment — see Section 6), not stored as a precomputed order column, since kudos changes are relatively low-frequency events per thread compared to the read volume of viewing a thread, and dynamic ordering is simpler to keep correct than a maintained order column.
+**Computed at read time**, from `community.comments` joined against `community.kudos` counts (or the cached per-comment equivalent — Section 6), not stored as a precomputed order column: kudos changes are low-frequency per thread compared to thread-view volume, and dynamic ordering is simpler to keep correct than a maintained column.
 
 ---
 
@@ -82,7 +86,11 @@ Both return the target's updated kudos count. No separate "read kudos count" end
 
 ## 6. Leaderboards and the Redis cache
 
-The architecture spec (Section 3) names "kudos leaderboards" as the example of Redis's hot-path caching role. This epic is where that's made concrete: a Redis sorted set (`kudos:leaderboard`, member = `handle_id`, score = `kudos_total`) updated alongside the same write that updates `community.handles.kudos_total` in Postgres. Any "top contributors" view (not itself in the PRD's MVP scope as a named feature, but a natural extension of a reputation system, and useful for the moderation/admin picture of who's active) reads from Redis rather than running a `ORDER BY kudos_total DESC` query against Postgres on every request — the same reasoning the architecture spec gives generally for using Redis as a read-path accelerator rather than a source of truth. Postgres remains authoritative; Redis is a derived, rebuildable cache.
+The architecture spec (Section 3) names "kudos leaderboards" as the example of Redis's hot-path caching role. This epic makes that concrete:
+
+- **Mechanism**: a Redis sorted set (`kudos:leaderboard`, member = `handle_id`, score = `kudos_total`), updated alongside the same write that updates `community.handles.kudos_total` in Postgres.
+- **What reads it**: any "top contributors" view — not itself in the PRD's MVP scope as a named feature, but a natural extension of a reputation system and useful for the moderation/admin picture of who's active — reads from Redis rather than running `ORDER BY kudos_total DESC` against Postgres on every request.
+- **Authority**: Postgres remains authoritative; Redis is a derived, rebuildable cache — the same reasoning the architecture spec gives generally for Redis as a read-path accelerator, never a source of truth.
 
 ---
 

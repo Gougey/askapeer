@@ -129,16 +129,42 @@ creation time, plus free <code>tags</code> within that category for
 flexibility and search depth. Every post has exactly one category and
 zero-or-more tags.</p>
 <p><strong>This spec does not invent the category list or tag
-vocabulary</strong> — Andrew Renshaw has an existing body-area list per
-the PRD (Section 15, FD-4 discussion), and a keyword/tag vocabulary
-already exists for the research feed
-(<code>prototypes/research-feed/data/taxonomy.json</code>), but that
-prototype’s own README is explicit that its taxonomy is “a starting
-point… not the final FD-4 forum taxonomy” and flags “taxonomy
-unification with the forum” as an open item. Reconciling the forum’s
-category/tag list, the research feed’s taxonomy, and Andrew’s body-area
-list into one controlled vocabulary is real work that hasn’t happened
-yet — flagged in Section 11, not assumed resolved here.</p>
+vocabulary.</strong> Three overlapping-but-different vocabularies
+already exist, and reconciling them into one controlled vocabulary is
+real work that hasn’t happened yet — flagged in Section 12, not assumed
+resolved here:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Vocabulary</th>
+<th>Where it lives</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Andrew Renshaw’s body-area list</td>
+<td>Referenced in the PRD (Section 15, FD-4 discussion)</td>
+<td>Exists, not yet in the repo</td>
+</tr>
+<tr>
+<td>Research-feed taxonomy</td>
+<td><code>prototypes/research-feed/data/taxonomy.json</code></td>
+<td>Its own README calls it “a starting point… not the final FD-4 forum
+taxonomy” and flags forum unification as open</td>
+</tr>
+<tr>
+<td>The forum’s category/tag list (this epic)</td>
+<td>Not yet defined</td>
+<td>Depends on the reconciliation above</td>
+</tr>
+</tbody>
+</table>
 <p><code>community.categories</code> is deliberately admin-managed (not
 member-created) — a hybrid taxonomy where either half were freely
 extensible would collapse into pure tagging (Option B), which is the
@@ -161,7 +187,7 @@ in the body), not merely a <code>tsvector</code>-against-body match.</p>
 <p>The PRD (Section 6.1) marks Search itself “(to be
 discussed/confirmed)” even though it’s in the Must-have table — an odd
 hedge worth surfacing rather than silently treating as fully settled
-(Section 11).</p>
+(Section 12).</p>
 <hr />
 <h2 id="api-endpoints">5. API endpoints</h2>
 <p>Consistent with the architecture spec’s Section 5.3 principles
@@ -188,29 +214,50 @@ check beyond what already exists.</p>
 <hr />
 <h2 id="editdelete-policy">6. Edit/delete policy</h2>
 <p><strong>Not specified in the PRD</strong> — this spec proposes a
-policy and flags it for confirmation rather than assuming it:</p>
-<ul>
-<li><strong>Comments/posts are editable by their author within a short
-window</strong> (proposed: 15 minutes) with no visible “edited” marker
-within that window (typo correction), and editable indefinitely after
-that but with an <code>edited_at</code> timestamp shown — balancing
-genuine correction against the integrity of a thread other members have
-already responded to or awarded kudos against.</li>
-<li><strong>Author self-delete is a soft delete</strong>
-(<code>status = removed</code>) — same mechanism as moderator removal
-(EPIC-F), so a deleted post’s replies aren’t orphaned, consistent with
-Section 2’s reasoning.</li>
-<li><strong>A post that already has kudos-bearing comments, or an
-attested case discussion (EPIC-E), should not be freely
-author-deletable</strong> — deleting a case discussion after attestation
-would undermine the point of the attestation existing (the PRD Section
-10.3 attestation is “recorded with timestamp and linked to the member’s
-verified identity” specifically so it persists as a record). This spec
-proposes case discussions become author-delete-restricted
-(moderator-only) once published; ordinary questions remain
-author-deletable. Flagged in Section 11 since it’s this spec’s judgment
-call, not a PRD requirement.</li>
-</ul>
+policy and flags it for confirmation (Section 12) rather than assuming
+it:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Action</th>
+<th>Proposed policy</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Edit within 15 minutes of posting</td>
+<td>Allowed, no visible “edited” marker</td>
+<td>Typo-correction window</td>
+</tr>
+<tr>
+<td>Edit after 15 minutes</td>
+<td>Allowed indefinitely, <code>edited_at</code> timestamp shown</td>
+<td>Balances genuine correction against the integrity of a thread others
+have already responded to or awarded kudos against</td>
+</tr>
+<tr>
+<td>Author self-delete (ordinary question/comment)</td>
+<td>Allowed — soft delete (<code>status = removed</code>)</td>
+<td>Same mechanism as moderator removal (EPIC-F), so a deleted post’s
+replies aren’t orphaned (Section 2’s reasoning)</td>
+</tr>
+<tr>
+<td>Author self-delete (published case discussion)</td>
+<td><strong>Not allowed</strong> — moderator-only removal once
+attested</td>
+<td>Deleting after attestation would undermine the attestation’s
+purpose: PRD Section 10.3 records it “with timestamp and linked to the
+member’s verified identity” specifically so it persists as a record
+(EPIC-E)</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="could-have-features-section-6.1">7. Could-have features (Section
 6.1)</h2>
@@ -237,7 +284,7 @@ votes table — a lightweight, self-contained addition if built; no
 interaction with any other epic’s data.</li>
 </ul>
 <p>None of these three should be assumed in the MVP build plan — flagged
-in Section 11 for a scope confirmation.</p>
+in Section 12 for a scope confirmation.</p>
 <hr />
 <h2 id="personalised-feed-should-have">8. Personalised feed
 (Should-have)</h2>

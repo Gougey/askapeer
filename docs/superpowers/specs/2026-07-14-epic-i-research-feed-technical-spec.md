@@ -65,13 +65,25 @@ DELETE /v1/research-feed/interests/:tag
 
 ## 4. `member_interests` vs. EPIC-B's `community.follows`
 
-Worth flagging precisely because it's easy to conflate: `community.member_interests` (this epic, weighted, used to score research-literature relevance) and `community.follows` (EPIC-B, binary, `target_type = tag` — the unified handle/tag follow mechanism resolved 2026-07-14; see EPIC-B's spec, Section 8, and `docs/2026-07-14-technical-specs-open-questions.md`, Section 2) are **two different concepts that happen to both be "a member's interest in a tag."** One is a weighted relevance signal for an external content stream (research articles); the other is a binary follow relationship, now built, for internal content (forum posts, via EPIC-C's personalised feed and EPIC-G's digest). They could plausibly be unified into a single mechanism feeding both the research feed and the forum's personalised feed — or they could legitimately stay separate given they serve different content types with different scoring needs. This spec deliberately doesn't resolve that unilaterally by either building a duplicate mechanism or assuming unification — flagged in Section 9 as still open, now that the tag-follow side of the question is no longer a gap but an actual table to weigh unification against.
+Worth flagging precisely because it's easy to conflate — these are **two different concepts that happen to both be "a member's interest in a tag"**:
+
+| | `community.member_interests` (this epic) | `community.follows`, `target_type = tag` (EPIC-B) |
+|---|---|---|
+| Signal | **Weighted** relevance score | **Binary** follow relationship |
+| Feeds | The research feed (external content — articles) | Forum personalised feed (EPIC-C) and weekly digest (EPIC-G) — internal content |
+| Status | Specified here | Built — the unified handle/tag follow mechanism, resolved 2026-07-14 (EPIC-B spec §8; open-questions doc, Section 2) |
+
+They could plausibly be unified into a single mechanism feeding both, or legitimately stay separate given they serve different content types with different scoring needs. This spec deliberately doesn't resolve that unilaterally — flagged in Section 9 as still open, now that the tag-follow side is no longer a gap but an actual table to weigh unification against.
 
 ---
 
 ## 5. Taxonomy dependency on EPIC-C
 
-EPIC-C's spec (Section 3) already flags that the forum's category/tag taxonomy, Andrew Renshaw's body-area list, and the research feed prototype's `taxonomy.json` are three overlapping-but-not-unified vocabularies. This epic depends on that reconciliation directly: `member_interests.tag` and the classification taxonomy the architecture spec's Section 8 describes should end up being **the same controlled vocabulary** as whatever EPIC-C settles on for forum tags, not a separately-maintained list — otherwise a member's forum tag-following and their research-feed interests would use different, possibly inconsistent vocabularies for what a member experiences as "topics I care about." No new work is proposed here beyond restating this dependency clearly, since EPIC-C's spec already owns resolving it.
+EPIC-C's spec (Section 3) already flags that three vocabularies — the forum's category/tag taxonomy, Andrew Renshaw's body-area list, and the research feed prototype's `taxonomy.json` — overlap without being unified. This epic depends on that reconciliation directly:
+
+- `member_interests.tag` and the classification taxonomy (architecture spec, Section 8) should end up being **the same controlled vocabulary** as whatever EPIC-C settles on for forum tags — not a separately-maintained list.
+- Otherwise a member's forum tag-following and their research-feed interests would use different, possibly inconsistent vocabularies for what they experience as one thing: "topics I care about."
+- No new work is proposed here — EPIC-C's spec owns resolving it; this section just states the dependency.
 
 ---
 

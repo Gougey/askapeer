@@ -82,21 +82,18 @@ being precise about in this spec, since it’s the one place this epic
 touches the identity boundary at all:</p>
 <p><strong><code>NotificationService</code> should read only
 <code>email</code> from <code>identity.members</code>, never
-<code>legal_name</code>.</strong> Nothing in the architecture spec
-technically prevents a wider read, since the grant is at the
-schema/table level, not column level — but every email template this
-service sends must address the member by their <strong>handle</strong>,
-never their real name, even though the service technically has the
-database access to do otherwise. This is an application-level discipline
-point worth stating explicitly rather than assuming it falls out of the
-schema separation automatically, since — unlike the general
-<code>identity</code>/<code>community</code> boundary, which the
-architecture spec enforces structurally (Section 4, via role grants) —
-this specific narrower constraint (email-yes, name-no) is
-<em>within</em> a single already-granted role, and structural
-enforcement (e.g., a view exposing only <code>email</code>) is a cheap
-and worthwhile hardening step to actually build, not just document as a
-norm. Flagged in Section 11.</p>
+<code>legal_name</code>.</strong> - Every email template this service
+sends must address the member by their <strong>handle</strong>, never
+their real name — even though the service technically has database
+access to do otherwise. - Nothing in the architecture spec structurally
+prevents a wider read: the grant is at the schema/table level, not
+column level. So unlike the general
+<code>identity</code>/<code>community</code> boundary (which Section 4
+of that spec enforces via role grants), this narrower email-yes/name-no
+constraint is currently application discipline <em>within</em> an
+already-granted role. - <strong>Recommended hardening</strong>: a
+database view exposing only <code>email</code> — cheap to build, turns
+the norm into a structural guarantee. Flagged in Section 11.</p>
 <p>This routine access is not an <code>identity_access_log</code> event,
 per the architecture spec’s Section 4.4 distinction (routine automated
 access vs. moderator-initiated identity lookup) — consistent with what
@@ -104,32 +101,51 @@ that section already states about sending a notification email.</p>
 <hr />
 <h2 id="the-pre-handle-notification-gap">4. The pre-handle notification
 gap</h2>
-<p><strong><code>community.notifications</code> is keyed by
-<code>handle_id</code></strong> — but
+<p><strong>The problem</strong>: <code>community.notifications</code> is
+keyed by <code>handle_id</code>, but
 <code>verification_status_change</code> (one of the five notification
-types the architecture spec names in Section 7.3) needs to reach
-applicants in <code>pending</code>, <code>needs_more_info</code>, or
-<code>rejected</code> status, none of whom have a handle yet (per the
-EPIC-A/EPIC-B handoff: a handle is only created once
-<code>approved_verified</code> is reached). A rejected applicant, by
-definition, <strong>never</strong> gets a handle at all.</p>
-<p>This means <code>verification_status_change</code> notifications for
-a not-yet-verified applicant cannot be stored in
-<code>community.notifications</code> — there’s no <code>handle_id</code>
-to attach them to. This spec proposes: for these pre-handle cases, the
-notification is <strong>email-only</strong>, sent directly by
+types, architecture spec Section 7.3) needs to reach applicants in
+<code>pending</code>, <code>needs_more_info</code>, or
+<code>rejected</code> status — none of whom have a handle yet (a handle
+is only created at <code>approved_verified</code>, per the EPIC-A/EPIC-B
+handoff). A rejected applicant, by definition, <strong>never</strong>
+gets one.</p>
+<p><strong>This spec’s proposal</strong> —
+<code>verification_status_change</code> is really two mechanisms
+depending on whether a handle exists yet:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Applicant state</th>
+<th>Delivery</th>
+<th>Storage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pre-handle (<code>pending</code>, <code>needs_more_info</code>,
+<code>rejected</code>)</td>
+<td><strong>Email only</strong>, sent directly by
 <code>NotificationService</code> reading
-<code>identity.members.email</code>, with no
-<code>community.notifications</code> row created at all. Once a member
-reaches <code>approved_verified</code> and has a handle, subsequent
-status-relevant events (e.g. a later suspension) can use the normal
-handle-scoped in-app-plus-email path like any other notification
-type.</p>
-<p>This is a genuine structural asymmetry among the five notification
-types worth surfacing clearly rather than quietly special-casing in code
-with no documentation trail — <code>verification_status_change</code> is
-really two different mechanisms depending on whether a handle exists
-yet, not one mechanism with a shared table.</p>
+<code>identity.members.email</code></td>
+<td>No <code>community.notifications</code> row at all — there’s no
+<code>handle_id</code> to attach one to</td>
+</tr>
+<tr>
+<td>Post-handle (later status changes, e.g. suspension)</td>
+<td>Normal in-app + email path</td>
+<td>Ordinary handle-scoped <code>community.notifications</code> row</td>
+</tr>
+</tbody>
+</table>
+<p>Surfaced here explicitly rather than quietly special-cased in code
+with no documentation trail — it’s a genuine structural asymmetry among
+the five notification types.</p>
 <hr />
 <h2 id="notification-types-and-triggers">5. Notification types and
 triggers</h2>
@@ -190,18 +206,21 @@ mechanism, only the specific job definitions.</p>
 can’t be disabled</h2>
 <p><code>community.notification_preferences</code> lets a member
 configure <code>in_app_enabled</code>/<code>email_enabled</code>
-<strong>per type</strong> — but this spec proposes that
-<code>verification_status_change</code> is not fully configurable: a
-member cannot disable the <strong>email</strong> channel for this type,
-even though they could disable email for <code>reply</code> or
-<code>kudos_received</code>. Account-status events (verification
-decisions, and — once EPIC-F exists — suspension/expulsion notices) are
-not engagement content a member should be able to silently opt out of; a
-member needs to know their access has changed regardless of their
-notification preferences. In-app is moot for the pre-handle cases
-(Section 4), and for post-handle status changes there’s no strong reason
-to force in-app specifically, only to guarantee email delivery. Flagged
-in Section 11 as a proposal, not a confirmed policy.</p>
+<strong>per type</strong> — with one proposed exception (flagged in
+Section 11 as a proposal, not confirmed policy):</p>
+<ul>
+<li><strong><code>verification_status_change</code> email cannot be
+disabled</strong>, even though a member can disable email for
+<code>reply</code> or <code>kudos_received</code>.</li>
+<li><strong>Why</strong>: account-status events (verification decisions,
+and — via EPIC-F — suspension/expulsion notices) are not engagement
+content to opt out of; a member needs to know their access has changed
+regardless of preferences.</li>
+<li>Only the <strong>email</strong> channel is forced: in-app is moot
+for the pre-handle cases (Section 4), and for post-handle status changes
+there’s no strong reason to force in-app specifically — only to
+guarantee delivery somewhere.</li>
+</ul>
 <hr />
 <h2 id="weekly-digest-built-on-epic-bs-unified-follows-table">7. Weekly
 digest, built on EPIC-B’s unified follows table</h2>

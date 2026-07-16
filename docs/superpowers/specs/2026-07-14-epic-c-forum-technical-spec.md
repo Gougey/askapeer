@@ -86,7 +86,13 @@ community.post_tags   (post_id FK, tag_id FK, primary key(post_id, tag_id))
 
 Per the architecture spec's assumption (Section 1) and the PRD's own recommendation (Section 15, FD-4, Option D): a small, fixed set of top-level `categories` (body-area plus a few professional topics — Research, Career, Equipment) chosen by the post author at creation time, plus free `tags` within that category for flexibility and search depth. Every post has exactly one category and zero-or-more tags.
 
-**This spec does not invent the category list or tag vocabulary** — Andrew Renshaw has an existing body-area list per the PRD (Section 15, FD-4 discussion), and a keyword/tag vocabulary already exists for the research feed (`prototypes/research-feed/data/taxonomy.json`), but that prototype's own README is explicit that its taxonomy is "a starting point... not the final FD-4 forum taxonomy" and flags "taxonomy unification with the forum" as an open item. Reconciling the forum's category/tag list, the research feed's taxonomy, and Andrew's body-area list into one controlled vocabulary is real work that hasn't happened yet — flagged in Section 11, not assumed resolved here.
+**This spec does not invent the category list or tag vocabulary.** Three overlapping-but-different vocabularies already exist, and reconciling them into one controlled vocabulary is real work that hasn't happened yet — flagged in Section 12, not assumed resolved here:
+
+| Vocabulary | Where it lives | Status |
+|---|---|---|
+| Andrew Renshaw's body-area list | Referenced in the PRD (Section 15, FD-4 discussion) | Exists, not yet in the repo |
+| Research-feed taxonomy | `prototypes/research-feed/data/taxonomy.json` | Its own README calls it "a starting point... not the final FD-4 forum taxonomy" and flags forum unification as open |
+| The forum's category/tag list (this epic) | Not yet defined | Depends on the reconciliation above |
 
 `community.categories` is deliberately admin-managed (not member-created) — a hybrid taxonomy where either half were freely extensible would collapse into pure tagging (Option B), which is the option FD-4 explicitly recommends against for MVP.
 
@@ -105,7 +111,7 @@ GET /v1/search?q=...&category=&tag=&cursor=...
      relevance across threads, a different question)
 ```
 
-The PRD (Section 6.1) marks Search itself "(to be discussed/confirmed)" even though it's in the Must-have table — an odd hedge worth surfacing rather than silently treating as fully settled (Section 11).
+The PRD (Section 6.1) marks Search itself "(to be discussed/confirmed)" even though it's in the Must-have table — an odd hedge worth surfacing rather than silently treating as fully settled (Section 12).
 
 ---
 
@@ -134,11 +140,14 @@ All write endpoints require a handle-scoped session token at `active` status (ar
 
 ## 6. Edit/delete policy
 
-**Not specified in the PRD** — this spec proposes a policy and flags it for confirmation rather than assuming it:
+**Not specified in the PRD** — this spec proposes a policy and flags it for confirmation (Section 12) rather than assuming it:
 
-- **Comments/posts are editable by their author within a short window** (proposed: 15 minutes) with no visible "edited" marker within that window (typo correction), and editable indefinitely after that but with an `edited_at` timestamp shown — balancing genuine correction against the integrity of a thread other members have already responded to or awarded kudos against.
-- **Author self-delete is a soft delete** (`status = removed`) — same mechanism as moderator removal (EPIC-F), so a deleted post's replies aren't orphaned, consistent with Section 2's reasoning.
-- **A post that already has kudos-bearing comments, or an attested case discussion (EPIC-E), should not be freely author-deletable** — deleting a case discussion after attestation would undermine the point of the attestation existing (the PRD Section 10.3 attestation is "recorded with timestamp and linked to the member's verified identity" specifically so it persists as a record). This spec proposes case discussions become author-delete-restricted (moderator-only) once published; ordinary questions remain author-deletable. Flagged in Section 11 since it's this spec's judgment call, not a PRD requirement.
+| Action | Proposed policy | Rationale |
+|---|---|---|
+| Edit within 15 minutes of posting | Allowed, no visible "edited" marker | Typo-correction window |
+| Edit after 15 minutes | Allowed indefinitely, `edited_at` timestamp shown | Balances genuine correction against the integrity of a thread others have already responded to or awarded kudos against |
+| Author self-delete (ordinary question/comment) | Allowed — soft delete (`status = removed`) | Same mechanism as moderator removal (EPIC-F), so a deleted post's replies aren't orphaned (Section 2's reasoning) |
+| Author self-delete (published case discussion) | **Not allowed** — moderator-only removal once attested | Deleting after attestation would undermine the attestation's purpose: PRD Section 10.3 records it "with timestamp and linked to the member's verified identity" specifically so it persists as a record (EPIC-E) |
 
 ---
 
@@ -150,7 +159,7 @@ The PRD lists three Could-have (MVP stretch) items. Specified here at a level su
 - **Image attachments**: stored in S3 per the architecture spec, Section 3, with EXIF stripping by a worker before persistence (already specified generically there) and an upload-time content-warning prompt (author-supplied, e.g. "clinical image"). A `community.attachments (id, post_id, s3_key, content_warning boolean)` table would own this; not built out further here since it's Could-have and the architecture spec already covers the EXIF-stripping mechanism it depends on.
 - **Polls**: a `community.polls (post_id, question, options jsonb)` plus a votes table — a lightweight, self-contained addition if built; no interaction with any other epic's data.
 
-None of these three should be assumed in the MVP build plan — flagged in Section 11 for a scope confirmation.
+None of these three should be assumed in the MVP build plan — flagged in Section 12 for a scope confirmation.
 
 ---
 
