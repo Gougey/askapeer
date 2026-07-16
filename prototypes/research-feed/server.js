@@ -7,6 +7,30 @@ const { fetchEuropePMC, fetchOpenAlex, dedupe } = require('./lib/sources');
 
 const PORT = process.env.PORT || 8787;
 const ROOT = __dirname;
+
+// Lightweight access barrier for the /docs section (PRD + technical specs) —
+// not real security (hardcoded, no rate limiting), just enough friction to
+// keep planning documents out of casual/search-engine reach while the team
+// reviews them. Override via env vars so the password isn't only in source
+// control if that ever matters.
+const DOCS_AUTH_USER = process.env.DOCS_AUTH_USER || 'team';
+const DOCS_AUTH_PASS = process.env.DOCS_AUTH_PASS || 'brisk-otter-47';
+
+function requireDocsAuth(req, res) {
+  const header = req.headers['authorization'] || '';
+  const [scheme, encoded] = header.split(' ');
+  const decoded = scheme === 'Basic' && encoded ? Buffer.from(encoded, 'base64').toString('utf8') : '';
+  const separatorIndex = decoded.indexOf(':');
+  const user = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : '';
+  const pass = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : '';
+  if (user === DOCS_AUTH_USER && pass === DOCS_AUTH_PASS) return true;
+  res.writeHead(401, {
+    'WWW-Authenticate': 'Basic realm="Askapeer docs"',
+    'Content-Type': 'text/plain',
+  });
+  res.end('Authentication required');
+  return false;
+}
 const TAXONOMY = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'taxonomy.json'), 'utf8'));
 const SAMPLE_FEED_PATH = path.join(ROOT, 'data', 'sample-feed.json');
 
@@ -158,8 +182,9 @@ async function buildFeed(selectedTags) {
 }
 
 function serveStatic(req, res) {
-  let filePath = req.url === '/' ? '/index.html' : req.url;
-  filePath = path.join(ROOT, 'public', filePath.split('?')[0]);
+  let urlPath = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+  if (urlPath.endsWith('/')) urlPath += 'index.html';
+  const filePath = path.join(ROOT, 'public', urlPath);
   if (!filePath.startsWith(path.join(ROOT, 'public'))) {
     res.writeHead(403);
     return res.end('Forbidden');
@@ -176,6 +201,10 @@ function serveStatic(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (req.url.startsWith('/docs') && !requireDocsAuth(req, res)) {
+    return; // requireDocsAuth already wrote the 401 response
+  }
+
   if (req.url === '/api/taxonomy' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify(TAXONOMY));

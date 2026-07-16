@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Consolidated Open Questions — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">Consolidated Open Questions</span>
+</div>
+<main>
+<h1 id="askapeer-technical-specs-consolidated-open-questions">Askapeer
+Technical Specs — Consolidated Open Questions</h1>
+<p><strong>Status</strong>: For discussion <strong>Date</strong>: 14
+July 2026 <strong>Author</strong>: Adrian Hall (Technical Lead),
+compiled with Claude Code</p>
+<p>Every open question and flagged conflict from the architecture spec
+and all nine per-epic technical specs
+(<code>docs/superpowers/specs/</code>), gathered into one place for
+review. This document exists so Adrian, Paul, and Andrew can work
+through them together rather than hunting across ten documents. Each
+item names its source spec/section so the fuller reasoning can be looked
+up if needed. Items get moved to Section 2 as they’re decided, rather
+than deleted, so the document also serves as a decision log.</p>
+<p>Organised in four parts:</p>
+<ol type="1">
+<li><a href="#1-cross-epic-conflicts-and-gaps">Cross-epic conflicts and
+gaps</a> — issues that span more than one spec and need a single
+coordinated answer</li>
+<li><a href="#2-already-resolved">Already resolved</a> — decided, kept
+here for traceability</li>
+<li><a href="#3-per-epic-open-questions">Per-epic open questions</a> —
+smaller items local to one spec</li>
+<li><a href="#4-standing-prdbusiness-items">Standing PRD/business
+items</a> — carried over from the architecture spec, not new</li>
+</ol>
+<hr />
+<h2 id="cross-epic-conflicts-and-gaps">1. Cross-epic conflicts and
+gaps</h2>
+<p>These are the items most worth discussing as a group, since a
+decision on one may constrain the others.</p>
+<h3
+id="member_interests-vs.-community.follows-possible-duplicate-concepts">1.1
+<code>member_interests</code> vs. <code>community.follows</code> —
+possible duplicate concepts</h3>
+<p>EPIC-I’s <code>community.member_interests</code> (a <em>weighted</em>
+interest signal used to score research-article relevance) and EPIC-B’s
+<code>community.follows</code> with <code>target_type = tag</code> (a
+<em>binary</em> follow relationship, resolved 2026-07-14 — see Section
+2) are both, conceptually, “a member’s interest in a topic.” They could
+be unified into one mechanism feeding both the research feed and the
+forum’s personalised feed, or deliberately kept separate since they
+serve different content types with different scoring needs.</p>
+<p><strong>Needs</strong>: a deliberate choice — not an assumption
+either way.</p>
+<p><em>Source: EPIC-I spec §4.</em></p>
+<h3 id="taxonomy-unification-three-unreconciled-vocabularies">1.2
+Taxonomy unification (three unreconciled vocabularies)</h3>
+<p>The forum’s category/tag taxonomy (EPIC-C, FD-4’s hybrid model),
+Andrew Renshaw’s existing body-area list (referenced in PRD §15/FD-4),
+and the research-feed prototype’s <code>taxonomy.json</code>
+(<code>prototypes/research-feed/data/taxonomy.json</code>, whose own
+README already flags it as “a starting point… not the final FD-4 forum
+taxonomy”) are three overlapping-but-not-identical lists right now.
+EPIC-I’s <code>member_interests.tag</code> depends on whichever
+vocabulary EPIC-C settles on.</p>
+<p><strong>Needs</strong>: FD-4 formally closed (still an open
+stakeholder decision, not just an implementation detail) and a single
+controlled vocabulary chosen before EPIC-C or EPIC-I can be built as
+specced.</p>
+<p><em>Source: EPIC-C spec §3 and §12, EPIC-I spec §5.</em></p>
+<h3 id="cross-spec-schema-amendments-needed-for-epic-e">1.3 Cross-spec
+schema amendments needed for EPIC-E</h3>
+<p>Writing EPIC-E surfaced two small but real changes to specs that were
+already committed before EPIC-E was drafted: - <strong>EPIC-C’s
+<code>community.posts.status</code> enum</strong> (currently
+<code>published, removed</code>) needs a <code>draft</code> value added,
+to support case discussions’ multi-step publish flow (fill template →
+checklist → attestation → publish). Ordinary forum posts don’t need
+this; case discussions do. - <strong>EPIC-F’s moderation
+<code>action_type</code> enum</strong> needs a
+<code>request_correction</code> value, to match PRD §10.4’s “request a
+corrected resubmission” for case discussions with de-identification
+problems.</p>
+<p><strong>Status</strong>: EPIC-F’s spec has already proposed adding
+<code>request_correction</code> (and, separately,
+<code>rename_handle</code> — see 1.4) to its own action-type enum, which
+would resolve the second bullet. The <code>draft</code> status addition
+to EPIC-C is not yet reflected back into EPIC-C’s committed spec.</p>
+<p><strong>Needs</strong>: confirmation that EPIC-F’s proposed
+resolution is accepted, and a decision on whether to amend EPIC-C’s spec
+directly or treat <code>draft</code> as an EPIC-E-specific
+extension.</p>
+<p><em>Source: EPIC-E spec §9, EPIC-F spec §3.</em></p>
+<h3 id="moderator-forced-handle-rename-where-does-it-live">1.4
+Moderator-forced handle rename — where does it live?</h3>
+<p>EPIC-B’s spec originally proposed a bespoke
+<code>POST /v1/admin/handles/:handle_id/rename</code> endpoint for the
+case where a handle name itself turns out to be identifying or
+impersonating. EPIC-F’s spec later proposed folding this into its own
+moderation <code>action_type</code> enum as <code>rename_handle</code>,
+on the grounds that a moderator-initiated rename is a moderation action
+in substance.</p>
+<p><strong>Needs</strong>: confirmation that EPIC-F’s resolution is
+accepted (this is a proposed fix already reflected in EPIC-F’s spec,
+awaiting sign-off rather than being fully open).</p>
+<p><em>Source: EPIC-B spec §13, EPIC-F spec §3/§10.</em></p>
+<h3
+id="two-independent-access-control-gates-moderation-status-and-billing-status">1.5
+Two independent access-control gates: moderation status and billing
+status</h3>
+<p>EPIC-H proposes that community access requires <strong>both</strong>
+a <code>community.handles.status</code> of <code>active</code>
+(EPIC-B/F’s concern) <strong>and</strong> a non-lapsed
+<code>billing.subscriptions.status</code> (EPIC-H’s concern) —
+deliberately kept as two separate gates rather than one combined status,
+on the reasoning that a moderation suspension and a billing lapse are
+different in kind (resolved by an appeal vs. resolved by paying). This
+is new design not anticipated by the architecture spec.</p>
+<p><strong>Needs</strong>: sign-off that two independently-checked gates
+is the right model, and that reusing EPIC-A’s pending-token pattern for
+a new “billing-lapsed” token scope is an acceptable mechanism.</p>
+<p><em>Source: EPIC-H spec §4.</em></p>
+<hr />
+<h2 id="already-resolved">2. Already resolved</h2>
+<p>Decided, kept here for the record rather than deleted.</p>
+<ul>
+<li><strong>The missing tag-follow mechanism — resolved
+2026-07-14.</strong> Three PRD features assumed a member could “follow a
+tag” — EPIC-C’s Should-have personalised feed (“tags <strong>and
+handles</strong> followed”), EPIC-G’s Should-have email digest
+(“top-kudos content in <strong>followed tags</strong>”) — but EPIC-B
+originally only specified <code>community.handle_follows</code>
+(following a <em>handle</em>), not a tag equivalent. <strong>Adrian
+asked</strong>: what’s the recommendation, and are handles and tags
+being confused as the same thing? <strong>Answer</strong>: they’re not
+the same thing (a handle is <em>who</em>, a tag is <em>what</em>) — the
+PRD itself already treats “follow” as one verb applying to both target
+types, so there’s no need for separate terminology. The real duplication
+risk was three separate “interest” mechanisms (handle-follows, a
+not-yet-built tag-follow, and EPIC-I’s weighted
+<code>member_interests</code>), not the handle/tag distinction itself.
+<strong>Decision</strong>: generalise EPIC-B’s
+<code>community.handle_follows</code> into a single
+<code>community.follows</code> table (<code>follower_handle_id</code>,
+<code>target_type</code> enum of <code>handle</code>/<code>tag</code>,
+<code>target_id</code>) — the same
+<code>target_type</code>/<code>target_id</code> discriminator pattern
+already used by <code>community.kudos</code> and
+<code>community.reports</code>, not a new modelling idiom. EPIC-B keeps
+ownership (it already owned the narrower table and the follow
+endpoints); EPIC-C’s personalised feed (now specified, its spec §8) and
+EPIC-G’s weekly digest (its spec §7) are read-only consumers filtering
+<code>WHERE target_type = 'tag'</code>. <code>member_interests</code>
+(EPIC-I) remains a deliberately separate, weighted mechanism — whether
+<em>that</em> should eventually be unified with
+<code>community.follows</code> is its own still-open question (Section
+1.1, above). <em>(EPIC-B spec §8/§9/§13; EPIC-C spec §8/§9/§12; EPIC-G
+spec §7/§11; EPIC-I spec §4/§9.)</em></li>
+<li><strong>The expulsion/re-registration gap — resolved
+2026-07-14.</strong> <code>identity.members.verification_status</code>
+(EPIC-A) had no <code>expelled</code> value, while
+<code>community.handles.status</code> (EPIC-B) does — so when EPIC-F’s
+<code>expel</code> action set a handle to <code>expelled</code>, nothing
+updated the identity-side status, and as specced a permanently expelled
+practitioner could re-register with the same professional credentials
+and get a brand-new handle. <strong>Adrian’s decision</strong>: add an
+<code>expelled</code> value to
+<code>identity.members.verification_status</code>; if an expelled member
+attempts to re-register, the attempt must be prevented <em>and</em>
+logged/reviewed, not just silently rejected. Implemented as: the
+architecture spec’s <code>identity.members</code> schema now includes
+<code>expelled</code> (Section 4.1, amended); EPIC-F’s
+<code>expel</code> action writes both
+<code>community.handles.status = expelled</code> and an
+<code>identity.verification_decisions</code> transition to
+<code>expelled</code>, atomically (its spec, §3, §7); EPIC-A’s existing
+uniqueness constraint blocks any non-<code>rejected</code> status by
+construction, so <code>expelled</code> is covered automatically, and a
+blocked attempt now additionally writes to a new
+<code>identity.reapplication_attempts</code> table, surfaced via
+<code>GET /v1/admin/reapplication-attempts</code> for admin review
+(EPIC-A spec, §2, §6, §8). One related sub-question remains open — see
+EPIC-F’s per-epic list in Section 3, and the exact applicant-facing
+rejection wording — see EPIC-A’s per-epic list in Section 3.
+<em>(Architecture spec — amendment note above §1; EPIC-A spec
+§2/§6/§8/§10/§11; EPIC-B spec §10/§13; EPIC-F spec
+§3/§7/§9/§10.)</em></li>
+<li><strong>FD-5 professional contact link</strong>: confirmed
+<strong>not</strong> to build a LinkedIn/contact-link field on the
+handle profile. EPIC-B’s spec had already flagged that the PRD’s FD-5
+discussion (recommending such a field, §16) directly conflicts with the
+PRD’s own zero-tolerance anonymity rule (§9.3, “deliberately identifying
+yourself” is an expulsion offence). Decision: leave it out. <em>(EPIC-B
+spec §1, §13.)</em></li>
+</ul>
+<hr />
+<h2 id="per-epic-open-questions">3. Per-epic open questions</h2>
+<p>Smaller items, local to a single spec, not part of a larger
+cross-epic conflict.</p>
+<h3 id="epic-a-verification">EPIC-A — Verification</h3>
+<ul>
+<li><strong>BASRAT/SST register access unconfirmed</strong>: whether
+either body publishes a queryable API or only a manual/scrape-only
+register — determines whether automated verification is even possible
+for these two bodies, or whether they’re manual-review-only from day
+one.</li>
+<li><strong>Rejection cooldown/reapplication</strong>: should a rejected
+applicant be able to resubmit immediately (current design allows this),
+and should a reviewing admin see the prior rejection?</li>
+<li><strong>Appeals process</strong>: the PRD doesn’t describe one
+beyond reapplying from scratch — worth confirming whether MVP needs
+something more formal.</li>
+<li><strong>Onfido webhook timeout</strong>: 72 hours is this spec’s own
+placeholder, not sourced from Onfido’s actual typical turnaround.</li>
+<li><strong>Identity-access-log boundary</strong>: confirm that routine
+admin verification-queue review is correctly <em>not</em> treated as an
+<code>identity_access_log</code> event — this is an interpretation of
+PRD §9.4, not an explicit statement.</li>
+<li><strong>Exact applicant-facing rejection wording for the
+expelled-reapplication case</strong> (§2 above): this spec proposes a
+generic message that doesn’t confirm expelled status to the applicant —
+worth a final check that this is the right call versus a
+legal/compliance preference for more explicit language.</li>
+</ul>
+<h3 id="epic-b-handlesprofile">EPIC-B — Handles/Profile</h3>
+<ul>
+<li><strong>Handle length/character rules</strong>: the 3–30 character,
+alphanumeric-plus-underscore/hyphen proposal is a placeholder needing a
+real decision (no architectural weight either way).</li>
+<li><strong>Blocklist storage/maintenance</strong>: config table
+vs. code constant — implementation detail, needs picking before
+build.</li>
+</ul>
+<p><em>(EPIC-B’s other flagged item, moderator-forced rename, is covered
+in §1.4 above. The expulsion/re-registration gap and the tag-follow
+mechanism are both resolved — see §2.)</em></p>
+<h3 id="epic-c-forum">EPIC-C — Forum</h3>
+<ul>
+<li><strong>Search’s PRD hedge</strong>: the PRD lists full-text search
+as Must-have but flags it “(to be discussed/confirmed)” in the same
+table row — worth checking whether that hedge is still live or was
+resolved verbally and never updated in the document.</li>
+<li><strong>Edit/delete policy</strong>: entirely this spec’s own
+proposal (15-minute no-marker edit window, case-discussion delete
+restriction, whether kudos-bearing comments should be edit-restricted
+too) — needs sign-off, no PRD basis.</li>
+<li><strong>Could-have scope confirmation</strong>: whether best-answer
+marker, image attachments, or polls are actually being built for MVP, or
+deferred — a sequencing/resourcing question, not architectural.</li>
+<li><strong>“Trending” definition</strong>: the personalised feed’s
+fallback view (§8 there) needs a concrete definition (time window,
+platform-wide vs. category-scoped) — this spec’s kudos-in-a-time-window
+heuristic is only a placeholder.</li>
+</ul>
+<p><em>(Taxonomy unification is covered in §1.2 above. The personalised
+feed’s underlying follow mechanism is resolved — see §2.)</em></p>
+<h3 id="epic-d-kudos">EPIC-D — Kudos</h3>
+<ul>
+<li><strong>Idempotency of a repeated award</strong>: should awarding
+kudos twice 409, or silently no-op? Minor, but affects client
+error-handling.</li>
+<li><strong>Un-award/retract</strong>: this spec’s own addition — worth
+confirming it’s wanted, versus kudos being a one-way permanent signal (a
+deliberate choice some reputation systems make to prevent award/retract
+gaming).</li>
+<li><strong>Reputation clawback on moderation</strong>: if a member is
+warned/suspended for a specific piece of content, should kudos already
+earned from it be clawed back, or does <code>kudos_total</code> stay
+purely historical? No PRD guidance either way.</li>
+<li><strong>“Top contributors” leaderboard</strong>: not in the PRD’s
+MVP scope — the Redis leaderboard design assumes it might exist
+eventually, but it isn’t a committed feature. Flagged so it isn’t
+mistaken for confirmed scope.</li>
+</ul>
+<h3 id="epic-e-case-discussions">EPIC-E — Case Discussions</h3>
+<ul>
+<li><strong>Structural enforcement of checklist items 3/4</strong>
+(age-banding, relative dates): should these be structurally restricted
+fields (e.g. an age-band selector) rather than relying purely on the
+attestation checkbox? This spec recommends yes — a stronger safeguard
+than the PRD strictly requires — and needs sign-off.</li>
+<li><strong>Image attachment dependency</strong>: checklist items 6/7
+assume case discussions can carry images, but EPIC-C only lists images
+as Could-have. If case discussions need images to be clinically usable,
+this may need to become Must-have specifically for this epic.</li>
+<li><strong>Corrected resubmission mechanics</strong>: does a correction
+create a new post, or unpublish/re-edit/re-attest the same one? The PRD
+names the action, not the mechanics.</li>
+<li><strong>Draft visibility to moderators</strong>: should an
+unattested, in-progress draft ever be visible to moderation (e.g. a
+safety escalation before publish)? Likely no, but not addressed by the
+PRD.</li>
+</ul>
+<p><em>(The two schema-amendment items are covered in §1.3
+above.)</em></p>
+<h3 id="epic-f-moderation">EPIC-F — Moderation</h3>
+<ul>
+<li><strong><code>anonymity_violation</code> as a priority report
+category</strong>: proposed by this spec (on the reasoning that the
+zero-tolerance anonymity rule is at least as serious as the
+patient-information rule, which <em>is</em> explicitly named as priority
+in PRD §10.4) but not a PRD-stated requirement — needs explicit
+confirmation.</li>
+<li><strong>Should <code>suspend</code> also write to
+<code>identity.members.verification_status</code></strong>: unlike the
+now-resolved <code>expel</code> case (§2 above), this is genuinely open
+— a handle-level suspension (this epic’s action) and the identity-level
+<code>suspended</code> status (EPIC-A’s, covering lapsed registration)
+may or may not be intended as the same event. Lower-stakes than
+expulsion since suspension is reversible either way, but still needs a
+decision.</li>
+<li><strong>No numeric moderation-response SLA</strong>: the PRD’s KPIs
+say response time “must be fast” without a figure — needed before
+building alerting/staffing plans.</li>
+<li><strong>Full report-category list</strong>: <code>harassment</code>,
+<code>spam</code>, <code>other</code> alongside the two priority
+categories is this spec’s own proposal — worth sanity-checking with
+Andrew given his domain familiarity with what reports will actually look
+like in practice.</li>
+</ul>
+<p><em>(The new action-type additions — <code>request_correction</code>,
+<code>rename_handle</code> — are covered in §1.3 and §1.4 above. The
+expulsion/re-registration gap is resolved — see §2.)</em></p>
+<h3 id="epic-g-notifications">EPIC-G — Notifications</h3>
+<ul>
+<li><strong>Column-level hardening of <code>NotificationService</code>’s
+identity access</strong>: should a database view restrict it to
+<code>email</code> only (rather than relying on application discipline
+over a full-table grant on <code>identity.members</code>)? Recommended,
+not yet built.</li>
+<li><strong>Non-optional <code>verification_status_change</code>
+email</strong>: this spec proposes members can’t disable this one
+notification channel, since it’s account-critical — needs confirmation
+that removing member control here is acceptable.</li>
+<li><strong>Digest cadence/unsubscribe mechanics</strong>: assumed
+weekly, email-only per the PRD’s own naming — no further design done
+beyond that assumption.</li>
+</ul>
+<p><em>(The tag-follow mechanism the digest depends on is resolved — see
+§2.)</em></p>
+<h3 id="epic-h-subscriptionpayments">EPIC-H — Subscription/Payments</h3>
+<ul>
+<li><strong>FD-2 itself</strong>: pricing, trial length, and processor
+choice (Stripe vs. WorldPay) all still formally open — this spec is
+written to be indifferent to the outcome, but a concrete choice is
+needed to actually build against.</li>
+<li><strong>Grace period length</strong>: 7 days (before a
+<code>past_due</code> subscription loses access) is this spec’s own
+placeholder.</li>
+<li><strong>Cancellation access timing</strong>: this spec proposes
+access continues until the end of the paid period, not immediate
+revocation — standard SaaS practice, but needs confirming as a
+deliberate choice.</li>
+<li><strong>Trial-length configurability</strong>: the data model allows
+a per-cohort trial length (relevant to the university-partnership idea,
+FD-6), but no invite-code/cohort feature is designed — needs a decision
+once FD-6 is confirmed one way or the other.</li>
+</ul>
+<p><em>(The billing-lapse access-gating design is covered in §1.5
+above.)</em></p>
+<h3 id="epic-i-research-feed">EPIC-I — Research Feed</h3>
+<ul>
+<li><strong>PRD update still pending</strong>: EPIC-I needs adding to
+PRD §6.1’s MoSCoW list — a standing item, not new.</li>
+<li><strong>Three carried-forward pre-launch items</strong> (unchanged
+from the architecture spec): DOAJ integration (predatory-journal check),
+Retraction Watch/Crossref integration (withdrawn-paper flagging), and a
+direct enquiry to PEDro about API access. Plus an unresolved
+abstract-redistribution licensing review, relevant only if a commercial
+source (Elsevier/Scopus/Cochrane) is ever added.</li>
+</ul>
+<p><em>(The <code>member_interests</code>/<code>community.follows</code>
+unification question is covered in §1.1 above; taxonomy unification in
+§1.2.)</em></p>
+<hr />
+<h2 id="standing-prdbusiness-items">4. Standing PRD/business items</h2>
+<p>Carried over from the architecture spec’s own “Open follow-ups”
+(Section 11) — not new findings from the per-epic specs, but still open
+and worth keeping on the same list so nothing gets lost across
+documents:</p>
+<ul>
+<li><strong>PRD update</strong>: EPIC-I (research/news feed) should be
+formally added to the PRD’s MVP epic list (§6.1) — a real scope addition
+Paul Gouge and Andrew Renshaw should be aware of. (Also restated in
+EPIC-I’s own spec, §9.)</li>
+<li><strong>Legal review</strong>: the right-to-erasure default
+(hard-delete identity, retain de-linked community content) should be
+confirmed with legal counsel before launch.</li>
+<li><strong>DPIA</strong>: a Data Protection Impact Assessment should be
+commissioned before launch, given the volume of
+professional-registration data processed.</li>
+<li><strong>FD-1, FD-3, FD-4, FD-5</strong>: all still formally open
+stakeholder decisions that the architecture and per-epic specs have
+designed <em>against</em> the PRD’s own recommendations for, in order to
+keep moving — none of these are closed just because a spec assumes an
+answer.</li>
+<li><strong>FD-2 (processor/pricing)</strong>: no material architectural
+impact from the choice itself, but a concrete decision is still needed
+before EPIC-H’s <code>StripeProvider</code> implementation can be built
+against real numbers.</li>
+<li><strong>FD-6 (university partnership)</strong>: an operational
+decision, not technical, but touches EPIC-H’s trial-length design (§7
+there) if it proceeds.</li>
+<li><strong>FD-7, FD-8</strong>: brand/trademark confirmation and
+competitor-research refresh — unchanged, no technical dependency.</li>
+</ul>
+
+</main>
+</body>
+</html>

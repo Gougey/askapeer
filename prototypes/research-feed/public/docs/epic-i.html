@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EPIC-I — Research Feed — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">EPIC-I — Research Feed</span>
+</div>
+<main>
+<h1 id="epic-i-researchnews-feed-technical-spec">EPIC-I — Research/News
+Feed — Technical Spec</h1>
+<p><strong>Status</strong>: Draft — for stakeholder review
+<strong>Date</strong>: 14 July 2026 <strong>Author</strong>: Adrian Hall
+(Technical Lead), drafted with Claude Code <strong>Scope</strong>: The
+ninth and final per-epic technical spec. Unlike EPIC-A through EPIC-H,
+this epic already has substantial design work done — the architecture
+spec’s Section 8 covers source adapters, ingestion, deduplication,
+classification, and scoring in real detail, validated by the working
+prototype in <code>prototypes/research-feed/</code>. This spec is
+deliberately lighter: it consolidates what’s already decided, adds the
+member-facing API surface the architecture spec didn’t specify, and
+carries forward the open items already identified there rather than
+re-deriving them.</p>
+<p>Source of truth: the architecture spec’s Section 8
+(<code>docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md</code>)
+and
+<code>docs/AHP_Research_Feed_Design_Conversation.md</code>/<code>docs/research-feed-sources-and-roadmap.md</code>.
+<strong>Reminder</strong>: EPIC-I is not yet in the PRD’s own Section
+6.1 MoSCoW list — it was added during architecture design and still
+needs reflecting back to Paul Gouge and Andrew Renshaw (architecture
+spec, Section 11 and Section 1).</p>
+<hr />
+<h2 id="contents">Contents</h2>
+<ol type="1">
+<li><a href="#1-scope">Scope</a></li>
+<li><a href="#2-data-model-as-already-specified">Data model (as already
+specified)</a></li>
+<li><a href="#3-member-facing-interest-management">Member-facing
+interest management</a></li>
+<li><a
+href="#4-member_interests-vs-epic-bs-communityfollows"><code>member_interests</code>
+vs. EPIC-B’s <code>community.follows</code></a></li>
+<li><a href="#5-taxonomy-dependency-on-epic-c">Taxonomy dependency on
+EPIC-C</a></li>
+<li><a href="#6-api-endpoints">API endpoints</a></li>
+<li><a href="#7-carried-forward-open-items">Carried-forward open
+items</a></li>
+<li><a href="#8-test-plan">Test plan</a></li>
+<li><a href="#9-open-questions">Open questions</a></li>
+</ol>
+<hr />
+<h2 id="scope">1. Scope</h2>
+<p><strong>In scope</strong>: source adapters and ingestion (already
+designed), deduplication and classification (already designed and
+prototype-validated), the feed API, and — the actual new content in this
+spec — how a member manages their interest profile, and the relationship
+between that profile and forum tag-following.</p>
+<p><strong>Out of scope</strong>: everything the architecture spec’s
+Section 8 already fully specifies is referenced, not repeated, here.</p>
+<hr />
+<h2 id="data-model-as-already-specified">2. Data model (as already
+specified)</h2>
+<p>Reproduced from the architecture spec, Section 8, for reference only
+— no changes proposed:</p>
+<pre><code>research.articles          (id, doi, pmid, other_ids, title, abstract, journal,
+                             published_date, evidence_type, open_access, source_refs, created_at)
+research.ingestion_cursors (source_name, last_run_at, last_cursor)
+community.member_interests (handle_id, tag, weight, updated_at)</code></pre>
+<p>Source adapters (<code>fetchSince(cursor): RawArticle[]</code>),
+deduplication order (DOI → PMID → other IDs → normalised title/year →
+fuzzy match), rule-based classification, and precomputed scoring (topic
+match + evidence-type weighting + recency) are all as specified
+there.</p>
+<hr />
+<h2 id="member-facing-interest-management">3. Member-facing interest
+management</h2>
+<p>The architecture spec designs the ingestion and scoring pipeline in
+detail but doesn’t specify how a member actually builds their
+<code>member_interests</code> profile — the working prototype does this
+via “interest tags on the Profile pane” (per
+<code>docs/research-feed-sources-and-roadmap.md</code>), which this spec
+formalises as an API:</p>
+<pre><code>GET  /v1/research-feed/interests
+PUT  /v1/research-feed/interests    { tag, weight }     -- upsert; weight e.g. 0-1 or a small
+                                                            integer scale, matching whatever
+                                                            the prototype&#39;s scoring already
+                                                            expects — not redefined here
+DELETE /v1/research-feed/interests/:tag</code></pre>
+<p><code>member_interests</code> is handle-scoped (architecture spec,
+Section 8’s data-boundary note) — this is ordinary
+<code>community</code>-schema data, no <code>identity</code>
+involvement, consistent with everything else in that schema.</p>
+<hr />
+<h2 id="member_interests-vs.-epic-bs-community.follows">4.
+<code>member_interests</code> vs. EPIC-B’s
+<code>community.follows</code></h2>
+<p>Worth flagging precisely because it’s easy to conflate:
+<code>community.member_interests</code> (this epic, weighted, used to
+score research-literature relevance) and <code>community.follows</code>
+(EPIC-B, binary, <code>target_type = tag</code> — the unified handle/tag
+follow mechanism resolved 2026-07-14; see EPIC-B’s spec, Section 8, and
+<code>docs/2026-07-14-technical-specs-open-questions.md</code>, Section
+2) are <strong>two different concepts that happen to both be “a member’s
+interest in a tag.”</strong> One is a weighted relevance signal for an
+external content stream (research articles); the other is a binary
+follow relationship, now built, for internal content (forum posts, via
+EPIC-C’s personalised feed and EPIC-G’s digest). They could plausibly be
+unified into a single mechanism feeding both the research feed and the
+forum’s personalised feed — or they could legitimately stay separate
+given they serve different content types with different scoring needs.
+This spec deliberately doesn’t resolve that unilaterally by either
+building a duplicate mechanism or assuming unification — flagged in
+Section 9 as still open, now that the tag-follow side of the question is
+no longer a gap but an actual table to weigh unification against.</p>
+<hr />
+<h2 id="taxonomy-dependency-on-epic-c">5. Taxonomy dependency on
+EPIC-C</h2>
+<p>EPIC-C’s spec (Section 3) already flags that the forum’s category/tag
+taxonomy, Andrew Renshaw’s body-area list, and the research feed
+prototype’s <code>taxonomy.json</code> are three
+overlapping-but-not-unified vocabularies. This epic depends on that
+reconciliation directly: <code>member_interests.tag</code> and the
+classification taxonomy the architecture spec’s Section 8 describes
+should end up being <strong>the same controlled vocabulary</strong> as
+whatever EPIC-C settles on for forum tags, not a separately-maintained
+list — otherwise a member’s forum tag-following and their research-feed
+interests would use different, possibly inconsistent vocabularies for
+what a member experiences as “topics I care about.” No new work is
+proposed here beyond restating this dependency clearly, since EPIC-C’s
+spec already owns resolving it.</p>
+<hr />
+<h2 id="api-endpoints">6. API endpoints</h2>
+<pre><code>GET /v1/research-feed?cursor=...     -- already specified, architecture spec Section 8:
+                                          combines member_interests weights with precomputed
+                                          article scores, returns an explanation string
+
+GET  /v1/research-feed/interests     -- Section 3, new in this spec
+PUT  /v1/research-feed/interests
+DELETE /v1/research-feed/interests/:tag</code></pre>
+<hr />
+<h2 id="carried-forward-open-items">7. Carried-forward open items</h2>
+<p>These are already identified in the architecture spec’s Section 11 as
+EPIC-I pre-launch items — restated here as this epic’s responsibility,
+not re-analysed:</p>
+<ul>
+<li><strong>DOAJ integration</strong> (predatory-journal legitimacy
+check) and <strong>Retraction Watch / Crossref integration</strong>
+(flagging withdrawn papers) — sources identified, integration not yet
+built.</li>
+<li><strong>PEDro API access</strong> — worth a direct enquiry to the
+PEDro team (University of Sydney/NeuRA) given it’s the best
+domain-specific fit found so far, but no confirmed public API.</li>
+<li><strong>Abstract-redistribution licensing review</strong> —
+unresolved, relevant if a commercial source (Elsevier/Scopus/Cochrane)
+is ever added.</li>
+</ul>
+<hr />
+<h2 id="test-plan">8. Test plan</h2>
+<ul>
+<li><strong>Interest CRUD</strong>: creating/updating/deleting a
+<code>member_interests</code> row is handle-scoped and has no
+<code>identity</code> involvement (same access-boundary test pattern as
+every other epic’s spec).</li>
+<li>Everything else (deduplication, classification, scoring) is already
+covered by the working prototype’s own validation, per the architecture
+spec — this spec doesn’t add new test surface beyond the member-facing
+interest endpoints.</li>
+</ul>
+<hr />
+<h2 id="open-questions">9. Open questions</h2>
+<ul>
+<li><strong>PRD update</strong>: EPIC-I still needs adding to Section
+6.1’s MoSCoW list — a standing item from the architecture spec, restated
+here since it’s this epic specifically that’s affected.</li>
+<li><strong><code>member_interests</code>
+vs. <code>community.follows</code> unification</strong> (Section 4): a
+genuine design choice spanning this epic, EPIC-B, EPIC-C, and EPIC-G —
+the tag-follow mechanism itself is no longer missing (resolved
+2026-07-14), but whether it should be unified with this epic’s weighted
+interests remains open.</li>
+<li><strong>Taxonomy reconciliation</strong> (Section 5): depends
+entirely on EPIC-C’s Section 3 resolution — this epic has no independent
+path to resolving it.</li>
+<li><strong>The three carried-forward items</strong> (Section 7):
+DOAJ/Retraction Watch integration, PEDro enquiry, and licensing review
+all remain open pre-launch work, unchanged from the architecture spec’s
+own assessment.</li>
+</ul>
+
+</main>
+</body>
+</html>

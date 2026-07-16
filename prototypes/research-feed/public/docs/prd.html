@@ -1,0 +1,1425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PRD v0.1 — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">PRD v0.1</span>
+</div>
+<main>
+<h1 id="askapeer-product-requirements-document">Askapeer — Product
+Requirements Document</h1>
+<p><strong>Version</strong>: 0.1 — Draft for Stakeholder
+Discussion<br />
+<strong>Date</strong>: June 2026<br />
+<strong>Status</strong>: Pre-sign-off — for review and discussion<br />
+<strong>Stakeholders</strong>: Andrew Renshaw (Clinical Domain Expert
+&amp; Originator), Paul Gouge (Business &amp; Technical), Adrian Hall
+(Technical Lead) <strong>Document owner</strong>: TBD — to be assigned
+on company formation</p>
+<hr />
+<h2 id="contents">Contents</h2>
+<ol type="1">
+<li><a href="#1-executive-summary">Executive Summary</a></li>
+<li><a href="#2-problem-statement">Problem Statement</a></li>
+<li><a href="#3-vision--strategic-goals">Vision &amp; Strategic
+Goals</a></li>
+<li><a href="#4-target-users--personas">Target Users &amp;
+Personas</a></li>
+<li><a href="#5-market-context--opportunity">Market Context &amp;
+Opportunity</a></li>
+<li><a href="#6-mvp-scope">MVP Scope</a></li>
+<li><a href="#7-platform-strategy">Platform Strategy</a></li>
+<li><a href="#8-verification--trust-model">Verification &amp; Trust
+Model</a></li>
+<li><a href="#9-anonymity--safety-framework">Anonymity &amp; Safety
+Framework</a></li>
+<li><a href="#10-case-discussions--patient-safety-policy">Case
+Discussions &amp; Patient Safety Policy</a></li>
+<li><a href="#11-monetisation-strategy">Monetisation Strategy</a></li>
+<li><a href="#12-phased-roadmap">Phased Roadmap</a></li>
+<li><a href="#13-success-metrics--kpis">Success Metrics &amp;
+KPIs</a></li>
+<li><a href="#14-risks--assumptions">Risks &amp; Assumptions</a></li>
+<li><a href="#15-for-discussion">For Discussion</a></li>
+<li><a href="#16-appendices">Appendices</a></li>
+</ol>
+<hr />
+<h2 id="executive-summary">1. Executive Summary</h2>
+<p>Medical and sports medicine culture has a problem: hierarchy
+suppresses honest learning. A senior consultant will not admit
+uncertainty for fear of losing credibility. A junior clinician will not
+challenge received wisdom for fear of being dismissed. The result is
+that learning happens in silos, best practice spreads slowly, and
+patients pay the price.</p>
+<p><strong>Askapeer</strong> is a verified-only, pseudonymous
+professional network for sports medicine practitioners that removes this
+barrier entirely. Every member is a qualified, registered professional —
+but no one knows whether they are a senior consultant or a first-year
+graduate. Ideas win on merit, not rank.</p>
+<p>Practitioners can ask the questions they would never dare ask in a
+hospital corridor and offer ideas they would never dare put to a senior
+colleague by name. Because the network is verified — not open to the
+public — the quality of discourse remains at a professional standard
+throughout. A kudos-based reputation system rewards the best
+contributors without exposing their identity.</p>
+<p>The initial market is the United Kingdom, home to approximately
+590,000 registered medical and sports science practitioners, with
+physiotherapists (82,000 HCPC-registered) forming the primary target
+segment. A subscription model funds the platform, keeping it independent
+of the advertising and pharmaceutical industry conflicts that affect
+comparable platforms.</p>
+<p>The MVP is a professional forum with verified identity, strong
+pseudonymity, kudos-based ranking, and structured case discussion
+capability built with patient privacy at its core. The platform launches
+on web, with native iOS and Android to follow.</p>
+<p>The three founders — Adrian Hall (technical lead), Paul Gouge
+(business and technical), and Andrew Renshaw (clinical domain expert and
+originator) — bring complementary expertise to a market with no
+comparable UK product.</p>
+<hr />
+<h2 id="problem-statement">2. Problem Statement</h2>
+<h3 id="the-hierarchy-problem-in-sports-medicine">2.1 The hierarchy
+problem in sports medicine</h3>
+<p>Rigid professional hierarchies create several failure modes in sports
+medicine:</p>
+<ul>
+<li><strong>Senior practitioners do not ask for help.</strong> Admitting
+uncertainty — to a peer, let alone a junior — risks perceived loss of
+credibility. Difficult cases are managed in isolation rather than
+benefiting from collective expertise.</li>
+<li><strong>Junior practitioners do not contribute.</strong> Good ideas
+go unvoiced because the social cost of being wrong in front of a senior
+colleague is too high.</li>
+<li><strong>Learning from failure is suppressed.</strong> A culture of
+error-denial means mistakes are buried rather than shared. As Andrew
+Renshaw, the platform’s originator, puts it: <em>“The biggest obstacle
+to learning in sports medicine is confidentiality and fear of
+criticism.”</em></li>
+<li><strong>Confidentiality prevents case sharing.</strong> Even where
+practitioners want to collaborate on difficult cases, patient
+confidentiality creates a practical and legal barrier that many do not
+know how to navigate safely.</li>
+</ul>
+<h3 id="what-is-missing">2.2 What is missing</h3>
+<p>There is currently no platform that: - Guarantees all participants
+are qualified, registered professionals - Removes identity and hierarchy
+signals that suppress honest discourse - Provides a safe, structured
+mechanism for discussing de-identified patient cases - Is built
+specifically for the sports medicine and physiotherapy context - Is
+independent of pharmaceutical industry or advertiser interests</p>
+<hr />
+<h2 id="vision-strategic-goals">3. Vision &amp; Strategic Goals</h2>
+<h3 id="vision">3.1 Vision</h3>
+<p><em>A world where every sports medicine practitioner has access to
+the collective expertise of their entire profession — and where the
+quality of your thinking, not the prestige of your job title, determines
+your standing.</em></p>
+<h3 id="mission-and-founding-philosophy">3.2 Mission and founding
+philosophy</h3>
+<p>To build the go-to professional network for sports medicine
+practitioners: verified, pseudonymous, honest, and rewarding enough to
+keep the best contributors coming back.</p>
+<p>The platform’s founding philosophy — <em>“The No Ego Sports Medicine
+Network”</em> — is the design constraint that shapes every feature
+decision. If a feature reintroduces hierarchy signals, it undermines the
+product. If it rewards merit-based contribution, it reinforces it.</p>
+<h3 id="strategic-goals">3.3 Strategic goals</h3>
+<table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 68%" />
+</colgroup>
+<thead>
+<tr>
+<th>Goal</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Establish trust</strong></td>
+<td>Become the only verified-professional network for UK sports medicine
+practitioners. Trust is the core product.</td>
+</tr>
+<tr>
+<td><strong>Build network density</strong></td>
+<td>Achieve sufficient active membership that any practitioner posting a
+question receives a useful response within 24 hours.</td>
+</tr>
+<tr>
+<td><strong>Become the institutional memory</strong></td>
+<td>Build a searchable archive of peer discussions, case insights, and
+clinical knowledge that has no equivalent in the profession.</td>
+</tr>
+<tr>
+<td><strong>Expand internationally</strong></td>
+<td>Following UK success, expand verification infrastructure to support
+global markets.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="target-users-personas">4. Target Users &amp; Personas</h2>
+<h3 id="primary-market-uk-registered-practitioners">4.1 Primary market —
+UK registered practitioners</h3>
+<p>The initial platform is open to any practitioner registered with a
+recognised UK professional body:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Professional body</th>
+<th>Approximate registrants</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HCPC — Physiotherapists</td>
+<td>82,000</td>
+<td><strong>Primary target segment</strong></td>
+</tr>
+<tr>
+<td>GMC — Doctors / Surgeons</td>
+<td>410,000</td>
+<td>Sports physicians, orthopaedic surgeons</td>
+</tr>
+<tr>
+<td>HCPC — Radiographers</td>
+<td>48,800</td>
+<td>Imaging in sports medicine context</td>
+</tr>
+<tr>
+<td>HCPC — Podiatrists / Chiropodists</td>
+<td>12,000</td>
+<td>Lower limb specialties</td>
+</tr>
+<tr>
+<td>HCPC — Practitioner Psychologists</td>
+<td>31,600</td>
+<td>Sports psychology</td>
+</tr>
+<tr>
+<td>BASRAT — Sports Rehabilitators</td>
+<td>1,300</td>
+<td>Sports rehabilitation specialists</td>
+</tr>
+<tr>
+<td>SST — Sports Therapists</td>
+<td>5,500</td>
+<td>Front-line sports therapy</td>
+</tr>
+<tr>
+<td><strong>Total UK addressable market</strong></td>
+<td><strong>~591,200</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The precise scope of the initial launch — physio-only or all
+registered practitioners — is an open stakeholder decision (see
+FD-1).</p>
+<h3 id="core-personas">4.2 Core personas</h3>
+<p><strong>Persona A — The Senior Clinician (The Hidden
+Learner)</strong> <em>Example: Consultant sports physician, 20+ years
+experience</em></p>
+<p>Seen as an authority in their institution but privately uncertain
+about specific edge cases or emerging techniques. Would benefit
+enormously from peer consultation if their identity were protected. A
+reluctant adopter who, once convinced the anonymity is real, becomes a
+high-value contributor and a credibility signal for the platform.</p>
+<p><strong>Persona B — The Junior Practitioner (The Unheard
+Voice)</strong> <em>Example: Newly qualified physiotherapist, 2 years
+post-qualification</em></p>
+<p>Often better-informed on recent evidence than senior practitioners.
+Has good ideas but will not voice them where their inexperience is
+visible. Pseudonymity gives them a level playing field: their
+contribution is judged on quality, not years of experience. Likely an
+enthusiastic early adopter.</p>
+<p><strong>Persona C — The Isolated Practitioner (The Lone
+Wolf)</strong> <em>Example: Solo private practice
+physiotherapist</em></p>
+<p>Works without the peer contact that hospital practitioners take for
+granted — no corridor conversations, no MDT meetings, no informal second
+opinions. Askapeer replaces the professional community they cannot
+otherwise access. Highly motivated; the platform offers something they
+genuinely cannot get elsewhere.</p>
+<p><strong>Persona D — The Sports Medicine Generalist</strong>
+<em>Example: Physiotherapist embedded in a professional sports
+club</em></p>
+<p>Manages a wide range of conditions across disciplines. Regularly
+encounters cases outside their primary expertise. Mobile between venues.
+High engagement potential and likely an early adopter.</p>
+<h3 id="internal-platform-roles">4.3 Internal platform roles</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Verified Member</strong></td>
+<td>Any registered practitioner who has passed verification. Primary
+platform user.</td>
+</tr>
+<tr>
+<td><strong>Moderator</strong></td>
+<td>Platform-appointed reviewer. Can access real identities for
+moderation purposes only. All identity access is immutably logged.</td>
+</tr>
+<tr>
+<td><strong>Administrator</strong></td>
+<td>Platform operations and compliance. Manages the verification queue,
+appeals, and policy.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="market-context-opportunity">5. Market Context &amp;
+Opportunity</h2>
+<h3 id="competitive-landscape">5.1 Competitive landscape</h3>
+<p>No directly comparable platform for UK sports medicine or
+physiotherapy practitioners was identified in research conducted in
+early 2025:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Key differences from Askapeer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Sermo</strong></td>
+<td>Doctor-focused; pharmaceutical/survey monetisation creates conflicts
+of interest; not sports medicine specific</td>
+</tr>
+<tr>
+<td><strong>LinkedIn</strong></td>
+<td>Not verified; real identity; not suited to clinical case
+discussion</td>
+</tr>
+<tr>
+<td><strong>Twitter / X</strong></td>
+<td>Not verified; not anonymous; no professional structure or
+moderation</td>
+</tr>
+<tr>
+<td><strong>WhatsApp groups</strong></td>
+<td>Not verified; unsearchable; unmoderated; limited to existing
+contacts; no knowledge archive</td>
+</tr>
+<tr>
+<td><strong>Professional body member areas</strong> (e.g. CSP)</td>
+<td>Identity known; limited engagement; not sports medicine
+specific</td>
+</tr>
+</tbody>
+</table>
+<p>The closest substitute — informal WhatsApp group chats — is
+unverified, unsearchable, unmoderated, and offers no persistent
+knowledge base. Askapeer would be the first professionally verified,
+pseudonymous network designed for this community.</p>
+<p><em>Competitive research should be refreshed prior to launch. See
+FD-8.</em></p>
+<h3 id="market-size-uk">5.2 Market size (UK)</h3>
+<p>At an illustrative subscription price of £19.99/month (see Section
+11):</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Penetration</th>
+<th>Subscribers (physio registrants only)</th>
+<th>Indicative annual revenue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1%</td>
+<td>~820</td>
+<td>~£197k</td>
+</tr>
+<tr>
+<td>5%</td>
+<td>~4,100</td>
+<td>~£983k</td>
+</tr>
+<tr>
+<td>10%</td>
+<td>~8,200</td>
+<td>~£1.97M</td>
+</tr>
+<tr>
+<td>5% of all UK registered practitioners</td>
+<td>~29,600</td>
+<td>~£7.1M</td>
+</tr>
+</tbody>
+</table>
+<h3 id="why-now">5.3 Why now</h3>
+<ul>
+<li>Growing awareness across health professions of the limitations of
+formal CPD and the value of peer learning</li>
+<li>No established competitor in this space — first-mover advantage is
+available</li>
+<li>AI-assisted development significantly reduces the cost and time to
+build a production-quality platform</li>
+</ul>
+<hr />
+<h2 id="mvp-scope">6. MVP Scope</h2>
+<p>The MVP is intentionally narrow: prove the core thesis — that
+verified, pseudonymous peer discussion is valuable enough to pay for —
+before adding complexity.</p>
+<h3 id="mvp-feature-set-moscow">6.1 MVP feature set (MoSCoW)</h3>
+<h4 id="must-have">Must have</h4>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Registration &amp; identity verification</strong></td>
+<td>Email sign-up and professional registration number; identity
+verified against HCPC, GMC, BASRAT, and SST registers or via an ID
+verification API (e.g. Onfido). Real identity stored securely; never
+exposed to other members.</td>
+</tr>
+<tr>
+<td><strong>Pseudonymous handles</strong></td>
+<td>Each verified member chooses a handle. No real name, employer, or
+specialty label. All community activity attributed to the handle
+only.</td>
+</tr>
+<tr>
+<td><strong>Professional forum</strong></td>
+<td>Organised discussion threads. Members post questions, contribute
+answers, and reply in threads.</td>
+</tr>
+<tr>
+<td><strong>Kudos system</strong></td>
+<td>Members award kudos to contributions they find valuable. Answers
+within a thread are ranked by kudos (highest first). Each handle
+accumulates a total kudos score — their community reputation.</td>
+</tr>
+<tr>
+<td><strong>Tagging system</strong></td>
+<td>Posts tagged by the author (body area, condition, clinical topic,
+modality). Tags are browsable and filterable.</td>
+</tr>
+<tr>
+<td><strong>Search</strong></td>
+<td>Full-text keyword search across all posts, answers, and tags. (to be
+discussed/confirmed)</td>
+</tr>
+<tr>
+<td><strong>De-identified case discussion</strong></td>
+<td>Structured template for case sharing, with mandatory
+de-identification checklist and attestation. Cannot be published without
+completion.</td>
+</tr>
+<tr>
+<td><strong>Content reporting</strong></td>
+<td>Any member can report a post or comment with a category and optional
+comment.</td>
+</tr>
+<tr>
+<td><strong>Moderation tools</strong></td>
+<td>Moderator review queue; actions: remove content, warn member,
+suspend account, permanently expel. All actions immutably logged.</td>
+</tr>
+<tr>
+<td><strong>Anonymity enforcement</strong></td>
+<td>Zero-tolerance policy enforced at product and policy level. Breaking
+anonymity (own or another member’s) triggers immediate permanent
+expulsion.</td>
+</tr>
+<tr>
+<td><strong>Member profile</strong></td>
+<td>Pseudonymous handle, kudos score, member-since date, post history.
+No real name, employer, location, or specialty visible to peers.</td>
+</tr>
+<tr>
+<td><strong>Notifications</strong></td>
+<td>In-app and email notifications for replies, mentions, and kudos
+received. Configurable per member.</td>
+</tr>
+<tr>
+<td><strong>Subscription and payment</strong></td>
+<td>Payment processing for monthly subscription. Free trial period.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="should-have">Should have</h4>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Follow handles</strong></td>
+<td>Follow another member’s handle to see their contributions in your
+feed. You follow their ideas, not their identity.</td>
+</tr>
+<tr>
+<td><strong>Saved / bookmarked posts</strong></td>
+<td>Save posts and threads for later reference.</td>
+</tr>
+<tr>
+<td><strong>Personalised feed</strong></td>
+<td>Home view based on tags and handles followed, with a trending/top
+view as fallback.</td>
+</tr>
+<tr>
+<td><strong>Email digest</strong></td>
+<td>Weekly digest of top-kudos content in followed tags.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="could-have-mvp-stretch-goals">Could have (MVP stretch
+goals)</h4>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Polls</strong></td>
+<td>Simple polls attached to posts for rapid community opinion.</td>
+</tr>
+<tr>
+<td><strong>Image attachments</strong></td>
+<td>Images with automatic EXIF metadata stripping and upload-time
+content warnings.</td>
+</tr>
+<tr>
+<td><strong>Best answer marker</strong></td>
+<td>Post author marks one reply as the accepted answer; displayed
+prominently at the top of the thread.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="will-not-have-in-mvp">Will not have in MVP</h4>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1:1 private messaging</strong></td>
+<td>Significant moderation overhead; harassment risk; low value at low
+user count. Phase 2. See FD-5.</td>
+</tr>
+<tr>
+<td><strong>Native iOS / Android apps</strong></td>
+<td>Web-first proof of concept; native apps follow post-traction. See
+FD-3.</td>
+</tr>
+<tr>
+<td><strong>Private or closed groups</strong></td>
+<td>Added complexity; Phase 2.</td>
+</tr>
+<tr>
+<td><strong>Multi-language support</strong></td>
+<td>UK-only MVP.</td>
+</tr>
+<tr>
+<td><strong>Paid surveys / market research</strong></td>
+<td>Phase 2 monetisation option only.</td>
+</tr>
+<tr>
+<td><strong>CE / CPD credit tracking</strong></td>
+<td>Out of scope.</td>
+</tr>
+<tr>
+<td><strong>Patient-facing features</strong></td>
+<td>Never in scope.</td>
+</tr>
+<tr>
+<td><strong>Employer / organisation pages</strong></td>
+<td>Phase 2.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="case-discussion-template-required-fields">6.2 Case discussion
+template (required fields)</h3>
+<ol type="1">
+<li>Presenting complaint and primary clinical question for the
+community</li>
+<li>Relevant history (non-identifying)</li>
+<li>Subjective findings</li>
+<li>Objective findings and clinical measurements</li>
+<li>Red flags considered</li>
+<li>Differential diagnosis / clinical hypotheses</li>
+<li>Interventions tried to date</li>
+<li>Response to treatment / current status</li>
+<li>Specific question to the community</li>
+</ol>
+<p>See Section 10 for the de-identification checklist and attestation
+requirement.</p>
+<hr />
+<h2 id="platform-strategy">7. Platform Strategy</h2>
+<h3 id="target-surfaces">7.1 Target surfaces</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Web application</strong></td>
+<td>Responsive web app; primary MVP delivery vehicle</td>
+</tr>
+<tr>
+<td><strong>Native iOS app</strong></td>
+<td>Native application for Apple iPhone and iPad — Phase 2</td>
+</tr>
+<tr>
+<td><strong>Native Android app</strong></td>
+<td>Native application for Android devices — Phase 2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sequencing">7.2 Sequencing</h3>
+<p>Sports medicine practitioners are frequently mobile between venues,
+pitchside, and clinic, making mobile the expected primary access method
+for many users. However, building three platforms simultaneously
+substantially increases cost, time to market, and maintenance burden for
+an unproven product.</p>
+<p><strong>Recommended approach</strong>: Launch the web application as
+the proof-of-concept vehicle. A responsive web app provides a usable
+mobile experience while the product is validated. Invest in native iOS
+and Android following successful early traction.</p>
+<blockquote>
+<p><strong>See FD-3</strong> for stakeholder confirmation of this
+sequencing, including the counter-argument that a web-only experience
+may suppress early adoption among mobile-first practitioners.</p>
+</blockquote>
+<h3 id="hosting-and-technology">7.3 Hosting and technology</h3>
+<p>The platform will be hosted on <strong>AWS (Amazon Web
+Services)</strong>, leveraging existing team knowledge. Stack decisions
+will optimise for developer velocity (small team building with AI
+assistance), maintainability, and real-time community features. Specific
+choices are addressed in the technical architecture phase.</p>
+<hr />
+<h2 id="verification-trust-model">8. Verification &amp; Trust Model</h2>
+<p>Trust is the core product. Every member is a verified, registered
+professional — this is non-negotiable and non-bypassable.</p>
+<h3 id="verification-process">8.1 Verification process</h3>
+<p><strong>Step 1 — Registration</strong>: applicant provides legal
+name, email, professional body, registration number, and country (UK for
+MVP).</p>
+<p><strong>Step 2 — Identity check</strong>: registration number
+cross-checked against the relevant register. HCPC and GMC both publish
+searchable public registers. Verification is automated via API where
+possible (e.g. Onfido); manual review is the fallback.</p>
+<p><strong>Step 3 — Status</strong>: member progresses through:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pending</code></td>
+<td>Submitted; awaiting review</td>
+</tr>
+<tr>
+<td><code>needs_more_info</code></td>
+<td>Additional evidence requested</td>
+</tr>
+<tr>
+<td><code>approved_verified</code></td>
+<td>Full community access granted</td>
+</tr>
+<tr>
+<td><code>rejected</code></td>
+<td>Not approved; reason provided</td>
+</tr>
+<tr>
+<td><code>suspended</code></td>
+<td>Access revoked (lapsed registration or policy violation)</td>
+</tr>
+</tbody>
+</table>
+<p>Only <code>approved_verified</code> members can access community
+content. All other statuses see a holding page only.</p>
+<p><strong>Step 4 — Ongoing</strong>: lapsed registration or serious
+policy violations trigger suspension. Periodic reverification is a Phase
+2 feature.</p>
+<h3 id="what-verification-guarantees-and-does-not-guarantee">8.2 What
+verification guarantees and does not guarantee</h3>
+<p><strong>Guarantees</strong>: the member was a registered practitioner
+at time of approval, and their real identity is known to the
+platform.</p>
+<p><strong>Does not guarantee</strong>: current clinical competence or
+that any contribution represents best practice. Askapeer is a peer
+discussion platform, not a quality assurance mechanism. Appropriate
+disclaimers are required throughout.</p>
+<h3 id="verification-operations">8.3 Verification operations</h3>
+<p>Verification is founder-led initially. As the platform scales, a
+dedicated operations function will be required — this cost should be
+reflected in the subscription pricing model.</p>
+<hr />
+<h2 id="anonymity-safety-framework">9. Anonymity &amp; Safety
+Framework</h2>
+<h3 id="the-anonymity-guarantee">9.1 The anonymity guarantee</h3>
+<p><strong>The Askapeer anonymity guarantee:</strong></p>
+<blockquote>
+<p><em>Every verified member participates under a pseudonymous handle of
+their own choosing. No other member — regardless of seniority, role, or
+platform standing — can discover the real identity behind any handle.
+The platform’s moderation and compliance team may access real identities
+solely to enforce platform policy, with all such access immutably logged
+and subject to audit.</em></p>
+</blockquote>
+<p>Anonymity is not an optional feature. Without it, the hierarchy
+problem the platform exists to solve reasserts itself and the product
+fails.</p>
+<h3 id="the-pseudonymous-model">9.2 The pseudonymous model</h3>
+<p><strong>Visible to peers:</strong> - Pseudonymous handle - Total
+kudos score - Approximate membership duration (e.g. “Member since 2025”)
+- Post and answer history under the handle</p>
+<p><strong>Never visible to peers:</strong> - Real name, employer, or
+institution - Geographic location - Specialty, grade, or years of
+experience</p>
+<blockquote>
+<p><strong>Design intent</strong>: Even specialty labels partially
+reintroduce hierarchy — “Consultant Orthopaedic Surgeon” carries
+different status to “Sports Rehabilitator.” Omitting formal credential
+labels preserves the meritocratic intent. Members’ expertise reveals
+itself naturally through their posting history.</p>
+</blockquote>
+<h3 id="the-zero-tolerance-rule">9.3 The zero-tolerance rule</h3>
+<p><strong>Any attempt to break the anonymity of themselves or another
+member results in immediate and permanent expulsion. There are no
+exceptions.</strong></p>
+<p>This applies to: revealing or attempting to reveal another member’s
+real identity; deliberately identifying yourself in a post (which
+creates pressure for others to do the same); and any collusion to
+de-anonymise members on or off the platform.</p>
+<p>This rule is stated clearly in the Terms of Use at registration,
+during onboarding, and surfaced in the posting UI.</p>
+<h3 id="moderation-access-to-identity">9.4 Moderation access to
+identity</h3>
+<p>Moderators may access real identity <strong>only</strong> when:
+investigating a reported policy violation; responding to a lawful legal
+request; or acting on a credible safety escalation. Every access is
+logged immutably with the moderator’s identity, reason, timestamp, and
+action taken.</p>
+<h3 id="inadvertent-identity-disclosure">9.5 Inadvertent identity
+disclosure</h3>
+<p>Members can inadvertently identify themselves through post content
+(naming an institution, referencing a unique event). The platform will
+provide in-product guidance when composing posts, enable reporting of
+apparently identifying content, and allow moderators to request editing
+— with the member’s handle identity protected throughout.</p>
+<hr />
+<h2 id="case-discussions-patient-safety-policy">10. Case Discussions
+&amp; Patient Safety Policy</h2>
+<h3 id="purpose-and-risk">10.1 Purpose and risk</h3>
+<p>Case discussions are among the highest-value features of the platform
+and the highest-risk. The platform has an absolute policy: <strong>no
+identifiable patient information is ever permitted.</strong> This is a
+legal requirement (UK GDPR, Data Protection Act 2018, common law duty of
+confidentiality) and a core trust requirement.</p>
+<h3 id="mandatory-de-identification-checklist">10.2 Mandatory
+de-identification checklist</h3>
+<p>The post cannot be submitted without completing all items:</p>
+<ul class="task-list">
+<li><label><input type="checkbox" />No patient names, initials, or
+aliases</label></li>
+<li><label><input type="checkbox" />No address, postcode, or identifying
+location data</label></li>
+<li><label><input type="checkbox" />No exact date of birth — age
+expressed as a band (e.g. 40–49 years)</label></li>
+<li><label><input type="checkbox" />No exact treatment dates — timelines
+expressed as relative (e.g. “3 weeks post-injury”)</label></li>
+<li><label><input type="checkbox" />No facility, club, or team name that
+would uniquely identify the patient</label></li>
+<li><label><input type="checkbox" />No patient photographs showing
+faces, unique tattoos, scars, or identifying features</label></li>
+<li><label><input type="checkbox" />Images reviewed for embedded
+metadata — the platform strips EXIF automatically; I confirm image
+content is compliant</label></li>
+<li><label><input type="checkbox" />No uploaded documents contain
+patient identifiers</label></li>
+</ul>
+<h3 id="mandatory-attestation">10.3 Mandatory attestation</h3>
+<blockquote>
+<p><em>“I confirm that this case discussion is de-identified in
+accordance with Askapeer’s patient privacy policy. I understand that any
+breach of patient confidentiality is a serious professional and legal
+matter and may result in permanent removal from the platform and
+referral to my professional regulatory body.”</em></p>
+</blockquote>
+<p>This attestation is recorded with timestamp and linked to the
+member’s verified identity.</p>
+<h3 id="reporting-and-priority-moderation">10.4 Reporting and priority
+moderation</h3>
+<p>Reports filed under <strong>“Identifiable patient
+information”</strong> trigger a <strong>priority review</strong> flag
+and are actioned before other report types. Moderation actions: remove
+content, request a corrected resubmission, warn the member, or escalate
+to administrator.</p>
+<h3 id="platform-disclaimer">10.5 Platform disclaimer</h3>
+<p>All case discussion pages carry:</p>
+<blockquote>
+<p><em>“This discussion is for peer learning purposes only. Responses
+represent individual practitioner perspectives and do not constitute
+clinical advice. Practitioners remain responsible for applying
+professional judgement appropriate to their individual clinical context
+and local scope of practice.”</em></p>
+</blockquote>
+<hr />
+<h2 id="monetisation-strategy">11. Monetisation Strategy</h2>
+<h3 id="guiding-principles">11.1 Guiding principles</h3>
+<ul>
+<li>The platform must be financially sustainable without compromising
+its independence or member trust</li>
+<li>Members are never the product — no selling of member data, no
+pharmaceutical industry targeting, no advertiser relationships</li>
+<li>A subscription model aligns platform incentives entirely with member
+interests</li>
+<li>The pharmaceutical survey and sponsored content model (as used by
+Sermo) is explicitly not being pursued — it creates conflicts of
+interest incompatible with Askapeer’s trust proposition</li>
+</ul>
+<h3 id="subscription-model">11.2 Subscription model</h3>
+<p>Members pay for access; the platform’s only obligation is to those
+paying members.</p>
+<p><strong>Illustrative pricing</strong> (working example — confirmed
+pricing is a stakeholder decision, see FD-2):</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Price</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Free trial period</td>
+<td>3 months</td>
+</tr>
+<tr>
+<td>Monthly subscription</td>
+<td>£19.99/month</td>
+</tr>
+<tr>
+<td>Annual subscription</td>
+<td>£199/year (~£16.60/month) — for discussion</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Revenue model at £19.99/month:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Active paying subscribers</th>
+<th>Monthly revenue</th>
+<th>Annual revenue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>500</td>
+<td>£9,995</td>
+<td>~£120k</td>
+</tr>
+<tr>
+<td>2,000</td>
+<td>£39,980</td>
+<td>~£480k</td>
+</tr>
+<tr>
+<td>5,000</td>
+<td>£99,950</td>
+<td>~£1.2M</td>
+</tr>
+<tr>
+<td>10,000</td>
+<td>£199,900</td>
+<td>~£2.4M</td>
+</tr>
+</tbody>
+</table>
+<p><em>Illustrative only. Does not account for payment processing fees,
+churn, or operational costs.</em></p>
+<h3 id="the-content-seeding-challenge">11.3 The content seeding
+challenge</h3>
+<p>A subscription model creates a chicken-and-egg problem: practitioners
+need to see value before paying, but value requires active membership. A
+3-month trial may be insufficient to build the network density needed
+for the platform to feel genuinely valuable. A longer seeding period
+(e.g. 6 months for the initial launch cohort) should be considered.</p>
+<p>Other seeding strategies under consideration: - University
+partnership — postgraduate students with professional registration as an
+engaged early-adopter cohort (see FD-6) - Founder-created seed content
+during pre-launch - Invitation-led early access through Andrew Renshaw’s
+professional network</p>
+<h3 id="phase-2-revenue-options">11.4 Phase 2 revenue options</h3>
+<p>Potential supplementary streams consistent with platform
+principles:</p>
+<ul>
+<li><strong>Premium subscription tier</strong>: advanced search, case
+export for CPD portfolios, posting analytics</li>
+<li><strong>Institutional / team accounts</strong>: clinics, sports
+clubs, or employers subscribe on behalf of a group — B2B sales
+potential</li>
+<li><strong>Professional body partnerships</strong>: white-label or
+co-branded version for an association’s members</li>
+</ul>
+<hr />
+<h2 id="phased-roadmap">12. Phased Roadmap</h2>
+<h3 id="phase-1-mvp-web-uk-market">Phase 1 — MVP (Web; UK market)</h3>
+<p><strong>Goal</strong>: prove the core thesis and that practitioners
+will pay for it.</p>
+<table>
+<thead>
+<tr>
+<th>Epic</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>EPIC-A</strong></td>
+<td>Registration, identity verification, admin review queue</td>
+</tr>
+<tr>
+<td><strong>EPIC-B</strong></td>
+<td>Pseudonymous handle and profile system</td>
+</tr>
+<tr>
+<td><strong>EPIC-C</strong></td>
+<td>Forum: posting, commenting, tagging, search</td>
+</tr>
+<tr>
+<td><strong>EPIC-D</strong></td>
+<td>Kudos system and answer ranking</td>
+</tr>
+<tr>
+<td><strong>EPIC-E</strong></td>
+<td>Case discussions with de-identification enforcement</td>
+</tr>
+<tr>
+<td><strong>EPIC-F</strong></td>
+<td>Content reporting and moderation tools</td>
+</tr>
+<tr>
+<td><strong>EPIC-G</strong></td>
+<td>Notifications (in-app and email)</td>
+</tr>
+<tr>
+<td><strong>EPIC-H</strong></td>
+<td>Subscription and payment processing</td>
+</tr>
+</tbody>
+</table>
+<h3 id="phase-2-growth">Phase 2 — Growth</h3>
+<p><strong>Goal</strong>: increase engagement, retention, and reach;
+expand to native platforms.</p>
+<ul>
+<li>Native iOS and Android applications</li>
+<li>Follow handles and personalised feed</li>
+<li>Private and closed groups (specialist interest, regional)</li>
+<li>1:1 messaging (subject to moderation capacity)</li>
+<li>Advanced search and filtering</li>
+<li>Premium subscription tier and institutional accounts</li>
+<li>International market expansion</li>
+<li>Periodic reverification of member registration status</li>
+</ul>
+<h3 id="phase-3-scale">Phase 3 — Scale</h3>
+<p><strong>Goal</strong>: establish Askapeer as the definitive
+professional network for sports medicine globally.</p>
+<ul>
+<li>Multi-language support</li>
+<li>Regional verification partnerships with professional bodies</li>
+<li>CPD / CE credit integration where regulators support it</li>
+<li>Research and educational partnerships</li>
+</ul>
+<hr />
+<h2 id="success-metrics-kpis">13. Success Metrics &amp; KPIs</h2>
+<h3 id="acquisition">13.1 Acquisition</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Metric</th>
+<th>What it measures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Verified member registrations</td>
+<td>Total members with <code>approved_verified</code> status</td>
+</tr>
+<tr>
+<td>Verification conversion rate</td>
+<td>% of sign-ups that reach <code>approved_verified</code></td>
+</tr>
+<tr>
+<td>Cost per verified member</td>
+<td>Marketing and operations cost per verified signup</td>
+</tr>
+</tbody>
+</table>
+<h3 id="engagement">13.2 Engagement</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Metric</th>
+<th>What it measures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Monthly active members (MAM)</td>
+<td>Members who post, comment, or award kudos at least once per
+month</td>
+</tr>
+<tr>
+<td>Posts per active member</td>
+<td>Average contributions per MAM per month</td>
+</tr>
+<tr>
+<td>Median time to first response</td>
+<td>Proxy for network density — how long before a question gets a
+reply</td>
+</tr>
+<tr>
+<td>Kudos awarded per post</td>
+<td>Indicator of content quality and community engagement</td>
+</tr>
+</tbody>
+</table>
+<h3 id="retention-and-revenue">13.3 Retention and revenue</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Metric</th>
+<th>What it measures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Post-trial conversion rate</td>
+<td>% of free trial members who convert to paid</td>
+</tr>
+<tr>
+<td>Monthly subscriber retention</td>
+<td>% of paying subscribers who renew</td>
+</tr>
+<tr>
+<td>12-month member retention</td>
+<td>% of members still active after 12 months</td>
+</tr>
+<tr>
+<td>Monthly recurring revenue (MRR)</td>
+<td>Total subscription revenue per month</td>
+</tr>
+</tbody>
+</table>
+<h3 id="trust-and-safety">13.4 Trust and safety</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Metric</th>
+<th>What it measures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reports per 1,000 posts</td>
+<td>Indicator of content quality and community standards</td>
+</tr>
+<tr>
+<td>Median moderation response time</td>
+<td>Time from report to moderator action</td>
+</tr>
+<tr>
+<td>PHI report resolution time</td>
+<td>Time to action potential patient data reports — must be fast</td>
+</tr>
+<tr>
+<td>Anonymity breach incidents</td>
+<td>Count of confirmed identity-reveal violations — target: zero</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="risks-assumptions">14. Risks &amp; Assumptions</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cold start / insufficient content to demonstrate value before
+paywall</td>
+<td>High</td>
+<td>High</td>
+<td>Extended trial; seeding strategy; university partnership;
+founder-created content pre-launch</td>
+</tr>
+<tr>
+<td>Anonymity breached or perceived to be untrustworthy</td>
+<td>Low</td>
+<td>Critical</td>
+<td>Technical controls, zero-tolerance enforcement, transparency about
+identity storage</td>
+</tr>
+<tr>
+<td>Legal or regulatory challenge related to patient data</td>
+<td>Low</td>
+<td>Critical</td>
+<td>Robust de-identification policy; no PHI storage; legal review of
+Terms of Use and Privacy Policy before launch</td>
+</tr>
+<tr>
+<td>Moderation overwhelm as platform scales</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Moderation capacity plan and budget in Phase 2; community
+self-moderation tools</td>
+</tr>
+<tr>
+<td>A well-funded competitor enters the market</td>
+<td>Low</td>
+<td>Medium</td>
+<td>First-mover advantage; network effect; professional body
+relationships</td>
+</tr>
+<tr>
+<td>API-based verification unavailable for some professional bodies</td>
+<td>Medium</td>
+<td>Low</td>
+<td>Manual review fallback process designed in from the start</td>
+</tr>
+<tr>
+<td>Registration lapse not caught post-approval</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Phase 2 periodic reverification; Phase 1 community reporting</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key assumptions:</strong> - HCPC and GMC registers remain
+publicly queryable or accessible via API - UK sports medicine
+practitioners will pay a subscription for a tool that provides clear
+professional value - Andrew Renshaw’s professional network provides
+meaningful early-adopter seeding - A small team building with AI
+development assistance can deliver the MVP within a commercially viable
+timeframe</p>
+<hr />
+<h2 id="for-discussion">15. For Discussion</h2>
+<p>These items require stakeholder decision before the PRD is finalised
+and development begins.</p>
+<hr />
+<h3 id="fd-1-professional-scope-at-launch">FD-1 — Professional scope at
+launch</h3>
+<p><strong>Decision</strong>: open to all UK registered practitioners
+from day one, or physiotherapists only for MVP with other professions
+added later?</p>
+<ul>
+<li><strong>A) Broad from launch</strong> — larger addressable market;
+more complex verification; harder to maintain a coherent early community
+identity</li>
+<li><strong>B) Physio-first MVP</strong> — simpler verification; clearer
+community identity; Andrew Renshaw’s deepest expertise; easier to
+moderate; expand to other professions in Phase 2</li>
+</ul>
+<p>Andrew Renshaw’s input is particularly important here.</p>
+<hr />
+<h3 id="fd-2-subscription-pricing-and-trial-length">FD-2 — Subscription
+pricing and trial length</h3>
+<p><strong>Decision</strong>: confirm price point, trial length, and
+whether an annual plan is offered at launch.</p>
+<p><strong>Working example</strong>: £19.99/month; 3-month free
+trial.</p>
+<ul>
+<li>Is £19.99/month the right price? Too high risks low conversion; too
+low undersells the platform’s professionalism.</li>
+<li>Is 3 months sufficient? A longer initial trial (e.g. 6 months) may
+build network density more effectively before the paywall
+activates.</li>
+<li>An annual plan (e.g. £199/year) reduces churn and improves cash flow
+predictability.</li>
+<li>Payment processor: WorldPay was referenced in the original concept;
+Stripe is worth evaluating for developer integration and international
+readiness.</li>
+</ul>
+<hr />
+<h3 id="fd-3-platform-sequencing">FD-3 — Platform sequencing</h3>
+<p><strong>Decision</strong>: confirm web-first as the MVP delivery
+vehicle, with native iOS and Android following post-traction.</p>
+<p><strong>Recommendation</strong>: web first — building three platforms
+simultaneously multiplies cost and time with no validated demand
+yet.</p>
+<p><strong>Counter-argument</strong>: if the target use case is heavily
+mobile (pitchside, between venues), a web-only experience may suppress
+early adoption. Should be tested with Andrew’s network.</p>
+<hr />
+<h3 id="fd-4-forum-and-content-organisation">FD-4 — Forum and content
+organisation</h3>
+<p><strong>Decision</strong>: primary organising principle for the
+forum?</p>
+<ul>
+<li><strong>A) Body-area taxonomy</strong> (Shoulder, Knee, Spine, etc.)
+— clinically intuitive; Andrew Renshaw has an existing body part
+list</li>
+<li><strong>B) Topic tagging only</strong> (Reddit-style) — flexible and
+member-driven; searchable</li>
+<li><strong>C) Follow-based feed</strong> — no fixed hierarchy; content
+surfaces through engagement</li>
+<li><strong>D) Hybrid</strong> — curated top-level categories (body
+areas plus a small set of professional topics: Research, Career,
+Equipment) with free tagging within them</li>
+</ul>
+<p><strong>Recommendation</strong>: Option D. A stable top-level
+structure gives new members an immediate mental map; free tagging
+provides flexibility and search depth as the archive grows.</p>
+<hr />
+<h3 id="fd-5-11-private-messaging">FD-5 — 1:1 private messaging</h3>
+<p><strong>Decision</strong>: include in MVP or defer to Phase 2?</p>
+<p><strong>Case for deferral</strong>: requires real-time chat
+infrastructure; every DM is a harassment risk requiring dedicated
+moderation flows and GDPR retention obligations; the core value
+proposition does not depend on it; demand is low at small user
+counts.</p>
+<p><strong>Recommendation</strong>: defer to Phase 2. In MVP, allow
+members to optionally add a professional contact link (e.g. LinkedIn
+URL) to their handle profile, giving motivated members a path to connect
+without the platform carrying the moderation burden.</p>
+<hr />
+<h3 id="fd-6-university-partnership-as-seeding-strategy">FD-6 —
+University partnership as seeding strategy</h3>
+<p><strong>Decision</strong>: should a formal partnership with a UK
+university (postgraduate students with professional registration) be
+pursued as part of the launch strategy?</p>
+<p>Andrew Renshaw was in early discussions with a UK university about
+trialling the platform with MSc students. A cohort of engaged
+postgraduates could seed high-quality content and accelerate network
+density. Requires relationship management, alignment on Terms of Use,
+and potentially a subsidised trial for the cohort.</p>
+<p><strong>Action</strong>: Andrew Renshaw to confirm current status of
+this relationship.</p>
+<hr />
+<h3 id="fd-7-brand-name-and-domain">FD-7 — Brand name and domain</h3>
+<p><strong>Decision</strong>: is “Askapeer” the final brand? Is a .com
+domain to be secured?</p>
+<p>“Askapeer” (<em>Ask a Peer</em>) communicates the purpose directly. A
+.com domain is preferable to .co.uk given global expansion aspirations.
+Trademark search across UK, US, and EU markets required before
+committing.</p>
+<hr />
+<h3 id="fd-8-competitor-research-refresh">FD-8 — Competitor research
+refresh</h3>
+<p><strong>Action</strong>: conduct a fresh competitive landscape review
+before committing to the development investment. Andrew Renshaw to
+confirm awareness of any new entrants in the sports medicine or
+physiotherapy space since the February 2025 review.</p>
+<hr />
+<h2 id="appendices">16. Appendices</h2>
+<h3 id="appendix-a-origin-and-founding-concept">Appendix A — Origin and
+founding concept</h3>
+<p>Askapeer was originated by Andrew Renshaw, Senior Physiotherapist,
+under the working title <em>“The No Ego Sports Medicine Network”</em>
+(2024). The concept described a verified, anonymous platform for UK
+sports medicine professionals to share knowledge and solve clinical
+problems without hierarchy or fear of criticism. Andrew’s original
+document is retained in the project archive
+(<code>docs/archive/</code>). The principles it established — anonymity
+as the primary mechanism, zero tolerance for anonymity violations,
+kudos-based contribution ranking, subscription funding, and learning
+from failure as an explicit goal — remain foundational and are reflected
+throughout this PRD.</p>
+<h3 id="appendix-b-key-terminology">Appendix B — Key terminology</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Term</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Verified member</td>
+<td>A practitioner whose professional registration has been confirmed by
+the platform</td>
+</tr>
+<tr>
+<td>Handle</td>
+<td>A pseudonymous username chosen at registration; not linked to real
+identity</td>
+</tr>
+<tr>
+<td>Kudos</td>
+<td>Community-awarded recognition points; accumulate to a handle’s
+reputation score; used to rank answers within threads</td>
+</tr>
+<tr>
+<td>De-identified case</td>
+<td>A patient case from which all potentially identifying information
+has been removed per platform policy</td>
+</tr>
+<tr>
+<td>PHI</td>
+<td>Protected Health Information — identifiable patient data; never
+permitted on the platform</td>
+</tr>
+<tr>
+<td>HCPC</td>
+<td>Health and Care Professions Council — UK regulator for
+physiotherapists, podiatrists, radiographers, and practitioner
+psychologists</td>
+</tr>
+<tr>
+<td>GMC</td>
+<td>General Medical Council — UK regulator for doctors and surgeons</td>
+</tr>
+<tr>
+<td>BASRAT</td>
+<td>British Association of Sport Rehabilitators and Trainers</td>
+</tr>
+<tr>
+<td>SST</td>
+<td>Society of Sports Therapy</td>
+</tr>
+<tr>
+<td>MoSCoW</td>
+<td>Prioritisation framework: Must have, Should have, Could have, Won’t
+have</td>
+</tr>
+</tbody>
+</table>
+<h3 id="appendix-c-document-changelog">Appendix C — Document
+changelog</h3>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Version</th>
+<th>Date</th>
+<th>Author</th>
+<th>Summary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.1</td>
+<td>June 2026</td>
+<td>A. Hall</td>
+<td>Initial draft for stakeholder discussion; all FD items open</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>This document is a living draft. All items in Section 15 require
+explicit stakeholder decision before the PRD is finalised. Nothing is
+binding until signed off by all three stakeholders: Adrian Hall, Paul
+Gouge, and Andrew Renshaw.</em></p>
+
+</main>
+</body>
+</html>

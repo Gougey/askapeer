@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Technical Architecture Specification — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">Technical Architecture Specification</span>
+</div>
+<main>
+<h1 id="askapeer-technical-architecture-specification">Askapeer —
+Technical Architecture Specification</h1>
+<p><strong>Status</strong>: Draft — for stakeholder review
+<strong>Date</strong>: 14 July 2026 <strong>Author</strong>: Adrian Hall
+(Technical Lead), drafted with Claude Code <strong>Scope</strong>:
+Cross-cutting technical architecture underpinning all MVP epics. This
+document does <strong>not</strong> replace the per-epic technical specs
+(one per EPIC-A through EPIC-I) — it establishes the shared foundation
+those specs will build on: technology stack, hosting, data model,
+identity/pseudonymity enforcement, authentication, and non-functional
+requirements.</p>
+<p>Source of truth for product requirements:
+<code>docs/askapeer-prd-v0.1.md</code>.</p>
+<p><strong>Amendment, 14 July 2026 (post-approval)</strong>:
+<code>identity.members.verification_status</code> (Section 4.1) gains an
+<code>expelled</code> value, resolving a gap identified while drafting
+the EPIC-B and EPIC-F specs — see
+<code>docs/2026-07-14-technical-specs-open-questions.md</code>, Section
+2, for the full history.</p>
+<hr />
+<h2 id="contents">Contents</h2>
+<ol type="1">
+<li><a href="#1-assumptions-and-scope-notes">Assumptions and scope
+notes</a></li>
+<li><a href="#2-glossary">Glossary</a></li>
+<li><a href="#3-system-overview-and-components">System overview and
+components</a></li>
+<li><a href="#4-data-model-and-the-identitypseudonymity-boundary">Data
+model and the identity/pseudonymity boundary</a></li>
+<li><a
+href="#5-verification-pipeline-authentication-and-api-design">Verification
+pipeline, authentication, and API design</a></li>
+<li><a href="#6-infrastructure-and-hosting">Infrastructure and
+hosting</a></li>
+<li><a href="#7-payments-moderation-tooling-and-notifications">Payments,
+moderation tooling, and notifications</a></li>
+<li><a href="#8-researchnews-feed-epic-i">Research/news feed
+(EPIC-I)</a></li>
+<li><a href="#9-non-functional-requirements">Non-functional
+requirements</a></li>
+<li><a href="#10-epic-to-module-map">Epic-to-module map</a></li>
+<li><a href="#11-open-follow-ups">Open follow-ups</a></li>
+</ol>
+<hr />
+<h2 id="assumptions-and-scope-notes">1. Assumptions and scope notes</h2>
+<p>The PRD (<code>docs/askapeer-prd-v0.1.md</code>, Section 15) lists
+eight open stakeholder decisions (FD-1 through FD-8) that are not yet
+formally closed. Per direction from the technical lead, this
+architecture is designed <strong>against the PRD’s stated
+recommendations</strong> for each open item, so design work is not
+blocked on sign-off. Each assumption below should be treated as
+revisable, not settled, until the relevant stakeholders close the FD
+item:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>FD item</th>
+<th>Assumption made here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FD-1 (professional scope)</td>
+<td>Physio-first MVP, per the PRD’s Option B recommendation</td>
+</tr>
+<tr>
+<td>FD-3 (platform sequencing)</td>
+<td>Web-first for MVP; architecture is API-first specifically so native
+iOS/Android (Phase 2) requires no backend rework</td>
+</tr>
+<tr>
+<td>FD-4 (forum taxonomy)</td>
+<td>Hybrid model (Option D): fixed top-level categories plus free
+tagging</td>
+</tr>
+<tr>
+<td>FD-5 (1:1 messaging)</td>
+<td>Deferred to Phase 2, per the PRD’s recommendation</td>
+</tr>
+</tbody>
+</table>
+<p>FD-2 (subscription pricing/processor) and FD-7/FD-8 (branding,
+competitive research) have no material architectural impact and are not
+assumed here; FD-6 (university partnership) is an operational, not
+technical, decision.</p>
+<p><strong>One scope addition beyond the PRD</strong>: this document
+adds a ninth epic, <strong>EPIC-I — Research/News Feed</strong>,
+covering the personalised research-literature feed prototyped in
+<code>prototypes/research-feed/</code> and designed in
+<code>docs/AHP_Research_Feed_Design_Conversation.md</code>. This was not
+in the PRD’s original MoSCoW list (Section 6.1) and should be reflected
+back into the PRD the next time it’s revised with Paul Gouge and Andrew
+Renshaw.</p>
+<hr />
+<h2 id="glossary">2. Glossary</h2>
+<p>Acronyms are expanded at first use in the body text below; this table
+is a standing reference. Terms already defined in the PRD’s own glossary
+(Appendix B) are not repeated in full here.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API</td>
+<td>Application Programming Interface — a defined way for software
+components to communicate, here mainly over HTTPS using JSON</td>
+</tr>
+<tr>
+<td>REST</td>
+<td>Representational State Transfer — an API design style built around
+resources and standard HTTP verbs</td>
+</tr>
+<tr>
+<td>JSON</td>
+<td>JavaScript Object Notation — a lightweight text format for
+structured data</td>
+</tr>
+<tr>
+<td>JWT</td>
+<td>JSON Web Token — a signed, compact token format used here to
+represent an authenticated session</td>
+</tr>
+<tr>
+<td>DTO</td>
+<td>Data Transfer Object — the shape of data returned by an API
+endpoint, distinct from how it’s stored in the database</td>
+</tr>
+<tr>
+<td>TLS</td>
+<td>Transport Layer Security — encrypts data in transit between client
+and server (the successor to SSL)</td>
+</tr>
+<tr>
+<td>AWS</td>
+<td>Amazon Web Services — the cloud hosting provider specified in the
+PRD</td>
+</tr>
+<tr>
+<td>VPC</td>
+<td>Virtual Private Cloud — an isolated private network within AWS</td>
+</tr>
+<tr>
+<td>ALB</td>
+<td>Application Load Balancer — distributes incoming web traffic across
+running application instances</td>
+</tr>
+<tr>
+<td>NAT gateway</td>
+<td>Network Address Translation gateway — lets resources in a private
+network reach the internet without being directly reachable from it</td>
+</tr>
+<tr>
+<td>ECS</td>
+<td>Elastic Container Service — AWS’s service for running containerised
+applications</td>
+</tr>
+<tr>
+<td>Fargate</td>
+<td>The “serverless” compute mode for ECS — no servers to manage
+directly</td>
+</tr>
+<tr>
+<td>RDS</td>
+<td>Relational Database Service — AWS’s managed database hosting</td>
+</tr>
+<tr>
+<td>S3</td>
+<td>Simple Storage Service — AWS’s file/object storage</td>
+</tr>
+<tr>
+<td>CDN</td>
+<td>Content Delivery Network — caches and serves content from locations
+close to the user (here, AWS CloudFront)</td>
+</tr>
+<tr>
+<td>WAF</td>
+<td>Web Application Firewall — filters malicious web traffic before it
+reaches the application</td>
+</tr>
+<tr>
+<td>CDK</td>
+<td>Cloud Development Kit — a way of defining AWS infrastructure as
+code, here in TypeScript</td>
+</tr>
+<tr>
+<td>CI/CD</td>
+<td>Continuous Integration / Continuous Deployment — automated building,
+testing, and deploying of code changes</td>
+</tr>
+<tr>
+<td>ECR</td>
+<td>Elastic Container Registry — AWS’s storage for container images</td>
+</tr>
+<tr>
+<td>PII</td>
+<td>Personally Identifiable Information — data that could identify a
+specific real person</td>
+</tr>
+<tr>
+<td>PHI</td>
+<td>Protected Health Information — identifiable patient data (see PRD
+glossary); never permitted on the platform</td>
+</tr>
+<tr>
+<td>GDPR</td>
+<td>General Data Protection Regulation — UK/EU data protection law</td>
+</tr>
+<tr>
+<td>DPIA</td>
+<td>Data Protection Impact Assessment — a formal review of privacy risk,
+recommended before handling data like Askapeer’s at scale</td>
+</tr>
+<tr>
+<td>DOI</td>
+<td>Digital Object Identifier — a persistent unique identifier for an
+academic publication</td>
+</tr>
+<tr>
+<td>PMID</td>
+<td>PubMed Identifier — a unique identifier assigned by the PubMed
+database</td>
+</tr>
+<tr>
+<td>EXIF</td>
+<td>Exchangeable Image File Format — metadata embedded in photos
+(e.g. GPS location) that must be stripped before storage</td>
+</tr>
+<tr>
+<td>SES</td>
+<td>Simple Email Service — AWS’s email-sending service</td>
+</tr>
+<tr>
+<td>PCI</td>
+<td>Payment Card Industry (Data Security Standard) — compliance
+requirements for handling card payments, offloaded here to the payment
+processor</td>
+</tr>
+<tr>
+<td>SPA</td>
+<td>Single-Page Application — a web app that runs mostly in the browser
+rather than reloading pages from the server</td>
+</tr>
+<tr>
+<td>SSR</td>
+<td>Server-Side Rendering — generating a web page’s HTML on the server
+before sending it to the browser</td>
+</tr>
+<tr>
+<td>SEO</td>
+<td>Search Engine Optimisation — making pages discoverable by search
+engines</td>
+</tr>
+<tr>
+<td>GIN index</td>
+<td>Generalized Inverted Index — a PostgreSQL index type used here for
+full-text search</td>
+</tr>
+<tr>
+<td>RPO</td>
+<td>Recovery Point Objective — the maximum acceptable amount of data
+loss, measured in time, after an outage</td>
+</tr>
+<tr>
+<td>RTO</td>
+<td>Recovery Time Objective — the maximum acceptable time to restore
+service after an outage</td>
+</tr>
+<tr>
+<td>APM</td>
+<td>Application Performance Monitoring — tooling for tracking
+application errors and performance in production</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="system-overview-and-components">3. System overview and
+components</h2>
+<pre><code>                         +-----------------------+
+                         |   Web app (Next.js)    |  &lt;- MVP client
+                         |   React SPA/SSR         |
+                         +-----------+-------------+
+                                     | HTTPS/JSON (REST)
+                                     | JWT bearer auth
+                         +-----------v-------------+
+                         |   API (NestJS)           |  &lt;- also serves future
+                         |   ECS Fargate             |    native iOS/Android
+                         |   eu-west-2 (London)      |    clients unchanged
+                         +--+----------+---------+--+
+                            |          |         |
+                  +---------v--+ +-----v----+ +--v----------+
+                  | PostgreSQL | | Redis    | | S3 (attach- |
+                  | (RDS)      | | (cache/  | | ments, EXIF |
+                  | schemas:   | | queues)  | | stripped)   |
+                  | identity + | +----------+ +-------------+
+                  | community  |
+                  | + billing  |
+                  | + research |
+                  +------------+
+                            |
+                  +---------v-----------+
+                  | Background workers   |  (BullMQ, same
+                  | (verification jobs,  |   codebase, separate
+                  | email, digests,      |   ECS service)
+                  | research ingestion)  |
+                  +----------+-----------+
+                             |
+              +--------------+---------------+
+        +------v-----+ +------v-----+ +------v-----+
+        | HCPC/GMC   | |  Onfido    | |  SES /     |
+        | registers  | |  (ID check)| |  Stripe/   |
+        | (lookup)   | |            | |  WorldPay  |
+        +------------+ +------------+ +------------+</code></pre>
+<p><strong>Stack decision</strong>: Node.js/TypeScript throughout, using
+the NestJS framework for the Application Programming Interface (API),
+organised as a <strong>modular monolith</strong> (not microservices) —
+the right size for a small team, avoiding distributed-systems overhead
+while still giving each module (“epic”) a clean, testable boundary.
+TypeScript end-to-end means the web frontend and backend share types,
+and it’s the stack AI coding agents are most fluent in, which matters
+given the team is building with AI assistance.</p>
+<p><strong>Components</strong>: - <strong>Web app</strong> — Next.js
+(React), the sole MVP client, communicating with the API entirely over
+HTTPS. Built API-first (no server-only logic baked into the web app) so
+a future native mobile client is architecturally just another API
+consumer, not a rewrite. - <strong>API</strong> — a single NestJS
+service, organised into modules mapping 1:1 to the PRD epics (see
+Section 10). - <strong>Background workers</strong> — the same codebase,
+deployed as a second Elastic Container Service (ECS) service, driven by
+a Redis-backed job queue (BullMQ). Handles anything that shouldn’t block
+a request: professional-register lookups, identity-check polling, email
+sending, EXIF stripping, digest generation, research-feed ingestion. -
+<strong>PostgreSQL</strong> (Relational Database Service (RDS),
+Multi-AZ, <code>eu-west-2</code>/London) — a single instance with four
+schemas: <code>identity</code>, <code>community</code>,
+<code>billing</code>, <code>research</code> (Section 4). -
+<strong>Redis</strong> (ElastiCache) — job queue plus hot-path caching
+(e.g. kudos leaderboards). - <strong>S3</strong> (Simple Storage
+Service) — attachments and verification documents in private buckets,
+accessed via presigned Uniform Resource Locators (URLs); EXIF metadata
+stripped by a worker before anything is persisted.</p>
+<hr />
+<h2 id="data-model-and-the-identitypseudonymity-boundary">4. Data model
+and the identity/pseudonymity boundary</h2>
+<p>The core architectural constraint (PRD Section 9) is: <strong>no path
+exists from a handle to a real identity except through one audited,
+narrow service.</strong> This is enforced two ways — schema separation
+<em>and</em> PostgreSQL role-based access grants (not application-code
+discipline alone, which a bug or a careless new module could
+bypass).</p>
+<h3
+id="identity-schema-real-personally-identifiable-information-pii">4.1
+<code>identity</code> schema — real personally identifiable information
+(PII)</h3>
+<p>Only three internal modules ever hold a database role with access
+here: <code>IdentityService</code> (verification, moderator-initiated
+lookups), <code>BillingService</code> (invoicing), and
+<code>NotificationService</code> (email delivery). No other module’s
+database role has grants on this schema — enforced by PostgreSQL
+<code>GRANT</code>/<code>REVOKE</code>, verified by an automated test
+(Section 9).</p>
+<pre><code>identity.members
+  id                    uuid PK          -- the real &quot;member_id&quot;
+  legal_name            text
+  email                 text unique
+  professional_body     enum(hcpc, gmc, basrat, sst)
+  registration_number   text
+  registration_country  text
+  verification_status   enum(pending, needs_more_info, approved_verified, rejected, suspended, expelled)
+  status_updated_at     timestamptz
+  created_at            timestamptz
+
+identity.verification_evidence
+  id            uuid PK
+  member_id     uuid FK -&gt; identity.members
+  evidence_type enum(register_lookup, onfido_check, manual_document)
+  source        text            -- e.g. &quot;HCPC register API&quot;, &quot;Onfido&quot;
+  raw_result    jsonb
+  outcome       enum(pass, fail, needs_review)
+  created_at    timestamptz
+
+identity.verification_decisions        -- immutable: INSERT-only grant
+  id            uuid PK
+  member_id     uuid FK -&gt; identity.members
+  from_status   text
+  to_status     text
+  decided_by    text            -- &#39;system&#39; or an admin&#39;s member_id
+  reason        text
+  created_at    timestamptz
+
+identity.case_attestations             -- see 4.3
+  id                 uuid PK
+  member_id          uuid FK -&gt; identity.members
+  post_id            uuid FK -&gt; community.posts
+  attestation_text   text
+  checklist_snapshot jsonb
+  attested_at        timestamptz
+  ip_address         inet
+
+identity.identity_access_log           -- immutable: INSERT-only grant
+  id                uuid PK
+  accessed_by       uuid            -- moderator/admin&#39;s own member_id
+  target_member_id  uuid FK -&gt; identity.members
+  reason_code       enum(reported_violation, legal_request, safety_escalation)
+  reason_note       text
+  action_taken      text
+  created_at        timestamptz</code></pre>
+<h3 id="community-schema-everything-peer-facing">4.2
+<code>community</code> schema — everything peer-facing</h3>
+<p>Read/written by the <code>forum</code>, <code>kudos</code>,
+<code>case-discussions</code>, <code>moderation</code> modules. This
+database role has <strong>zero</strong> grants on the
+<code>identity</code> schema.</p>
+<pre><code>community.handles
+  id           uuid PK          -- the public &quot;handle_id&quot;
+  member_id    uuid             -- FK exists for referential integrity only;
+                                  -- readable solely via IdentityService&#39;s role
+  handle_name  text unique
+  kudos_total  int default 0
+  member_since date
+  status       enum(active, suspended, expelled)
+
+community.posts (id, handle_id, type enum(question, case_discussion), title, body, status, created_at)
+community.comments (id, post_id, handle_id, parent_comment_id, body, status, created_at)
+community.tags / community.post_tags        -- FD-4 hybrid taxonomy
+community.kudos
+  id, target_type(post|comment), target_id, given_by_handle_id, created_at
+  unique(target_type, target_id, given_by_handle_id)   -- one kudos per handle per item
+
+community.reports
+  id, reporter_handle_id, target_type, target_id,
+  category enum(..., identifiable_patient_information, ...),
+  priority boolean generated from category,
+  status enum(open, actioned, dismissed), created_at
+
+community.moderation_actions           -- immutable: INSERT-only grant
+  id, report_id nullable, target_handle_id,
+  action_type enum(remove_content, warn, suspend, expel),
+  moderator_id, reason, created_at
+
+community.notifications              (handle_id, type, payload, read_at, created_at)
+community.notification_preferences   (handle_id, type, in_app_enabled, email_enabled)
+community.member_interests           (handle_id, tag, weight, updated_at)   -- see Section 8</code></pre>
+<h3 id="the-deliberate-exception-case-attestations">4.3 The deliberate
+exception: case attestations</h3>
+<p>Case-discussion attestations (PRD Section 10.3) must be “linked to
+the member’s verified identity,” not just the handle — this is the legal
+record that lets a confirmed patient-privacy breach be escalated to the
+individual’s professional regulator. So <code>case_attestations</code>
+lives in the <code>identity</code> schema, cross-referencing
+<code>community.posts</code>, even though the <em>action</em> that
+creates it (publishing a case post) happens in the community-facing
+flow. It’s the one place identity and community data are deliberately
+joined, and it’s protected the same way as everything else in the
+<code>identity</code> schema.</p>
+<h3 id="audit-logging-scope">4.4 Audit logging scope</h3>
+<p><code>identity_access_log</code> captures only the three
+moderator-initiated reasons in PRD Section 9.4 (investigating a report,
+a lawful legal request, a safety escalation). Routine automated system
+access to the <code>identity</code> schema — sending a notification
+email, processing a billing charge — is normal application activity with
+ordinary observability, not a logged “identity access” event; conflating
+the two would make the audit log noisy and undermine its purpose as a
+trust artifact.</p>
+<p><code>identity.verification_decisions</code> and
+<code>community.moderation_actions</code> are separately immutable (per
+the requirement that “audit logs are immutable for verification
+decisions, moderation actions, and all moderator access to real
+identity”) — enforced the same way as <code>identity_access_log</code>:
+an INSERT-only database grant, with
+<code>UPDATE</code>/<code>DELETE</code> privileges revoked at the role
+level.</p>
+<hr />
+<h2 id="verification-pipeline-authentication-and-api-design">5.
+Verification pipeline, authentication, and API design</h2>
+<h3 id="verification-pipeline-background-worker-identityservice">5.1
+Verification pipeline (background worker,
+<code>IdentityService</code>)</h3>
+<pre><code>1. Registration
+   POST /v1/auth/register { legal_name, email, professional_body, registration_number, country }
+   -&gt; identity.members row created, status = pending
+   -&gt; verification job enqueued
+
+2. Automated checks (async, worker)
+   a. Register lookup - query the relevant professional register (e.g. the Health and
+      Care Professions Council (HCPC) or General Medical Council (GMC) public register)
+      by registration_number, fuzzy-match legal_name.
+      Result -&gt; identity.verification_evidence (evidence_type = register_lookup)
+   b. Identity document check via Onfido - document + facial-similarity check, binds
+      the real applicant to the claimed registration (the register lookup alone only
+      proves the registration number is real, not who is holding it).
+      Result arrives via an Onfido webhook -&gt; identity.verification_evidence
+      (evidence_type = onfido_check)
+
+3. Decision
+   register lookup = pass AND identity check = clear  -&gt; auto-approve
+   either fails / ambiguous / register unavailable     -&gt; routed to the admin review
+      queue; status stays `pending` (or moves to `needs_more_info` if the admin
+      requests further evidence)
+   Every transition writes an immutable row to identity.verification_decisions.</code></pre>
+<p>Manual review (the fallback path) is worked from the same admin panel
+described in Section 7; both automated and manual decisions write to the
+same <code>verification_decisions</code> audit trail.</p>
+<h3 id="authentication-passwordless-by-default">5.2 Authentication —
+passwordless by default</h3>
+<p>Rather than storing password hashes (extra attack surface, and a
+password-reset flow is non-trivial to build securely for a small team),
+the first factor is an emailed single-use magic link:</p>
+<pre><code>POST /v1/auth/request-link { email }   -&gt; IdentityService looks up the member,
+                                            emails a single-use signed token
+GET  /v1/auth/verify?token=...         -&gt; validates the token, mints a session</code></pre>
+<p><strong>Critical detail for the pseudonymity guarantee</strong>: the
+JSON Web Token (JWT) issued after login is scoped to the caller’s
+<strong>handle_id, not member_id</strong>. Every subsequent
+community-facing API call (posting, commenting, awarding kudos)
+authenticates as a handle. The token payload never carries the
+real-identity linkage into browser or mobile storage —
+<code>member_id</code> is only ever resolved server-side, inside
+<code>IdentityService</code>, for the narrow set of operations that
+legitimately need it.</p>
+<p>Session mechanics: a short-lived access token (around 15 minutes)
+plus a rotating refresh token. The web app stores the refresh token in
+an HttpOnly secure cookie (mitigates cross-site scripting attacks); a
+future native mobile client would receive it in the response body to
+store in platform-native secure storage instead — the same endpoints
+serve both, so no backend change is needed when mobile ships.</p>
+<p>Members who are not yet <code>approved_verified</code> receive a
+token scoped only to a holding-status endpoint — matching the PRD’s
+requirement that “all other statuses see a holding page only.”</p>
+<h3 id="api-design-principles">5.3 API design principles</h3>
+<ul>
+<li>Representational State Transfer (REST) over JSON, versioned under
+<code>/v1</code>, cursor-based pagination on feeds (forum listings,
+notifications, research feed).</li>
+<li>No endpoint outside <code>IdentityService</code>’s own internal
+calls ever returns <code>member_id</code> or <code>legal_name</code> —
+response shapes (Data Transfer Objects, or DTOs) for standard endpoints
+are built purely from <code>community</code>-schema data.</li>
+<li>Admin/moderation endpoints require a moderator-role claim on the
+JWT; any call that resolves a handle to a real identity requires a
+<code>reason_code</code> parameter and is exactly what populates
+<code>identity_access_log</code>.</li>
+<li>Rate limiting (Redis-backed, per-IP and per-account) on
+authentication and reporting endpoints.</li>
+<li>No server-rendered-only logic — every user-facing action is
+reachable via a versioned API endpoint, which is what makes native
+mobile clients additive later rather than a rewrite.</li>
+</ul>
+<hr />
+<h2 id="infrastructure-and-hosting">6. Infrastructure and hosting</h2>
+<p><strong>AWS account structure</strong>: two Amazon Web Services (AWS)
+accounts under AWS Organizations — <code>production</code> and
+<code>staging</code> — genuinely separate (separate database instances,
+separate Onfido/payment-processor keys) so nothing in staging can touch
+real member data.</p>
+<p><strong>Region</strong>: <code>eu-west-2</code> (London) for all data
+stores (database, cache, file storage, compute), satisfying the UK/EU
+data-residency requirement. One documented exception: AWS’s
+email-sending service (Simple Email Service, or SES) has no London
+endpoint — it’s available in <code>eu-west-1</code> (Ireland), which is
+still within the EU and consistent with the residency decision, but is
+called out here rather than left implicit.</p>
+<pre><code>Virtual Private Cloud (eu-west-2, 2 availability zones)
+ |- Public subnets:  Application Load Balancer, NAT gateways
+ |- Private subnets: application containers (API, workers, web), database, cache
+
+CloudFront (content delivery network) + Web Application Firewall
+        |
+  Application Load Balancer
+   +----+-----+
+   |          |
+Web (Next.js) API (NestJS)     &lt;- both on Elastic Container Service (ECS)
+   Fargate     Fargate            Fargate, auto-scaled on request-count/CPU
+                  |
+              Workers (BullMQ)  &lt;- separate ECS service, same container
+              Fargate              image, different startup command</code></pre>
+<ul>
+<li><strong>PostgreSQL</strong> (RDS, Multi-AZ), automated backups with
+point-in-time recovery (30-day retention). A single instance for the
+MVP, but the data-access layer separates read and write database
+connections from day one — pointed at the same instance for now, so
+adding a <strong>read replica</strong> later (forum browsing and search
+are read-heavy, and the platform is being designed for faster growth) is
+a configuration change, not a rework.</li>
+<li><strong>Search (EPIC-C)</strong>: start with PostgreSQL’s built-in
+full-text search (a <code>tsvector</code> column with a Generalized
+Inverted Index, or GIN index) rather than standing up a dedicated search
+service — sufficient at the target scale and avoids operating an extra
+piece of infrastructure. There is a documented upgrade path to a
+dedicated search service (e.g. OpenSearch) if relevance or volume
+outgrows it, but it is not built into the MVP.</li>
+<li><strong>Secrets</strong> (database credentials,
+Onfido/payment-processor keys, JWT signing keys) live in AWS Secrets
+Manager, injected into containers at runtime — never in environment
+files or source control.</li>
+<li><strong>Infrastructure as code</strong>: AWS Cloud Development Kit
+(CDK) in TypeScript — the same language as the application, keeping
+infrastructure changes approachable for the small team and for
+AI-assisted development, and avoiding a second language (e.g. Terraform)
+to maintain.</li>
+<li><strong>Continuous integration / continuous deployment
+(CI/CD)</strong>: GitHub Actions builds and tests the code, pushes a
+container image to Elastic Container Registry (ECR), then deploys via
+CDK — automatically to staging on merge to the main branch, to
+production behind a manual approval gate.</li>
+<li><strong>Observability</strong>: CloudWatch for infrastructure
+metrics and logs; Sentry (with its European Union data-residency region
+explicitly selected) for application error tracking, since CloudWatch
+alone is weak for application-level exceptions and stack traces.</li>
+</ul>
+<hr />
+<h2 id="payments-moderation-tooling-and-notifications">7. Payments,
+moderation tooling, and notifications</h2>
+<h3 id="payments-provider-agnostic-by-design">7.1 Payments —
+provider-agnostic by design</h3>
+<p>FD-2 (payment processor choice) is genuinely open, so
+<code>BillingService</code> defines a <code>PaymentProvider</code>
+interface rather than calling a specific processor directly from
+business logic:</p>
+<pre><code>interface PaymentProvider {
+  createCustomer(member): ProviderCustomerId
+  startSubscription(customerId, plan, trialDays): ProviderSubscriptionId
+  cancelSubscription(subscriptionId): void
+  handleWebhook(rawPayload, signature): NormalizedBillingEvent
+}</code></pre>
+<p>One concrete implementation is still needed to build the MVP against:
+<code>StripeProvider</code> is built first (strong developer experience,
+built-in trial/dunning handling), with <code>WorldPayProvider</code>
+available as a pluggable alternative if there is a commercial reason to
+switch. Swapping providers is then a new class and a configuration
+change, not a rearchitecture.</p>
+<p>Billing data lives in its own <code>billing</code> schema (not
+<code>identity</code>) — <code>subscriptions</code>,
+<code>invoices</code>, <code>webhook_events</code> (for idempotent,
+replay-safe webhook processing) — keyed by <code>member_id</code>.
+<code>BillingService</code> has the same narrow, audited access pattern
+as <code>IdentityService</code>, since invoicing legitimately needs the
+member’s real name and email, but this is kept out of the
+<code>identity</code> schema itself to avoid conflating “who is this
+person” with “what do they owe.”</p>
+<h3 id="moderation-tooling-same-web-app-role-gated">7.2 Moderation
+tooling — same web app, role-gated</h3>
+<p>Rather than a separate admin application (which would double the
+frontend work for a small team), the moderation/admin panel is a set of
+<code>/admin/*</code> routes in the same Next.js web app, gated by a
+moderator-role claim on the JWT, calling the same API’s
+<code>/v1/admin/*</code> endpoints. This is a logical isolation via
+authentication and authorisation, not a physical one — cheap to split
+into a separate deployment later if that stronger isolation is ever
+needed.</p>
+<ul>
+<li><strong>Queue ordering</strong>: reports categorised
+<code>identifiable_patient_information</code> are surfaced first (PRD
+Section 10.4’s priority queue), then ordered by report age.</li>
+<li><strong>Actions</strong> (<code>remove_content</code>,
+<code>warn</code>, <code>suspend</code>, <code>expel</code>) write to
+<code>community.moderation_actions</code> (immutable) and update
+<code>community.handles.status</code>. Suspension or expulsion takes
+effect within one access-token lifetime (about 15 minutes), since
+refresh tokens are revocable server-side — a suspended handle’s next
+token refresh fails and routes them to the holding page.</li>
+<li><strong>Viewing a member’s real identity</strong> from the admin
+panel is a distinct, explicit action — not implicit in viewing a report
+— and is exactly what triggers the <code>reason_code</code>-gated
+<code>IdentityService</code> call and the
+<code>identity_access_log</code> write.</li>
+</ul>
+<h3 id="notifications">7.3 Notifications</h3>
+<p>A worker reacts to domain events (a new comment, kudos received) by
+writing an in-app <code>community.notifications</code> row and, if the
+member’s preferences allow it, enqueuing an email via SES
+(<code>eu-west-1</code>) through <code>NotificationService</code>. This
+routine, automated access to a member’s email address is ordinary logged
+application activity, not a moderation <code>identity_access_log</code>
+entry (Section 4.4).</p>
+<p>Notification types for MVP: <code>reply</code>, <code>mention</code>,
+<code>kudos_received</code>, <code>verification_status_change</code>,
+and the Should-have <code>weekly_digest</code>.</p>
+<hr />
+<h2 id="researchnews-feed-epic-i">8. Research/news feed (EPIC-I)</h2>
+<p>Re-architected onto the chosen Node.js/TypeScript stack from the
+design explored in
+<code>docs/AHP_Research_Feed_Design_Conversation.md</code> and validated
+by the working prototype in <code>prototypes/research-feed/</code>. The
+original conversation recommended ASP.NET Core; nothing in the design
+actually required that specific framework, and running two runtimes for
+a small team adds real operational overhead without a compelling reason
+— so this reuses the same NestJS modules, PostgreSQL database, Redis
+queue, and BullMQ workers already established above.</p>
+<pre><code>research.articles
+  id, doi, pmid, other_ids jsonb, title, abstract, journal,
+  published_date, evidence_type, open_access boolean,
+  source_refs jsonb, created_at
+
+research.ingestion_cursors
+  source_name, last_run_at, last_cursor        -- per-source incremental fetch
+
+community.member_interests
+  handle_id, tag, weight, updated_at            -- weighted interests, not
+                                                  -- simple keywords</code></pre>
+<ul>
+<li><strong>Source adapters</strong> — one NestJS provider per external
+literature source (Europe PMC, OpenAlex, Semantic Scholar,
+Crossref/PubMed), each implementing a common
+<code>fetchSince(cursor): RawArticle[]</code> interface. Same pattern as
+<code>PaymentProvider</code> — a new source is a new adapter, not a core
+change.</li>
+<li><strong>Ingestion</strong> — BullMQ repeatable jobs per adapter
+(every few hours), using the same worker infrastructure as verification
+and notifications.</li>
+<li><strong>Deduplication</strong> — priority order Digital Object
+Identifier (DOI), then PubMed Identifier (PMID), then other identifiers,
+then normalised title/year, then fuzzy matching — applied at upsert time
+into <code>research.articles</code>, matching the original design
+conversation’s approach.</li>
+<li><strong>Classification (MVP)</strong> — rule-based proximity-window
+keyword matching against a controlled taxonomy, exactly as the working
+prototype already validates. No vector embeddings for MVP: PostgreSQL’s
+<code>vector</code> extension (pgvector) is a documented, cheap upgrade
+path if rule-based classification proves too noisy at scale, but
+building it now would be speculative given the prototype already
+demonstrates the simpler approach works.</li>
+<li><strong>Scoring</strong> — topic match plus evidence-type weighting
+(systematic review &gt; randomised controlled trial &gt; cohort study
+&gt; case report) plus recency, computed once at ingestion time and
+stored, not recalculated on every request — keeps the feed endpoint fast
+as the article corpus grows.</li>
+<li><strong>Feed API</strong> — <code>GET /v1/research-feed</code>
+combines each member’s <code>member_interests</code> weights with
+precomputed article scores at query time, and returns the same style of
+explanation string as the prototype (“Recommended because it matches
+your interest in X…”).</li>
+<li><strong>Data boundary</strong> — <code>member_interests</code> is
+handle-scoped (a clinical-interest profile, not real identity data), so
+it lives in the <code>community</code> schema under the same access
+rules as everything else there; no <code>identity</code>-schema
+involvement.</li>
+<li><strong>Quality/safety filtering</strong> —
+<code>docs/research-feed-sources-and-roadmap.md</code> identifies
+concrete, free sources to close this gap rather than leaving it
+unscoped: the Directory of Open Access Journals (DOAJ) for a
+predatory-journal legitimacy check, and the Retraction Watch database
+(now folded into Crossref’s open API) for flagging withdrawn papers.
+Neither is integrated yet — tracked as an EPIC-I pre-launch item — but
+the sourcing question is answered, only the integration work
+remains.</li>
+<li><strong>PEDro (Physiotherapy Evidence Database)</strong> is flagged
+in the same roadmap doc as the best domain-specific fit for this
+audience (68,000+ physiotherapy trials/reviews, each quality-rated on
+the PEDro scale) but with no confirmed public API — worth a direct
+enquiry to the PEDro team (University of Sydney/NeuRA) before committing
+engineering time to it.</li>
+<li><strong>Carried-over gap</strong>: no licensing review has been done
+for redistributing article abstracts commercially (relevant if a
+commercial source like Elsevier/Scopus/Cochrane is ever added) — still
+open.</li>
+</ul>
+<hr />
+<h2 id="non-functional-requirements">9. Non-functional requirements</h2>
+<p><strong>Security</strong> - Transport Layer Security (TLS)
+everywhere; encryption at rest on the database, cache, and file storage
+(S3 server-side encryption). - JWT signing keys held in Secrets Manager
+with rotation; refresh tokens revocable server-side. - AWS WAF on
+CloudFront (common attack patterns, rate limiting) plus
+application-level rate limiting on authentication and reporting
+endpoints. - Automated dependency vulnerability scanning in CI. - A
+specific regression test class: automated tests asserting that the
+<code>community</code>-schema database role genuinely cannot query the
+<code>identity</code> schema — the core trust guarantee should be
+enforced by a test that fails the build, not by code review alone.</p>
+<p><strong>Privacy and compliance</strong> - No PHI, enforced by policy
+and by the case-discussion attestation/checklist gate (Section 4.3). -
+Right-to-erasure default (worth explicit legal review before launch, as
+this is a policy decision as much as a technical one): on a deletion
+request, the <code>identity</code> record is hard-deleted; the handle’s
+community content is retained but the handle is marked
+<code>deleted_member</code> with no possibility of re-linking to an
+identity. This preserves the forum’s value as a knowledge archive while
+honouring the erasure request for real PII specifically. - A Data
+Protection Impact Assessment (DPIA) is worth commissioning before
+launch, given the verification pipeline processes
+professional-registration data at volume.</p>
+<p><strong>Availability and performance</strong> - Target roughly 99.5%
+uptime for the MVP — deliberately not over-promising a level a small
+team cannot realistically staff for. - Multi-AZ database, application
+containers spread across two availability zones, rolling deployments
+with health checks. - 95th-percentile API latency target under 300
+milliseconds for standard reads; feed and search queries backed by
+appropriate indexes.</p>
+<p><strong>Observability</strong> - Structured JSON logging with a
+correlation ID threaded from an API request through to any worker jobs
+it triggers, so a single user action is traceable end-to-end. -
+CloudWatch alarms on error rate, queue depth, and database connection
+saturation; Sentry for application exception tracking.</p>
+<p><strong>Disaster recovery</strong> - Database point-in-time recovery;
+Recovery Point Objective (RPO) of around 5 minutes, Recovery Time
+Objective (RTO) of a few hours — pragmatic for MVP scale, not a “five
+nines” commitment.</p>
+<p><strong>Testing strategy</strong> - Unit tests per module;
+integration tests against a dockerised PostgreSQL instance in CI;
+contract tests for the pluggable interfaces
+(<code>PaymentProvider</code>, source adapters) so swapping an
+implementation cannot silently break the contract.</p>
+<hr />
+<h2 id="epic-to-module-map">10. Epic-to-module map</h2>
+<p>Each row below is expected to become its own per-epic technical spec,
+building directly on the foundations in this document.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Epic</th>
+<th>NestJS module(s)</th>
+<th>Primary schema(s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EPIC-A — Verification</td>
+<td><code>identity</code> (IdentityService)</td>
+<td><code>identity</code></td>
+</tr>
+<tr>
+<td>EPIC-B — Handles/profile</td>
+<td><code>handles</code></td>
+<td><code>community</code></td>
+</tr>
+<tr>
+<td>EPIC-C — Forum</td>
+<td><code>forum</code></td>
+<td><code>community</code></td>
+</tr>
+<tr>
+<td>EPIC-D — Kudos</td>
+<td><code>kudos</code> (part of <code>forum</code> or standalone)</td>
+<td><code>community</code></td>
+</tr>
+<tr>
+<td>EPIC-E — Case discussions</td>
+<td><code>case-discussions</code></td>
+<td><code>community</code> +
+<code>identity.case_attestations</code></td>
+</tr>
+<tr>
+<td>EPIC-F — Moderation</td>
+<td><code>moderation</code> + admin panel routes</td>
+<td><code>community</code>, gated <code>identity</code> access</td>
+</tr>
+<tr>
+<td>EPIC-G — Notifications</td>
+<td><code>notifications</code> (NotificationService)</td>
+<td><code>community</code>, gated <code>identity</code> access
+(email)</td>
+</tr>
+<tr>
+<td>EPIC-H — Subscription/payments</td>
+<td><code>billing</code> (BillingService)</td>
+<td><code>billing</code>, gated <code>identity</code> access</td>
+</tr>
+<tr>
+<td>EPIC-I — Research feed</td>
+<td><code>research-feed</code></td>
+<td><code>research</code>, <code>community.member_interests</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="open-follow-ups">11. Open follow-ups</h2>
+<p>Items surfaced during this design that need action outside this
+document:</p>
+<ul>
+<li><strong>PRD update</strong>: EPIC-I (research/news feed) should be
+added to the PRD’s MVP epic list (Section 6.1) — it was not part of the
+original MoSCoW scope and this is a real scope addition, worth Paul
+Gouge and Andrew Renshaw’s awareness.</li>
+<li><strong>Legal review</strong>: the right-to-erasure default
+described in Section 9 (hard-delete identity, retain de-linked community
+content) should be confirmed with legal counsel before launch.</li>
+<li><strong>DPIA</strong>: commission a Data Protection Impact
+Assessment before launch given the volume of professional-registration
+data processed.</li>
+<li><strong>Research feed gaps</strong>: DOAJ and Retraction Watch
+integration (sources identified, not yet built) and
+abstract-redistribution licensing review (source unidentified) remain
+open before EPIC-I can ship (Section 8). A direct enquiry to PEDro about
+API access is also worth making given it’s the best domain-specific fit
+found so far.</li>
+<li><strong>FD-2 (payment processor)</strong>: this document designs
+around either Stripe or WorldPay via the <code>PaymentProvider</code>
+interface (Section 7.1), but a concrete choice is still needed to build
+the first implementation against.</li>
+</ul>
+
+</main>
+</body>
+</html>

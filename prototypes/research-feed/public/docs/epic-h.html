@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EPIC-H — Subscription/Payments — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">EPIC-H — Subscription/Payments</span>
+</div>
+<main>
+<h1
+id="epic-h-subscription-and-payment-processing-technical-spec">EPIC-H —
+Subscription and Payment Processing — Technical Spec</h1>
+<p><strong>Status</strong>: Draft — for stakeholder review
+<strong>Date</strong>: 14 July 2026 <strong>Author</strong>: Adrian Hall
+(Technical Lead), drafted with Claude Code <strong>Scope</strong>: The
+eighth per-epic technical spec. Builds on the architecture spec’s
+Section 7.1 (<code>PaymentProvider</code> interface,
+<code>billing</code> schema, <code>StripeProvider</code> chosen first) —
+read that first. This epic is the one place FD-2 (pricing, trial length,
+processor — still formally open) has real technical weight, so this spec
+is deliberately built to be indifferent to how FD-2 resolves wherever
+possible.</p>
+<p>Source of truth: <code>docs/askapeer-prd-v0.1.md</code>, Section 11
+(Monetisation Strategy) in full.</p>
+<hr />
+<h2 id="contents">Contents</h2>
+<ol type="1">
+<li><a href="#1-scope">Scope</a></li>
+<li><a href="#2-data-model">Data model</a></li>
+<li><a href="#3-subscription-lifecycle">Subscription lifecycle</a></li>
+<li><a href="#4-access-gating--a-new-token-scope">Access gating — a new
+token scope</a></li>
+<li><a href="#5-webhook-handling">Webhook handling</a></li>
+<li><a href="#6-api-endpoints">API endpoints</a></li>
+<li><a href="#7-trial-length-flexibility">Trial length
+flexibility</a></li>
+<li><a href="#8-non-functional-notes-specific-to-epic-h">Non-functional
+notes specific to EPIC-H</a></li>
+<li><a href="#9-test-plan">Test plan</a></li>
+<li><a href="#10-open-questions">Open questions</a></li>
+</ol>
+<hr />
+<h2 id="scope">1. Scope</h2>
+<p><strong>In scope</strong>: the subscription/invoice data model, the
+trial-to-paid lifecycle, webhook processing, and — the one piece of
+genuine new design in this spec — how a lapsed subscription actually
+restricts community access, which the PRD doesn’t specify and the
+architecture spec only implies.</p>
+<p><strong>Out of scope</strong>: Phase 2 revenue options (premium tier,
+institutional accounts — PRD Section 11.4), which are explicitly
+deferred and have no MVP data-model requirement.</p>
+<hr />
+<h2 id="data-model">2. Data model</h2>
+<p>Fleshes out the <code>billing</code> schema the architecture spec
+(Section 7.1) named but didn’t fully define:</p>
+<pre><code>billing.subscriptions
+  id                     uuid PK
+  member_id              uuid              -- keyed to real identity, not handle_id, per the
+                                              architecture spec&#39;s reasoning: billing legitimately
+                                              needs the member&#39;s real name/email for invoicing
+  provider               enum(stripe, worldpay)
+  provider_customer_id   text
+  provider_subscription_id text
+  plan                   enum(monthly, annual)
+  status                 enum(trialing, active, past_due, cancelled)
+  trial_end              date
+  current_period_end     date
+  created_at             timestamptz
+
+billing.invoices
+  id                  uuid PK
+  member_id           uuid
+  subscription_id     uuid FK -&gt; billing.subscriptions
+  provider_invoice_id text
+  amount              numeric
+  currency            text
+  status              enum(paid, open, failed)
+  issued_at           timestamptz
+
+billing.webhook_events                 -- idempotent, replay-safe processing
+  id                  uuid PK
+  provider            enum(stripe, worldpay)
+  external_event_id   text unique       -- the processor&#39;s own event ID; the uniqueness
+                                           constraint is what makes replay safe
+  event_type          text
+  raw_payload         jsonb
+  processed_at        timestamptz nullable
+  created_at          timestamptz</code></pre>
+<p><code>BillingService</code> has the same narrow, audited access
+pattern to <code>identity.members</code> as
+<code>NotificationService</code> (EPIC-G spec, Section 3) — but with a
+materially different scope: invoicing <strong>legitimately needs
+<code>legal_name</code></strong>, not just <code>email</code>, since a
+receipt or invoice showing a handle instead of a real name would be a
+strange (and possibly non-compliant, for VAT/accounting purposes)
+invoice. This is the one service where reading <code>legal_name</code>
+outside <code>IdentityService</code> itself is intentional, not a gap to
+harden — worth stating explicitly so it isn’t mistaken for the same
+problem flagged in EPIC-G’s spec.</p>
+<hr />
+<h2 id="subscription-lifecycle">3. Subscription lifecycle</h2>
+<pre><code>Registration (EPIC-A) -&gt; handle created (EPIC-B) -&gt; prompted to start subscription
+  |
+  v
+trialing  (trial_end set; full community access per Section 4)
+  |
+  | trial ends, payment method charged successfully
+  v
+active  (current_period_end rolls forward each billing cycle)
+  |
+  | payment fails
+  v
+past_due  (grace period — Section 4 — before access is restricted)
+  |
+  | either: payment recovered -&gt; active
+  | or: grace period expires / member cancels -&gt; cancelled
+  v
+cancelled  (access continues until current_period_end, then restricted — Section 4)</code></pre>
+<p><code>StripeProvider</code>’s built-in dunning (retrying failed
+payments automatically) is the mechanism that determines how long a
+subscription sits in <code>past_due</code> before Stripe itself gives up
+and the subscription is cancelled — this spec doesn’t reimplement retry
+logic, only reacts to the resulting webhook events (Section 5).</p>
+<hr />
+<h2 id="access-gating-a-new-token-scope">4. Access gating — a new token
+scope</h2>
+<p><strong>Neither the PRD nor the architecture spec specifies what
+happens to community access when a subscription lapses</strong> — the
+PRD’s holding-page language (Section 8.1) is written entirely in terms
+of verification status, and the architecture spec’s Section 5.2
+token-scoping mechanism was designed for the verification case
+specifically. This spec proposes extending the same mechanism rather
+than inventing a new one:</p>
+<ul>
+<li>A <strong>billing-lapsed-scoped token</strong>, structurally
+identical in purpose to EPIC-A’s pending-scoped token (its spec, Section
+7) — grants access only to billing endpoints (Section 6) and a
+holding-style “reactivate your subscription” view, not community
+content.</li>
+<li>Issued when <code>billing.subscriptions.status</code> moves to
+<code>cancelled</code> (immediately) or <code>past_due</code> beyond a
+<strong>grace period</strong> (proposed: 7 days from the first failed
+payment, chosen arbitrarily and flagged in Section 10 — a
+<code>past_due</code> subscription still gets a short window since
+payment failures are often transient, e.g. an expired card, not a
+deliberate lapse).</li>
+<li>Takes effect within one access-token lifetime (~15 minutes), reusing
+exactly the revocable-refresh-token mechanism the architecture spec
+already describes for suspension/expulsion (Section 7.2) — no new
+session-invalidation mechanism needed, only a new reason a refresh can
+be downgraded.</li>
+</ul>
+<p><strong>This is deliberately a separate gating dimension from
+<code>community.handles.status</code></strong> (EPIC-B/EPIC-F’s
+moderation states). A billing lapse and a moderation suspension are
+different in kind — one is resolved by paying, the other by an appeal or
+a fixed suspension period — and conflating them into one status field
+would make “why can’t I access the platform” ambiguous both to the
+member and to support staff. Keeping them as two independently-checked
+gates (handle status AND subscription status, both must permit access)
+is this spec’s proposed resolution, flagged for confirmation since it’s
+a real architectural decision with no PRD precedent either way.</p>
+<hr />
+<h2 id="webhook-handling">5. Webhook handling</h2>
+<pre><code>POST /v1/billing/webhook
+  -&gt; verify signature (provider-specific, per architecture spec&#39;s PaymentProvider.handleWebhook)
+  -&gt; normalise into NormalizedBillingEvent
+  -&gt; INSERT into billing.webhook_events keyed on external_event_id; a duplicate insert
+     (the same event redelivered, which all major processors do on retry) is a no-op
+     via the unique constraint, not reprocessed
+  -&gt; update billing.subscriptions / billing.invoices accordingly
+  -&gt; mark processed_at</code></pre>
+<p>Idempotency is enforced at the database level (the unique
+constraint), not by application-level “have I seen this before” logic —
+consistent with the architecture spec’s general preference for
+schema-enforced guarantees (Section 4) over code discipline, applied
+here to a different problem (webhook replay safety) than where the
+architecture spec originally used the principle (the identity/community
+boundary).</p>
+<hr />
+<h2 id="api-endpoints">6. API endpoints</h2>
+<pre><code>POST /v1/billing/subscribe        { plan: monthly | annual }
+  -&gt; creates provider customer + subscription (trial, per Section 7)
+  -&gt; returns whatever client-side step the provider requires (e.g. Stripe
+     Elements setup) — provider-specific, abstracted behind PaymentProvider
+
+POST /v1/billing/cancel
+  -&gt; status -&gt; cancelled; access continues until current_period_end (Section 3) —
+     proposed, not PRD-specified; see Section 10
+
+GET  /v1/billing/me
+  -&gt; { plan, status, trial_end, current_period_end }
+
+POST /v1/billing/webhook           -- Section 5, no session auth (processor-signed instead)</code></pre>
+<hr />
+<h2 id="trial-length-flexibility">7. Trial length flexibility</h2>
+<p>PRD Section 11.3 raises the possibility of a <strong>longer trial for
+the initial launch cohort</strong> (e.g. 6 months, vs. the illustrative
+3-month figure elsewhere) specifically to address the content-seeding
+chicken-and-egg problem, and separately floats a university-partnership
+cohort (FD-6) that might need its own trial terms. This spec proposes
+<code>trial_end</code> be set per-subscription at creation time from a
+configurable value (not a hardcoded constant), so a different cohort
+(e.g. an invite-code-driven university trial) can receive a different
+trial length without a schema change — cheap to build in from the start,
+expensive to retrofit if trial length turns out to need to vary. No
+invite-code/cohort mechanism is designed further here since none is
+confirmed scope; this section only ensures the data model doesn’t
+foreclose it.</p>
+<hr />
+<h2 id="non-functional-notes-specific-to-epic-h">8. Non-functional notes
+specific to EPIC-H</h2>
+<ul>
+<li><strong>PCI compliance is entirely offloaded to the
+processor</strong> (architecture spec glossary, Section 2) — no card
+data ever touches Askapeer’s own servers or database, consistent with
+using Stripe Elements/equivalent client-side tokenisation.</li>
+<li><strong>Webhook signature verification</strong> is the single most
+security-critical piece of this epic — an unverified webhook endpoint
+would let anyone forge a “payment succeeded” event.
+<code>PaymentProvider.handleWebhook</code>’s signature check
+(architecture spec, Section 7.1) must happen before any database write,
+not after.</li>
+<li><strong>Contract tests for <code>PaymentProvider</code></strong>:
+already named generically in the architecture spec’s Section 9
+non-functional requirements — this epic is where those tests actually
+get written, covering both <code>StripeProvider</code> and (if/when
+built) <code>WorldPayProvider</code> against the same interface.</li>
+</ul>
+<hr />
+<h2 id="test-plan">9. Test plan</h2>
+<ul>
+<li><strong>Webhook idempotency</strong>: the same
+<code>external_event_id</code> delivered twice results in exactly one
+state update, not two.</li>
+<li><strong>Trial-to-active transition</strong>: a successful first
+charge at <code>trial_end</code> moves
+<code>trialing -&gt; active</code> and sets
+<code>current_period_end</code>.</li>
+<li><strong>Grace period</strong>: a <code>past_due</code> subscription
+retains full access until the grace period (Section 4) elapses, then the
+member’s next token refresh returns a billing-lapsed-scoped token.</li>
+<li><strong>Cancellation timing</strong>: cancelling mid-cycle retains
+access until <code>current_period_end</code>, not immediately (pending
+Section 10 confirmation).</li>
+<li><strong>Dual gating</strong>: a member who is both
+<code>suspended</code> (EPIC-F) and has an <code>active</code>
+subscription is still denied community access — confirms the two gates
+(Section 4) are independently enforced, neither overriding the
+other.</li>
+</ul>
+<hr />
+<h2 id="open-questions">10. Open questions</h2>
+<ul>
+<li><strong>FD-2 itself</strong>: pricing, trial length, and processor
+choice (Stripe vs. WorldPay) are all still formally open — this spec is
+written to be indifferent to the outcome, but a concrete choice is
+needed before <code>StripeProvider</code> can actually be built against
+real pricing.</li>
+<li><strong>Grace period length</strong> (Section 4): 7 days is this
+spec’s own placeholder, not a PRD or architecture figure.</li>
+<li><strong>Cancellation access timing</strong> (Section 6):
+end-of-period access (this spec’s proposal) vs. immediate revocation —
+standard SaaS practice favours the former, but needs confirming as a
+deliberate choice, not a default.</li>
+<li><strong>Billing-lapse token scope as a new mechanism</strong>
+(Section 4): this spec proposes extending EPIC-A’s pending-token pattern
+to billing; needs confirmation that a billing lapse and a moderation
+status should indeed be independently gated (Section 4) rather than
+collapsed into a single “can this handle access the platform” flag.</li>
+<li><strong>Trial-length configurability and cohort mechanism</strong>
+(Section 7): the data model is left open for a per-cohort trial length,
+but no invite-code/cohort feature itself is designed — needs a decision
+once FD-6 (university partnership) is confirmed one way or the
+other.</li>
+</ul>
+
+</main>
+</body>
+</html>

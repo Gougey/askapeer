@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EPIC-A — Verification — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">EPIC-A — Verification</span>
+</div>
+<main>
+<h1
+id="epic-a-registration-identity-verification-admin-review-queue-technical-spec">EPIC-A
+— Registration, Identity Verification &amp; Admin Review Queue —
+Technical Spec</h1>
+<p><strong>Status</strong>: Draft — for stakeholder review
+<strong>Date</strong>: 14 July 2026 <strong>Author</strong>: Adrian Hall
+(Technical Lead), drafted with Claude Code <strong>Scope</strong>: The
+first per-epic technical spec, building on the approved cross-cutting
+architecture in
+<code>docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md</code>
+(“the architecture spec”). This document does not repeat that spec’s
+stack, hosting, or schema rationale — it only adds detail specific to
+EPIC-A. Read the architecture spec first, particularly Sections 4
+(<code>identity</code> schema) and 5.1–5.2 (verification pipeline,
+authentication).</p>
+<p>Source of truth for product requirements:
+<code>docs/askapeer-prd-v0.1.md</code>, Section 8 (Verification &amp;
+Trust Model).</p>
+<p>EPIC-A is the foundation epic: no other epic can be built or tested
+end-to-end until a member can register and reach
+<code>approved_verified</code> status, since every community-facing
+feature requires an authenticated handle.</p>
+<hr />
+<h2 id="contents">Contents</h2>
+<ol type="1">
+<li><a href="#1-scope">Scope</a></li>
+<li><a href="#2-data-model">Data model</a></li>
+<li><a href="#3-state-machine">State machine</a></li>
+<li><a href="#4-api-endpoints">API endpoints</a></li>
+<li><a href="#5-verification-worker">Verification worker</a></li>
+<li><a href="#6-admin-review-queue">Admin review queue</a></li>
+<li><a href="#7-authentication-handoff">Authentication handoff</a></li>
+<li><a href="#8-failure-modes-and-edge-cases">Failure modes and edge
+cases</a></li>
+<li><a href="#9-non-functional-notes-specific-to-epic-a">Non-functional
+notes specific to EPIC-A</a></li>
+<li><a href="#10-test-plan">Test plan</a></li>
+<li><a href="#11-open-questions">Open questions</a></li>
+</ol>
+<hr />
+<h2 id="scope">1. Scope</h2>
+<p><strong>In scope</strong>: applicant registration, automated register
+lookup (HCPC/GMC/BASRAT/SST), automated identity document check
+(Onfido), the resulting status state machine, the admin manual-review
+fallback, and the point at which a verified member is handed off to
+authentication (EPIC-B mints the handle itself — see Section 7).</p>
+<p><strong>Out of scope for this spec</strong> (tracked elsewhere): -
+Handle creation/profile — EPIC-B, once <code>approved_verified</code> is
+reached. - Periodic reverification — explicitly Phase 2 per PRD Section
+8.1, Step 4. - Appeals process for <code>rejected</code> decisions — not
+detailed in the PRD beyond “reason provided”; flagged as an open
+question (Section 11). - Admin panel UI framework — covered generically
+in the architecture spec, Section 7.2; this document only specifies the
+queue’s data and ordering requirements.</p>
+<hr />
+<h2 id="data-model">2. Data model</h2>
+<p>This epic owns the <code>identity.members</code>,
+<code>identity.verification_evidence</code>, and
+<code>identity.verification_decisions</code> tables defined in the
+architecture spec, Section 4.1. Reproduced here with the additions this
+spec requires:</p>
+<pre><code>identity.members
+  id                    uuid PK
+  legal_name            text
+  email                 text unique
+  professional_body     enum(hcpc, gmc, basrat, sst)
+  registration_number   text
+  registration_country  text                  -- &#39;UK&#39; only for MVP; column exists
+                                                -- for the international-expansion
+                                                -- goal without needing a migration
+  verification_status   enum(pending, needs_more_info, approved_verified,
+                              rejected, suspended, expelled)
+  status_updated_at     timestamptz
+  created_at            timestamptz
+
+  unique(professional_body, registration_number, registration_country)
+    where verification_status != &#39;rejected&#39;
+    -- prevents the same real-world registration being used to create two accounts.
+    -- Deliberately a blacklist (excludes only &#39;rejected&#39;), not a whitelist of the
+    -- statuses that should block re-registration — so any status added to the enum
+    -- in future (expelled included) is blocked by default without a constraint
+    -- change. This is the fix for the expulsion/re-registration gap identified
+    -- while drafting EPIC-B/EPIC-F: see Section 8 and
+    -- docs/2026-07-14-technical-specs-open-questions.md, Section 2.
+
+identity.reapplication_attempts        -- immutable: INSERT-only grant
+  id                    uuid PK
+  matched_member_id     uuid FK -&gt; identity.members   -- the existing row that
+                                                          blocked the attempt
+  attempted_legal_name  text
+  attempted_email       text
+  professional_body     enum(hcpc, gmc, basrat, sst)
+  registration_number   text
+  registration_country  text
+  created_at            timestamptz
+
+identity.verification_evidence
+  id            uuid PK
+  member_id     uuid FK -&gt; identity.members
+  evidence_type enum(register_lookup, onfido_check, manual_document)
+  source        text
+  raw_result    jsonb
+  outcome       enum(pass, fail, needs_review)
+  created_at    timestamptz
+
+identity.verification_decisions        -- immutable: INSERT-only grant
+  id            uuid PK
+  member_id     uuid FK -&gt; identity.members
+  from_status   text
+  to_status     text
+  decided_by    text            -- &#39;system&#39; or an admin&#39;s member_id
+  reason        text
+  created_at    timestamptz</code></pre>
+<p><strong>Why a uniqueness constraint on
+<code>(professional_body, registration_number, registration_country)</code></strong>:
+the PRD doesn’t mention duplicate-registration abuse directly, but the
+trust proposition (“every member is a qualified professional”) is
+undermined if one real registration can back multiple pseudonymous
+handles — that would let a single practitioner run sockpuppet accounts
+to manufacture apparent consensus. Enforced at the database level, not
+just application logic, consistent with the architecture spec’s general
+approach of using schema constraints over code discipline.</p>
+<p><strong>Expelled-member reapplication is deliberately more than a
+silent 409.</strong> Adrian’s decision (2026-07-14, resolving the gap
+flagged in the EPIC-B and EPIC-F specs): an expelled member attempting
+to re-register must be prevented <em>and</em> the attempt logged and
+reviewed, not just quietly rejected like an ordinary
+duplicate-registration case. When <code>POST /v1/auth/register</code>’s
+uniqueness check fails specifically because the matched row is
+<code>expelled</code> (as opposed to
+<code>pending</code>/<code>approved_verified</code>/<code>suspended</code>,
+which are ordinary “you already have an account in progress” cases), the
+API additionally writes an <code>identity.reapplication_attempts</code>
+row and surfaces it to admins (Section 6). The applicant-facing response
+is a generic registration-rejected message in either case — it
+deliberately does not confirm to the applicant that the system
+recognised them as previously expelled, since doing so would hand a
+bad-faith actor confirmation their identity was detected. This
+distinction (generic response to the applicant, specific logging
+internally) is this spec’s own proposal, flagged in Section 11 alongside
+the exact wording question.</p>
+<p>No new table is needed for the admin review queue itself — it’s a
+filtered view over <code>identity.members</code> (Section 6), not
+separate storage. <code>identity.reapplication_attempts</code> (above)
+is a separate, append-only log reviewed the same way (Section 6).</p>
+<hr />
+<h2 id="state-machine">3. State machine</h2>
+<pre><code>                 register
+                    |
+                    v
+              +-----------+
+              |  pending  |&lt;------------------+
+              +-----+-----+                   |
+                    |                          |
+     automated checks run (worker)             |
+                    |                          |
+         +----------+-----------+              |
+         |                      |               
+    both pass              fail / ambiguous /    admin requests
+         |                 register unavailable  more evidence
+         v                      |                          
+  +----------------+            v                          
+  | approved_      |    +----------------+                
+  |  verified      |    |  admin review  |------------------+
+  +-------+--------+    |    queue       |
+          |              +-------+--------+
+          |                      |
+          |            +---------+---------+
+          |            |                   |
+          |     admin approves       admin rejects
+          |            |                   |
+          |            v                   v
+          |    approved_verified       rejected
+          |
+   lapsed registration
+   or policy violation
+          |
+          v
+     suspended
+
+          (also, from approved_verified, via EPIC-F&#39;s `expel` moderation
+           action rather than anything internal to this epic&#39;s own worker)
+          |
+          v
+      expelled   -- terminal; see Section 8 for the reapplication block</code></pre>
+<p>Rules: - Every transition is written as an
+<code>identity.verification_decisions</code> row
+(<code>from_status</code>, <code>to_status</code>,
+<code>decided_by</code>, <code>reason</code>) — no status field update
+happens without a corresponding decision row in the same database
+transaction. This is what makes the audit trail authoritative rather
+than incidental. - <code>needs_more_info</code> is a sub-state reachable
+only from the admin queue, not from the automated path directly —
+automated checks either resolve cleanly (both pass) or fall through to
+manual review; only a human admin decides that a specific applicant
+should be asked for more evidence rather than being outright rejected or
+escalated further. - <code>suspended</code> is reachable from
+<code>approved_verified</code> only, per PRD Section 8.1 Step 4 (lapsed
+registration or policy violation) — always admin/system-initiated, never
+self-service. - <strong><code>expelled</code> is reachable from
+<code>approved_verified</code> only, is terminal (no transition out),
+and is written by EPIC-F’s <code>expel</code> moderation action, not by
+anything in this epic’s own verification worker.</strong> It’s distinct
+from <code>suspended</code>: suspension is framed by the PRD (Section
+8.1) as potentially temporary (a lapsed registration can be corrected),
+while expulsion is the zero-tolerance rule’s permanent outcome (PRD
+Section 9.3) — the two must not be conflated into one status, which is
+exactly the mistake the original architecture spec made by not having an
+<code>expelled</code> value at all. See EPIC-F’s spec, Section 3, for
+the write path. - There is no path back to <code>pending</code> —
+<code>needs_more_info</code> is the only “still in progress” state after
+the initial automated pass, keeping the state machine’s “still awaiting
+a human decision” states to one, not two overlapping ones.</p>
+<hr />
+<h2 id="api-endpoints">4. API endpoints</h2>
+<p>Builds directly on the architecture spec, Section 5.1’s registration
+flow and Section 5.3’s API principles (versioned under <code>/v1</code>,
+no non-<code>IdentityService</code> endpoint ever returns
+<code>member_id</code> or <code>legal_name</code>).</p>
+<pre><code>POST /v1/auth/register
+  body: { legal_name, email, professional_body, registration_number, registration_country }
+  -&gt; 201, { member_id, verification_status: &quot;pending&quot; }
+     (member_id here is only ever returned to the registering applicant themselves,
+      pre-handle, as a reference for polling their own status — never surfaced to
+      any other member)
+  -&gt; 409 if (professional_body, registration_number, registration_country) already
+     has a non-rejected member row
+  -&gt; enqueues the verification job (Section 5)
+
+GET /v1/auth/verification-status
+  auth: pending-scoped token (Section 7)
+  -&gt; { verification_status, status_updated_at, needs_more_info_reason? }
+     Powers the holding page — the only thing a non-approved_verified session
+     can call.
+
+--- admin-only, moderator-role JWT claim required (architecture spec, Section 5.3) ---
+
+GET /v1/admin/verification-queue?status=pending,needs_more_info&amp;cursor=...
+  -&gt; paginated list, ordered per Section 6
+
+GET /v1/admin/verification-queue/:member_id
+  -&gt; full detail: verification_evidence rows, prior decisions, applicant-submitted
+     fields. This is a legitimate IdentityService read (the admin is doing the job
+     verification exists for), not a moderation identity_access_log event — see
+     Section 9 for why this distinction matters.
+
+POST /v1/admin/verification-queue/:member_id/decide
+  body: { to_status: approved_verified | rejected | needs_more_info, reason }
+  -&gt; writes identity.verification_decisions, updates identity.members.verification_status
+  -&gt; on approved_verified: triggers EPIC-B handle-creation prompt (Section 7)
+  -&gt; on rejected/needs_more_info: triggers a notification (EPIC-G) with `reason`</code></pre>
+<hr />
+<h2 id="verification-worker">5. Verification worker</h2>
+<p>Runs on the background-worker ECS service defined in the architecture
+spec (Section 3), driven by BullMQ. One job per registration, two
+sequential steps:</p>
+<p><strong>Step A — register lookup.</strong> Query the professional
+body’s public register (HCPC and GMC both publish one; BASRAT and SST
+need confirmation of API vs. scrape-only access — see Section 11) by
+<code>registration_number</code>, fuzzy-match <code>legal_name</code>
+against the register’s returned name. Write
+<code>identity.verification_evidence</code> with
+<code>evidence_type = register_lookup</code>. A fuzzy-match rather than
+exact-match is necessary because registers store legal names with
+formatting variance (middle names, punctuation) that shouldn’t cause a
+false fail.</p>
+<p><strong>Step B — identity document check.</strong> Submit an Onfido
+check binding the applicant’s uploaded document + selfie to the claimed
+identity. This step is what proves the <em>person registering</em> is
+the person named on the register — Step A alone only proves the
+registration number is real. Onfido is async; the job waits on a webhook
+rather than polling, per the architecture spec’s
+worker-handles-anything-that-shouldn’t-block-a-request principle. Result
+written as <code>evidence_type = onfido_check</code>.</p>
+<p><strong>Decision logic</strong> (executed once both results are in,
+or on evidence of definitive failure from either):</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Register lookup</th>
+<th>Onfido check</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pass</td>
+<td>clear</td>
+<td>auto-approve → <code>approved_verified</code></td>
+</tr>
+<tr>
+<td>fail</td>
+<td>(any)</td>
+<td>→ admin review queue, stays <code>pending</code></td>
+</tr>
+<tr>
+<td>needs_review / register unavailable</td>
+<td>(any)</td>
+<td>→ admin review queue, stays <code>pending</code></td>
+</tr>
+<tr>
+<td>pass</td>
+<td>needs_review / fail</td>
+<td>→ admin review queue, stays <code>pending</code></td>
+</tr>
+</tbody>
+</table>
+<p>Auto-approval is the only decision this worker makes unattended;
+every other outcome is a queue entry, not an auto-reject — a false
+auto-reject would permanently and wrongly block a real practitioner,
+whereas a false queue entry only costs admin time. This is a deliberate
+asymmetry: the automated path is only trusted to say “yes, cleanly,”
+never “no.”</p>
+<hr />
+<h2 id="admin-review-queue">6. Admin review queue</h2>
+<p>A view over <code>identity.members</code> where
+<code>verification_status IN (pending, needs_more_info)</code>, filtered
+to rows where the automated worker has already run (i.e., excluding the
+brief pending window while the worker job is still in flight) — this
+keeps the queue showing applicants who genuinely need a human, not ones
+still mid-automated-check.</p>
+<p><strong>Ordering</strong>: oldest <code>status_updated_at</code>
+first within each status, <code>needs_more_info</code> entries before
+fresh <code>pending</code> entries that fell through to review — an
+applicant who has already responded to an admin’s request for more
+evidence shouldn’t wait behind a fresh queue entry. (This queue has no
+<code>identifiable_patient_information</code>-style priority category —
+that ordering rule from the architecture spec, Section 7.2, is specific
+to the moderation-reports queue, not this one.)</p>
+<p><strong>Admin actions available per entry</strong>: approve (→
+<code>approved_verified</code>), reject (→ <code>rejected</code>,
+<code>reason</code> required), request more info (→
+<code>needs_more_info</code>, <code>reason</code> required — surfaced to
+the applicant so they know what to provide).</p>
+<p>Verification is founder-led at MVP scale (PRD Section 8.3) — this
+queue is designed for a handful of admins reviewing a low volume of edge
+cases per day, not a high-throughput ops tool. A dedicated
+verification-operations function, if the platform scales, is a staffing
+decision, not something this spec needs to design ahead of.</p>
+<p><strong>A separate admin view,
+<code>GET /v1/admin/reapplication-attempts</code>, lists
+<code>identity.reapplication_attempts</code> rows for review</strong> —
+distinct from the verification queue above, since these aren’t
+applicants awaiting a decision (the registration was already blocked
+automatically) but flagged events an admin should be aware of, e.g. to
+judge whether a repeat or aggressive reapplication pattern warrants
+escalation beyond the automatic block (a legal referral, for instance,
+if the PRD’s underlying policy violation was serious enough). No
+ordering/priority logic beyond newest-first is specified here, since
+volume is expected to be very low.</p>
+<hr />
+<h2 id="authentication-handoff">7. Authentication handoff</h2>
+<p>EPIC-A ends at <code>approved_verified</code>; EPIC-B
+(handles/profile) begins immediately after. The precise handoff, since
+both epics touch the same registration flow:</p>
+<ol type="1">
+<li>On <code>POST /v1/auth/register</code>, no handle exists yet and no
+session is issued — the applicant only has a <code>member_id</code> to
+poll their own status with (Section 4).</li>
+<li>While <code>verification_status</code> is anything other than
+<code>approved_verified</code>, any authenticated call is scoped to a
+<strong>pending token</strong> that grants access only to
+<code>GET /v1/auth/verification-status</code> — matching the PRD’s “all
+other statuses see a holding page only” and the architecture spec’s
+Section 5.2 note that non-verified members get a holding-status-scoped
+token.</li>
+<li>The moment <code>verification_status</code> transitions to
+<code>approved_verified</code> (whether by auto-approve or admin
+decision), the member is prompted to choose a handle. Only once
+<code>community.handles</code> has a row for them does
+<code>IdentityService</code> issue the full handle-scoped JWT described
+in the architecture spec, Section 5.2 — EPIC-A never issues a
+handle-scoped token itself, since it has no concept of handles.</li>
+</ol>
+<p>This spec does not define the handle-creation endpoint itself
+(<code>community.handles</code> insert, uniqueness/profanity checks on
+<code>handle_name</code>) — that’s EPIC-B’s spec. It only guarantees the
+trigger point and the shape of what EPIC-B receives
+(<code>member_id</code>, resolved server-side, never exposed to the
+applicant’s own client beyond the initial registration response).</p>
+<hr />
+<h2 id="failure-modes-and-edge-cases">8. Failure modes and edge
+cases</h2>
+<ul>
+<li><strong>Register API down or rate-limited</strong>: worker marks the
+<code>register_lookup</code> evidence row
+<code>outcome = needs_review</code> with the raw error in
+<code>raw_result</code>, routes to admin queue rather than retrying
+indefinitely and leaving the applicant in limbo. PRD’s risk register
+(Section 13) already names this as a medium-likelihood risk with manual
+review as the designed mitigation.</li>
+<li><strong>BASRAT/SST have no confirmed public lookup API</strong> (see
+Section 11) — until confirmed, these two professional bodies route every
+applicant straight to manual review regardless of Onfido outcome. This
+is a deliberate, explicit fallback, not a silent gap.</li>
+<li><strong>Onfido webhook never arrives</strong> (delivery failure,
+applicant abandons the document-upload step): job has a timeout
+(proposed: 72 hours) after which it’s surfaced in the admin queue as
+<code>needs_more_info</code> with an automatic reason of “identity check
+not completed,” rather than leaving the applicant in
+<code>pending</code> indefinitely with no visible next step.</li>
+<li><strong>Duplicate registration attempt</strong> on an
+already-<code>rejected</code> member: the unique constraint in Section 2
+only blocks non-rejected rows, so a genuinely rejected applicant isn’t
+permanently locked out of ever reapplying (e.g. after resolving a
+registration lapse) — a fresh registration attempt creates a new
+<code>identity.members</code> row. Whether this needs a cooldown period
+or admin awareness of the prior rejection is an open question (Section
+11).</li>
+<li><strong>Duplicate registration attempt on an <code>expelled</code>
+member</strong>: resolved (2026-07-14) — the same unique constraint
+blocks it, since <code>expelled</code> isn’t <code>rejected</code>
+(Section 2), and the attempt is additionally logged to
+<code>identity.reapplication_attempts</code> for admin review (Section
+6). This was previously a real gap (identified while drafting the EPIC-B
+and EPIC-F specs, where <code>identity.members</code> had no
+<code>expelled</code> value at all and expulsion never touched this
+table) — see
+<code>docs/2026-07-14-technical-specs-open-questions.md</code>, Section
+2, for the history.</li>
+<li><strong>Applicant emails don’t match register-held contact
+details</strong>: not a verification signal — the register lookup
+matches on <code>legal_name</code> + <code>registration_number</code>,
+not email, since professional registers don’t reliably expose a
+queryable email field.</li>
+</ul>
+<hr />
+<h2 id="non-functional-notes-specific-to-epic-a">9. Non-functional notes
+specific to EPIC-A</h2>
+<ul>
+<li><strong>Why admin queue reads aren’t
+<code>identity_access_log</code> events</strong>: the architecture spec,
+Section 4.4, draws the line at “routine automated system access”
+vs. moderator-initiated identity access. Reviewing a <em>pending
+verification applicant’s own submitted evidence</em> is the core,
+ordinary function <code>IdentityService</code> exists to perform — it is
+meaningfully different from a moderator looking up an <em>existing
+verified member’s</em> real identity behind their handle (which the
+PRD’s Section 9.4 access rule and the architecture spec’s
+<code>identity_access_log</code> are protecting against). Conflating the
+two would make routine verification work indistinguishable from a
+genuine identity-access event in the audit trail, undermining the log’s
+value as a trust artifact. If this reading is wrong, it needs correcting
+before build, not after — flagged in Section 11.</li>
+<li><strong>PII handling in transit/rest</strong>:
+<code>legal_name</code>, <code>raw_result</code> (which may embed
+applicant-submitted document data from Onfido), and
+<code>registration_number</code> are exactly the category of data the
+architecture spec’s <code>identity</code> schema access grants exist to
+protect — no change needed here beyond confirming this epic’s code paths
+only ever run under the <code>IdentityService</code> database role.</li>
+<li><strong>Rate limiting</strong>: <code>POST /v1/auth/register</code>
+and <code>POST /v1/auth/request-link</code> are the two endpoints
+explicitly called out in the architecture spec, Section 5.3, for
+Redis-backed per-IP rate limiting — registration is an obvious target
+for automated abuse (e.g. scripted submission of stolen registration
+numbers to probe the register-lookup step).</li>
+</ul>
+<hr />
+<h2 id="test-plan">10. Test plan</h2>
+<ul>
+<li><strong>State machine</strong>: every transition in Section 3 has a
+corresponding test; explicitly test that no transition exists that skips
+writing a <code>verification_decisions</code> row (e.g. by asserting the
+two writes happen in one database transaction and a forced failure of
+either rolls back both).</li>
+<li><strong>Uniqueness constraint</strong>: registering the same
+<code>(professional_body, registration_number, registration_country)</code>
+twice while the first is
+<code>pending</code>/<code>approved_verified</code>/<code>needs_more_info</code>/<code>suspended</code>/<code>expelled</code>
+is rejected; while <code>rejected</code>, a new row is allowed.</li>
+<li><strong>Expelled reapplication logging</strong>: a blocked
+registration attempt matching an <code>expelled</code> row writes
+exactly one <code>identity.reapplication_attempts</code> record with the
+correct <code>matched_member_id</code>, and the applicant-facing
+response is indistinguishable from an ordinary duplicate-registration
+rejection (no confirmation of expelled status leaks to the caller).</li>
+<li><strong>Worker decision table</strong>: each row of the Section 5
+table covered by a test with mocked register-lookup and Onfido
+responses, including the “register unavailable” case.</li>
+<li><strong>Access-control regression</strong> (extends the architecture
+spec’s Section 9 cross-schema test): confirm no EPIC-A endpoint response
+DTO includes <code>legal_name</code> or raw
+<code>identity.members</code> fields beyond <code>member_id</code> and
+<code>verification_status</code>.</li>
+<li><strong>Timeout handling</strong>: simulate an Onfido webhook that
+never arrives and assert the applicant surfaces in the admin queue after
+the timeout window, not stuck silently in <code>pending</code>.</li>
+</ul>
+<hr />
+<h2 id="open-questions">11. Open questions</h2>
+<ul>
+<li><strong>BASRAT/SST register access</strong>: confirm whether either
+publishes a queryable API or only a manual/scrape-only public register.
+This determines whether Step A (Section 5) can run automatically for
+these two bodies at all, or whether every BASRAT/SST applicant is
+manual-review-only from day one. Relevant to FD-1 (professional scope)
+but is itself an implementation detail, not a scope decision.</li>
+<li><strong>Rejection cooldown/reapplication</strong>: should a
+<code>rejected</code> applicant be able to immediately resubmit (current
+design permits this via Section 2’s constraint scoping), or should there
+be a cooldown, or should the admin reviewing a resubmission see the
+prior rejection reason? Not addressed in the PRD.</li>
+<li><strong>Appeals process</strong>: PRD Section 8.1 says a rejection
+reason is provided but doesn’t describe an appeals mechanism beyond
+reapplying from scratch. Worth confirming with Andrew Renshaw/Paul Gouge
+whether MVP needs anything more formal.</li>
+<li><strong>Onfido webhook timeout value</strong>: 72 hours is this
+spec’s proposal, not a PRD-specified figure — worth a sanity check
+against Onfido’s own typical turnaround time before committing to
+it.</li>
+<li><strong>Identity-access-log boundary (Section 9)</strong>: confirm
+the reasoning that routine admin verification-queue review is not an
+<code>identity_access_log</code> event is correct before build — it’s a
+meaningful interpretation of PRD Section 9.4, not an explicit PRD
+statement.</li>
+<li><strong>Exact applicant-facing rejection wording for the
+expelled-reapplication case</strong> (Section 2): this spec proposes a
+generic message that doesn’t confirm expelled status to the applicant —
+worth a final check that this is the right call versus, say, a
+legal/compliance preference for more explicit language.</li>
+</ul>
+
+</main>
+</body>
+</html>

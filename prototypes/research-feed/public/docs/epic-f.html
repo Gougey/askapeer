@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EPIC-F — Moderation — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">EPIC-F — Moderation</span>
+</div>
+<main>
+<h1
+id="epic-f-content-reporting-and-moderation-tools-technical-spec">EPIC-F
+— Content Reporting and Moderation Tools — Technical Spec</h1>
+<p><strong>Status</strong>: Draft — for stakeholder review
+<strong>Date</strong>: 14 July 2026 <strong>Author</strong>: Adrian Hall
+(Technical Lead), drafted with Claude Code <strong>Scope</strong>: The
+sixth per-epic technical spec. Builds on the architecture spec’s Section
+4.2 (<code>community.reports</code>,
+<code>community.moderation_actions</code>), Section 4.4 (audit logging
+scope), and Section 7.2 (moderation tooling as role-gated routes in the
+same web app) — read those first. Also resolves two forward-references
+left open by earlier specs: EPIC-B’s question (its spec, Section 13)
+about where a moderator-forced handle rename belongs, and EPIC-E’s
+requirement (its spec, Section 9) for a <code>request_correction</code>
+action type. Both are addressed in Section 3 below.</p>
+<p>Source of truth: <code>docs/askapeer-prd-v0.1.md</code>, Section
+9.3–9.5 (zero-tolerance rule, moderation access to identity, inadvertent
+disclosure) and Section 10.4 (case-discussion priority reporting).</p>
+<p>This epic is where the platform’s two highest-stakes policies —
+zero-tolerance anonymity enforcement and the “no PHI” rule — actually
+get executed, not just stated. It’s also where a real inconsistency
+between two already-written specs surfaces (Section 7) and needs
+flagging for the consolidated review, per your instruction to hold
+cross-epic conflicts until every spec is drafted.</p>
+<hr />
+<h2 id="contents">Contents</h2>
+<ol type="1">
+<li><a href="#1-scope">Scope</a></li>
+<li><a href="#2-data-model">Data model</a></li>
+<li><a href="#3-moderation-action-types">Moderation action
+types</a></li>
+<li><a href="#4-report-categories-and-queue-ordering">Report categories
+and queue ordering</a></li>
+<li><a href="#5-viewing-real-identity--the-audited-exception">Viewing
+real identity — the audited exception</a></li>
+<li><a href="#6-api-endpoints">API endpoints</a></li>
+<li><a href="#7-the-expulsionre-registration-gap">The
+expulsion/re-registration gap</a></li>
+<li><a href="#8-non-functional-notes-specific-to-epic-f">Non-functional
+notes specific to EPIC-F</a></li>
+<li><a href="#9-test-plan">Test plan</a></li>
+<li><a href="#10-open-questions">Open questions</a></li>
+</ol>
+<hr />
+<h2 id="scope">1. Scope</h2>
+<p><strong>In scope</strong>: reporting content (or a handle — Section
+2) with a category, the moderation review queue and its ordering, the
+full set of moderation actions and their downstream effects on other
+epics’ data, and the audited real-identity-viewing action.</p>
+<p><strong>Out of scope</strong>: the admin panel’s UI/routing mechanics
+(already specified generically in the architecture spec, Section 7.2 —
+role-gated <code>/admin/*</code> routes in the same Next.js app); this
+epic only specifies the data and actions those routes operate on.</p>
+<hr />
+<h2 id="data-model">2. Data model</h2>
+<p>Reuses <code>community.reports</code> and
+<code>community.moderation_actions</code>, defined in the architecture
+spec, Section 4.2, with one addition: <strong><code>target_type</code>
+needs a <code>handle</code> value</strong>, not just
+<code>post</code>/<code>comment</code>. The PRD’s zero-tolerance rule
+(Section 9.3) explicitly covers “collusion to de-anonymise members on or
+off the platform” — a report about a pattern of behaviour or an
+off-platform incident may have no specific post or comment to attach to,
+only a handle. Restricting reports to content-only targets would leave
+no way to file exactly the kind of report the platform’s most serious
+rule anticipates.</p>
+<pre><code>community.reports
+  id, reporter_handle_id, target_type enum(post, comment, handle),
+  target_id, category, priority boolean generated from category,
+  status enum(open, actioned, dismissed), created_at
+
+community.moderation_actions           -- immutable: INSERT-only grant
+  id, report_id nullable, target_handle_id,
+  action_type enum(remove_content, warn, suspend, expel,
+                    request_correction, rename_handle),
+  moderator_id, reason, created_at</code></pre>
+<p><code>action_type</code> gains <strong>two values beyond the
+architecture spec’s original four</strong>:
+<code>request_correction</code> (resolves EPIC-E’s Section 9 dependency
+— the “request a corrected resubmission” action PRD Section 10.4 names
+for case discussions) and <code>rename_handle</code> (resolves EPIC-B’s
+Section 13 open question — a moderator-forced handle rename, when a
+handle name itself turns out to be identifying or impersonating, is a
+moderation action in substance and belongs in this enum rather than as a
+bespoke EPIC-B-only endpoint). Both additions are proposed here as the
+natural home for these actions, since this spec is where the action-type
+vocabulary is actually owned — but see Section 10 for confirmation
+status.</p>
+<hr />
+<h2 id="moderation-action-types">3. Moderation action types</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th><code>action_type</code></th>
+<th>Effect</th>
+<th>Owning epic for the effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>remove_content</code></td>
+<td><code>community.posts</code>/<code>comments.status = removed</code></td>
+<td>EPIC-C</td>
+</tr>
+<tr>
+<td><code>warn</code></td>
+<td>No status change; a logged, immutable record a member received a
+formal warning</td>
+<td>This epic</td>
+</tr>
+<tr>
+<td><code>suspend</code></td>
+<td><code>community.handles.status = suspended</code>; see Section 7 for
+whether this should also touch <code>identity.members</code></td>
+<td>EPIC-B (status)</td>
+</tr>
+<tr>
+<td><code>expel</code></td>
+<td><code>community.handles.status = expelled</code>
+<strong>and</strong>
+<code>identity.members.verification_status = expelled</code>, both in
+the same transaction; permanent</td>
+<td>EPIC-B (status), Section 7 (identity linkage — resolved)</td>
+</tr>
+<tr>
+<td><code>request_correction</code></td>
+<td>Case discussion returns to an editable/unpublished state for
+resubmission</td>
+<td>EPIC-E</td>
+</tr>
+<tr>
+<td><code>rename_handle</code></td>
+<td><code>community.handles.handle_name</code> changed, old name
+recorded in <code>community.handle_name_history</code></td>
+<td>EPIC-B</td>
+</tr>
+</tbody>
+</table>
+<p>Every action writes one <code>community.moderation_actions</code> row
+regardless of type — this is the immutable trail the architecture spec’s
+Section 4.4 requires for “moderation actions” generally, not just the
+four original action types.</p>
+<hr />
+<h2 id="report-categories-and-queue-ordering">4. Report categories and
+queue ordering</h2>
+<p>The PRD names one specific category explicitly —
+<code>identifiable_patient_information</code> (Section 10.4), which
+“trigger[s] a priority review flag and are actioned before other report
+types.” It does not enumerate a full category list. This spec proposes
+the following, since a report form needs <em>some</em> fixed set of
+categories to be usable, but the full list is this spec’s own
+construction, not a PRD requirement:</p>
+<ul>
+<li><code>identifiable_patient_information</code> —
+<strong>priority</strong> (explicit PRD requirement)</li>
+<li><code>anonymity_violation</code> — attempting to reveal one’s own or
+another’s identity (PRD Section 9.3/9.5). <strong>This spec proposes
+priority status for this category too</strong>, even though the PRD only
+explicitly names patient-information reports as priority — the
+zero-tolerance rule around anonymity is described in equally or more
+severe terms (“immediate and permanent expulsion… no exceptions”) than
+the patient-privacy policy, and it would be an odd asymmetry for the
+platform’s other founding guarantee to sit in the ordinary queue.
+Flagged for explicit confirmation in Section 10 rather than
+assumed.</li>
+<li><code>harassment</code></li>
+<li><code>spam</code></li>
+<li><code>other</code></li>
+</ul>
+<p>Queue ordering: priority categories
+(<code>identifiable_patient_information</code>,
+<code>anonymity_violation</code>) first, then by report age within each
+tier — the same pattern the EPIC-A spec already established for its own
+(structurally separate) verification queue, Section 6 there.</p>
+<hr />
+<h2 id="viewing-real-identity-the-audited-exception">5. Viewing real
+identity — the audited exception</h2>
+<p>The architecture spec (Section 7.2) already establishes that “viewing
+a member’s real identity from the admin panel is a distinct, explicit
+action… not implicit in viewing a report.” This epic is where that
+action is actually triggered from:</p>
+<pre><code>POST /v1/admin/handles/:handle_id/reveal-identity
+  body: { reason_code: reported_violation | legal_request | safety_escalation, reason_note }
+  -&gt; resolves handle_id -&gt; member_id via IdentityService
+  -&gt; writes identity.identity_access_log (architecture spec, Section 4.1)
+  -&gt; returns real identity fields to the moderator</code></pre>
+<p>A moderator reviewing a report (Section 4) does <strong>not</strong>
+automatically see the reported handle’s real identity — the report queue
+itself operates entirely on <code>handle_id</code>s, consistent with
+every other community-facing surface in the platform. Only this
+explicit, separately-logged action crosses the boundary, exactly
+matching the architecture spec’s stated design intent.</p>
+<hr />
+<h2 id="api-endpoints">6. API endpoints</h2>
+<pre><code>POST   /v1/reports                          { target_type, target_id, category, comment }
+
+--- admin-only, moderator-role JWT claim required ---
+
+GET    /v1/admin/reports?status=open&amp;cursor=...    -- priority categories first (Section 4)
+GET    /v1/admin/reports/:report_id
+POST   /v1/admin/reports/:report_id/action  { action_type, target_handle_id, reason, ...type-specific-fields }
+POST   /v1/admin/handles/:handle_id/reveal-identity   -- Section 5</code></pre>
+<p><code>POST .../action</code>’s type-specific fields:
+<code>remove_content</code> needs the specific
+<code>post_id</code>/<code>comment_id</code>; <code>rename_handle</code>
+needs <code>new_handle_name</code>; <code>request_correction</code>
+needs the case-discussion <code>post_id</code>. A single endpoint with a
+discriminated body (rather than one endpoint per action type) keeps the
+audit-logging code path in one place, which matters more here than API
+surface elegance given every branch must reliably write to an immutable
+log.</p>
+<hr />
+<h2 id="the-expulsionre-registration-gap-resolved">7. The
+expulsion/re-registration gap — resolved</h2>
+<p>This section originally flagged a real gap spanning three specs
+(EPIC-A, EPIC-B, and this one); Adrian resolved it on 2026-07-14 and
+it’s kept here, marked resolved, for the history rather than
+deleted:</p>
+<ul>
+<li><code>identity.members.verification_status</code> (architecture
+spec, Section 4.1) was
+<code>pending | needs_more_info | approved_verified | rejected | suspended</code>
+— no <code>expelled</code> value existed.</li>
+<li><code>community.handles.status</code> (Section 4.2) is
+<code>active | suspended | expelled</code> — no
+<code>rejected</code>/<code>needs_more_info</code> value, and its
+<code>suspended</code> isn’t necessarily the same event as the
+identity-side <code>suspended</code> (that question — whether this
+epic’s <code>suspend</code> action should also touch
+<code>identity.members</code> — remains genuinely open; see Section
+10).</li>
+<li><strong>The consequence</strong>: when this epic’s
+<code>expel</code> action set
+<code>community.handles.status = expelled</code>, nothing updated
+<code>identity.members.verification_status</code>, so a permanently
+expelled person’s registration was still sitting at
+<code>approved_verified</code> — nothing stopped them re-registering
+with the same credentials.</li>
+</ul>
+<p><strong>Decision</strong>:
+<code>identity.members.verification_status</code> gains an
+<code>expelled</code> value (architecture spec amended, Section 4.1).
+This epic’s <code>expel</code> action now writes an
+<code>identity.verification_decisions</code> transition to
+<code>expelled</code> in the same transaction as the
+<code>community.handles</code> update (Section 3’s table, above).
+EPIC-A’s uniqueness constraint already blocks any
+non-<code>rejected</code> status by construction (its spec, Section 2),
+so <code>expelled</code> is covered automatically — and per Adrian’s
+direction, a blocked reapplication attempt is additionally logged to
+<code>identity.reapplication_attempts</code> and surfaced for admin
+review (EPIC-A’s spec, Section 6), not just silently rejected. Full
+history in
+<code>docs/2026-07-14-technical-specs-open-questions.md</code>, Section
+2.</p>
+<p><strong>Still open</strong>: whether <code>suspend</code> should
+similarly write to <code>identity.members</code> (see Section 10) —
+suspension’s temporary/reversible nature makes this a less clear-cut
+case than expulsion’s permanence.</p>
+<hr />
+<h2 id="non-functional-notes-specific-to-epic-f">8. Non-functional notes
+specific to EPIC-F</h2>
+<ul>
+<li><strong>Immutable actions</strong>:
+<code>community.moderation_actions</code> and
+<code>identity.identity_access_log</code> are both INSERT-only at the
+database-role level, per the architecture spec, Section 4.4 — this epic
+introduces no new tables needing that treatment, only new
+<code>action_type</code> values within the existing immutable
+table.</li>
+<li><strong>Response-time KPIs</strong>: the PRD (Section 13) names
+“median moderation response time” and “PHI report resolution time — must
+be fast” as KPIs, without a numeric target. This epic’s data model
+supports measuring both (<code>created_at</code> on the report,
+<code>created_at</code> on the resulting <code>moderation_actions</code>
+row), but no SLA is defined to build alerting against — flagged in
+Section 10.</li>
+</ul>
+<hr />
+<h2 id="test-plan">9. Test plan</h2>
+<ul>
+<li><strong>Priority ordering</strong>:
+<code>identifiable_patient_information</code> and (pending confirmation)
+<code>anonymity_violation</code> reports surface before other categories
+regardless of submission order.</li>
+<li><strong>Handle-targeted reports</strong>: a report with
+<code>target_type = handle</code> and no associated post/comment is
+valid and appears in the queue (covers the “off-platform collusion” case
+PRD Section 9.3 anticipates).</li>
+<li><strong>Identity reveal is separately logged</strong>: viewing a
+report never itself produces an <code>identity_access_log</code> row;
+only <code>POST .../reveal-identity</code> does, and it requires a
+<code>reason_code</code>.</li>
+<li><strong>Action immutability</strong>: no
+<code>UPDATE</code>/<code>DELETE</code> grant exists on
+<code>community.moderation_actions</code> at the database-role level
+(mirrors the EPIC-A spec’s equivalent test for
+<code>identity.verification_decisions</code>).</li>
+<li><strong>New action types</strong>: <code>request_correction</code>
+correctly unpublishes the target case discussion (coordinating with
+EPIC-E’s flow); <code>rename_handle</code> writes
+<code>handle_name_history</code> and validates against the same
+blocklist/uniqueness rules as ordinary handle creation (EPIC-B, Section
+3).</li>
+<li><strong><code>expel</code> writes both statuses atomically</strong>:
+<code>community.handles.status = expelled</code> and
+<code>identity.members.verification_status = expelled</code> both land,
+or neither does, on a forced failure of either write (same pattern as
+EPIC-A’s Section 10 test for the verification state machine); a
+subsequent registration attempt using the expelled member’s credentials
+is blocked and logged (EPIC-A spec, Section 10).</li>
+</ul>
+<hr />
+<h2 id="open-questions">10. Open questions</h2>
+<ul>
+<li><strong><code>anonymity_violation</code> as a priority
+category</strong> (Section 4): proposed here but not a PRD-stated
+requirement — needs explicit confirmation given the PRD only names
+patient-information reports as priority.</li>
+<li><del><strong>The expulsion/re-registration gap</strong></del> —
+<strong>resolved 2026-07-14</strong>, see Section 7 above.</li>
+<li><strong>Should <code>suspend</code> also write to
+<code>identity.members.verification_status</code></strong> (Section 7):
+unlike <code>expel</code>, this is genuinely unresolved — a handle-level
+suspension (this epic’s action) and the identity-level
+<code>suspended</code> status (EPIC-A’s, covering lapsed registration)
+may or may not be intended as the same event. Needs a decision, though
+it’s lower-stakes than the expulsion case since suspension is reversible
+either way.</li>
+<li><strong><code>rename_handle</code> and
+<code>request_correction</code> as new action types</strong>: proposed
+here as the natural resolution of two other specs’ forward-references
+(Section 3) — worth a final check that EPIC-B and EPIC-E’s specs should
+indeed be read as pointing here, rather than wanting their own bespoke
+handling.</li>
+<li><strong>No numeric moderation-response SLA</strong> (Section 8): the
+PRD’s KPIs name “must be fast” without a figure — worth a concrete
+target before building alerting/staffing plans around it.</li>
+<li><strong>Full report-category list</strong> (Section 4):
+<code>harassment</code>, <code>spam</code>, <code>other</code> alongside
+the two priority categories is this spec’s own proposal, not confirmed
+against the PRD (which doesn’t enumerate a full list) — worth a sanity
+check with Andrew Renshaw given his domain familiarity with what reports
+are likely to actually look like in practice.</li>
+</ul>
+
+</main>
+</body>
+</html>
