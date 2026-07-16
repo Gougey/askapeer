@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pdffonts *)",
+      "Bash(fc-list *)",
+      "Bash(pandoc --version)",
+      "Bash(pandoc -D *)",
+      "Bash(pandoc *)",
+      "Bash(curl *)",
+      "Bash(kill *)",
+      "Bash(pkill node)",
+      "Bash(flyctl version *)",
+      "Bash(flyctl status *)",
+      "Bash(flyctl auth whoami)"
+    ]
+  }
+}

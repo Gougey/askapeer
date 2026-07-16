@@ -2,7 +2,11 @@
 .DS_Store
 Thumbs.db
 *.log
-.claude/
+
+# Claude Code: personal/session files stay ignored; the shared project
+# settings (permission allowlist) are checked in per standard convention
+.claude/*
+!.claude/settings.json
 
 # Node (for when the real build lands)
 node_modules/
