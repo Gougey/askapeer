@@ -408,6 +408,35 @@ source (Elsevier/Scopus/Cochrane) is ever added.</li>
 <p><em>(The <code>member_interests</code>/<code>community.follows</code>
 unification question is covered in §1.1 above; taxonomy unification in
 §1.2.)</em></p>
+<h3 id="epic-j-administration-configuration-added-2026-07-17">EPIC-J —
+Administration &amp; Configuration (added 2026-07-17)</h3>
+<p>New epic (a scope addition, like EPIC-I) giving a single owner to the
+platform’s reference-data and settings management — categories, tag
+vocabulary, search synonym dictionary, handle blocklist, and tunable
+thresholds — surfaces that earlier specs called “admin-managed” but none
+owned. Local open questions:</p>
+<ul>
+<li><strong>PRD update</strong>: EPIC-J is beyond the PRD’s original
+eight-epic list — should be added to §6.1 / the roadmap when the PRD is
+next revised (same status as EPIC-I). Arguably always implied by the
+PRD’s Administrator persona.</li>
+<li><strong>New <code>config</code> schema</strong>: introduces a fifth
+schema (an architecture amendment) — vs. putting config tables in
+<code>community</code>. Recommended as-is; needs an explicit nod.</li>
+<li><strong>Administrator/Moderator role split</strong>: refines the
+architecture spec’s single “moderator-role claim” (§5.3) into two
+claims. Confirm before build.</li>
+<li><strong>Billing config boundary</strong>: do trial-length/cohort
+settings live in EPIC-J’s settings store or stay in EPIC-H?
+Recommendation: semantics stay in EPIC-H.</li>
+<li><strong>MVP trimming</strong>: categories, blocklist, and settings
+management are needed for launch; tag-merge and the synonym dictionary
+are deferrable within the epic.</li>
+</ul>
+<p><em>(EPIC-J was created in response to Adrian’s question, 2026-07-17,
+about where admin/config functions should live — decided: a dedicated
+epic, not folded into EPIC-F. See
+<code>docs/superpowers/specs/2026-07-17-epic-j-administration-configuration-technical-spec.md</code>.)</em></p>
 <hr />
 <h2 id="standing-prdbusiness-items">4. Standing PRD/business items</h2>
 <p>Carried over from the architecture spec’s own “Open follow-ups”
@@ -415,10 +444,11 @@ unification question is covered in §1.1 above; taxonomy unification in
 and worth keeping on the same list so nothing gets lost across
 documents:</p>
 <ul>
-<li><strong>PRD update</strong>: EPIC-I (research/news feed) should be
-formally added to the PRD’s MVP epic list (§6.1) — a real scope addition
-Paul Gouge and Andrew Renshaw should be aware of. (Also restated in
-EPIC-I’s own spec, §9.)</li>
+<li><strong>PRD update</strong>: EPIC-I (research/news feed) <strong>and
+EPIC-J (administration &amp; configuration)</strong> should be formally
+added to the PRD’s MVP epic list (§6.1) — both are real scope additions
+beyond the original eight that Paul Gouge and Andrew Renshaw should be
+aware of. (Also restated in each epic’s own spec.)</li>
 <li><strong>Legal review</strong>: the right-to-erasure default
 (hard-delete identity, retain de-linked community content) should be
 confirmed with legal counsel before launch.</li>

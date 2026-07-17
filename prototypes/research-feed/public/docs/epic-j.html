@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EPIC-J — Administration & Configuration — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">EPIC-J — Administration & Configuration</span>
+</div>
+<main>
+<h1
+id="epic-j-administration-platform-configuration-technical-spec">EPIC-J
+— Administration &amp; Platform Configuration — Technical Spec</h1>
+<p><strong>Status</strong>: Draft — for stakeholder review
+<strong>Date</strong>: 17 July 2026 <strong>Author</strong>: Adrian Hall
+(Technical Lead), drafted with Claude Code <strong>Scope</strong>: The
+tenth per-epic technical spec, and a <strong>scope addition beyond the
+PRD’s original eight-epic MVP list</strong> (like EPIC-I). Builds on the
+architecture spec
+(<code>docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md</code>),
+particularly Section 5.3 (admin JWT claim) and Section 7.2 (the
+<code>/admin/*</code> panel). Gives a single owner to the platform’s
+<strong>reference-data and settings management</strong> surfaces, which
+several earlier specs describe as “admin-managed” without specifying the
+CRUD, audit, or access control for them.</p>
+<p>Source of truth: <code>docs/askapeer-prd-v0.1.md</code>, Section 4
+(personas — the PRD already distinguishes <strong>Administrator</strong>
+from <strong>Moderator</strong>, which this epic’s role model
+implements).</p>
+<p><strong>Why this is a separate epic, not part of EPIC-F</strong>:
+EPIC-F is <em>enforcement</em> (reports → remove/warn/suspend/expel,
+audited identity access). This epic is <em>platform setup</em> —
+reference data (categories, tags, blocklist) and settings (tunable
+thresholds). Different concern, and — per the PRD’s own personas — a
+different role. Folding config into EPIC-F would make it a grab-bag of
+two unrelated things. Verification review stays in EPIC-A; this epic
+does not touch it.</p>
+<hr />
+<h2 id="contents">Contents</h2>
+<ol type="1">
+<li><a href="#scope">Scope</a></li>
+<li><a href="#role-model-administrator-vs-moderator">Role model —
+Administrator vs Moderator</a></li>
+<li><a href="#data-model">Data model</a></li>
+<li><a href="#configuration-surfaces">Configuration surfaces</a></li>
+<li><a href="#audit">Audit</a></li>
+<li><a href="#api-endpoints">API endpoints</a></li>
+<li><a href="#boundaries-with-other-epics">Boundaries with other
+epics</a></li>
+<li><a href="#non-functional-notes-specific-to-epic-j">Non-functional
+notes specific to EPIC-J</a></li>
+<li><a href="#test-plan">Test plan</a></li>
+<li><a href="#open-questions">Open questions</a></li>
+</ol>
+<hr />
+<h2 id="scope">1. Scope</h2>
+<p><strong>In scope</strong>: the management (create / edit / reorder /
+retire) of the platform’s admin-controlled reference data and settings,
+its audit trail, and the Administrator role that gates it. Specifically
+the surfaces that are currently “homeless” — mentioned as admin-managed
+in earlier specs but owned by none:</p>
+<ul>
+<li>Forum <strong>categories</strong> (EPIC-C Section 3 —
+“admin-managed”)</li>
+<li>The <strong>tag vocabulary</strong> and, once FD-4 lands, the
+<strong>search synonym dictionary</strong> (EPIC-C Sections 3–4)</li>
+<li>The <strong>handle-name blocklist</strong> config table (EPIC-B
+Section 3, 11 — “config table” agreed)</li>
+<li><strong>Tunable platform settings</strong>: top-contributor badge
+threshold (EPIC-D Section 6), trending window / result-count N (EPIC-C
+Section 8), and similar knobs</li>
+</ul>
+<p><strong>Out of scope</strong> (owned elsewhere):</p>
+<ul>
+<li><strong>Verification review queue and reapplication-attempts
+review</strong> — EPIC-A. Identity gatekeeping, already specced
+there.</li>
+<li><strong>Moderation enforcement</strong> (reports,
+remove/warn/suspend/expel/rename, identity reveal) — EPIC-F.
+Enforcement, not configuration.</li>
+<li><strong>Member-facing notification preferences</strong> — EPIC-G.
+Member settings, not platform config.</li>
+<li><strong>Billing/subscription configuration</strong> (trial-length
+defaults, cohort/invite codes) — EPIC-H, since those are coupled to the
+payment provider. This epic’s generic settings store <em>could</em> hold
+billing tunables, but EPIC-H owns their semantics — see Section 7.</li>
+<li><strong>The admin panel’s UI/routing</strong> — generically covered
+in the architecture spec, Section 7.2 (<code>/admin/*</code> in the same
+Next.js app). The UI takes shape in visual design; this spec owns the
+data model, API, audit, and access control underneath it.</li>
+</ul>
+<hr />
+<h2 id="role-model-administrator-vs-moderator">2. Role model —
+Administrator vs Moderator</h2>
+<p>The PRD’s personas (Section 4) already distinguish two operator
+roles, and this epic implements that split:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Does</th>
+<th>Gated surfaces</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Moderator</strong></td>
+<td>Content/behaviour enforcement, audited identity access</td>
+<td>EPIC-F reports &amp; actions; EPIC-A verification review</td>
+</tr>
+<tr>
+<td><strong>Administrator</strong></td>
+<td>Platform configuration, operations, compliance</td>
+<td>This epic — categories, tags, blocklist, settings</td>
+</tr>
+</tbody>
+</table>
+<p>This <strong>refines the architecture spec’s Section 5.3</strong>,
+which currently assumes a single “moderator-role claim” covers all
+<code>/admin/*</code> endpoints. This epic splits that into two JWT
+claims — <code>moderator</code> and <code>administrator</code> — so
+config mutation and enforcement can carry different privileges.</p>
+<p><strong>At MVP the two roles will very likely collapse to the same
+people</strong> (verification and moderation are founder-led per PRD
+Section 8.3, and the founders will also be the ones configuring
+categories). The point of the split is clean access-control design, not
+a requirement to staff two teams — a single person can hold both claims.
+Stated explicitly so nobody over-builds a role/permissions system for
+MVP: two boolean-ish claims on the JWT is enough; a full RBAC system is
+not MVP scope.</p>
+<hr />
+<h2 id="data-model">3. Data model</h2>
+<p>Introduces a <strong>new <code>config</code> schema</strong> —
+flagged as an <strong>architecture addition</strong> (the architecture
+spec, Section 4, defines four schemas: <code>identity</code>,
+<code>community</code>, <code>billing</code>, <code>research</code>;
+this adds a fifth). Rationale: operational configuration is neither
+member content (<code>community</code>) nor sensitive PII
+(<code>identity</code>), and giving it its own schema makes the
+Administrator-write / everyone-else-read access grant clean, mirroring
+how <code>identity</code> gets restricted grants. Categories and tags
+are the exception — they stay in <code>community</code> (they’re
+content-organisation structure members interact with directly); this
+epic provides only the <em>management</em> endpoints over them.</p>
+<pre><code>config.settings                        -- key/value tunable platform settings
+  key           text PK               -- e.g. &#39;badge.top_contributor_percentile&#39;,
+                                          &#39;feed.trending_min_results&#39;, &#39;feed.trending_window_steps&#39;
+  value         jsonb
+  description   text                   -- human-readable, shown in the admin UI
+  updated_by    uuid                   -- Administrator&#39;s member_id
+  updated_at    timestamptz
+
+config.handle_blocklist                -- the EPIC-B blocklist, config-table form
+  id            uuid PK
+  term          text unique            -- case-insensitive; matched per EPIC-B Section 3
+  category      enum(profanity, slur, role_impersonation, profession_specific, other)
+  added_by      uuid                   -- Administrator&#39;s member_id
+  added_at      timestamptz
+
+config.admin_audit_log                 -- immutable: INSERT-only grant
+  id            uuid PK
+  admin_id      uuid                   -- the acting Administrator&#39;s member_id
+  action        text                   -- e.g. &#39;category.create&#39;, &#39;blocklist.add&#39;, &#39;setting.update&#39;
+  target        text                   -- the affected entity (category id, term, setting key)
+  before        jsonb nullable         -- prior value, for edits/deletes
+  after         jsonb nullable         -- new value, for creates/edits
+  created_at    timestamptz</code></pre>
+<p><code>config.settings</code> is deliberately a small key/value store,
+not a column-per-setting table — new tunables are added as rows without
+a migration, which suits knobs that are expected to be tuned in
+operation (badge threshold, trending window) rather than fixed at design
+time.</p>
+<p>Categories and tags are managed in their existing
+<code>community</code> tables (<code>community.categories</code>,
+<code>community.tags</code> — EPIC-C Section 2), with a <strong>retire,
+not hard-delete</strong> rule (Section 4).</p>
+<hr />
+<h2 id="configuration-surfaces">4. Configuration surfaces</h2>
+<p>Each row is a surface this epic manages, its backing data, and the
+operations it exposes:</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Backing table</th>
+<th>Owner of the <em>definition</em></th>
+<th>Operations this epic adds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Categories</td>
+<td><code>community.categories</code></td>
+<td>EPIC-C</td>
+<td>Create, edit (name/description), reorder (<code>sort_order</code>),
+<strong>retire</strong></td>
+</tr>
+<tr>
+<td>Tag vocabulary</td>
+<td><code>community.tags</code></td>
+<td>EPIC-C</td>
+<td>Add, merge (fold one tag’s posts into another),
+<strong>retire</strong> — pending FD-4 closure</td>
+</tr>
+<tr>
+<td>Search synonym dictionary</td>
+<td>Postgres text-search config + a synonyms table</td>
+<td>EPIC-C Section 4</td>
+<td>Maintain synonym entries (seeded from the tag→MeSH mapping — see
+<code>docs/2026-07-17-taxonomy-standards-research.md</code>); pending
+FD-4</td>
+</tr>
+<tr>
+<td>Handle blocklist</td>
+<td><code>config.handle_blocklist</code></td>
+<td>This epic</td>
+<td>Add / remove terms, categorised</td>
+</tr>
+<tr>
+<td>Platform settings</td>
+<td><code>config.settings</code></td>
+<td>This epic</td>
+<td>Edit values (badge threshold, trending window/N, …)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Retire, not hard-delete</strong> (categories and tags): a
+category or tag that existing posts reference cannot be hard-deleted
+without orphaning or rewriting content. Retiring instead hides it from
+the new-post composer (so no <em>new</em> posts use it) while leaving
+existing posts and their filtering intact — the same “content is an
+archive, don’t break it” principle EPIC-B applied to expelled handles
+and EPIC-C applied to removed posts. Implemented as a
+<code>retired_at timestamptz nullable</code> column on
+<code>community.categories</code> / <code>community.tags</code> (a small
+addition to EPIC-C’s tables — flagged in Section 7).</p>
+<p><strong>Tag merge</strong> exists because free tagging (FD-4’s hybrid
+model) inevitably produces near-duplicates (<code>acl</code> /
+<code>acl-tear</code> / <code>anterior-cruciate-ligament</code>). Merge
+repoints the losing tag’s <code>post_tags</code> rows to the winning tag
+and retires the loser — an Administrator cleanup action, audited like
+any other.</p>
+<hr />
+<h2 id="audit">5. Audit</h2>
+<p>Every mutation through this epic writes a
+<code>config.admin_audit_log</code> row (immutable, INSERT-only grant —
+the same enforcement as <code>identity.verification_decisions</code> and
+<code>community.moderation_actions</code>). Changing the category list,
+editing the blocklist, or moving a threshold are all platform-wide
+privileged actions: less sensitive than identity access, but exactly the
+kind of change where “who changed this, when, from what to what” needs
+to be answerable — both for operational debugging (“why did every post
+lose a tag last Tuesday?”) and for the trust/compliance posture the
+platform trades on.</p>
+<p>This is a <em>config</em> audit trail, distinct from the
+identity-access log (EPIC-A/architecture Section 4.4) and the
+moderation-actions log (EPIC-F). It records no member PII — only which
+Administrator changed which setting.</p>
+<hr />
+<h2 id="api-endpoints">6. API endpoints</h2>
+<p>All require an <code>administrator</code> JWT claim (Section 2).
+Consistent with the architecture spec’s Section 5.3 principles
+(versioned <code>/v1</code>, no <code>identity</code> leakage — this
+epic touches no member PII at all).</p>
+<pre><code>--- categories (community.categories) ---
+POST   /v1/admin/categories            { name, description, sort_order }
+PATCH  /v1/admin/categories/:id        { name?, description?, sort_order? }
+POST   /v1/admin/categories/:id/retire
+
+--- tags (community.tags) ---
+POST   /v1/admin/tags                  { name }
+POST   /v1/admin/tags/:id/retire
+POST   /v1/admin/tags/:id/merge        { into_tag_id }
+
+--- handle blocklist (config.handle_blocklist) ---
+GET    /v1/admin/blocklist
+POST   /v1/admin/blocklist             { term, category }
+DELETE /v1/admin/blocklist/:id
+
+--- platform settings (config.settings) ---
+GET    /v1/admin/settings
+PATCH  /v1/admin/settings/:key         { value }
+
+--- audit ---
+GET    /v1/admin/config-audit?cursor=...   -- read the config.admin_audit_log</code></pre>
+<p>Synonym-dictionary endpoints are deferred until FD-4 closes and the
+tag vocabulary exists to seed from (Section 4).</p>
+<p>Every mutating call writes a <code>config.admin_audit_log</code> row
+in the same transaction as the change.</p>
+<hr />
+<h2 id="boundaries-with-other-epics">7. Boundaries with other epics</h2>
+<ul>
+<li><strong>EPIC-C (categories, tags)</strong> owns the <em>table
+definitions</em>; this epic owns the <em>management endpoints</em> over
+them, and needs one small addition to EPIC-C’s schema: a
+<code>retired_at</code> column on <code>community.categories</code> and
+<code>community.tags</code> (Section 4). Flagged for reconciliation into
+EPIC-C’s spec.</li>
+<li><strong>EPIC-B (handle blocklist)</strong> agreed the blocklist
+lives in a config table (its Section 3, 11); this epic is where that
+table (<code>config.handle_blocklist</code>) and its management actually
+live. EPIC-B’s creation-time validation <em>reads</em> it; this epic
+<em>writes</em> it.</li>
+<li><strong>EPIC-D (badge threshold)</strong> and <strong>EPIC-C
+(trending window/N)</strong> define tunable knobs; their values live in
+<code>config.settings</code> and are edited here. The consuming epics
+read the setting; this epic owns editing it.</li>
+<li><strong>EPIC-F (moderation)</strong> is the sibling operator surface
+— enforcement, under the <code>moderator</code> claim — distinct from
+this epic’s configuration surface under the <code>administrator</code>
+claim. The two share the physical <code>/admin</code> panel
+(architecture Section 7.2) but not their role claims or their
+concerns.</li>
+<li><strong>EPIC-A (verification review)</strong> is explicitly
+<em>not</em> here — it stays under EPIC-A, gated by its own admin
+access, per that spec.</li>
+<li><strong>EPIC-H (billing config)</strong> owns billing-coupled
+settings (trial defaults, invite/cohort codes); the generic
+<code>config.settings</code> store could physically hold them, but
+EPIC-H owns their semantics and any provider interaction. Boundary to
+confirm (Section 10).</li>
+</ul>
+<hr />
+<h2 id="non-functional-notes-specific-to-epic-j">8. Non-functional notes
+specific to EPIC-J</h2>
+<ul>
+<li><strong>No <code>identity</code>-schema access</strong>: this epic
+touches no member PII — it operates on <code>config</code> and (for
+category/tag management) <code>community</code>. The only member
+reference it stores is <code>updated_by</code>/<code>admin_id</code>,
+which is the acting <em>Administrator’s</em> own <code>member_id</code>
+in an audit context, not another member’s identity behind a handle.</li>
+<li><strong>Settings read path</strong>: consuming epics (badge,
+trending) read <code>config.settings</code> frequently; cache it in
+Redis (or in-process with a short TTL) rather than hitting Postgres per
+request — these values change rarely. A settings change should
+invalidate the cache so it takes effect promptly.</li>
+<li><strong>Blocklist read path</strong>: EPIC-B reads
+<code>config.handle_blocklist</code> at handle-creation time (low
+frequency), so no special caching is needed there beyond ordinary query
+performance.</li>
+<li><strong>Config-audit immutability</strong>:
+<code>config.admin_audit_log</code> gets the same INSERT-only
+database-role grant as the platform’s other audit logs.</li>
+</ul>
+<hr />
+<h2 id="test-plan">9. Test plan</h2>
+<ul>
+<li><strong>Role gating</strong>: an <code>administrator</code>-claim
+token can call these endpoints; a <code>moderator</code>-only token
+cannot (and vice-versa for EPIC-F’s enforcement endpoints) — confirms
+the Section 2 split is enforced, not just declared.</li>
+<li><strong>Retire, not delete</strong>: retiring a category/tag hides
+it from the new-post composer but leaves existing posts and their tag
+associations intact and still filterable.</li>
+<li><strong>Tag merge</strong>: merging tag B into tag A repoints B’s
+<code>post_tags</code> to A, retires B, and no post loses its
+association.</li>
+<li><strong>Audit completeness</strong>: every mutating endpoint writes
+exactly one <code>config.admin_audit_log</code> row with correct
+<code>before</code>/<code>after</code>; the log is INSERT-only (no
+update/delete grant).</li>
+<li><strong>Settings round-trip</strong>: editing a setting (e.g. the
+trending window) changes the value read by the consuming epic within the
+cache TTL / after invalidation.</li>
+<li><strong>Blocklist integration</strong>: a term added here is
+rejected by EPIC-B’s handle-creation validation on the next
+attempt.</li>
+</ul>
+<hr />
+<h2 id="open-questions">10. Open questions</h2>
+<ul>
+<li><strong>PRD update</strong>: EPIC-J is a scope addition beyond the
+PRD’s original eight-epic MVP list (Section 6.1 / Section 12 roadmap) —
+the same status EPIC-I has. Both should be raised with Paul Gouge and
+Andrew Renshaw when the PRD is next revised. (Arguably EPIC-J was always
+<em>implied</em> by the PRD’s Administrator persona and the
+“admin-managed” language scattered through the specs — but it was never
+an explicit epic.)</li>
+<li><strong>New <code>config</code> schema</strong> (Section 3):
+introducing a fifth schema is an architecture-level decision. The
+alternative is to put <code>config.*</code> tables in
+<code>community</code> and avoid a new schema. Recommended as-is (clean
+Administrator-write access boundary), but worth an explicit nod since it
+amends the architecture spec’s four-schema model.</li>
+<li><strong>Administrator/Moderator role split</strong> (Section 2):
+refines the architecture spec’s single “moderator-role claim” (Section
+5.3) into two claims. Low-effort, but a deliberate change to a written
+assumption — confirm before build.</li>
+<li><strong>Billing config boundary</strong> (Section 7): do
+trial-length defaults and cohort/invite codes live in this epic’s
+<code>config.settings</code> or stay entirely in EPIC-H? Recommendation:
+semantics stay in EPIC-H; revisit if it turns out an Administrator wants
+to edit them from the same settings screen.</li>
+<li><strong>Whether MVP needs all of this</strong>: categories,
+blocklist, and settings management are genuinely needed for launch
+(someone has to create the categories and seed the blocklist). Tag merge
+and the synonym dictionary are lower-priority (tag merge matters once
+free-tagging has produced duplicates; the synonym dictionary depends on
+FD-4) — candidates to defer within the epic if MVP scope needs
+trimming.</li>
+</ul>
+
+</main>
+</body>
+</html>

@@ -142,13 +142,24 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 
 *(The `member_interests`/`community.follows` unification question is covered in §1.1 above; taxonomy unification in §1.2.)*
 
+### EPIC-J — Administration & Configuration (added 2026-07-17)
+New epic (a scope addition, like EPIC-I) giving a single owner to the platform's reference-data and settings management — categories, tag vocabulary, search synonym dictionary, handle blocklist, and tunable thresholds — surfaces that earlier specs called "admin-managed" but none owned. Local open questions:
+
+- **PRD update**: EPIC-J is beyond the PRD's original eight-epic list — should be added to §6.1 / the roadmap when the PRD is next revised (same status as EPIC-I). Arguably always implied by the PRD's Administrator persona.
+- **New `config` schema**: introduces a fifth schema (an architecture amendment) — vs. putting config tables in `community`. Recommended as-is; needs an explicit nod.
+- **Administrator/Moderator role split**: refines the architecture spec's single "moderator-role claim" (§5.3) into two claims. Confirm before build.
+- **Billing config boundary**: do trial-length/cohort settings live in EPIC-J's settings store or stay in EPIC-H? Recommendation: semantics stay in EPIC-H.
+- **MVP trimming**: categories, blocklist, and settings management are needed for launch; tag-merge and the synonym dictionary are deferrable within the epic.
+
+*(EPIC-J was created in response to Adrian's question, 2026-07-17, about where admin/config functions should live — decided: a dedicated epic, not folded into EPIC-F. See `docs/superpowers/specs/2026-07-17-epic-j-administration-configuration-technical-spec.md`.)*
+
 ---
 
 ## 4. Standing PRD/business items
 
 Carried over from the architecture spec's own "Open follow-ups" (Section 11) — not new findings from the per-epic specs, but still open and worth keeping on the same list so nothing gets lost across documents:
 
-- **PRD update**: EPIC-I (research/news feed) should be formally added to the PRD's MVP epic list (§6.1) — a real scope addition Paul Gouge and Andrew Renshaw should be aware of. (Also restated in EPIC-I's own spec, §9.)
+- **PRD update**: EPIC-I (research/news feed) **and EPIC-J (administration & configuration)** should be formally added to the PRD's MVP epic list (§6.1) — both are real scope additions beyond the original eight that Paul Gouge and Andrew Renshaw should be aware of. (Also restated in each epic's own spec.)
 - **Legal review**: the right-to-erasure default (hard-delete identity, retain de-linked community content) should be confirmed with legal counsel before launch.
 - **DPIA**: a Data Protection Impact Assessment should be commissioned before launch, given the volume of professional-registration data processed.
 - **FD-1, FD-3, FD-4, FD-5**: all still formally open stakeholder decisions that the architecture and per-epic specs have designed *against* the PRD's own recommendations for, in order to keep moving — none of these are closed just because a spec assumes an answer.

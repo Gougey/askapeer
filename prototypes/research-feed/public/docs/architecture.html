@@ -913,8 +913,22 @@ building directly on the foundations in this document.</p>
 <td><code>research-feed</code></td>
 <td><code>research</code>, <code>community.member_interests</code></td>
 </tr>
+<tr>
+<td>EPIC-J — Administration &amp; configuration</td>
+<td><code>admin-config</code> + admin panel routes</td>
+<td><code>config</code> (new schema), management of
+<code>community.categories</code>/<code>community.tags</code></td>
+</tr>
 </tbody>
 </table>
+<p><strong>Amendment, 17 July 2026</strong>: EPIC-J (Administration
+&amp; Platform Configuration) added as a scope addition beyond the PRD’s
+original eight-epic list (like EPIC-I). It introduces a fifth schema,
+<code>config</code> (platform settings, handle blocklist, config audit
+log), and splits the single “moderator-role” JWT claim (Section 5.3)
+into <code>moderator</code> (enforcement, EPIC-F) and
+<code>administrator</code> (configuration, EPIC-J). See
+<code>docs/superpowers/specs/2026-07-17-epic-j-administration-configuration-technical-spec.md</code>.</p>
 <hr />
 <h2 id="open-follow-ups">11. Open follow-ups</h2>
 <p>Items surfaced during this design that need action outside this

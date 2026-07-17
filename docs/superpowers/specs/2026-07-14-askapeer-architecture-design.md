@@ -454,6 +454,9 @@ Each row below is expected to become its own per-epic technical spec, building d
 | EPIC-G — Notifications | `notifications` (NotificationService) | `community`, gated `identity` access (email) |
 | EPIC-H — Subscription/payments | `billing` (BillingService) | `billing`, gated `identity` access |
 | EPIC-I — Research feed | `research-feed` | `research`, `community.member_interests` |
+| EPIC-J — Administration & configuration | `admin-config` + admin panel routes | `config` (new schema), management of `community.categories`/`community.tags` |
+
+**Amendment, 17 July 2026**: EPIC-J (Administration & Platform Configuration) added as a scope addition beyond the PRD's original eight-epic list (like EPIC-I). It introduces a fifth schema, `config` (platform settings, handle blocklist, config audit log), and splits the single "moderator-role" JWT claim (Section 5.3) into `moderator` (enforcement, EPIC-F) and `administrator` (configuration, EPIC-J). See `docs/superpowers/specs/2026-07-17-epic-j-administration-configuration-technical-spec.md`.
 
 ---
 
