@@ -64,9 +64,10 @@ authentication (EPIC-B mints the handle itself — see Section 7).</p>
 <code>approved_verified</code> is reached.</li>
 <li>Periodic reverification — explicitly Phase 2 per PRD Section 8.1,
 Step 4.</li>
-<li>Appeals process for <code>rejected</code> decisions — not detailed
-in the PRD beyond “reason provided”; flagged as an open question
-(Section 11).</li>
+<li>Formal appeals workflow for <code>rejected</code> decisions —
+<strong>not built for MVP</strong> (resolved 2026-07-17): reapplying
+with corrected evidence is the appeal path (Section 11), so there’s no
+separate appeals mechanism to spec. Policy flagged for Andrew/Paul.</li>
 <li>Admin panel UI framework — covered generically in the architecture
 spec, Section 7.2; this document only specifies the queue’s data and
 ordering requirements.</li>
@@ -184,8 +185,10 @@ identical</td>
 that the system recognised them as previously expelled would hand a
 bad-faith actor confirmation their identity was detected. This
 distinction (generic response externally, specific logging internally)
-is this spec’s own proposal — flagged in Section 11 alongside the exact
-wording question.</p>
+is <strong>confirmed 2026-07-17</strong> — the generic message stands;
+only the <em>exact wording</em> is deferred to the pre-launch
+legal-counsel review (Section 11), in case compliance prefers more
+explicit language.</p>
 <p>No new table is needed for the admin review queue itself — it’s a
 filtered view over <code>identity.members</code> (Section 6), not
 separate storage. <code>identity.reapplication_attempts</code> (above)
@@ -363,15 +366,28 @@ POST /v1/admin/verification-queue/:member_id/decide
 spec (Section 3), driven by BullMQ. One job per registration, two
 sequential steps:</p>
 <p><strong>Step A — register lookup.</strong> Query the professional
-body’s public register (HCPC and GMC both publish one; BASRAT and SST
-need confirmation of API vs. scrape-only access — see Section 11) by
-<code>registration_number</code>, fuzzy-match <code>legal_name</code>
-against the register’s returned name. Write
+body’s public register by <code>registration_number</code>, fuzzy-match
+<code>legal_name</code> against the register’s returned name. Write
 <code>identity.verification_evidence</code> with
 <code>evidence_type = register_lookup</code>. A fuzzy-match rather than
 exact-match is necessary because registers store legal names with
 formatting variance (middle names, punctuation) that shouldn’t cause a
 false fail.</p>
+<p><strong>Register availability (researched 2026-07-17):</strong> HCPC
+and GMC both publish queryable registers. <strong>BASRAT</strong> and
+<strong>SST</strong> both publish a <em>public register-check web
+page</em> (<a href="https://www.basrat.org/registercheck">BASRaT
+Register Check</a>; <a href="https://thesst.org/check-the-register/">SST
+Check the Register</a>) — searchable by name/number, showing
+registration status — <strong>but no documented public API was
+found</strong>. So for MVP, <strong>BASRAT/SST applicants route straight
+to manual review</strong> (Section 8), not automated Step A; the
+follow-up is a direct enquiry to each body about API or data-sharing
+access (registrar@basrat.org, admin@thesst.org). Note the <strong>FD-1
+interplay</strong>: if the MVP launches physio-first (the PRD’s own
+recommendation), HCPC is the primary register and BASRAT/SST — sport
+rehabilitators/therapists, a different professional group — may not be
+needed at launch at all.</p>
 <p><strong>Step B — identity document check.</strong> Submit an Onfido
 check binding the applicant’s uploaded document + selfie to the claimed
 identity. This step is what proves the <em>person registering</em> is
@@ -445,6 +461,22 @@ to the moderation-reports queue, not this one.)</p>
 <code>reason</code> required), request more info (→
 <code>needs_more_info</code>, <code>reason</code> required — surfaced to
 the applicant so they know what to provide).</p>
+<p><strong>Prior-rejection context (resolved 2026-07-17).</strong> When
+an applicant is a <em>reapplication</em> — a fresh
+<code>identity.members</code> row created after an earlier rejection
+(Section 8; the unique constraint permits this because the old row is
+<code>rejected</code>) — the queue detail surfaces the <strong>prior
+rejected registration(s)</strong> matching the same
+<code>(professional_body, registration_number, registration_country)</code>,
+with each prior rejection’s <code>reason</code> and date (from
+<code>identity.verification_decisions</code>). This is a lookup across
+member rows by professional-registration identity, not just the current
+row’s own decisions (a reapplication has a <em>new</em>
+<code>member_id</code>, so its prior history lives on a different row).
+No schema change — the data already exists in
+<code>verification_decisions</code>. It lets the reviewer spot a
+repeated pattern or avoid re-doing work, without any cooldown or
+automatic lockout on the reapplication itself.</p>
 <p>Verification is founder-led at MVP scale (PRD Section 8.3) — this
 queue is designed for a handful of admins reviewing a low volume of edge
 cases per day, not a high-throughput ops tool. A dedicated
@@ -518,29 +550,38 @@ PRD’s risk register (Section 13) already names this risk with manual
 review as the designed mitigation</td>
 </tr>
 <tr>
-<td>BASRAT/SST have no confirmed public lookup API (Section 11)</td>
+<td>BASRAT/SST public register has no documented API (researched
+2026-07-17, Section 5)</td>
 <td>Every applicant from these two bodies routes straight to manual
 review, regardless of Onfido outcome</td>
-<td>A deliberate, explicit fallback until API access is confirmed — not
-a silent gap</td>
+<td>A deliberate, explicit fallback — a public register-check web page
+exists but no API; follow-up is a direct enquiry to each registrar. May
+be moot at launch if physio-first (FD-1)</td>
 </tr>
 <tr>
 <td>Onfido webhook never arrives (delivery failure, or applicant
 abandons the document upload)</td>
-<td>Job timeout (proposed: 72 hours), after which the applicant surfaces
-in the admin queue as <code>needs_more_info</code> with automatic reason
-“identity check not completed”</td>
-<td>Avoids leaving the applicant in <code>pending</code> indefinitely
-with no visible next step</td>
+<td>Job timeout — <strong>configurable, default 48 hours</strong>
+(<code>verification.onfido_timeout_hours</code>, EPIC-J config) — after
+which the applicant surfaces in the admin queue as
+<code>needs_more_info</code> with automatic reason “identity check not
+completed”</td>
+<td>Onfido itself returns in minutes (researched 2026-07-17), so this
+window only guards an applicant who <em>abandons</em> their upload —
+long enough for a real person to return and finish, tunable without a
+deploy</td>
 </tr>
 <tr>
 <td>Reapplication by a <code>rejected</code> member</td>
 <td>Permitted — the unique constraint only blocks
 non-<code>rejected</code> rows; a fresh attempt creates a new
-<code>identity.members</code> row</td>
+<code>identity.members</code> row. <strong>The admin reviewing the new
+attempt sees the prior rejection(s)</strong> — reason + date — surfaced
+on the queue detail (Section 6). No cooldown</td>
 <td>A genuinely rejected applicant isn’t locked out forever (e.g. after
-resolving a registration lapse). Cooldown / admin visibility of the
-prior rejection is an open question (Section 11)</td>
+resolving a registration lapse), but the reviewer gets the
+prior-rejection context to spot a pattern or avoid repeating work.
+Resolved 2026-07-17 (Section 11)</td>
 </tr>
 <tr>
 <td>Reapplication by an <code>expelled</code> member</td>
@@ -568,9 +609,8 @@ don’t reliably expose a queryable email field</td>
 specific to EPIC-A</h2>
 <ul>
 <li><strong>Why admin queue reads aren’t
-<code>identity_access_log</code> events</strong> (flagged for
-confirmation in Section 11 — if this reading is wrong it needs
-correcting before build, not after):
+<code>identity_access_log</code> events</strong> (<strong>confirmed
+2026-07-17</strong> — the interpretation below is accepted):
 <ul>
 <li>The architecture spec (Section 4.4) draws the line at “routine
 automated system access” vs. moderator-initiated identity access.</li>
@@ -633,35 +673,53 @@ the timeout window, not stuck silently in <code>pending</code>.</li>
 <hr />
 <h2 id="open-questions">11. Open questions</h2>
 <ul>
-<li><strong>BASRAT/SST register access</strong>: confirm whether either
-publishes a queryable API or only a manual/scrape-only public register.
-This determines whether Step A (Section 5) can run automatically for
-these two bodies at all, or whether every BASRAT/SST applicant is
-manual-review-only from day one. Relevant to FD-1 (professional scope)
-but is itself an implementation detail, not a scope decision.</li>
-<li><strong>Rejection cooldown/reapplication</strong>: should a
-<code>rejected</code> applicant be able to immediately resubmit (current
-design permits this via Section 2’s constraint scoping), or should there
-be a cooldown, or should the admin reviewing a resubmission see the
-prior rejection reason? Not addressed in the PRD.</li>
-<li><strong>Appeals process</strong>: PRD Section 8.1 says a rejection
-reason is provided but doesn’t describe an appeals mechanism beyond
-reapplying from scratch. Worth confirming with Andrew Renshaw/Paul Gouge
-whether MVP needs anything more formal.</li>
-<li><strong>Onfido webhook timeout value</strong>: 72 hours is this
-spec’s proposal, not a PRD-specified figure — worth a sanity check
-against Onfido’s own typical turnaround time before committing to
-it.</li>
-<li><strong>Identity-access-log boundary (Section 9)</strong>: confirm
-the reasoning that routine admin verification-queue review is not an
-<code>identity_access_log</code> event is correct before build — it’s a
-meaningful interpretation of PRD Section 9.4, not an explicit PRD
-statement.</li>
-<li><strong>Exact applicant-facing rejection wording for the
-expelled-reapplication case</strong> (Section 2): this spec proposes a
-generic message that doesn’t confirm expelled status to the applicant —
-worth a final check that this is the right call versus, say, a
-legal/compliance preference for more explicit language.</li>
+<li><del><strong>BASRAT/SST register access</strong></del> —
+<strong>resolved 2026-07-17</strong> (researched): both publish a
+<em>public register-check web page</em> but <strong>no documented
+API</strong> (Section 5). MVP routes BASRAT/SST applicants to manual
+review; follow-up is a direct enquiry to each registrar
+(registrar@basrat.org, admin@thesst.org) about API/data access. May be
+moot at launch if physio-first (FD-1) — HCPC is then the primary
+register. <em>(External action item, not a design gap.)</em></li>
+<li><del><strong>Rejection cooldown/reapplication</strong></del> —
+<strong>resolved 2026-07-17</strong>: a <code>rejected</code> applicant
+may resubmit immediately (no cooldown), and the admin reviewing the new
+attempt <strong>sees the prior rejection(s)</strong> — reason + date —
+on the queue detail (Sections 6, 8). Transparency for the reviewer
+without locking out a legitimate reapplicant who has fixed the
+issue.</li>
+<li><del><strong>Appeals process</strong></del> — <strong>resolved
+2026-07-17</strong> (working call): for MVP there is <strong>no separate
+appeals workflow</strong> — reapplying with corrected/additional
+evidence <em>is</em> the appeal path, re-reviewed fresh by an admin
+(founder-led verification makes a formal appeals queue overkill at MVP
+scale). <strong>Flagged for Andrew Renshaw / Paul Gouge to confirm the
+policy</strong> (see the standing items in the open-questions doc
+§4).</li>
+<li><del><strong>Onfido webhook timeout value</strong></del> —
+<strong>resolved 2026-07-17</strong>: <strong>configurable, default 48
+hours</strong> (<code>verification.onfido_timeout_hours</code>, EPIC-J
+config). Onfido itself returns in minutes (researched), so this window
+only guards an applicant who abandons their upload — tunable without a
+deploy, consistent with the billing grace-period-as-config
+decision.</li>
+<li><del><strong>Identity-access-log boundary (Section 9)</strong></del>
+— <strong>confirmed 2026-07-17</strong>: routine admin
+verification-queue review is <strong>not</strong> an
+<code>identity_access_log</code> event (that log is for a moderator
+revealing an existing verified member’s real identity behind their
+handle — PRD §9.4). Reviewing a pending applicant’s own submitted
+evidence is the ordinary function <code>IdentityService</code> exists
+for; logging it would dilute the log’s value as a trust artifact.</li>
+<li><del><strong>Exact applicant-facing rejection wording for the
+expelled-reapplication case</strong> (Section 2)</del> —
+<strong>resolved 2026-07-17</strong>: keep the <strong>generic</strong>
+message (do not confirm expelled status to the applicant — confirming it
+would hand a bad-faith actor certainty their identity was detected). The
+<em>exact wording</em> is folded into the pre-launch legal-counsel
+review already bundled with the right-to-erasure / DPIA work
+(open-questions doc §4), in case compliance prefers more explicit
+language — but the default is generic.</li>
 </ul>
 
 </main>

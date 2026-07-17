@@ -75,7 +75,8 @@ threshold (EPIC-D Section 6), trending window / result-count N (EPIC-C
 Section 8), the <strong>billing grace-period days</strong> and
 <strong>default trial-length days</strong> (EPIC-H Sections 4, 7 —
 numeric values here, billing semantics stay in EPIC-H; see Section 7),
-and similar knobs</li>
+the <strong>Onfido webhook timeout hours</strong> (EPIC-A Section 8,
+default 48), and similar knobs</li>
 </ul>
 <p><strong>Out of scope</strong> (owned elsewhere):</p>
 <ul>
@@ -157,7 +158,9 @@ and tags are the exception — they stay in <code>community</code>
 this epic provides only the <em>management</em> endpoints over them.</p>
 <pre><code>config.settings                        -- key/value tunable platform settings
   key           text PK               -- e.g. &#39;badge.top_contributor_percentile&#39;,
-                                          &#39;feed.trending_min_results&#39;, &#39;feed.trending_window_steps&#39;
+                                          &#39;feed.trending_min_results&#39;, &#39;feed.trending_window_steps&#39;,
+                                          &#39;billing.grace_period_days&#39;, &#39;billing.default_trial_days&#39;,
+                                          &#39;verification.onfido_timeout_hours&#39;
   value         jsonb
   description   text                   -- human-readable, shown in the admin UI
   updated_by    uuid                   -- Administrator&#39;s member_id

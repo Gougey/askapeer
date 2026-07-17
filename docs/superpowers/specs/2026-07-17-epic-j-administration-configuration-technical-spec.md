@@ -33,7 +33,7 @@ Source of truth: `docs/askapeer-prd-v0.1.md`, Section 4 (personas — the PRD al
 - Forum **categories** (EPIC-C Section 3 — "admin-managed")
 - The **tag vocabulary** and, once FD-4 lands, the **search synonym dictionary** (EPIC-C Sections 3–4)
 - The **handle-name blocklist** config table (EPIC-B Section 3, 11 — "config table" agreed)
-- **Tunable platform settings**: top-contributor badge threshold (EPIC-D Section 6), trending window / result-count N (EPIC-C Section 8), the **billing grace-period days** and **default trial-length days** (EPIC-H Sections 4, 7 — numeric values here, billing semantics stay in EPIC-H; see Section 7), and similar knobs
+- **Tunable platform settings**: top-contributor badge threshold (EPIC-D Section 6), trending window / result-count N (EPIC-C Section 8), the **billing grace-period days** and **default trial-length days** (EPIC-H Sections 4, 7 — numeric values here, billing semantics stay in EPIC-H; see Section 7), the **Onfido webhook timeout hours** (EPIC-A Section 8, default 48), and similar knobs
 
 **Out of scope** (owned elsewhere):
 
@@ -67,7 +67,9 @@ Introduces a **new `config` schema** — an **architecture addition, approved 20
 ```
 config.settings                        -- key/value tunable platform settings
   key           text PK               -- e.g. 'badge.top_contributor_percentile',
-                                          'feed.trending_min_results', 'feed.trending_window_steps'
+                                          'feed.trending_min_results', 'feed.trending_window_steps',
+                                          'billing.grace_period_days', 'billing.default_trial_days',
+                                          'verification.onfido_timeout_hours'
   value         jsonb
   description   text                   -- human-readable, shown in the admin UI
   updated_by    uuid                   -- Administrator's member_id
