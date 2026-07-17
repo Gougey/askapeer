@@ -203,6 +203,12 @@ spec §1, §13.)</em></li>
 alphanumeric plus underscore/hyphen</strong>. Not a PRD requirement, but
 now settled rather than a placeholder. <em>(EPIC-B spec §3,
 §13.)</em></li>
+<li><strong>Handle-name blocklist storage — resolved
+2026-07-17.</strong> Config table, not a code constant — so
+profession-specific terms (specialty names, credentials,
+professional-body abbreviations) can be added without a deploy, since
+they can’t be fully enumerated upfront. <em>(EPIC-B spec §3, §11,
+§13.)</em></li>
 </ul>
 <hr />
 <h2 id="per-epic-open-questions">3. Per-epic open questions</h2>
@@ -234,14 +240,9 @@ worth a final check that this is the right call versus a
 legal/compliance preference for more explicit language.</li>
 </ul>
 <h3 id="epic-b-handlesprofile">EPIC-B — Handles/Profile</h3>
-<ul>
-<li><strong>Blocklist storage/maintenance</strong>: config table
-vs. code constant — implementation detail, needs picking before
-build.</li>
-</ul>
-<p><em>(EPIC-B’s other flagged item, moderator-forced rename, is covered
-in §1.4 above. The handle length/character rules, the
-expulsion/re-registration gap, and the tag-follow mechanism are all
+<p><em>(No local open questions remain. The moderator-forced rename is
+covered in §1.4 above; the handle length/character rules, blocklist
+storage, expulsion/re-registration gap, and tag-follow mechanism are all
 resolved — see §2.)</em></p>
 <h3 id="epic-c-forum">EPIC-C — Forum</h3>
 <ul>

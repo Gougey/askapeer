@@ -84,7 +84,7 @@ Continues directly from the EPIC-A spec, Section 7: the moment `identity.members
 
 - **Case-insensitive uniqueness** — `handle_name` collisions are checked ignoring case, so `DrSmith` and `drsmith` can't both exist (visually near-identical handles would otherwise be a natural phishing/impersonation vector in a trust-based community).
 - **No real-name plausibility check at creation time** — the platform cannot algorithmically know whether "Andrew_R_Physio" is someone's real name. This is handled by policy and reporting (PRD Section 9.3's "deliberately identifying yourself" rule), not creation-time validation, and is explicitly out of this spec's ability to enforce technically.
-- **Blocklist filtering**: profanity, slurs, and terms impersonating platform roles (`admin`, `moderator`, `askapeer`, `support`, and close variants) are rejected at creation time — this one *is* technically enforceable and prevents an obvious trust/impersonation failure mode before it reaches a human moderator.
+- **Blocklist filtering**: profanity, slurs, and terms impersonating platform roles (`admin`, `moderator`, `askapeer`, `support`, and close variants) are rejected at creation time — this one *is* technically enforceable and prevents an obvious trust/impersonation failure mode before it reaches a human moderator. Stored in a **config table**, not a code constant (agreed by Adrian, 2026-07-17) — see Section 11 for why.
 - **Length and character constraints**: **3–30 characters, alphanumeric plus underscore/hyphen** (agreed by Adrian, 2026-07-17). Not a PRD requirement, but now a settled decision rather than a placeholder.
 - **No reuse of a previously-expelled handle's exact name** — checked against `community.handle_name_history` as well as current `handles` rows, so a fresh registration can't casually re-adopt an identity an expelled member used, which could otherwise confuse other members about who they're now talking to.
 
@@ -241,7 +241,7 @@ Several fields and behaviors on `community.handles` are written by other epics; 
 ## 11. Non-functional notes specific to EPIC-B
 
 - **No new identity-schema access**: this epic's endpoints operate entirely under a `community`-schema database role; the cross-schema regression test the architecture spec requires (Section 9) should be extended to cover this epic's endpoints specifically once built, the same way the EPIC-A spec's test plan does for its own.
-- **Handle-name blocklist maintenance**: the profanity/impersonation blocklist (Section 3) needs an update mechanism (config-driven, not a code change per new term) — small detail, but worth deciding where that list lives (a config table vs. an application constant) before build; not specified further here since it has no architectural weight either way.
+- **Handle-name blocklist storage**: the profanity/impersonation blocklist (Section 3) lives in a **config table**, not a code constant (agreed by Adrian, 2026-07-17). Rationale: beyond the obvious profanity/role-impersonation terms, profession-specific words will need adding over time (specialty names, credentials, professional-body abbreviations that could hint at identity or impersonate authority) — these can't be fully enumerated upfront, and coupling every addition to a code deploy is friction felt exactly when responding to abuse. A config table lets a moderator add a term without a release. No `identity`-schema involvement; ordinary `community`/config data.
 
 ---
 
@@ -263,4 +263,4 @@ Several fields and behaviors on `community.handles` are written by other epics; 
 - ~~**Handle length/character rules**~~ — **resolved 2026-07-17**: 3–30 characters, alphanumeric plus underscore/hyphen, agreed by Adrian. See Section 3.
 - **Moderator-forced rename as a first-class moderation action**: should `POST /v1/admin/handles/:handle_id/rename` (Section 5) actually live in EPIC-F's action-type enum (`remove_content`, `warn`, `suspend`, `expel` per the architecture spec, Section 7.2) rather than as a separate EPIC-B-only endpoint? Flagged for reconciliation once the EPIC-F spec is written.
 - ~~**Expelled-member re-registration gap**~~ — **resolved 2026-07-14**, see Section 10 above and EPIC-A/EPIC-F's specs.
-- **Blocklist storage/maintenance mechanism**: config table vs. code constant — an implementation detail with no architectural weight, but needs picking before build.
+- ~~**Blocklist storage/maintenance mechanism**~~ — **resolved 2026-07-17**: config table (not a code constant), so profession-specific terms can be added without a deploy. See Sections 3 and 11.

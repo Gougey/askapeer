@@ -161,7 +161,9 @@ impersonating platform roles (<code>admin</code>,
 <code>moderator</code>, <code>askapeer</code>, <code>support</code>, and
 close variants) are rejected at creation time — this one <em>is</em>
 technically enforceable and prevents an obvious trust/impersonation
-failure mode before it reaches a human moderator.</li>
+failure mode before it reaches a human moderator. Stored in a
+<strong>config table</strong>, not a code constant (agreed by Adrian,
+2026-07-17) — see Section 11 for why.</li>
 <li><strong>Length and character constraints</strong>: <strong>3–30
 characters, alphanumeric plus underscore/hyphen</strong> (agreed by
 Adrian, 2026-07-17). Not a PRD requirement, but now a settled decision
@@ -497,12 +499,17 @@ database role; the cross-schema regression test the architecture spec
 requires (Section 9) should be extended to cover this epic’s endpoints
 specifically once built, the same way the EPIC-A spec’s test plan does
 for its own.</li>
-<li><strong>Handle-name blocklist maintenance</strong>: the
-profanity/impersonation blocklist (Section 3) needs an update mechanism
-(config-driven, not a code change per new term) — small detail, but
-worth deciding where that list lives (a config table vs. an application
-constant) before build; not specified further here since it has no
-architectural weight either way.</li>
+<li><strong>Handle-name blocklist storage</strong>: the
+profanity/impersonation blocklist (Section 3) lives in a <strong>config
+table</strong>, not a code constant (agreed by Adrian, 2026-07-17).
+Rationale: beyond the obvious profanity/role-impersonation terms,
+profession-specific words will need adding over time (specialty names,
+credentials, professional-body abbreviations that could hint at identity
+or impersonate authority) — these can’t be fully enumerated upfront, and
+coupling every addition to a code deploy is friction felt exactly when
+responding to abuse. A config table lets a moderator add a term without
+a release. No <code>identity</code>-schema involvement; ordinary
+<code>community</code>/config data.</li>
 </ul>
 <hr />
 <h2 id="test-plan">12. Test plan</h2>
@@ -567,9 +574,10 @@ written.</li>
 <li><del><strong>Expelled-member re-registration gap</strong></del> —
 <strong>resolved 2026-07-14</strong>, see Section 10 above and
 EPIC-A/EPIC-F’s specs.</li>
-<li><strong>Blocklist storage/maintenance mechanism</strong>: config
-table vs. code constant — an implementation detail with no architectural
-weight, but needs picking before build.</li>
+<li><del><strong>Blocklist storage/maintenance mechanism</strong></del>
+— <strong>resolved 2026-07-17</strong>: config table (not a code
+constant), so profession-specific terms can be added without a deploy.
+See Sections 3 and 11.</li>
 </ul>
 
 </main>
