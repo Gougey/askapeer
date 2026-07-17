@@ -243,6 +243,31 @@ a minimum floor, tunable) — consistent with the no-ego thesis since the
 badge is merit-earned, not rank/seniority. Introduces one new coupling:
 EPIC-F’s <code>remove_content</code> now triggers the EPIC-D clawback.
 <em>(EPIC-D spec §3, §6, §7, §9, §10; EPIC-F spec §3.)</em></li>
+<li><strong>Push notifications added as a third channel — 2026-07-17
+(Adrian).</strong> EPIC-G originally specified only two delivery
+channels (in-app, email); server-generated <strong>push</strong> had no
+mechanism or user preference anywhere. Adrian’s direction: describe the
+push mechanism/technology <strong>and</strong> the user preference now,
+but ship it <strong>inert (preference visible, greyed-out) for the
+web-only MVP</strong> — the real per-event triggers (expected:
+<code>reply</code>/<code>kudos_received</code>-type interactions,
+<em>not</em> the weekly digest) become apparent during app testing.
+Implemented as: <code>community.notification_preferences</code> gains
+<code>push_enabled</code>; a new
+<code>community.push_subscriptions</code> registry table (handle-scoped,
+so post-handle-only); transport is <strong>W3C Web Push</strong>
+(browser Push API + service worker + VAPID keys) for the web MVP,
+generalising to native APNs/FCM in Phase 2 (FD-3) via the same
+preference/worker; delivery is via the existing notification BullMQ
+worker with the fan-out branch <strong>gated off at MVP</strong>. Push
+copy is constrained to handle-attributed, non-identifying content (no
+real names, no patient-identifying detail — a payload can surface on a
+lock screen). The registration endpoints function at MVP; only outbound
+delivery is inert. Architecture spec §4.2 schema and §7.3 amended to
+match. Remaining sub-questions (which types push; batching/throttling;
+PWA/service-worker prerequisite) are deferred to testing, tracked in
+EPIC-G’s §3 below. <em>(EPIC-G spec §1, §2, §5, §6.2, §8, §10, §11;
+architecture spec §4.2, §7.3.)</em></li>
 <li><strong>EPIC-F (moderation) — all four local questions resolved
 2026-07-17.</strong> (1) <strong><code>anonymity_violation</code> is a
 priority report category</strong>, alongside
@@ -363,9 +388,16 @@ that removing member control here is acceptable.</li>
 <li><strong>Digest cadence/unsubscribe mechanics</strong>: assumed
 weekly, email-only per the PRD’s own naming — no further design done
 beyond that assumption.</li>
+<li><strong>Push channel — per-type triggers and throttling</strong>
+(deferred to testing, not blocking): the push mechanism/preference is
+now specified and ships inert for MVP (see §2) — which notification
+types actually push, and the batching/throttling to avoid nuisance, are
+to be settled during app testing. Also a prerequisite check: the web
+client must be a PWA with a service worker (and, on iOS,
+added-to-Home-Screen) before push can be switched on.</li>
 </ul>
 <p><em>(The tag-follow mechanism the digest depends on is resolved — see
-§2.)</em></p>
+§2. The push channel addition itself is resolved — see §2.)</em></p>
 <h3 id="epic-h-subscriptionpayments">EPIC-H — Subscription/Payments</h3>
 <ul>
 <li><strong>FD-2 itself</strong>: pricing, trial length, and processor

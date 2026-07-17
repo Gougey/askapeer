@@ -469,8 +469,20 @@ community.moderation_actions           -- immutable: INSERT-only grant
   moderator_id, reason, created_at
 
 community.notifications              (handle_id, type, payload, read_at, created_at)
-community.notification_preferences   (handle_id, type, in_app_enabled, email_enabled)
+community.notification_preferences   (handle_id, type, in_app_enabled, email_enabled, push_enabled)
+community.push_subscriptions         (handle_id, transport, endpoint, p256dh, auth, user_agent, created_at, last_seen_at, revoked_at)   -- push channel; see Section 7.3 and EPIC-G spec §6.2
 community.member_interests           (handle_id, tag, weight, updated_at)   -- see Section 8</code></pre>
+<blockquote>
+<p><strong>Amendment (2026-07-17)</strong>:
+<code>notification_preferences</code> gains a <code>push_enabled</code>
+column and a <code>community.push_subscriptions</code> table are added,
+for the <strong>push notification channel</strong> introduced by the
+EPIC-G spec (§6.2). Push is a third delivery channel alongside in-app
+and email; it is <strong>fully specified but ships inert for the
+web-only MVP</strong> (the preference is visible but greyed-out and
+nothing is delivered), and generalises to native APNs/FCM transports in
+Phase 2. See §7.3 below.</p>
+</blockquote>
 <h3 id="the-deliberate-exception-case-attestations">4.3 The deliberate
 exception: case attestations</h3>
 <p>Case-discussion attestations (PRD Section 10.3) must be “linked to
@@ -706,6 +718,22 @@ entry (Section 4.4).</p>
 <p>Notification types for MVP: <code>reply</code>, <code>mention</code>,
 <code>kudos_received</code>, <code>verification_status_change</code>,
 and the Should-have <code>weekly_digest</code>.</p>
+<p><strong>Delivery channels (amended 2026-07-17)</strong>: a member
+sets preferences per type across <strong>three channels — in-app, email,
+and push</strong>. <strong>Push</strong> uses the W3C Web Push protocol
+(browser Push API + service worker + VAPID keys) for the web MVP, with
+subscriptions stored in <code>community.push_subscriptions</code>
+(post-handle only) and delivered by the same worker that writes the
+in-app row. The channel is <strong>fully described in the EPIC-G spec
+(§6.2) but ships inert for the web-only MVP</strong> — the preference is
+present and visible (greyed-out) but no push is delivered at launch;
+which events push, and the batching/throttling rules, are settled during
+app testing. Native push transports (APNs/FCM) are Phase 2 with the
+native apps (FD-3); the preference and worker are modelled
+channel-generically so native is additive. Push copy carries only
+handle-attributed, non-identifying content — never real names or
+patient-identifying detail, since a payload can surface on a lock
+screen.</p>
 <hr />
 <h2 id="researchnews-feed-epic-i">8. Research/news feed (EPIC-I)</h2>
 <p>Re-architected onto the chosen Node.js/TypeScript stack from the

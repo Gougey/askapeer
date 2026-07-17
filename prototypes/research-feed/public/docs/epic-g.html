@@ -23,6 +23,23 @@ Section 4.2 (<code>community.notifications</code>,
 (<code>NotificationService</code> as one of only three modules with an
 <code>identity</code>-schema grant), and Section 7.3 (notification types
 and delivery mechanism) — read those first.</p>
+<p><strong>Scope addition (2026-07-17)</strong>: this spec adds a
+<strong>third delivery channel — push notifications — beyond the
+architecture spec’s in-app + email pair</strong> (§7.3 and the §4.2
+<code>notification_preferences</code> schema). The mechanism and its
+user preference are <strong>fully described here but ship inert for the
+web-only MVP</strong>: the per-type push preference is present in the
+data model and surfaced in the UI (greyed-out / “coming soon”), and the
+delivery worker is specified, but nothing is sent at launch. This lets
+the preference and its storage exist from day one while the actual
+per-event push triggers are pinned down during app testing (the
+expectation is engagement events like <code>reply</code> and
+<code>kudos_received</code>, <em>not</em> the
+<code>weekly_digest</code>). Native push (APNs/FCM) is Phase 2 with
+native apps (FD-3); the channel is modelled generically so Phase 2
+reuses the same preference and worker. This is a scope addition to be
+reflected back into the architecture spec’s §7.3, the same way
+EPIC-I/EPIC-J are additions to the PRD.</p>
 <p>Source of truth: <code>docs/askapeer-prd-v0.1.md</code>, the
 Must-have “Notifications” row (Section 6.1) and the Should-have “Email
 digest” row.</p>
@@ -38,37 +55,70 @@ dual-schema access</a></li>
 notification gap</a></li>
 <li><a href="#notification-types-and-triggers">Notification types and
 triggers</a></li>
-<li><a href="#preferences-and-what-cant-be-disabled">Preferences —
-and what can’t be disabled</a></li>
+<li><a href="#channels-preferences-and-the-push-mechanism">Channels,
+preferences, and the push mechanism</a></li>
 <li><a
-href="#weekly-digest-built-on-epic-bs-unified-follows-table">Weekly
+href="#three-channels-per-type-preferences">Weekly
 digest, built on EPIC-B’s unified follows table</a></li>
-<li><a href="#api-endpoints">API endpoints</a></li>
-<li><a href="#non-functional-notes-specific-to-epic-g">Non-functional
+<li><a href="#the-push-channel-mechanism-described-mvp-status-inert">API endpoints</a></li>
+<li><a href="#weekly-digest-built-on-epic-bs-unified-follows-table">Non-functional
 notes specific to EPIC-G</a></li>
-<li><a href="#test-plan">Test plan</a></li>
-<li><a href="#open-questions">Open questions</a></li>
+<li><a href="#api-endpoints">Test plan</a></li>
+<li><a href="#non-functional-notes-specific-to-epic-g">Open questions</a></li>
 </ol>
 <hr />
 <h2 id="scope">1. Scope</h2>
 <p><strong>In scope</strong>: the in-app notification store, delivery
-preferences, email delivery via <code>NotificationService</code>, and
-the Should-have weekly digest.</p>
+preferences across <strong>three channels — in-app, email, and
+push</strong>, email delivery via <code>NotificationService</code>, the
+push-notification mechanism and its subscription registry (described
+here, inert for MVP — Section 6), and the Should-have weekly digest.</p>
 <p><strong>Out of scope</strong>: the domain events themselves (new
 comment, kudos awarded, verification decision) — those are EPIC-C,
-EPIC-D, and EPIC-A/EPIC-F’s data; this epic only reacts to them.</p>
+EPIC-D, and EPIC-A/EPIC-F’s data; this epic only reacts to them.
+<strong>Native push transports (APNs/FCM)</strong> are Phase 2 with the
+native apps (FD-3) — the MVP describes Web Push only, but the preference
+and worker are modelled channel-generically so native is additive, not a
+rewrite. <strong>Active push delivery at MVP</strong> is out of scope by
+decision (the channel ships inert — Section 6), not by omission.</p>
 <hr />
 <h2 id="data-model">2. Data model</h2>
 <p>Reuses <code>community.notifications</code> and
-<code>community.notification_preferences</code>, already defined in the
-architecture spec, Section 4.2:</p>
+<code>community.notification_preferences</code> (architecture spec,
+Section 4.2), with <strong>one new column and one new table</strong> for
+the push channel:</p>
 <pre><code>community.notifications
   id, handle_id, type, payload jsonb, read_at, created_at
 
 community.notification_preferences
-  handle_id, type, in_app_enabled, email_enabled</code></pre>
-<p>No new tables are needed for the in-app/email mechanics themselves;
-this spec’s additions are behavioral (Sections 4, 6, 7), not schema.</p>
+  handle_id, type, in_app_enabled, email_enabled,
+  push_enabled            -- NEW: third channel, default false; see Section 6
+
+community.push_subscriptions          -- NEW: the push-delivery registry
+  id, handle_id,
+  transport enum(web_push),           -- Phase 2 adds: apns, fcm
+  endpoint text,                      -- Web Push: the browser push service URL
+  p256dh text, auth text,             -- Web Push: the subscription&#39;s public key + auth secret
+  user_agent text,                    -- for a member-facing &quot;your devices&quot; list
+  created_at, last_seen_at,
+  revoked_at nullable                 -- soft-revoke on unsubscribe / expiry</code></pre>
+<ul>
+<li><code>push_subscriptions</code> is <strong>handle-scoped, not
+member-scoped</strong> — consistent with every other community-facing
+table, and it means a push subscription only ever exists for an
+<code>approved_verified</code> member who has a handle (which is exactly
+why push, like in-app, is a post-handle-only channel — Section 4).</li>
+<li>One member/handle may have <strong>many</strong> rows (one per
+browser/device that granted permission); delivery fans out across the
+live (non-<code>revoked_at</code>) rows.</li>
+<li><code>default false</code> on <code>push_enabled</code> matters:
+push is <strong>opt-in per browser permission grant anyway</strong>, and
+the channel is inert at MVP, so no member is opted into a channel that
+does nothing.</li>
+</ul>
+<p>The in-app and email mechanics themselves still need no new schema —
+those additions are behavioral (Sections 4, 6, 7). The push channel is
+the only part of this epic that adds storage.</p>
 <hr />
 <h2 id="notificationservices-dual-schema-access">3.
 <code>NotificationService</code>’s dual-schema access</h2>
@@ -154,10 +204,11 @@ the five notification types.</p>
 triggers</h2>
 <table>
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
 </colgroup>
 <thead>
 <tr>
@@ -165,6 +216,7 @@ triggers</h2>
 <th>Trigger</th>
 <th>Owning epic (event source)</th>
 <th>Handle exists?</th>
+<th>Push-eligible?</th>
 </tr>
 </thead>
 <tbody>
@@ -173,30 +225,35 @@ triggers</h2>
 <td>New comment on a handle’s post/comment</td>
 <td>EPIC-C</td>
 <td>Always</td>
+<td><strong>Likely</strong> (TBD in testing)</td>
 </tr>
 <tr>
 <td><code>mention</code></td>
 <td><code>@handle</code> parsed in a post/comment body</td>
 <td>EPIC-C</td>
 <td>Always</td>
+<td><strong>Likely</strong> (TBD in testing)</td>
 </tr>
 <tr>
 <td><code>kudos_received</code></td>
 <td>Kudos awarded to a handle’s post/comment</td>
 <td>EPIC-D</td>
 <td>Always</td>
+<td><strong>Likely</strong> (TBD in testing)</td>
 </tr>
 <tr>
 <td><code>verification_status_change</code></td>
 <td>Any <code>identity.verification_decisions</code> transition</td>
 <td>EPIC-A (and EPIC-F, for suspend/expel)</td>
 <td>Sometimes — Section 4</td>
+<td>Post-handle changes only (pre-handle is email — Section 4)</td>
 </tr>
 <tr>
 <td><code>weekly_digest</code> (Should-have)</td>
 <td>Scheduled job</td>
 <td>EPIC-C/EPIC-D data</td>
 <td>Always</td>
+<td><strong>No</strong> — a digest is not a real-time nudge</td>
 </tr>
 </tbody>
 </table>
@@ -204,13 +261,25 @@ triggers</h2>
 to the triggering domain event, per the architecture spec’s general
 worker pattern (Section 3) — this epic doesn’t introduce a new delivery
 mechanism, only the specific job definitions.</p>
+<p>The <strong>Push-eligible?</strong> column records the
+<em>intent</em> for when the push channel is activated (post-MVP); it is
+not live at launch. Which types actually push — and how they’re
+batched/throttled to avoid nuisance (a burst of kudos shouldn’t fire ten
+notifications) — is deliberately left to be settled during app testing,
+per Section 6. The clear early call is that the
+<code>weekly_digest</code> is <strong>not</strong> push-eligible: push
+is for time-sensitive, “someone interacted with you” moments, not a
+scheduled roundup.</p>
 <hr />
-<h2 id="preferences-and-what-cant-be-disabled">6. Preferences — and what
-can’t be disabled</h2>
+<h2 id="channels-preferences-and-the-push-mechanism">6. Channels,
+preferences, and the push mechanism</h2>
+<h3 id="three-channels-per-type-preferences">6.1 Three channels,
+per-type preferences</h3>
 <p><code>community.notification_preferences</code> lets a member
-configure <code>in_app_enabled</code>/<code>email_enabled</code>
-<strong>per type</strong> — with one proposed exception (flagged in
-Section 11 as a proposal, not confirmed policy):</p>
+configure <strong>three channels per notification type</strong>:
+<code>in_app_enabled</code>, <code>email_enabled</code>, and (new)
+<code>push_enabled</code> — with one proposed exception below (flagged
+in Section 11 as a proposal, not yet confirmed policy).</p>
 <ul>
 <li><strong><code>verification_status_change</code> email cannot be
 disabled</strong>, even though a member can disable email for
@@ -222,8 +291,88 @@ regardless of preferences.</li>
 <li>Only the <strong>email</strong> channel is forced: in-app is moot
 for the pre-handle cases (Section 4), and for post-handle status changes
 there’s no strong reason to force in-app specifically — only to
-guarantee delivery somewhere.</li>
+guarantee delivery somewhere. Push is never forced (it depends on a
+browser permission grant the member can revoke at any time).</li>
 </ul>
+<h3 id="the-push-channel-mechanism-described-mvp-status-inert">6.2 The
+push channel — mechanism (described), MVP status (inert)</h3>
+<p>Push is added as a first-class channel now, but <strong>ships inert
+for the web-only MVP</strong>: the preference exists and is shown in the
+settings UI as <strong>greyed-out / “coming soon”</strong>, and the
+mechanism below is specified so it can be switched on without a schema
+or model change once the per-event triggers are validated in
+testing.</p>
+<p><strong>Transport — Web Push (MVP), native later.</strong> For the
+web MVP the transport is the <strong>W3C Web Push protocol</strong>: the
+browser’s Push API + a service worker + a <strong>VAPID</strong> key
+pair (application server identity; the private key is a server secret,
+config-managed like other secrets in the architecture spec’s Section 6).
+No third-party push SaaS — messages go from our delivery worker straight
+to the browser’s push service (the endpoint stored on the subscription),
+keeping delivery on first-party infrastructure, consistent with the
+platform’s data-residency/trust posture. Phase 2 adds
+<code>apns</code>/<code>fcm</code> rows to
+<code>push_subscriptions.transport</code> for native apps; the
+preference (<code>push_enabled</code>) and the worker’s fan-out logic
+are unchanged by that addition.</p>
+<p><strong>Subscription lifecycle:</strong></p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Grant</strong></td>
+<td>The web client asks the browser for notification permission; on
+grant it registers a push subscription and <code>POST</code>s the
+<code>endpoint</code> + <code>p256dh</code>/<code>auth</code> keys to
+the API (Section 8), creating a
+<code>community.push_subscriptions</code> row for the member’s
+handle.</td>
+</tr>
+<tr>
+<td><strong>Deliver</strong></td>
+<td>A BullMQ worker (the same job that writes the in-app row and
+enqueues email) fans out to every live subscription row for the handle
+<strong>when <code>push_enabled</code> is true for that type</strong> —
+encrypting the payload per the Web Push spec and <code>POST</code>ing it
+to each <code>endpoint</code>. <strong>At MVP this branch is
+disabled</strong>, so no push is sent even where a subscription
+exists.</td>
+</tr>
+<tr>
+<td><strong>Revoke/expire</strong></td>
+<td>On unsubscribe, or a <code>410 Gone</code>/<code>404</code> from the
+push service (subscription expired), the row is soft-revoked
+(<code>revoked_at</code> set) and skipped on future fan-out.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Payload discipline — the anonymity rule reaches into push
+too.</strong> A push payload must contain <strong>only
+handle-attributed, non-identifying content</strong> (e.g. <em>“You
+received kudos”</em>, <em>“New reply on your post”</em>) — never real
+names (which the service never has for other members anyway) and,
+importantly, <strong>no patient-identifying content</strong>: because a
+case-discussion reply could surface on a lock screen, push copy is
+deliberately generic (“New reply in a case discussion”) and links into
+the app rather than quoting the content. This is why push copy is
+defined per type here, not derived verbatim from the notification
+payload.</p>
+<p><strong>Why model it now if it’s inert?</strong> So the preference
+and its storage exist from launch (no migration or UI churn when it’s
+switched on), and so the anonymity/PHI constraints on push copy are
+settled as a design decision rather than discovered late. The remaining
+open call — <em>which</em> types push, and how they’re batched/throttled
+— is intentionally deferred to app testing (Section 11), where real
+interaction volume will show what’s useful versus what’s noise.</p>
 <hr />
 <h2 id="weekly-digest-built-on-epic-bs-unified-follows-table">7. Weekly
 digest, built on EPIC-B’s unified follows table</h2>
@@ -255,11 +404,23 @@ PATCH /v1/notifications/:id/read
 POST  /v1/notifications/read-all
 
 GET   /v1/notification-preferences
-PUT   /v1/notification-preferences        { type, in_app_enabled, email_enabled }</code></pre>
+PUT   /v1/notification-preferences        { type, in_app_enabled, email_enabled, push_enabled }
+
+--- push subscription registry (Section 6.2) ---
+GET    /v1/push/vapid-public-key          -- client needs this to subscribe
+POST   /v1/push/subscriptions             { endpoint, keys: { p256dh, auth }, user_agent }
+DELETE /v1/push/subscriptions/:id         -- unsubscribe this device (soft-revoke)</code></pre>
 <p><code>PUT .../notification-preferences</code> rejects an attempt to
 set <code>email_enabled = false</code> for
-<code>verification_status_change</code>, per Section 6, if that proposal
-is confirmed.</p>
+<code>verification_status_change</code>, per Section 6.1 (a proposal
+pending confirmation — see Section 11). It accepts
+<code>push_enabled</code> for any type, but at MVP the value is stored
+without effect (the delivery branch is inert, Section 6.2).</p>
+<p>The three <code>/v1/push/*</code> endpoints exist and function at MVP
+(a member <em>can</em> register a subscription and toggle the
+preference) — only the outbound delivery is gated off. This is
+deliberate: it lets the end-to-end registration path be exercised in
+testing before the fan-out is enabled.</p>
 <hr />
 <h2 id="non-functional-notes-specific-to-epic-g">9. Non-functional notes
 specific to EPIC-G</h2>
@@ -302,6 +463,25 @@ EPIC-B specs already establish for their own modules.</li>
 <li><strong>Mention parsing</strong>: mentioning an
 <code>expelled</code> handle doesn’t error or leak status, consistent
 with EPIC-C’s Section 9 note on the same behavior.</li>
+<li><strong>Push registration path works, delivery is inert
+(MVP)</strong>: registering a <code>community.push_subscriptions</code>
+row and setting <code>push_enabled = true</code> both succeed, but the
+delivery worker sends <strong>no</strong> push message at MVP (the
+fan-out branch is gated off) — asserts the channel ships inert as
+specified (Section 6.2).</li>
+<li><strong>Push subscriptions are handle-scoped and
+post-handle-only</strong>: no <code>push_subscriptions</code> row can be
+created for an applicant without a handle (mirrors the pre-handle gap in
+Section 4).</li>
+<li><strong>Expired subscription is soft-revoked</strong>: a simulated
+<code>410 Gone</code> from the push service sets <code>revoked_at</code>
+and the row is skipped on subsequent fan-out (relevant once delivery is
+enabled).</li>
+<li><strong>Push copy carries no identifying content</strong>: push
+payload templates address the recipient by nothing more than context (no
+real names, no quoted case-discussion body) — the notification-copy
+analogue of the <code>NotificationService</code> field-access test above
+(Section 6.2 payload discipline).</li>
 </ul>
 <hr />
 <h2 id="open-questions">11. Open questions</h2>
@@ -320,6 +500,22 @@ spec, Section 8.</li>
 <li><strong>Digest cadence/unsubscribe mechanics</strong>: this spec
 assumes weekly, email-only, per the PRD’s own naming — no further design
 beyond that assumption has been done here.</li>
+<li><strong>Push channel — which types push, and
+batching/throttling</strong> (Section 6.2): the mechanism and preference
+are specified and ship inert for MVP; the per-type trigger set
+(expected: <code>reply</code>, <code>mention</code>,
+<code>kudos_received</code>; <em>not</em> <code>weekly_digest</code>)
+and the batching/throttling rules to avoid nuisance are intentionally
+left to be settled during app testing, where real interaction volume
+will show what’s useful versus noise. Activating the delivery branch is
+a config flip, not a schema/model change.</li>
+<li><strong>Web Push prerequisites</strong> (Section 6.2): Web Push
+needs a service worker and a browser notification-permission grant; on
+iOS it additionally requires the web app be installed to the home screen
+(added-to-Home-Screen PWA). Worth confirming the web client is a PWA
+with a service worker (the <code>prototypes/mobile-lookfeel</code>
+prototype already leans PWA-style) before push is switched on, so the
+channel isn’t advertised where the platform can’t deliver it.</li>
 </ul>
 
 </main>
