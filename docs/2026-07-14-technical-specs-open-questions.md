@@ -80,6 +80,7 @@ Decided, kept here for the record rather than deleted.
 - **Search design — resolved 2026-07-17.** Stays in PostgreSQL for MVP (no third-party engine — Algolia-style SaaS ruled out on trust/data-residency grounds; self-hosted OpenSearch kept as a documented later upgrade). Firmed up as: weighted `tsvector` + GIN, `websearch_to_tsquery`, `pg_trgm` for typo tolerance, and a clinical synonym dictionary (ACL ⇄ anterior cruciate ligament, etc.). The synonym dictionary is seeded from the tag vocabulary — so it has a forward dependency on FD-4/taxonomy (§1.2), and MeSH entry-terms give the synonyms largely for free if the tag→MeSH mapping is adopted. Resolves the PRD's "(to be discussed/confirmed)" hedge on Search. *(EPIC-C spec §4, §12.)*
 - **Forum edit/delete policy — resolved 2026-07-17.** Agreed: 15-minute no-marker edit window, `edited_at` shown after, author self-delete as soft-delete for ordinary posts, moderator-only removal for attested case discussions. *(EPIC-C spec §6, §12.)*
 - **Could-have scope + image-attachment deferral — resolved 2026-07-17.** Best-answer marker and polls are **in MVP**; **image attachments are deferred** (remain a future Could-have) on privacy grounds — images are the highest-risk vector for inadvertent patient identification (faces, tattoos, scars, EXIF, identifiable settings), which EXIF-stripping alone can't mitigate. Knock-on effect: EPIC-E case discussions are **text-only at MVP**, so the de-identification checklist is six items (1–5, 8) not eight; items 6/7 (image content, EXIF) return when image support lands. The `checklist_snapshot` records whichever items were live at attestation, so no schema change is needed for the reduction or its later restoration. *(EPIC-C spec §7, §12; EPIC-E spec §4, §12.)*
+- **"Trending" fallback-feed definition — resolved 2026-07-17.** Platform-wide, with an **adaptive** time window (start 24h; widen 24h → 7d → 30d → all-time until ≥ N results, proposed N = 10), ranked by kudos with recency tiebreak. Adaptive rather than fixed-24h to avoid an empty fallback feed at low launch volume — the fallback is a new member's first impression, so it must never look dead. *(EPIC-C spec §8, §12.)*
 
 ---
 
@@ -99,9 +100,7 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 *(No local open questions remain. The moderator-forced rename is covered in §1.4 above; the handle length/character rules, blocklist storage, expulsion/re-registration gap, and tag-follow mechanism are all resolved — see §2.)*
 
 ### EPIC-C — Forum
-- **"Trending" definition**: the personalised feed's fallback view (§8 there) needs a concrete definition (time window, platform-wide vs. category-scoped) — this spec's kudos-in-a-time-window heuristic is only a placeholder.
-
-*(Taxonomy unification is covered in §1.2 above. The search design, edit/delete policy, Could-have scope, and personalised-feed follow mechanism are all resolved — see §2.)*
+*(No local open questions remain. Taxonomy unification is covered in §1.2 above; the search design, edit/delete policy, Could-have scope, "trending" fallback definition, and personalised-feed follow mechanism are all resolved — see §2.)*
 
 ### EPIC-D — Kudos
 - **Idempotency of a repeated award**: should awarding kudos twice 409, or silently no-op? Minor, but affects client error-handling.

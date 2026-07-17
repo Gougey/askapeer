@@ -204,15 +204,33 @@ PRD Section 6.1: "Home view based on tags and handles followed, with a trending/
 GET /v1/feed?cursor=...
   -> posts whose category/tags match the caller's tag-follows (community.follows,
      target_type = tag), or whose author matches the caller's handle-follows
-     (target_type = handle), ranked by recency (not kudos — kudos ranks answers
-     within a thread, per EPIC-D, a different question from ranking a feed of
-     distinct posts)
-  -> falls back to a "trending/top" view (e.g. most-kudos posts in the last N
-     days, platform-wide) when the caller follows nothing yet or the followed-
-     content result set is thin — per the PRD's own "fallback" language
+     (target_type = handle), ranked by recency — this is a "what's new from what
+     I follow" view, so chronological is the right order (the trending fallback
+     below ranks differently, by kudos, since it's answering a different question)
+  -> falls back to the trending view (below) when the caller follows nothing yet
+     or the followed-content result set is thin — per the PRD's own "fallback"
+     language
 ```
 
-No new schema is introduced here — `community.follows` (EPIC-B) and `community.posts`/`post_tags` (this epic, Section 2) are sufficient to build this query. "Trending" itself isn't otherwise defined by the PRD (a simple kudos-in-a-time-window heuristic is this spec's own proposal, flagged in Section 12).
+### The trending fallback (agreed, Adrian 2026-07-17)
+
+**Platform-wide, with an adaptive time window.** Scope is platform-wide because the fallback exists precisely for members who haven't expressed a category interest yet (a brand-new member who follows nothing) — anything narrower would leave them with nothing.
+
+The window is **adaptive rather than a fixed 24 hours**, to avoid the cold-start trap: at MVP/seed scale the posting rate may be low (a handful of posts a day, near-zero on a quiet weekend), so a fixed 24-hour window could render an empty or near-empty feed — exactly the wrong first impression on a new member's first visit, which is when this view matters most.
+
+```
+Trending fallback algorithm:
+  1. Take posts from the last 24 hours, platform-wide.
+  2. If that yields fewer than N results (proposed N = 10), widen the window:
+     24 hours -> 7 days -> 30 days -> all-time.
+  3. Stop at the first window that produces >= N results (or all-time if none do).
+  4. Within the chosen window, rank by kudos_total descending, most-recent
+     (created_at) breaking ties.
+```
+
+This keeps the "of-the-moment" feel of a 24-hour view whenever there's enough activity to fill it, while guaranteeing the fallback is never sparse in the early days. `N = 10` is a proposed threshold, tunable without design change.
+
+No new schema is introduced — `community.follows` (EPIC-B) and `community.posts`/`post_tags` (this epic, Section 2), plus the existing `kudos_total`/`created_at` columns, are sufficient. Note the trending rank *does* use kudos (it's ranking distinct posts by overall community signal), which is a different question from EPIC-D's within-thread answer ranking — the two aren't in tension.
 
 ---
 
@@ -252,4 +270,4 @@ No new schema is introduced here — `community.follows` (EPIC-B) and `community
 - ~~**Edit/delete policy**~~ — **resolved 2026-07-17**: the Section 6 policy (15-minute no-marker edit window, `edited_at` after, soft-delete for ordinary posts, moderator-only removal for attested case discussions) is agreed.
 - ~~**Could-have scope confirmation**~~ — **resolved 2026-07-17** (Section 7): best-answer marker and polls are **in MVP**; image attachments are **deferred** on privacy grounds. Follow-up below.
 - **EPIC-E image-checklist reconciliation** (new, from the image deferral, Section 7): EPIC-E's de-identification checklist items 6/7 assume image uploads exist. With images deferred, case discussions are text-only at MVP and those two items need dropping/greying-out in EPIC-E's spec until images land. Tracked against EPIC-E.
-- **"Trending" definition** (Section 8): a kudos-in-a-time-window heuristic is this spec's own placeholder for the PRD's unspecified fallback view — needs a concrete definition (window length, whether it's platform-wide or category-scoped) before build.
+- ~~**"Trending" definition**~~ — **resolved 2026-07-17** (Section 8): platform-wide, adaptive time window (start 24h, widen to 7d/30d/all-time until ≥ N results), ranked by kudos with recency tiebreak. The adaptive window avoids an empty fallback feed at low launch volume.

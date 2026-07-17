@@ -434,17 +434,43 @@ it’s a read-only consumer:</p>
 <pre><code>GET /v1/feed?cursor=...
   -&gt; posts whose category/tags match the caller&#39;s tag-follows (community.follows,
      target_type = tag), or whose author matches the caller&#39;s handle-follows
-     (target_type = handle), ranked by recency (not kudos — kudos ranks answers
-     within a thread, per EPIC-D, a different question from ranking a feed of
-     distinct posts)
-  -&gt; falls back to a &quot;trending/top&quot; view (e.g. most-kudos posts in the last N
-     days, platform-wide) when the caller follows nothing yet or the followed-
-     content result set is thin — per the PRD&#39;s own &quot;fallback&quot; language</code></pre>
-<p>No new schema is introduced here — <code>community.follows</code>
-(EPIC-B) and <code>community.posts</code>/<code>post_tags</code> (this
-epic, Section 2) are sufficient to build this query. “Trending” itself
-isn’t otherwise defined by the PRD (a simple kudos-in-a-time-window
-heuristic is this spec’s own proposal, flagged in Section 12).</p>
+     (target_type = handle), ranked by recency — this is a &quot;what&#39;s new from what
+     I follow&quot; view, so chronological is the right order (the trending fallback
+     below ranks differently, by kudos, since it&#39;s answering a different question)
+  -&gt; falls back to the trending view (below) when the caller follows nothing yet
+     or the followed-content result set is thin — per the PRD&#39;s own &quot;fallback&quot;
+     language</code></pre>
+<h3 id="the-trending-fallback-agreed-adrian-2026-07-17">The trending
+fallback (agreed, Adrian 2026-07-17)</h3>
+<p><strong>Platform-wide, with an adaptive time window.</strong> Scope
+is platform-wide because the fallback exists precisely for members who
+haven’t expressed a category interest yet (a brand-new member who
+follows nothing) — anything narrower would leave them with nothing.</p>
+<p>The window is <strong>adaptive rather than a fixed 24 hours</strong>,
+to avoid the cold-start trap: at MVP/seed scale the posting rate may be
+low (a handful of posts a day, near-zero on a quiet weekend), so a fixed
+24-hour window could render an empty or near-empty feed — exactly the
+wrong first impression on a new member’s first visit, which is when this
+view matters most.</p>
+<pre><code>Trending fallback algorithm:
+  1. Take posts from the last 24 hours, platform-wide.
+  2. If that yields fewer than N results (proposed N = 10), widen the window:
+     24 hours -&gt; 7 days -&gt; 30 days -&gt; all-time.
+  3. Stop at the first window that produces &gt;= N results (or all-time if none do).
+  4. Within the chosen window, rank by kudos_total descending, most-recent
+     (created_at) breaking ties.</code></pre>
+<p>This keeps the “of-the-moment” feel of a 24-hour view whenever
+there’s enough activity to fill it, while guaranteeing the fallback is
+never sparse in the early days. <code>N = 10</code> is a proposed
+threshold, tunable without design change.</p>
+<p>No new schema is introduced — <code>community.follows</code> (EPIC-B)
+and <code>community.posts</code>/<code>post_tags</code> (this epic,
+Section 2), plus the existing
+<code>kudos_total</code>/<code>created_at</code> columns, are
+sufficient. Note the trending rank <em>does</em> use kudos (it’s ranking
+distinct posts by overall community signal), which is a different
+question from EPIC-D’s within-thread answer ranking — the two aren’t in
+tension.</p>
 <hr />
 <h2 id="boundaries-with-other-epics">9. Boundaries with other epics</h2>
 <ul>
@@ -550,11 +576,11 @@ items 6/7 assume image uploads exist. With images deferred, case
 discussions are text-only at MVP and those two items need
 dropping/greying-out in EPIC-E’s spec until images land. Tracked against
 EPIC-E.</li>
-<li><strong>“Trending” definition</strong> (Section 8): a
-kudos-in-a-time-window heuristic is this spec’s own placeholder for the
-PRD’s unspecified fallback view — needs a concrete definition (window
-length, whether it’s platform-wide or category-scoped) before
-build.</li>
+<li><del><strong>“Trending” definition</strong></del> — <strong>resolved
+2026-07-17</strong> (Section 8): platform-wide, adaptive time window
+(start 24h, widen to 7d/30d/all-time until ≥ N results), ranked by kudos
+with recency tiebreak. The adaptive window avoids an empty fallback feed
+at low launch volume.</li>
 </ul>
 
 </main>

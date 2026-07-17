@@ -248,6 +248,13 @@ lands. The <code>checklist_snapshot</code> records whichever items were
 live at attestation, so no schema change is needed for the reduction or
 its later restoration. <em>(EPIC-C spec §7, §12; EPIC-E spec §4,
 §12.)</em></li>
+<li><strong>“Trending” fallback-feed definition — resolved
+2026-07-17.</strong> Platform-wide, with an <strong>adaptive</strong>
+time window (start 24h; widen 24h → 7d → 30d → all-time until ≥ N
+results, proposed N = 10), ranked by kudos with recency tiebreak.
+Adaptive rather than fixed-24h to avoid an empty fallback feed at low
+launch volume — the fallback is a new member’s first impression, so it
+must never look dead. <em>(EPIC-C spec §8, §12.)</em></li>
 </ul>
 <hr />
 <h2 id="per-epic-open-questions">3. Per-epic open questions</h2>
@@ -284,15 +291,10 @@ covered in §1.4 above; the handle length/character rules, blocklist
 storage, expulsion/re-registration gap, and tag-follow mechanism are all
 resolved — see §2.)</em></p>
 <h3 id="epic-c-forum">EPIC-C — Forum</h3>
-<ul>
-<li><strong>“Trending” definition</strong>: the personalised feed’s
-fallback view (§8 there) needs a concrete definition (time window,
-platform-wide vs. category-scoped) — this spec’s kudos-in-a-time-window
-heuristic is only a placeholder.</li>
-</ul>
-<p><em>(Taxonomy unification is covered in §1.2 above. The search
-design, edit/delete policy, Could-have scope, and personalised-feed
-follow mechanism are all resolved — see §2.)</em></p>
+<p><em>(No local open questions remain. Taxonomy unification is covered
+in §1.2 above; the search design, edit/delete policy, Could-have scope,
+“trending” fallback definition, and personalised-feed follow mechanism
+are all resolved — see §2.)</em></p>
 <h3 id="epic-d-kudos">EPIC-D — Kudos</h3>
 <ul>
 <li><strong>Idempotency of a repeated award</strong>: should awarding
