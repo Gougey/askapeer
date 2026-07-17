@@ -37,7 +37,7 @@ table).</p>
 <ol type="1">
 <li><a href="#scope">Scope</a></li>
 <li><a href="#data-model">Data model</a></li>
-<li><a href="#tagging-and-the-hybrid-taxonomy-fd-4">Tagging and the
+<li><a href="#tagging-and-the-hybrid-taxonomy-fd-4-resolved-2026-07-17">Tagging and the
 hybrid taxonomy (FD-4)</a></li>
 <li><a href="#search">Search</a></li>
 <li><a href="#why-in-postgres-not-a-search-engine">API endpoints</a></li>
@@ -83,9 +83,11 @@ defined in the architecture spec, Section 4.2. This spec adds the
 <strong>top-level category</strong> table the hybrid taxonomy (FD-4,
 Option D) requires, which the architecture spec named but didn’t fully
 model:</p>
-<pre><code>community.categories                  -- fixed, admin-managed, small set
+<pre><code>community.categories                  -- fixed, admin-managed, small set (CONTENT TYPE)
   id           uuid PK
-  name         text unique            -- e.g. &quot;Shoulder&quot;, &quot;Knee&quot;, &quot;Research&quot;, &quot;Career&quot;
+  name         text unique            -- content type, not body area:
+                                       -- e.g. &quot;Clinical Case&quot;, &quot;Research&quot;, &quot;Career&quot;,
+                                       -- &quot;Equipment&quot;, &quot;General&quot; (final set TBD, admin-managed)
   description  text
   sort_order   int
 
@@ -117,7 +119,17 @@ community.comments
   created_at         timestamptz
   edited_at          timestamptz nullable
 
-community.tags        (id, name unique)
+community.tags        -- the unified clinical vocabulary (resolved 2026-07-17, §3)
+  id           uuid PK
+  name         text unique            -- canonical label, e.g. &quot;Knee&quot;, &quot;Tendinopathy&quot;
+  facet        enum(region, muscle, structure, pathology)
+  parent_id    uuid FK -&gt; community.tags nullable   -- region grouping (Upper/Lower limb)
+  synonyms     text[]                 -- e.g. ACL -&gt; &quot;anterior cruciate ligament&quot;;
+                                       -- feeds the search synonym dictionary (§4)
+  mesh_id      text nullable          -- INTERNAL only: MeSH mapping for research-feed
+                                       -- interop (EPIC-I); never member-facing
+  sort_order   int
+  retired_at   timestamptz nullable   -- EPIC-J retire (hide from composer, keep on old posts)
 community.post_tags   (post_id FK, tag_id FK, primary key(post_id, tag_id))</code></pre>
 <p><code>status = removed</code> (rather than a hard delete) is what
 Section 6 needs to distinguish “content that was here and got moderated”
@@ -137,56 +149,79 @@ EPIC-E Section 3) and a corrected-resubmission path
 while preserving its comments and kudos — see EPIC-E for the full
 semantics.</p>
 <hr />
-<h2 id="tagging-and-the-hybrid-taxonomy-fd-4">3. Tagging and the hybrid
-taxonomy (FD-4)</h2>
-<p>Per the architecture spec’s assumption (Section 1) and the PRD’s own
-recommendation (Section 15, FD-4, Option D): a small, fixed set of
-top-level <code>categories</code> (body-area plus a few professional
-topics — Research, Career, Equipment) chosen by the post author at
-creation time, plus free <code>tags</code> within that category for
-flexibility and search depth. Every post has exactly one category and
-zero-or-more tags.</p>
-<p><strong>This spec does not invent the category list or tag
-vocabulary.</strong> Three overlapping-but-different vocabularies
-already exist, and reconciling them into one controlled vocabulary is
-real work that hasn’t happened yet — flagged in Section 12, not assumed
-resolved here:</p>
+<h2 id="tagging-and-the-hybrid-taxonomy-fd-4-resolved-2026-07-17">3.
+Tagging and the hybrid taxonomy (FD-4) — resolved 2026-07-17</h2>
+<p>Per the PRD’s recommendation (Section 15, FD-4, Option D) and now
+<strong>confirmed with Andrew Renshaw</strong> (2026-07-17): each post
+has exactly <strong>one category and zero-or-more tags</strong>.</p>
+<p><strong>Categories = content type</strong> (not body area): a small,
+fixed, admin-managed set — e.g. <em>Clinical Case, Research, Career,
+Equipment, General</em> (final list admin-managed, working set here).
+Chosen by the author at creation. This is the correction to an earlier
+ambiguity: body areas are <strong>tags</strong>, not categories.</p>
+<p><strong>Tags = one unified clinical vocabulary</strong>
+(<code>community.tags</code>, §2). The three previously-unreconciled
+vocabularies (Andrew’s body-area list, the research-feed
+<code>taxonomy.json</code>, and the forum’s own list) are
+<strong>collapsed into a single controlled table</strong> — resolving
+open-questions §1.2. The full decision, rationale, and the agreed seed
+rows are in <code>docs/2026-07-17-taxonomy-standards-research.md</code>
+(Decision section). In brief:</p>
 <table>
 <colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
+<col style="width: 50%" />
+<col style="width: 50%" />
 </colgroup>
 <thead>
 <tr>
-<th>Vocabulary</th>
-<th>Where it lives</th>
-<th>Status</th>
+<th>Aspect</th>
+<th>Resolution</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Andrew Renshaw’s body-area list</td>
-<td>Referenced in the PRD (Section 15, FD-4 discussion)</td>
-<td>Exists, not yet in the repo</td>
+<td><strong>Structure</strong></td>
+<td>One table, one list — used by <strong>both</strong> case posts and
+news-feed interests (EPIC-I). A post can carry a clinical tag
+(<em>tendinopathy</em>) <strong>alongside</strong> a region
+(<em>knee</em>), not regions only.</td>
 </tr>
 <tr>
-<td>Research-feed taxonomy</td>
-<td><code>prototypes/research-feed/data/taxonomy.json</code></td>
-<td>Its own README calls it “a starting point… not the final FD-4 forum
-taxonomy” and flags forum unification as open</td>
+<td><strong>Facets</strong></td>
+<td>Each tag has a <code>facet</code> — <code>region</code> /
+<code>muscle</code> / <code>structure</code> / <code>pathology</code> —
+as organising metadata (composer grouping, feed filtering),
+<strong>not</strong> a restriction on which surface may use it.</td>
 </tr>
 <tr>
-<td>The forum’s category/tag list (this epic)</td>
-<td>Not yet defined</td>
-<td>Depends on the reconciliation above</td>
+<td><strong>Grouping</strong></td>
+<td>Region tags nest under Upper limb / Lower limb via
+<code>parent_id</code>.</td>
+</tr>
+<tr>
+<td><strong>OSIICS</strong></td>
+<td><strong>Omitted</strong> — Andrew judged it too complex for the
+audience even as an optional field.</td>
+</tr>
+<tr>
+<td><strong>MeSH</strong></td>
+<td>Retained only as an <strong>internal</strong> <code>mesh_id</code>
+per tag (research-feed/search interop); never member-facing.</td>
+</tr>
+<tr>
+<td><strong>Maintenance</strong></td>
+<td>The table is extended over time (Andrew’s fuller muscle list to
+follow) via EPIC-J’s tag-vocabulary management — Andrew’s “maintained in
+a table to allow additions going forward.”</td>
 </tr>
 </tbody>
 </table>
-<p><code>community.categories</code> is deliberately admin-managed (not
-member-created) — a hybrid taxonomy where either half were freely
-extensible would collapse into pure tagging (Option B), which is the
-option FD-4 explicitly recommends against for MVP.</p>
+<p><code>community.tags</code> is <strong>admin-managed, not
+member-created</strong> (via EPIC-J) — a curated vocabulary. A hybrid
+taxonomy where either half were freely member-extensible would collapse
+into pure tagging (Option B), which FD-4 recommends against for MVP.
+(FD-4 as a formal stakeholder decision is now substantively answered by
+this; see the open-questions doc §1.2 / Section 4.)</p>
 <hr />
 <h2 id="search">4. Search</h2>
 <p>Firmed up (Adrian, 2026-07-17) — this resolves the PRD’s “(to be
@@ -562,20 +597,23 @@ activates when the caller follows nothing.</li>
 <hr />
 <h2 id="open-questions">12. Open questions</h2>
 <ul>
-<li><strong>Taxonomy unification</strong> (Section 3): the forum’s
-<code>category</code>/<code>tag</code> vocabulary, Andrew Renshaw’s
-body-area list, and the research feed’s <code>taxonomy.json</code> are
-three overlapping-but-not-identical vocabularies right now. Needs a
-single controlled vocabulary decided before build, and FD-4 needs formal
-closure regardless (it’s still an open stakeholder decision, not just an
-implementation detail).</li>
+<li><del><strong>Taxonomy unification</strong></del> (Section 3) —
+<strong>resolved 2026-07-17</strong> (Andrew’s input): the three
+vocabularies are collapsed into one controlled
+<code>community.tags</code> table (facet + grouping + synonyms +
+internal MeSH), used by both posts and the news feed; categories are
+content-type; OSIICS omitted. Closes open-questions §1.2. FD-4’s
+taxonomy substance is answered (the remaining FD-4 formalities are
+stakeholder sign-off, tracked in the open-questions doc). Full record in
+<code>docs/2026-07-17-taxonomy-standards-research.md</code>.</li>
 <li><del><strong>Search’s “(to be discussed/confirmed)”
 hedge</strong></del> — <strong>resolved 2026-07-17</strong>: search
 design firmed up (Postgres FTS + <code>pg_trgm</code> + weighted
 <code>tsvector</code> + clinical synonym dictionary; no
-external/third-party engine), Section 4. One forward dependency remains:
-the synonym dictionary is seeded from the tag vocabulary, so it can’t be
-fully built until FD-4/taxonomy lands.</li>
+external/third-party engine), Section 4. The former forward dependency
+is now cleared: the synonym dictionary seeds from
+<code>community.tags.synonyms</code> (§2), which the taxonomy resolution
+above defines.</li>
 <li><del><strong>Edit/delete policy</strong></del> — <strong>resolved
 2026-07-17</strong>: the Section 6 policy (15-minute no-marker edit
 window, <code>edited_at</code> after, soft-delete for ordinary posts,

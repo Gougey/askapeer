@@ -35,7 +35,7 @@ The PRD (`docs/askapeer-prd-v0.1.md`, Section 15) lists eight open stakeholder d
 |---|---|
 | FD-1 (professional scope) | Physio-first MVP, per the PRD's Option B recommendation |
 | FD-3 (platform sequencing) | Web-first for MVP; architecture is API-first specifically so native iOS/Android (Phase 2) requires no backend rework |
-| FD-4 (forum taxonomy) | Hybrid model (Option D): fixed top-level categories plus free tagging |
+| FD-4 (forum taxonomy) | Hybrid model (Option D): fixed **content-type** categories plus a **curated, admin-managed unified tag vocabulary** (taxonomy substance resolved with Andrew 2026-07-17 — one faceted `community.tags` table shared by forum + research feed; not free member tagging; OSIICS omitted). See EPIC-C §3. |
 | FD-5 (1:1 messaging) | Deferred to Phase 2, per the PRD's recommendation |
 
 FD-2 (subscription pricing/processor) and FD-7/FD-8 (branding, competitive research) have no material architectural impact and are not assumed here; FD-6 (university partnership) is an operational, not technical, decision.
@@ -214,7 +214,9 @@ community.handles
 
 community.posts (id, handle_id, type enum(question, case_discussion), title, body, status, created_at)
 community.comments (id, post_id, handle_id, parent_comment_id, body, status, created_at)
-community.tags / community.post_tags        -- FD-4 hybrid taxonomy
+community.tags / community.post_tags        -- FD-4 hybrid taxonomy; community.tags is the
+  -- unified clinical vocabulary (facet, parent_id, synonyms, internal mesh_id) resolved
+  -- 2026-07-17 — one table for both forum tags and research-feed interests. See EPIC-C §3.
 community.kudos
   id, target_type(post|comment), target_id, given_by_handle_id, created_at
   unique(target_type, target_id, given_by_handle_id)   -- one kudos per handle per item
@@ -233,7 +235,9 @@ community.moderation_actions           -- immutable: INSERT-only grant
 community.notifications              (handle_id, type, payload, read_at, created_at)
 community.notification_preferences   (handle_id, type, in_app_enabled, email_enabled, push_enabled)
 community.push_subscriptions         (handle_id, transport, endpoint, p256dh, auth, user_agent, created_at, last_seen_at, revoked_at)   -- push channel; see Section 7.3 and EPIC-G spec §6.2
-community.member_interests           (handle_id, tag, weight, updated_at)   -- see Section 8
+community.member_interests           (handle_id, tag, weight, updated_at)   -- see Section 8;
+  -- `tag` references the unified community.tags vocabulary (resolved 2026-07-17), the same
+  -- list the forum uses — not a separate research-only taxonomy
 ```
 
 > **Amendment (2026-07-17)**: `notification_preferences` gains a `push_enabled` column and a `community.push_subscriptions` table are added, for the **push notification channel** introduced by the EPIC-G spec (§6.2). Push is a third delivery channel alongside in-app and email; it is **fully specified but ships inert for the web-only MVP** (the preference is visible but greyed-out and nothing is delivered), and generalises to native APNs/FCM transports in Phase 2. See §7.3 below.

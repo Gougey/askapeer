@@ -14,19 +14,245 @@
 <main>
 <h1 id="standard-medical-taxonomies-research-note">Standard Medical
 Taxonomies — Research Note</h1>
-<p><strong>Status</strong>: Reference — input to FD-4 / taxonomy
-unification <strong>Date</strong>: 17 July 2026 <strong>Author</strong>:
-Adrian Hall (Technical Lead), researched with Claude Code</p>
+<p><strong>Status</strong>: Decision record — the taxonomy portion of
+FD-4 / §1.2 is now <strong>resolved</strong> (Andrew Renshaw’s input,
+2026-07-17). The research below is retained for context; the Decision
+section states what was chosen. <strong>Date</strong>: 17 July 2026
+(decision added 2026-07-17) <strong>Author</strong>: Adrian Hall
+(Technical Lead), researched with Claude Code</p>
 <p>Background research on whether Askapeer’s forum tag vocabulary should
 be built from scratch or anchored to an existing standard medical
-taxonomy. Supports the still-open FD-4 decision (forum organisation) and
-the taxonomy-unification item in
-<code>docs/2026-07-14-technical-specs-open-questions.md</code> (§1.2).
-Not a decision — input for the conversation with Andrew Renshaw.</p>
+taxonomy. Supported the FD-4 decision (forum organisation) and the
+taxonomy-unification item in
+<code>docs/2026-07-14-technical-specs-open-questions.md</code>
+(§1.2).</p>
 <p>Related design context: the agreed forum structure is <strong>one
 category + many tags per post</strong> (EPIC-C spec, Sections 2–3;
-category = content type, tags = body areas / conditions / treatments).
-This note is about where the <em>tag</em> vocabulary comes from.</p>
+category = content type, tags = the unified clinical vocabulary
+below).</p>
+<hr />
+<h2 id="decision-andrew-renshaws-input-2026-07-17">Decision (Andrew
+Renshaw’s input, 2026-07-17)</h2>
+<p>Andrew reviewed the approach and provided concrete lists. Decisions
+taken with Adrian:</p>
+<p><strong>1. Model confirmed (FD-4).</strong> Content-type
+<strong>categories</strong> (a short admin-managed set — e.g. Clinical
+Case, Research, Career, Equipment, General) plus many
+<strong>tags</strong> per post. Andrew agrees with a limited category
+set and a curated tag list.</p>
+<p><strong>2. One unified tag vocabulary — a single maintained table,
+used by both surfaces.</strong> Andrew supplied one list for tagging
+case posts (anatomical <strong>regions</strong>) and a different,
+broader list for filtering the <strong>news feed</strong> (regions
+<strong>+</strong> muscles <strong>+</strong> structures
+<strong>+</strong> pathologies). They overlap. Rather than maintain two
+lists, they are <strong>combined into one controlled vocabulary</strong>
+(Adrian’s call: “one list is correct”), because a case post legitimately
+needs a clinical tag like <em>tendinopathy</em> <strong>in addition
+to</strong> a region like <em>knee</em> — not regions alone. Each term
+carries a <strong>facet</strong> (<code>region</code> /
+<code>muscle</code> / <code>structure</code> / <code>pathology</code>)
+and, for regions, a <strong>grouping</strong> (Upper limb / Lower limb).
+Both case posts and news-feed interests draw from the same table; the
+facet is organising metadata (for grouping the composer and filtering
+the feed), <strong>not</strong> a wall between the two surfaces. This is
+the concrete resolution of §1.2 (and unifies the vocabulary side of
+§1.1). The table must support additions going forward (Andrew will keep
+contributing terms) — which the EPIC-J tag-vocabulary management already
+provides.</p>
+<p><strong>3. OSIICS omitted entirely.</strong> Andrew floated it as an
+<em>optional</em> box but worried its complexity would put people off
+(“rarely used in the UK… I’d fear that including this might put people
+off”). An optional classification field would also complicate the model
+for little near-term return (no injury-audit use case yet).
+<strong>Dropped</strong> — this supersedes the OSIICS recommendation
+further down this note.</p>
+<p><strong>4. MeSH retained as an internal mapping only.</strong> Not
+member-facing and not OSIICS’s replacement — an optional
+<code>mesh_id</code> per term, behind the scenes, so news-feed relevance
+(Europe PMC/PubMed are MeSH-indexed) and the search synonym dictionary
+get literature interop for free. Seeded opportunistically; never shown
+to or filled in by members.</p>
+<p><strong>5. Muscle list pending.</strong> Andrew will supply a fuller
+list of commonly-injured muscles from his medical system; the four
+already implied by his news-feed list (hamstring, quadriceps, adductor,
+calf) are seeded now, more added to the same table later.</p>
+<h3 id="agreed-seed-vocabulary">Agreed seed vocabulary</h3>
+<p>The initial rows for the unified table (canonical label → facet,
+grouping, synonyms). Extended over time via EPIC-J.</p>
+<table>
+<thead>
+<tr>
+<th>Facet</th>
+<th>Term</th>
+<th>Grouping</th>
+<th>Synonyms / notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>region</td>
+<td>Head and neck</td>
+<td>—</td>
+<td>includes cervical spine</td>
+</tr>
+<tr>
+<td>region</td>
+<td>Chest</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td>region</td>
+<td>Thoracic spine</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td>region</td>
+<td>Lumbar spine</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td>region</td>
+<td>Abdomen</td>
+<td>—</td>
+<td>“abdominal”</td>
+</tr>
+<tr>
+<td>region</td>
+<td>Pelvis</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td>region</td>
+<td>Groin</td>
+<td>—</td>
+<td>(news-feed list; near hip/adductor)</td>
+</tr>
+<tr>
+<td>region</td>
+<td>Shoulder</td>
+<td>Upper limb</td>
+<td></td>
+</tr>
+<tr>
+<td>region</td>
+<td>Upper arm</td>
+<td>Upper limb</td>
+<td></td>
+</tr>
+<tr>
+<td>region</td>
+<td>Elbow</td>
+<td>Upper limb</td>
+<td></td>
+</tr>
+<tr>
+<td>region</td>
+<td>Forearm</td>
+<td>Upper limb</td>
+<td>“lower arm”</td>
+</tr>
+<tr>
+<td>region</td>
+<td>Wrist/hand</td>
+<td>Upper limb</td>
+<td>single term (Andrew)</td>
+</tr>
+<tr>
+<td>region</td>
+<td>Hip</td>
+<td>Lower limb</td>
+<td></td>
+</tr>
+<tr>
+<td>region</td>
+<td>Thigh</td>
+<td>Lower limb</td>
+<td>anterior + posterior</td>
+</tr>
+<tr>
+<td>region</td>
+<td>Knee</td>
+<td>Lower limb</td>
+<td></td>
+</tr>
+<tr>
+<td>region</td>
+<td>Lower leg</td>
+<td>Lower limb</td>
+<td>anterior + posterior</td>
+</tr>
+<tr>
+<td>region</td>
+<td>Ankle</td>
+<td>Lower limb</td>
+<td></td>
+</tr>
+<tr>
+<td>region</td>
+<td>Foot</td>
+<td>Lower limb</td>
+<td></td>
+</tr>
+<tr>
+<td>muscle</td>
+<td>Hamstring</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td>muscle</td>
+<td>Quadriceps</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td>muscle</td>
+<td>Adductor</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td>muscle</td>
+<td>Calf</td>
+<td>—</td>
+<td>(Andrew’s fuller muscle list to follow)</td>
+</tr>
+<tr>
+<td>structure</td>
+<td>Anterior cruciate ligament</td>
+<td>—</td>
+<td>“ACL”</td>
+</tr>
+<tr>
+<td>structure</td>
+<td>Achilles</td>
+<td>—</td>
+<td>Achilles tendon</td>
+</tr>
+<tr>
+<td>pathology</td>
+<td>Tendinopathy</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td>pathology</td>
+<td>Osteochondral</td>
+<td>—</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note on Ankle/foot:</strong> Andrew’s post list combined
+“ankle/foot” as one entry, but his news-feed list separated Ankle and
+Foot; the unified table uses the <strong>granular</strong> Ankle and
+Foot rows (the composer can still present them grouped). <strong>Upper
+limb / Lower limb</strong> exist as grouping parents.</p>
 <hr />
 <h2 id="the-landscape">The landscape</h2>
 <p>Several standard vocabularies exist, but they serve different
@@ -128,25 +354,31 @@ commercial/scientific use.</li>
 <p><strong>Assessment</strong>: usable (a CC BY spreadsheet, importable
 directly), but it’s a <em>diagnosis-coding</em> system (fine-grained
 injury pathology), not a browsing taxonomy. ~1,500 codes is far too many
-to put in front of a member choosing a tag. Better as a
-<strong>reference/mapping source for the condition/injury tags, and a
-credibility signal for Andrew</strong>, than as the literal
-member-facing list.</p>
-<h2 id="recommendation">Recommendation</h2>
-<p>Neither availability nor licensing blocks the approach. Refined
-recommendation for the FD-4 / Andrew conversation:</p>
+to put in front of a member choosing a tag. <strong>Superseded — see the
+Decision section above: OSIICS is omitted entirely.</strong> Andrew (the
+domain source this note assumed would want it) judged it too complex for
+the audience, even as an optional field, and there’s no injury-audit use
+case yet to justify the model cost. Left here for the record.</p>
+<h2
+id="recommendation-as-it-stood-before-andrews-input-now-settled-by-the-decision-section-above">Recommendation
+(as it stood before Andrew’s input — now settled by the Decision section
+above)</h2>
+<p>Neither availability nor licensing blocked the approach. What was
+recommended, and how it landed:</p>
 <ul>
 <li><strong>Member-facing tags</strong>: a short, curated,
 human-friendly list — small enough to browse — starting from Andrew’s
-existing body-part list.</li>
-<li><strong>Map that list to MeSH</strong> underneath, for the
-research-feed interop (the real payoff of anchoring to a standard).</li>
-<li><strong>Use OSIICS v16 as a reference</strong> when building the
-condition/injury portion of the curated list — sports-medicine-native
-and the name Andrew knows — but don’t expose its ~1,500 codes
-directly.</li>
-<li><strong>Do not</strong> adopt SNOMED/ICD wholesale — too granular;
-would make tagging a chore and browsing overwhelming.</li>
+body-part list. → <strong>Adopted</strong>, and extended with
+muscles/structures/pathologies into the one unified vocabulary
+(Decision, above).</li>
+<li><strong>Map that list to MeSH</strong> underneath, for research-feed
+interop. → <strong>Adopted</strong> as an internal-only optional
+<code>mesh_id</code>.</li>
+<li><strong>Use OSIICS v16 as a reference</strong> for the
+condition/injury tags. → <strong>Dropped</strong> — Andrew judged it too
+complex even as an optional field (Decision, above).</li>
+<li><strong>Do not</strong> adopt SNOMED/ICD wholesale — too granular. →
+<strong>Held</strong> (still the right call).</li>
 </ul>
 <h2 id="sources">Sources</h2>
 <ul>

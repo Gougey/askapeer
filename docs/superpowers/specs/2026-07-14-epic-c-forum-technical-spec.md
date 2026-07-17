@@ -44,9 +44,11 @@ Source of truth: `docs/askapeer-prd-v0.1.md`, Section 6.1 (Must/Should/Could fea
 Builds on `community.posts`, `community.comments`, `community.tags`/`community.post_tags` already defined in the architecture spec, Section 4.2. This spec adds the **top-level category** table the hybrid taxonomy (FD-4, Option D) requires, which the architecture spec named but didn't fully model:
 
 ```
-community.categories                  -- fixed, admin-managed, small set
+community.categories                  -- fixed, admin-managed, small set (CONTENT TYPE)
   id           uuid PK
-  name         text unique            -- e.g. "Shoulder", "Knee", "Research", "Career"
+  name         text unique            -- content type, not body area:
+                                       -- e.g. "Clinical Case", "Research", "Career",
+                                       -- "Equipment", "General" (final set TBD, admin-managed)
   description  text
   sort_order   int
 
@@ -78,7 +80,17 @@ community.comments
   created_at         timestamptz
   edited_at          timestamptz nullable
 
-community.tags        (id, name unique)
+community.tags        -- the unified clinical vocabulary (resolved 2026-07-17, §3)
+  id           uuid PK
+  name         text unique            -- canonical label, e.g. "Knee", "Tendinopathy"
+  facet        enum(region, muscle, structure, pathology)
+  parent_id    uuid FK -> community.tags nullable   -- region grouping (Upper/Lower limb)
+  synonyms     text[]                 -- e.g. ACL -> "anterior cruciate ligament";
+                                       -- feeds the search synonym dictionary (§4)
+  mesh_id      text nullable          -- INTERNAL only: MeSH mapping for research-feed
+                                       -- interop (EPIC-I); never member-facing
+  sort_order   int
+  retired_at   timestamptz nullable   -- EPIC-J retire (hide from composer, keep on old posts)
 community.post_tags   (post_id FK, tag_id FK, primary key(post_id, tag_id))
 ```
 
@@ -88,19 +100,24 @@ community.post_tags   (post_id FK, tag_id FK, primary key(post_id, tag_id))
 
 ---
 
-## 3. Tagging and the hybrid taxonomy (FD-4)
+## 3. Tagging and the hybrid taxonomy (FD-4) — resolved 2026-07-17
 
-Per the architecture spec's assumption (Section 1) and the PRD's own recommendation (Section 15, FD-4, Option D): a small, fixed set of top-level `categories` (body-area plus a few professional topics — Research, Career, Equipment) chosen by the post author at creation time, plus free `tags` within that category for flexibility and search depth. Every post has exactly one category and zero-or-more tags.
+Per the PRD's recommendation (Section 15, FD-4, Option D) and now **confirmed with Andrew Renshaw** (2026-07-17): each post has exactly **one category and zero-or-more tags**.
 
-**This spec does not invent the category list or tag vocabulary.** Three overlapping-but-different vocabularies already exist, and reconciling them into one controlled vocabulary is real work that hasn't happened yet — flagged in Section 12, not assumed resolved here:
+**Categories = content type** (not body area): a small, fixed, admin-managed set — e.g. *Clinical Case, Research, Career, Equipment, General* (final list admin-managed, working set here). Chosen by the author at creation. This is the correction to an earlier ambiguity: body areas are **tags**, not categories.
 
-| Vocabulary | Where it lives | Status |
-|---|---|---|
-| Andrew Renshaw's body-area list | Referenced in the PRD (Section 15, FD-4 discussion) | Exists, not yet in the repo |
-| Research-feed taxonomy | `prototypes/research-feed/data/taxonomy.json` | Its own README calls it "a starting point... not the final FD-4 forum taxonomy" and flags forum unification as open |
-| The forum's category/tag list (this epic) | Not yet defined | Depends on the reconciliation above |
+**Tags = one unified clinical vocabulary** (`community.tags`, §2). The three previously-unreconciled vocabularies (Andrew's body-area list, the research-feed `taxonomy.json`, and the forum's own list) are **collapsed into a single controlled table** — resolving open-questions §1.2. The full decision, rationale, and the agreed seed rows are in `docs/2026-07-17-taxonomy-standards-research.md` (Decision section). In brief:
 
-`community.categories` is deliberately admin-managed (not member-created) — a hybrid taxonomy where either half were freely extensible would collapse into pure tagging (Option B), which is the option FD-4 explicitly recommends against for MVP.
+| Aspect | Resolution |
+|---|---|
+| **Structure** | One table, one list — used by **both** case posts and news-feed interests (EPIC-I). A post can carry a clinical tag (*tendinopathy*) **alongside** a region (*knee*), not regions only. |
+| **Facets** | Each tag has a `facet` — `region` / `muscle` / `structure` / `pathology` — as organising metadata (composer grouping, feed filtering), **not** a restriction on which surface may use it. |
+| **Grouping** | Region tags nest under Upper limb / Lower limb via `parent_id`. |
+| **OSIICS** | **Omitted** — Andrew judged it too complex for the audience even as an optional field. |
+| **MeSH** | Retained only as an **internal** `mesh_id` per tag (research-feed/search interop); never member-facing. |
+| **Maintenance** | The table is extended over time (Andrew's fuller muscle list to follow) via EPIC-J's tag-vocabulary management — Andrew's "maintained in a table to allow additions going forward." |
+
+`community.tags` is **admin-managed, not member-created** (via EPIC-J) — a curated vocabulary. A hybrid taxonomy where either half were freely member-extensible would collapse into pure tagging (Option B), which FD-4 recommends against for MVP. (FD-4 as a formal stakeholder decision is now substantively answered by this; see the open-questions doc §1.2 / Section 4.)
 
 ---
 
@@ -270,8 +287,8 @@ No new schema is introduced — `community.follows` (EPIC-B) and `community.post
 
 ## 12. Open questions
 
-- **Taxonomy unification** (Section 3): the forum's `category`/`tag` vocabulary, Andrew Renshaw's body-area list, and the research feed's `taxonomy.json` are three overlapping-but-not-identical vocabularies right now. Needs a single controlled vocabulary decided before build, and FD-4 needs formal closure regardless (it's still an open stakeholder decision, not just an implementation detail).
-- ~~**Search's "(to be discussed/confirmed)" hedge**~~ — **resolved 2026-07-17**: search design firmed up (Postgres FTS + `pg_trgm` + weighted `tsvector` + clinical synonym dictionary; no external/third-party engine), Section 4. One forward dependency remains: the synonym dictionary is seeded from the tag vocabulary, so it can't be fully built until FD-4/taxonomy lands.
+- ~~**Taxonomy unification**~~ (Section 3) — **resolved 2026-07-17** (Andrew's input): the three vocabularies are collapsed into one controlled `community.tags` table (facet + grouping + synonyms + internal MeSH), used by both posts and the news feed; categories are content-type; OSIICS omitted. Closes open-questions §1.2. FD-4's taxonomy substance is answered (the remaining FD-4 formalities are stakeholder sign-off, tracked in the open-questions doc). Full record in `docs/2026-07-17-taxonomy-standards-research.md`.
+- ~~**Search's "(to be discussed/confirmed)" hedge**~~ — **resolved 2026-07-17**: search design firmed up (Postgres FTS + `pg_trgm` + weighted `tsvector` + clinical synonym dictionary; no external/third-party engine), Section 4. The former forward dependency is now cleared: the synonym dictionary seeds from `community.tags.synonyms` (§2), which the taxonomy resolution above defines.
 - ~~**Edit/delete policy**~~ — **resolved 2026-07-17**: the Section 6 policy (15-minute no-marker edit window, `edited_at` after, soft-delete for ordinary posts, moderator-only removal for attested case discussions) is agreed.
 - ~~**Could-have scope confirmation**~~ — **resolved 2026-07-17** (Section 7): best-answer marker and polls are **in MVP**; image attachments are **deferred** on privacy grounds. Follow-up below.
 - **EPIC-E image-checklist reconciliation** (new, from the image deferral, Section 7): EPIC-E's de-identification checklist items 6/7 assume image uploads exist. With images deferred, case discussions are text-only at MVP and those two items need dropping/greying-out in EPIC-E's spec until images land. Tracked against EPIC-E.

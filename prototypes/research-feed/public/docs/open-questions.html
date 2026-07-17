@@ -30,9 +30,9 @@ than deleted, so the document also serves as a decision log.</p>
 <li><a href="#cross-epic-conflicts-and-gaps">Cross-epic conflicts and
 gaps</a> — issues that span more than one spec and need a single
 coordinated answer</li>
-<li><a href="#member_interests-vs.-community.follows-possible-duplicate-concepts">Already resolved</a> — decided, kept
+<li><a href="#member_interests-vs.-community.follows-possible-duplicate-concepts-narrowed-2026-07-17">Already resolved</a> — decided, kept
 here for traceability</li>
-<li><a href="#taxonomy-unification-three-unreconciled-vocabularies">Per-epic open questions</a> —
+<li><a href="#taxonomy-unification-three-unreconciled-vocabularies-resolved-2026-07-17">Per-epic open questions</a> —
 smaller items local to one spec</li>
 <li><a href="#moderator-forced-handle-rename-where-does-it-live">Standing PRD/business
 items</a> — carried over from the architecture spec, not new</li>
@@ -43,45 +43,47 @@ gaps</h2>
 <p>These are the items most worth discussing as a group, since a
 decision on one may constrain the others.</p>
 <h3
-id="member_interests-vs.-community.follows-possible-duplicate-concepts">1.1
+id="member_interests-vs.-community.follows-possible-duplicate-concepts-narrowed-2026-07-17">1.1
 <code>member_interests</code> vs. <code>community.follows</code> —
-possible duplicate concepts</h3>
+possible duplicate concepts (NARROWED 2026-07-17)</h3>
 <p>EPIC-I’s <code>community.member_interests</code> (a <em>weighted</em>
 interest signal used to score research-article relevance) and EPIC-B’s
 <code>community.follows</code> with <code>target_type = tag</code> (a
 <em>binary</em> follow relationship, resolved 2026-07-14 — see Section
-2) are both, conceptually, “a member’s interest in a topic.” They could
-be unified into one mechanism feeding both the research feed and the
-forum’s personalised feed, or deliberately kept separate since they
-serve different content types with different scoring needs.</p>
-<p><strong>Needs</strong>: a deliberate choice — not an assumption
-either way.</p>
+2) are both, conceptually, “a member’s interest in a topic.”</p>
+<p><strong>Narrowed by the taxonomy resolution (§1.2,
+2026-07-17)</strong>: the <em>vocabulary</em> both reference is now
+unified (one <code>community.tags</code>), which was the substance of
+the duplication worry — a member’s forum tag-follows and research-feed
+interests are drawn from the same list. What remains open is only
+whether the two <em>relationship mechanisms</em> (weighted vs. binary)
+should collapse into one. They serve different scoring needs, so keeping
+both is defensible; this is now a smaller, separable call, not a
+blocking conflict.</p>
+<p><strong>Needs</strong>: a deliberate choice on the mechanism question
+— low-stakes, non-blocking (both can be built independently).</p>
 <p><em>Source: EPIC-I spec §4.</em></p>
-<h3 id="taxonomy-unification-three-unreconciled-vocabularies">1.2
-Taxonomy unification (three unreconciled vocabularies)</h3>
-<p>The forum’s category/tag taxonomy (EPIC-C, FD-4’s hybrid model),
-Andrew Renshaw’s existing body-area list (referenced in PRD §15/FD-4),
-and the research-feed prototype’s <code>taxonomy.json</code>
-(<code>prototypes/research-feed/data/taxonomy.json</code>, whose own
-README already flags it as “a starting point… not the final FD-4 forum
-taxonomy”) are three overlapping-but-not-identical lists right now.
-EPIC-I’s <code>member_interests.tag</code> depends on whichever
-vocabulary EPIC-C settles on.</p>
-<p><strong>Needs</strong>: FD-4 formally closed (still an open
-stakeholder decision, not just an implementation detail) and a single
-controlled vocabulary chosen before EPIC-C or EPIC-I can be built as
-specced.</p>
-<p><strong>Input available</strong>:
-<code>docs/2026-07-17-taxonomy-standards-research.md</code> researches
-standard medical taxonomies as candidate anchors — recommends a curated
-member-facing list (from Andrew’s body-part list) mapped to
-<strong>MeSH</strong> (the vocabulary PubMed/Europe PMC already index
-with, so it unifies the forum tags and the research feed for free), with
-<strong>OSIICS v16</strong> (CC BY, sports-medicine-native) as a
-reference for the injury/condition tags. Both are free and
-machine-readable. Pending the conversation with Andrew.</p>
-<p><em>Source: EPIC-C spec §3 and §12, EPIC-I spec §5;
-taxonomy-standards research note.</em></p>
+<h3
+id="taxonomy-unification-three-unreconciled-vocabularies-resolved-2026-07-17">1.2
+Taxonomy unification (three unreconciled vocabularies) — RESOLVED
+2026-07-17</h3>
+<p><strong>Resolved</strong> (Andrew Renshaw’s input) — see Section 2
+(taxonomy entry) for the full record. The three vocabularies are
+collapsed into <strong>one controlled <code>community.tags</code>
+table</strong>, faceted
+(<code>region</code>/<code>muscle</code>/<code>structure</code>/<code>pathology</code>)
+with a region grouping and a <code>synonyms</code> array, used by
+<strong>both</strong> the forum and the research feed. Categories are
+<strong>content type</strong>; body areas and clinical terms are
+<strong>tags</strong>; <strong>OSIICS omitted</strong>;
+<strong>MeSH</strong> kept only as an internal <code>mesh_id</code>
+mapping. Full decision + agreed seed list in
+<code>docs/2026-07-17-taxonomy-standards-research.md</code>.
+<em>(Heading kept in place so cross-references to “§1.2”
+resolve.)</em></p>
+<p><em>Source: EPIC-C spec §2, §3, §12; EPIC-I spec §4, §5, §9; EPIC-J
+spec §4; architecture spec §4.2; taxonomy-standards research
+note.</em></p>
 <h3 id="moderator-forced-handle-rename-where-does-it-live">1.3
 Moderator-forced handle rename — where does it live?</h3>
 <p>EPIC-B’s spec originally proposed a bespoke
@@ -242,6 +244,38 @@ a minimum floor, tunable) — consistent with the no-ego thesis since the
 badge is merit-earned, not rank/seniority. Introduces one new coupling:
 EPIC-F’s <code>remove_content</code> now triggers the EPIC-D clawback.
 <em>(EPIC-D spec §3, §6, §7, §9, §10; EPIC-F spec §3.)</em></li>
+<li><strong>Taxonomy unification (§1.2) + FD-4 substance — resolved
+2026-07-17 (Andrew Renshaw’s input).</strong> Andrew confirmed the
+limited-categories-plus-tags approach and supplied concrete lists.
+Decisions with Adrian: <strong>(1) One unified
+<code>community.tags</code> vocabulary — a single maintained table used
+by both case posts and news-feed interests.</strong> Andrew gave one
+list for post tagging (anatomical regions) and a broader one for the
+news feed (regions + muscles + structures + pathologies); rather than
+maintain two, they’re combined into one (Adrian: “one list is correct”),
+since a case post legitimately needs a clinical tag like
+<em>tendinopathy</em> <strong>in addition to</strong> a region like
+<em>knee</em>. Each term carries a <strong>facet</strong>
+(<code>region</code>/<code>muscle</code>/<code>structure</code>/<code>pathology</code>)
+and, for regions, a <strong>grouping</strong> (Upper/Lower limb) —
+organising metadata, not a wall between surfaces. <strong>(2) Categories
+= content type</strong> (Clinical Case/Research/Career/Equipment/General
+— admin-managed), correcting an earlier ambiguity where body areas were
+miscast as categories. <strong>(3) OSIICS omitted entirely</strong> —
+Andrew judged it too complex for the audience even as an optional field,
+no audit use case yet. <strong>(4) MeSH retained only as an internal
+<code>mesh_id</code></strong> per tag (research-feed/search interop),
+never member-facing. <strong>(5) Muscle list pending</strong> — Andrew
+to supply a fuller commonly-injured-muscles list;
+hamstring/quadriceps/adductor/calf seeded now. The table is
+admin-managed and extensible (EPIC-J), satisfying Andrew’s “maintained
+in a table to allow additions going forward.” Also <strong>narrows
+§1.1</strong>: the vocabulary both interest mechanisms use is now
+shared, leaving only the (separable, non-blocking) weighted-vs-binary
+mechanism question. Full record + agreed seed rows:
+<code>docs/2026-07-17-taxonomy-standards-research.md</code>. <em>(EPIC-C
+spec §2/§3/§12; EPIC-I spec §4/§5/§9; EPIC-J spec §4/§10; architecture
+spec §2/§4.2; taxonomy-standards research note.)</em></li>
 <li><strong>EPIC-H (subscriptions/payments) — local questions resolved
 2026-07-17, including cross-epic §1.4.</strong> (1) <strong>Grace period
 is a configurable setting, not a hardcoded 7 days</strong> (Adrian:
@@ -454,9 +488,11 @@ direct enquiry to PEDro about API access. Plus an unresolved
 abstract-redistribution licensing review, relevant only if a commercial
 source (Elsevier/Scopus/Cochrane) is ever added.</li>
 </ul>
-<p><em>(The <code>member_interests</code>/<code>community.follows</code>
-unification question is covered in §1.1 above; taxonomy unification in
-§1.2.)</em></p>
+<p><em>(Taxonomy unification (§1.2) is now <strong>resolved</strong> —
+one unified <code>community.tags</code> vocabulary; see §2. The
+<code>member_interests</code>/<code>community.follows</code> question
+(§1.1) is <strong>narrowed</strong> to just the weighted-vs-binary
+mechanism, non-blocking.)</em></p>
 <h3 id="epic-j-administration-configuration-added-2026-07-17">EPIC-J —
 Administration &amp; Configuration (added 2026-07-17)</h3>
 <p>New epic (a scope addition, like EPIC-I) giving a single owner to the
@@ -507,11 +543,17 @@ confirmed with legal counsel before launch.</li>
 <li><strong>DPIA</strong>: a Data Protection Impact Assessment should be
 commissioned before launch, given the volume of
 professional-registration data processed.</li>
-<li><strong>FD-1, FD-3, FD-4, FD-5</strong>: all still formally open
+<li><strong>FD-1, FD-3, FD-5</strong>: all still formally open
 stakeholder decisions that the architecture and per-epic specs have
 designed <em>against</em> the PRD’s own recommendations for, in order to
 keep moving — none of these are closed just because a spec assumes an
 answer.</li>
+<li><strong>FD-4 (forum taxonomy)</strong>: the <strong>taxonomy
+substance is now resolved</strong> with Andrew (2026-07-17, §1.2 /
+Section 2) — content-type categories + one unified faceted tag
+vocabulary. What remains of FD-4 is only the formal stakeholder
+acknowledgement of the hybrid-model decision in the PRD; the design is
+settled and built against.</li>
 <li><strong>FD-2 (processor/pricing)</strong>: no material architectural
 impact from the choice itself, but a concrete decision is still needed
 before EPIC-H’s <code>StripeProvider</code> implementation can be built

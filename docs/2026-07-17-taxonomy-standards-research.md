@@ -1,12 +1,63 @@
 # Standard Medical Taxonomies — Research Note
 
-**Status**: Reference — input to FD-4 / taxonomy unification
-**Date**: 17 July 2026
+**Status**: Decision record — the taxonomy portion of FD-4 / §1.2 is now **resolved** (Andrew Renshaw's input, 2026-07-17). The research below is retained for context; the Decision section states what was chosen.
+**Date**: 17 July 2026 (decision added 2026-07-17)
 **Author**: Adrian Hall (Technical Lead), researched with Claude Code
 
-Background research on whether Askapeer's forum tag vocabulary should be built from scratch or anchored to an existing standard medical taxonomy. Supports the still-open FD-4 decision (forum organisation) and the taxonomy-unification item in `docs/2026-07-14-technical-specs-open-questions.md` (§1.2). Not a decision — input for the conversation with Andrew Renshaw.
+Background research on whether Askapeer's forum tag vocabulary should be built from scratch or anchored to an existing standard medical taxonomy. Supported the FD-4 decision (forum organisation) and the taxonomy-unification item in `docs/2026-07-14-technical-specs-open-questions.md` (§1.2).
 
-Related design context: the agreed forum structure is **one category + many tags per post** (EPIC-C spec, Sections 2–3; category = content type, tags = body areas / conditions / treatments). This note is about where the *tag* vocabulary comes from.
+Related design context: the agreed forum structure is **one category + many tags per post** (EPIC-C spec, Sections 2–3; category = content type, tags = the unified clinical vocabulary below).
+
+---
+
+## Decision (Andrew Renshaw's input, 2026-07-17)
+
+Andrew reviewed the approach and provided concrete lists. Decisions taken with Adrian:
+
+**1. Model confirmed (FD-4).** Content-type **categories** (a short admin-managed set — e.g. Clinical Case, Research, Career, Equipment, General) plus many **tags** per post. Andrew agrees with a limited category set and a curated tag list.
+
+**2. One unified tag vocabulary — a single maintained table, used by both surfaces.** Andrew supplied one list for tagging case posts (anatomical **regions**) and a different, broader list for filtering the **news feed** (regions **+** muscles **+** structures **+** pathologies). They overlap. Rather than maintain two lists, they are **combined into one controlled vocabulary** (Adrian's call: "one list is correct"), because a case post legitimately needs a clinical tag like *tendinopathy* **in addition to** a region like *knee* — not regions alone. Each term carries a **facet** (`region` / `muscle` / `structure` / `pathology`) and, for regions, a **grouping** (Upper limb / Lower limb). Both case posts and news-feed interests draw from the same table; the facet is organising metadata (for grouping the composer and filtering the feed), **not** a wall between the two surfaces. This is the concrete resolution of §1.2 (and unifies the vocabulary side of §1.1). The table must support additions going forward (Andrew will keep contributing terms) — which the EPIC-J tag-vocabulary management already provides.
+
+**3. OSIICS omitted entirely.** Andrew floated it as an *optional* box but worried its complexity would put people off ("rarely used in the UK… I'd fear that including this might put people off"). An optional classification field would also complicate the model for little near-term return (no injury-audit use case yet). **Dropped** — this supersedes the OSIICS recommendation further down this note.
+
+**4. MeSH retained as an internal mapping only.** Not member-facing and not OSIICS's replacement — an optional `mesh_id` per term, behind the scenes, so news-feed relevance (Europe PMC/PubMed are MeSH-indexed) and the search synonym dictionary get literature interop for free. Seeded opportunistically; never shown to or filled in by members.
+
+**5. Muscle list pending.** Andrew will supply a fuller list of commonly-injured muscles from his medical system; the four already implied by his news-feed list (hamstring, quadriceps, adductor, calf) are seeded now, more added to the same table later.
+
+### Agreed seed vocabulary
+
+The initial rows for the unified table (canonical label → facet, grouping, synonyms). Extended over time via EPIC-J.
+
+| Facet | Term | Grouping | Synonyms / notes |
+|---|---|---|---|
+| region | Head and neck | — | includes cervical spine |
+| region | Chest | — | |
+| region | Thoracic spine | — | |
+| region | Lumbar spine | — | |
+| region | Abdomen | — | "abdominal" |
+| region | Pelvis | — | |
+| region | Groin | — | (news-feed list; near hip/adductor) |
+| region | Shoulder | Upper limb | |
+| region | Upper arm | Upper limb | |
+| region | Elbow | Upper limb | |
+| region | Forearm | Upper limb | "lower arm" |
+| region | Wrist/hand | Upper limb | single term (Andrew) |
+| region | Hip | Lower limb | |
+| region | Thigh | Lower limb | anterior + posterior |
+| region | Knee | Lower limb | |
+| region | Lower leg | Lower limb | anterior + posterior |
+| region | Ankle | Lower limb | |
+| region | Foot | Lower limb | |
+| muscle | Hamstring | — | |
+| muscle | Quadriceps | — | |
+| muscle | Adductor | — | |
+| muscle | Calf | — | (Andrew's fuller muscle list to follow) |
+| structure | Anterior cruciate ligament | — | "ACL" |
+| structure | Achilles | — | Achilles tendon |
+| pathology | Tendinopathy | — | |
+| pathology | Osteochondral | — | |
+
+**Note on Ankle/foot:** Andrew's post list combined "ankle/foot" as one entry, but his news-feed list separated Ankle and Foot; the unified table uses the **granular** Ankle and Foot rows (the composer can still present them grouped). **Upper limb / Lower limb** exist as grouping parents.
 
 ---
 
@@ -42,16 +93,16 @@ The reason MeSH is interesting here: **the research feed (EPIC-I) already pulls 
 - **Size/structure**: ~1,500+ codes, hierarchical — body region (letter, e.g. C = chest) → tissue type (letter) → pathology (number), e.g. `CxBxx`. v16 notably expanded female-athlete diagnoses.
 - **Attribution**: acknowledgement requested for commercial/scientific use.
 
-**Assessment**: usable (a CC BY spreadsheet, importable directly), but it's a *diagnosis-coding* system (fine-grained injury pathology), not a browsing taxonomy. ~1,500 codes is far too many to put in front of a member choosing a tag. Better as a **reference/mapping source for the condition/injury tags, and a credibility signal for Andrew**, than as the literal member-facing list.
+**Assessment**: usable (a CC BY spreadsheet, importable directly), but it's a *diagnosis-coding* system (fine-grained injury pathology), not a browsing taxonomy. ~1,500 codes is far too many to put in front of a member choosing a tag. **Superseded — see the Decision section above: OSIICS is omitted entirely.** Andrew (the domain source this note assumed would want it) judged it too complex for the audience, even as an optional field, and there's no injury-audit use case yet to justify the model cost. Left here for the record.
 
-## Recommendation
+## Recommendation (as it stood before Andrew's input — now settled by the Decision section above)
 
-Neither availability nor licensing blocks the approach. Refined recommendation for the FD-4 / Andrew conversation:
+Neither availability nor licensing blocked the approach. What was recommended, and how it landed:
 
-- **Member-facing tags**: a short, curated, human-friendly list — small enough to browse — starting from Andrew's existing body-part list.
-- **Map that list to MeSH** underneath, for the research-feed interop (the real payoff of anchoring to a standard).
-- **Use OSIICS v16 as a reference** when building the condition/injury portion of the curated list — sports-medicine-native and the name Andrew knows — but don't expose its ~1,500 codes directly.
-- **Do not** adopt SNOMED/ICD wholesale — too granular; would make tagging a chore and browsing overwhelming.
+- **Member-facing tags**: a short, curated, human-friendly list — small enough to browse — starting from Andrew's body-part list. → **Adopted**, and extended with muscles/structures/pathologies into the one unified vocabulary (Decision, above).
+- **Map that list to MeSH** underneath, for research-feed interop. → **Adopted** as an internal-only optional `mesh_id`.
+- **Use OSIICS v16 as a reference** for the condition/injury tags. → **Dropped** — Andrew judged it too complex even as an optional field (Decision, above).
+- **Do not** adopt SNOMED/ICD wholesale — too granular. → **Held** (still the right call).
 
 ## Sources
 

@@ -45,7 +45,7 @@ interest management</a></li>
 <li><a
 href="#member_interests-vs.-epic-bs-community.follows"><code>member_interests</code>
 vs. EPIC-B’s <code>community.follows</code></a></li>
-<li><a href="#taxonomy-dependency-on-epic-c">Taxonomy dependency on
+<li><a href="#taxonomy-dependency-on-epic-c-resolved-2026-07-17">Taxonomy dependency on
 EPIC-C</a></li>
 <li><a href="#api-endpoints">API endpoints</a></li>
 <li><a href="#carried-forward-open-items">Carried-forward open
@@ -138,27 +138,58 @@ internal content</td>
 </table>
 <p>They could plausibly be unified into a single mechanism feeding both,
 or legitimately stay separate given they serve different content types
-with different scoring needs. This spec deliberately doesn’t resolve
-that unilaterally — flagged in Section 9 as still open, now that the
-tag-follow side is no longer a gap but an actual table to weigh
-unification against.</p>
+with different scoring needs.</p>
+<p><strong>Vocabulary unified 2026-07-17 (Andrew’s input).</strong> The
+<em>vocabulary</em> both mechanisms reference is now settled:
+<code>member_interests.tag</code> and <code>community.follows</code>
+(<code>target_type = tag</code>) both point at the <strong>one</strong>
+<code>community.tags</code> controlled vocabulary (EPIC-C §2–3; resolves
+§1.2). So a member’s news-feed interests and their forum tag-follows are
+drawn from the <em>same</em> list — no risk of two divergent
+vocabularies for “topics I care about,” which was the substance of
+§1.1’s concern. Andrew’s news-feed interest list (regions + muscles +
+structures + pathologies) is exactly the broader-facet slice of that
+shared table; the news feed simply exposes all facets, where the forum
+composer groups them.</p>
+<p><strong>Still a deliberate choice, not resolved here</strong>:
+whether the two <em>relationship mechanisms</em> — this epic’s
+<strong>weighted</strong> <code>member_interests</code> and EPIC-B’s
+<strong>binary</strong> <code>community.follows</code> — should further
+collapse into one. They serve different scoring needs
+(relevance-weighting external articles vs. a binary internal follow), so
+keeping both is defensible; unifying them is a smaller, separable
+decision now that the vocabulary underneath is shared (Section 9).</p>
 <hr />
-<h2 id="taxonomy-dependency-on-epic-c">5. Taxonomy dependency on
-EPIC-C</h2>
-<p>EPIC-C’s spec (Section 3) already flags that three vocabularies — the
-forum’s category/tag taxonomy, Andrew Renshaw’s body-area list, and the
-research feed prototype’s <code>taxonomy.json</code> — overlap without
-being unified. This epic depends on that reconciliation directly:</p>
+<h2 id="taxonomy-dependency-on-epic-c-resolved-2026-07-17">5. Taxonomy
+dependency on EPIC-C — resolved 2026-07-17</h2>
+<p>The reconciliation this epic depended on is <strong>done</strong>
+(Andrew’s input, 2026-07-17):</p>
 <ul>
-<li><code>member_interests.tag</code> and the classification taxonomy
-(architecture spec, Section 8) should end up being <strong>the same
-controlled vocabulary</strong> as whatever EPIC-C settles on for forum
-tags — not a separately-maintained list.</li>
-<li>Otherwise a member’s forum tag-following and their research-feed
-interests would use different, possibly inconsistent vocabularies for
-what they experience as one thing: “topics I care about.”</li>
-<li>No new work is proposed here — EPIC-C’s spec owns resolving it; this
-section just states the dependency.</li>
+<li><code>member_interests.tag</code> and the article-classification
+taxonomy (architecture spec, Section 8) reference <strong>the one
+<code>community.tags</code> controlled vocabulary</strong> EPIC-C now
+defines (its §2–3) — not a separately-maintained list. Resolves
+§1.2.</li>
+<li>So a member’s forum tag-following and their research-feed interests
+use the <em>same</em> vocabulary for what they experience as one thing:
+“topics I care about.”</li>
+<li>The unified table is <strong>faceted</strong> (<code>region</code> /
+<code>muscle</code> / <code>structure</code> / <code>pathology</code>);
+the research feed uses the <strong>full</strong> set (Andrew’s news-feed
+list is precisely the muscle/structure/pathology-inclusive slice),
+whereas the forum composer groups regions under limbs. Same table,
+surface-appropriate presentation.</li>
+<li><strong>MeSH</strong> lives on the tag as an internal
+<code>mesh_id</code> (EPIC-C §2) — the mechanism by which a member
+interest (e.g. “ACL”) matches MeSH-indexed Europe PMC/PubMed articles.
+This is the load-bearing reason MeSH was kept when OSIICS was dropped
+(see <code>docs/2026-07-17-taxonomy-standards-research.md</code>).</li>
+<li><strong>Article classification → <code>member_interests</code>
+matching</strong> therefore runs off the shared vocabulary + its MeSH
+mapping; no separate research-only taxonomy is maintained. The
+prototype’s <code>taxonomy.json</code> is superseded as a <em>source of
+truth</em> by <code>community.tags</code> (it can still seed initial
+rows).</li>
 </ul>
 <hr />
 <h2 id="api-endpoints">6. API endpoints</h2>
@@ -205,14 +236,16 @@ interest endpoints.</li>
 6.1’s MoSCoW list — a standing item from the architecture spec, restated
 here since it’s this epic specifically that’s affected.</li>
 <li><strong><code>member_interests</code>
-vs. <code>community.follows</code> unification</strong> (Section 4): a
-genuine design choice spanning this epic, EPIC-B, EPIC-C, and EPIC-G —
-the tag-follow mechanism itself is no longer missing (resolved
-2026-07-14), but whether it should be unified with this epic’s weighted
-interests remains open.</li>
-<li><strong>Taxonomy reconciliation</strong> (Section 5): depends
-entirely on EPIC-C’s Section 3 resolution — this epic has no independent
-path to resolving it.</li>
+vs. <code>community.follows</code> unification</strong> (Section 4):
+<strong>narrowed 2026-07-17</strong> — the <em>vocabulary</em> both use
+is now unified (one <code>community.tags</code>), which was the
+substance of §1.1. What remains is only whether the two <em>relationship
+mechanisms</em> (weighted vs. binary) should collapse into one — a
+smaller, separable call; keeping both is defensible.</li>
+<li><del><strong>Taxonomy reconciliation</strong></del> (Section 5) —
+<strong>resolved 2026-07-17</strong> (Andrew’s input): one unified
+<code>community.tags</code> vocabulary, faceted, MeSH-mapped internally,
+used by both forum and feed. Closes §1.2.</li>
 <li><strong>The three carried-forward items</strong> (Section 7):
 DOAJ/Retraction Watch integration, PEDro enquiry, and licensing review
 all remain open pre-launch work, unchanged from the architecture spec’s
