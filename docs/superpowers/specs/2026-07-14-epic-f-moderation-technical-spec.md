@@ -66,7 +66,7 @@ community.moderation_actions           -- immutable: INSERT-only grant
 
 | `action_type` | Effect | Owning epic for the effect |
 |---|---|---|
-| `remove_content` | `community.posts`/`comments.status = removed` | EPIC-C |
+| `remove_content` | `community.posts`/`comments.status = removed`; also **claws back** the kudos that content earned, from the author's `kudos_total` (EPIC-D Section 7) — moderation removal, unlike author self-delete, reverses earned reputation | EPIC-C (status), EPIC-D (kudos clawback) |
 | `warn` | No status change; a logged, immutable record a member received a formal warning | This epic |
 | `suspend` | `community.handles.status = suspended`; see Section 7 for whether this should also touch `identity.members` | EPIC-B (status) |
 | `expel` | `community.handles.status = expelled` **and** `identity.members.verification_status = expelled`, both in the same transaction; permanent | EPIC-B (status), Section 7 (identity linkage — resolved) |

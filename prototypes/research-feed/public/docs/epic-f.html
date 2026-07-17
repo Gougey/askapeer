@@ -123,8 +123,11 @@ EPIC-B-only endpoint.</li>
 <tbody>
 <tr>
 <td><code>remove_content</code></td>
-<td><code>community.posts</code>/<code>comments.status = removed</code></td>
-<td>EPIC-C</td>
+<td><code>community.posts</code>/<code>comments.status = removed</code>;
+also <strong>claws back</strong> the kudos that content earned, from the
+author’s <code>kudos_total</code> (EPIC-D Section 7) — moderation
+removal, unlike author self-delete, reverses earned reputation</td>
+<td>EPIC-C (status), EPIC-D (kudos clawback)</td>
 </tr>
 <tr>
 <td><code>warn</code></td>

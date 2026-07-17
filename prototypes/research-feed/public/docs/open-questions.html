@@ -255,6 +255,19 @@ results, proposed N = 10), ranked by kudos with recency tiebreak.
 Adaptive rather than fixed-24h to avoid an empty fallback feed at low
 launch volume — the fallback is a new member’s first impression, so it
 must never look dead. <em>(EPIC-C spec §8, §12.)</em></li>
+<li><strong>EPIC-D (kudos) — all four questions resolved
+2026-07-17.</strong> (1) <strong>Repeated award</strong> = silent no-op,
+not 409. (2) <strong>Retract</strong> is supported. (3)
+<strong>Moderation clawback</strong> = yes: kudos on moderation-removed
+content is reversed out of the author’s <code>kudos_total</code> (author
+self-delete does <em>not</em> claw back — the clawback keys on
+<em>why</em> content was removed). (4) <strong>No public
+leaderboard</strong>, but the same kudos ranking drives a
+<strong>top-contributor badge</strong> (top ~1% of active handles above
+a minimum floor, tunable) — consistent with the no-ego thesis since the
+badge is merit-earned, not rank/seniority. Introduces one new coupling:
+EPIC-F’s <code>remove_content</code> now triggers the EPIC-D clawback.
+<em>(EPIC-D spec §3, §6, §7, §9, §10; EPIC-F spec §3.)</em></li>
 </ul>
 <hr />
 <h2 id="per-epic-open-questions">3. Per-epic open questions</h2>
@@ -296,23 +309,8 @@ in §1.2 above; the search design, edit/delete policy, Could-have scope,
 “trending” fallback definition, and personalised-feed follow mechanism
 are all resolved — see §2.)</em></p>
 <h3 id="epic-d-kudos">EPIC-D — Kudos</h3>
-<ul>
-<li><strong>Idempotency of a repeated award</strong>: should awarding
-kudos twice 409, or silently no-op? Minor, but affects client
-error-handling.</li>
-<li><strong>Un-award/retract</strong>: this spec’s own addition — worth
-confirming it’s wanted, versus kudos being a one-way permanent signal (a
-deliberate choice some reputation systems make to prevent award/retract
-gaming).</li>
-<li><strong>Reputation clawback on moderation</strong>: if a member is
-warned/suspended for a specific piece of content, should kudos already
-earned from it be clawed back, or does <code>kudos_total</code> stay
-purely historical? No PRD guidance either way.</li>
-<li><strong>“Top contributors” leaderboard</strong>: not in the PRD’s
-MVP scope — the Redis leaderboard design assumes it might exist
-eventually, but it isn’t a committed feature. Flagged so it isn’t
-mistaken for confirmed scope.</li>
-</ul>
+<p><em>(No local open questions remain — all four resolved 2026-07-17;
+see §2.)</em></p>
 <h3 id="epic-e-case-discussions">EPIC-E — Case Discussions</h3>
 <ul>
 <li><strong>Structural enforcement of checklist items 3/4</strong>

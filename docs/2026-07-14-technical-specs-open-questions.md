@@ -81,6 +81,7 @@ Decided, kept here for the record rather than deleted.
 - **Forum edit/delete policy — resolved 2026-07-17.** Agreed: 15-minute no-marker edit window, `edited_at` shown after, author self-delete as soft-delete for ordinary posts, moderator-only removal for attested case discussions. *(EPIC-C spec §6, §12.)*
 - **Could-have scope + image-attachment deferral — resolved 2026-07-17.** Best-answer marker and polls are **in MVP**; **image attachments are deferred** (remain a future Could-have) on privacy grounds — images are the highest-risk vector for inadvertent patient identification (faces, tattoos, scars, EXIF, identifiable settings), which EXIF-stripping alone can't mitigate. Knock-on effect: EPIC-E case discussions are **text-only at MVP**, so the de-identification checklist is six items (1–5, 8) not eight; items 6/7 (image content, EXIF) return when image support lands. The `checklist_snapshot` records whichever items were live at attestation, so no schema change is needed for the reduction or its later restoration. *(EPIC-C spec §7, §12; EPIC-E spec §4, §12.)*
 - **"Trending" fallback-feed definition — resolved 2026-07-17.** Platform-wide, with an **adaptive** time window (start 24h; widen 24h → 7d → 30d → all-time until ≥ N results, proposed N = 10), ranked by kudos with recency tiebreak. Adaptive rather than fixed-24h to avoid an empty fallback feed at low launch volume — the fallback is a new member's first impression, so it must never look dead. *(EPIC-C spec §8, §12.)*
+- **EPIC-D (kudos) — all four questions resolved 2026-07-17.** (1) **Repeated award** = silent no-op, not 409. (2) **Retract** is supported. (3) **Moderation clawback** = yes: kudos on moderation-removed content is reversed out of the author's `kudos_total` (author self-delete does *not* claw back — the clawback keys on *why* content was removed). (4) **No public leaderboard**, but the same kudos ranking drives a **top-contributor badge** (top ~1% of active handles above a minimum floor, tunable) — consistent with the no-ego thesis since the badge is merit-earned, not rank/seniority. Introduces one new coupling: EPIC-F's `remove_content` now triggers the EPIC-D clawback. *(EPIC-D spec §3, §6, §7, §9, §10; EPIC-F spec §3.)*
 
 ---
 
@@ -103,10 +104,7 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 *(No local open questions remain. Taxonomy unification is covered in §1.2 above; the search design, edit/delete policy, Could-have scope, "trending" fallback definition, and personalised-feed follow mechanism are all resolved — see §2.)*
 
 ### EPIC-D — Kudos
-- **Idempotency of a repeated award**: should awarding kudos twice 409, or silently no-op? Minor, but affects client error-handling.
-- **Un-award/retract**: this spec's own addition — worth confirming it's wanted, versus kudos being a one-way permanent signal (a deliberate choice some reputation systems make to prevent award/retract gaming).
-- **Reputation clawback on moderation**: if a member is warned/suspended for a specific piece of content, should kudos already earned from it be clawed back, or does `kudos_total` stay purely historical? No PRD guidance either way.
-- **"Top contributors" leaderboard**: not in the PRD's MVP scope — the Redis leaderboard design assumes it might exist eventually, but it isn't a committed feature. Flagged so it isn't mistaken for confirmed scope.
+*(No local open questions remain — all four resolved 2026-07-17; see §2.)*
 
 ### EPIC-E — Case Discussions
 - **Structural enforcement of checklist items 3/4** (age-banding, relative dates): should these be structurally restricted fields (e.g. an age-band selector) rather than relying purely on the attestation checkbox? This spec recommends yes — a stronger safeguard than the PRD strictly requires — and needs sign-off.

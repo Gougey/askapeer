@@ -41,8 +41,9 @@ merit.”</p>
 kudos</a></li>
 <li><a href="#answer-ranking">Answer ranking</a></li>
 <li><a href="#api-endpoints">API endpoints</a></li>
-<li><a href="#leaderboards-and-the-redis-cache">Leaderboards and the
-Redis cache</a></li>
+<li><a
+href="#top-contributor-badge-and-the-redis-cache">Top-contributor
+badge and the Redis cache</a></li>
 <li><a href="#interaction-with-moderation-and-status">Interaction with
 moderation and status</a></li>
 <li><a href="#non-functional-notes-specific-to-epic-d">Non-functional
@@ -85,8 +86,13 @@ figure.</li>
 kudos</h2>
 <ul>
 <li><strong>One kudos per handle per target</strong>, enforced by the
-existing unique constraint — a member can’t inflate a single answer’s
-score by repeated awards.</li>
+existing unique constraint. A repeated award of an already-awarded
+target <strong>silently succeeds as a no-op</strong> (returns 200 with
+the current count), rather than 409 — agreed by Adrian, 2026-07-17.
+Rationale: from the member’s point of view “I want this to have my
+kudos” is already true, so a repeat tap isn’t an error to surface; a
+no-op is the least surprising behaviour and keeps client error-handling
+simpler.</li>
 <li><strong>Self-kudos is rejected</strong>: a handle cannot award kudos
 to its own post or comment. Not stated in the PRD, but follows directly
 from the same “ideas win on merit” thesis kudos exists to serve —
@@ -94,17 +100,15 @@ unrestricted self-kudos would let any member manufacture their own
 reputation number, which undermines the entire signal
 <code>kudos_total</code> is meant to be.</li>
 <li><strong>Un-awarding is supported</strong> (<code>DELETE</code>,
-Section 5) — a member can retract a kudos they gave. Not specified in
-the PRD; proposed here because kudos is presented to members as a live,
-editable action (“award kudos to contributions you find valuable”), and
-locking it permanently the moment it’s given has no clear justification
-and would surprise users. Flagged in Section 10 in case there’s a reason
-(e.g. gaming via rapid award/retract cycles to manipulate
-visible-at-a-glance thread state) to restrict this.</li>
+Section 5) — a member can retract a kudos they gave (agreed by Adrian,
+2026-07-17). Kudos is presented to members as a live, editable action
+(“award kudos to contributions you find valuable”), so locking it
+permanently the moment it’s given would surprise users.</li>
 <li><strong>Target must be <code>published</code></strong> (EPIC-C’s
 <code>status</code> field) — a <code>removed</code> post/comment cannot
-receive new kudos, though kudos already given before removal are not
-retracted (Section 7).</li>
+receive new kudos. Kudos already given to content that is <em>later</em>
+removed is handled per Section 7 (clawed back on moderation
+removal).</li>
 </ul>
 <hr />
 <h2 id="answer-ranking">4. Answer ranking</h2>
@@ -164,22 +168,41 @@ count” endpoint is needed — it’s already part of the post/comment
 representation returned by EPIC-C’s
 <code>GET /v1/posts/:post_id</code>.</p>
 <hr />
-<h2 id="leaderboards-and-the-redis-cache">6. Leaderboards and the Redis
-cache</h2>
+<h2 id="top-contributor-badge-and-the-redis-cache">6. Top-contributor
+badge and the Redis cache</h2>
+<p><strong>No public leaderboard</strong> (Adrian, 2026-07-17). A ranked
+“top contributors” <em>list</em> is deliberately <strong>not</strong> a
+member-facing feature — but the same ranking is used to
+<strong>badge</strong> individual top contributors (e.g. a “Top
+Contributor” marker on the handle, shown on the profile and next to the
+handle in threads).</p>
+<p>This is consistent with the no-ego thesis rather than in tension with
+it: the badge is earned purely through kudos (merit the community
+awarded), not through rank, seniority, or grade — exactly the kind of
+signal the platform <em>wants</em> to reward, and it reveals nothing
+about real identity. <code>kudos_total</code> is already peer-visible
+per PRD Section 9.2; the badge is just a visual shorthand for
+“consistently high kudos.”</p>
 <p>The architecture spec (Section 3) names “kudos leaderboards” as the
-example of Redis’s hot-path caching role. This epic makes that
-concrete:</p>
+example of Redis’s hot-path caching role — this epic makes that
+concrete, now serving badge computation rather than a displayed
+leaderboard:</p>
 <ul>
 <li><strong>Mechanism</strong>: a Redis sorted set
 (<code>kudos:leaderboard</code>, member = <code>handle_id</code>, score
 = <code>kudos_total</code>), updated alongside the same write that
 updates <code>community.handles.kudos_total</code> in Postgres.</li>
-<li><strong>What reads it</strong>: any “top contributors” view — not
-itself in the PRD’s MVP scope as a named feature, but a natural
-extension of a reputation system and useful for the moderation/admin
-picture of who’s active — reads from Redis rather than running
+<li><strong>What reads it</strong>: the top-contributor badge check
+(does this handle qualify?), plus the moderation/admin picture of who’s
+active — reads from Redis rather than running
 <code>ORDER BY kudos_total DESC</code> against Postgres on every
 request.</li>
+<li><strong>Qualifying threshold</strong>: proposed as the <strong>top
+~1% of active handles by <code>kudos_total</code>, subject to a sensible
+minimum</strong> (e.g. at least some floor of kudos so a tiny early
+community doesn’t hand out badges trivially) — a tunable heuristic, not
+a fixed rule, and refinable without design change once real distribution
+is known.</li>
 <li><strong>Authority</strong>: Postgres remains authoritative; Redis is
 a derived, rebuildable cache — the same reasoning the architecture spec
 gives generally for Redis as a read-path accelerator, never a source of
@@ -189,13 +212,28 @@ truth.</li>
 <h2 id="interaction-with-moderation-and-status">7. Interaction with
 moderation and status</h2>
 <ul>
-<li><strong>Kudos already awarded to content later removed by EPIC-F are
-not retracted</strong> — <code>kudos_total</code> reflects historical
-contribution, not a live audit of currently-published content. Removing
-a popular comment doesn’t retroactively strip its author’s earned
-reputation; the two are treated as separate concerns (this spec’s
-judgment call, flagged in Section 10, since the PRD doesn’t address it
-directly).</li>
+<li><strong>Kudos on content removed by moderation IS clawed
+back</strong> (Adrian, 2026-07-17). When EPIC-F removes a post or
+comment (<code>remove_content</code>, or content removed as part of a
+<code>warn</code>/<code>suspend</code>/<code>expel</code>), the kudos
+that content received are reversed out of the author’s
+<code>kudos_total</code> (and the Redis leaderboard, in the same write).
+Rationale: content that violated policy shouldn’t leave earned
+reputation behind — a member shouldn’t keep the standing that a
+since-removed contribution gave them. Implementation: the
+moderation-removal path decrements <code>kudos_total</code> by that
+content’s kudos count and deletes the associated
+<code>community.kudos</code> rows, in one transaction, mirroring the
+retract path.
+<ul>
+<li><strong>Author self-delete does <em>not</em> claw back</strong> —
+only moderation removal does. A member removing their own good-faith
+contribution isn’t a policy event; penalising it would discourage
+tidying up and feels punitive for something that wasn’t a violation.
+(Both self-delete and moderation set <code>status = removed</code> per
+EPIC-C Section 6, so the clawback keys on <em>why</em> the content was
+removed — the moderation path — not on the status field alone.)</li>
+</ul></li>
 <li><strong>A <code>suspended</code> or <code>expelled</code> handle
 cannot award new kudos</strong> (their session token doesn’t
 authenticate, per the architecture spec’s Section 7.2 mechanism)
@@ -222,9 +260,10 @@ could otherwise both read the same starting total.</li>
 <hr />
 <h2 id="test-plan">9. Test plan</h2>
 <ul>
-<li><strong>Uniqueness</strong>: a handle awarding kudos twice to the
-same target is rejected (idempotent — the second call either 409s or is
-treated as a no-op, needs picking, see Section 10).</li>
+<li><strong>Idempotent award</strong>: a handle awarding kudos twice to
+the same target results in one <code>community.kudos</code> row and one
+increment; the second call returns 200 with the current count (a no-op),
+not 409.</li>
 <li><strong>Self-kudos rejection</strong>: awarding kudos to your own
 post/comment is rejected.</li>
 <li><strong>Ranking</strong>: comments are returned kudos-descending,
@@ -233,38 +272,41 @@ chronological regardless of kudos.</li>
 <li><strong>Retract</strong>: <code>DELETE</code> removes the
 <code>community.kudos</code> row and decrements
 <code>kudos_total</code>; total never goes negative.</li>
-<li><strong>Removed-content kudos persistence</strong>: removing a
-comment via EPIC-F’s moderation action does not change the kudos-giver’s
-or kudos-receiver’s totals.</li>
+<li><strong>Moderation clawback</strong>: removing a comment via
+EPIC-F’s moderation action reverses that comment’s kudos out of the
+author’s <code>kudos_total</code> (and the Redis leaderboard); an author
+<em>self</em>-deleting the same comment does <strong>not</strong>.</li>
+<li><strong>Badge threshold</strong>: a handle crossing/falling below
+the top-contributor qualifying threshold (Section 6) gains/loses the
+badge; a tiny early community below the minimum floor awards no
+badges.</li>
 <li><strong>Leaderboard consistency</strong>: the Redis sorted set score
-matches Postgres’s <code>kudos_total</code> after a burst of
-awards/retractions (a consistency check worth running in integration
-tests, not just unit tests, given it’s a cache being kept in sync
-manually rather than via a single transactional write).</li>
+matches Postgres’s <code>kudos_total</code> after a burst of awards,
+retractions, and moderation clawbacks (a consistency check worth running
+in integration tests, not just unit tests, given it’s a cache being kept
+in sync manually rather than via a single transactional write).</li>
 </ul>
 <hr />
 <h2 id="open-questions">10. Open questions</h2>
+<p>All four EPIC-D open questions were resolved by Adrian on
+2026-07-17:</p>
 <ul>
-<li><strong>Idempotency of a repeated award</strong>: should calling
-<code>POST .../kudos</code> a second time (already-awarded) 409, or
-silently succeed as a no-op? Minor, but needs picking before the
-client’s error-handling is built.</li>
-<li><strong>Un-award / retract</strong>: confirmed as this spec’s own
-addition (Section 3) — worth Adrian/Andrew confirming it’s actually
-wanted, versus kudos being a one-way, permanent signal (which some
-reputation systems deliberately choose, to prevent rapid award/retract
-gaming of a visible score).</li>
-<li><strong>Reputation clawback on moderation</strong>: should a member
-who receives a formal warning or suspension have kudos from the
-offending content clawed back, or does <code>kudos_total</code> stay
-purely historical regardless of what happens to the underlying content
-(Section 7)? No PRD guidance either way.</li>
-<li><strong>“Top contributors” leaderboard as a member-facing
-feature</strong>: not in the PRD’s MVP scope at all — Section 6’s Redis
-design assumes it might exist eventually (or serves an admin/ops view),
-but it isn’t a committed feature; flagged so it isn’t mistaken for
-confirmed scope.</li>
+<li><del><strong>Idempotency of a repeated award</strong></del> —
+<strong>resolved</strong>: silent no-op (200 with current count), not
+409. See Section 3.</li>
+<li><del><strong>Un-award / retract</strong></del> —
+<strong>resolved</strong>: retract is supported. See Section 3.</li>
+<li><del><strong>Reputation clawback on moderation</strong></del> —
+<strong>resolved</strong>: yes, clawed back — kudos on
+moderation-removed content is reversed out of the author’s
+<code>kudos_total</code>; author self-delete does not claw back. See
+Section 7.</li>
+<li><del><strong>“Top contributors” leaderboard</strong></del> —
+<strong>resolved</strong>: no public leaderboard, but the same kudos
+ranking drives a <strong>top-contributor badge</strong>. See Section
+6.</li>
 </ul>
+<p>No open questions remain for EPIC-D.</p>
 
 </main>
 </body>
