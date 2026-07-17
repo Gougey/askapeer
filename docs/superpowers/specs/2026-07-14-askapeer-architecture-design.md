@@ -147,7 +147,7 @@ The core architectural constraint (PRD Section 9) is: **no path exists from a ha
 
 ### 4.1 `identity` schema — real personally identifiable information (PII)
 
-Only three internal modules ever hold a database role with access here: `IdentityService` (verification, moderator-initiated lookups), `BillingService` (invoicing), and `NotificationService` (email delivery). No other module's database role has grants on this schema — enforced by PostgreSQL `GRANT`/`REVOKE`, verified by an automated test (Section 9).
+Only three internal modules ever hold a database role with access here: `IdentityService` (verification, moderator-initiated lookups), `BillingService` (invoicing), and `NotificationService` (email delivery). No other module's database role has grants on this schema — enforced by PostgreSQL `GRANT`/`REVOKE`, verified by an automated test (Section 9). **Refinement (2026-07-17)**: `NotificationService`'s grant is narrowed further — it targets an **email-only view** (`identity.member_emails`, exposing `member_id` + `email`), not `identity.members` itself, so it is structurally unable to read `legal_name`. See EPIC-G spec §3.
 
 ```
 identity.members
@@ -372,7 +372,7 @@ A worker reacts to domain events (a new comment, kudos received) by writing an i
 
 Notification types for MVP: `reply`, `mention`, `kudos_received`, `verification_status_change`, and the Should-have `weekly_digest`.
 
-**Delivery channels (amended 2026-07-17)**: a member sets preferences per type across **three channels — in-app, email, and push**. **Push** uses the W3C Web Push protocol (browser Push API + service worker + VAPID keys) for the web MVP, with subscriptions stored in `community.push_subscriptions` (post-handle only) and delivered by the same worker that writes the in-app row. The channel is **fully described in the EPIC-G spec (§6.2) but ships inert for the web-only MVP** — the preference is present and visible (greyed-out) but no push is delivered at launch; which events push, and the batching/throttling rules, are settled during app testing. Native push transports (APNs/FCM) are Phase 2 with the native apps (FD-3); the preference and worker are modelled channel-generically so native is additive. Push copy carries only handle-attributed, non-identifying content — never real names or patient-identifying detail, since a payload can surface on a lock screen.
+**Delivery channels (amended 2026-07-17)**: a member sets preferences per type across **three channels — in-app, email, and push**. **Push** uses the W3C Web Push protocol (browser Push API + service worker + VAPID keys) for the web MVP, with subscriptions stored in `community.push_subscriptions` (post-handle only) and delivered by the same worker that writes the in-app row. The channel is **fully described in the EPIC-G spec (§6.2) but ships inert for the web-only MVP** — the preference is present and visible (greyed-out) but no push is delivered at launch; which events push, and the batching/throttling rules, are settled during app testing. Native push transports (APNs/FCM) arrive with the native apps — a **near-term intention rather than a distant Phase 2** (Adrian, 2026-07-17): the app is a PWA for early development and moves to native as soon as possible. The preference and worker are modelled channel-generically so native is additive, not a rewrite. Push copy carries only handle-attributed, non-identifying content — never real names or patient-identifying detail, since a payload can surface on a lock screen.
 
 ---
 

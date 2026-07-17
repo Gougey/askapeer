@@ -243,6 +243,26 @@ a minimum floor, tunable) — consistent with the no-ego thesis since the
 badge is merit-earned, not rank/seniority. Introduces one new coupling:
 EPIC-F’s <code>remove_content</code> now triggers the EPIC-D clawback.
 <em>(EPIC-D spec §3, §6, §7, §9, §10; EPIC-F spec §3.)</em></li>
+<li><strong>EPIC-G (notifications) — three original local questions
+resolved 2026-07-17.</strong> (1)
+<strong><code>NotificationService</code> identity access is hardened by
+a database view</strong>: an email-only view
+(<code>identity.member_emails</code>) is created and the service’s grant
+targets the <em>view</em>, not <code>identity.members</code>, so it’s
+structurally unable to read <code>legal_name</code> — turning the
+email-yes/name-no norm from application discipline into a
+permission-level guarantee (architecture spec §4.1 refined). (2)
+<strong>The <code>verification_status_change</code> email is
+non-optional — confirmed</strong>: this one account-critical channel
+can’t be disabled, unlike
+<code>reply</code>/<code>kudos_received</code>. (3) <strong>Weekly
+digest is weekly, email-only, with an unsubscribe link</strong>
+(equivalent to disabling <code>email_enabled</code> for
+<code>weekly_digest</code>; a PECR-friendly opt-out for engagement
+content, while transactional account notices stay non-optional) — legal
+sanity-check still bundled with the DPIA, but the design is settled.
+<em>(EPIC-G spec §3, §6.1, §9, §10, §11; architecture spec
+§4.1.)</em></li>
 <li><strong>Push notifications added as a third channel — 2026-07-17
 (Adrian).</strong> EPIC-G originally specified only two delivery
 channels (in-app, email); server-generated <strong>push</strong> had no
@@ -376,28 +396,19 @@ above; <code>request_correction</code> and the expulsion/re-registration
 gap are resolved — see §2.)</em></p>
 <h3 id="epic-g-notifications">EPIC-G — Notifications</h3>
 <ul>
-<li><strong>Column-level hardening of <code>NotificationService</code>’s
-identity access</strong>: should a database view restrict it to
-<code>email</code> only (rather than relying on application discipline
-over a full-table grant on <code>identity.members</code>)? Recommended,
-not yet built.</li>
-<li><strong>Non-optional <code>verification_status_change</code>
-email</strong>: this spec proposes members can’t disable this one
-notification channel, since it’s account-critical — needs confirmation
-that removing member control here is acceptable.</li>
-<li><strong>Digest cadence/unsubscribe mechanics</strong>: assumed
-weekly, email-only per the PRD’s own naming — no further design done
-beyond that assumption.</li>
 <li><strong>Push channel — per-type triggers and throttling</strong>
-(deferred to testing, not blocking): the push mechanism/preference is
-now specified and ships inert for MVP (see §2) — which notification
-types actually push, and the batching/throttling to avoid nuisance, are
-to be settled during app testing. Also a prerequisite check: the web
-client must be a PWA with a service worker (and, on iOS,
-added-to-Home-Screen) before push can be switched on.</li>
+(deferred to testing, <em>not a decision pending now</em>): the push
+mechanism/preference is specified and ships inert for MVP (see §2) —
+which notification types actually push, and the batching/throttling to
+avoid nuisance, are to be tuned during app testing. Web Push
+prerequisite is resolved: the app is a PWA with a service worker for
+early development, moving to native ASAP (see §2).</li>
 </ul>
-<p><em>(The tag-follow mechanism the digest depends on is resolved — see
-§2. The push channel addition itself is resolved — see §2.)</em></p>
+<p><em>(All three original EPIC-G questions — identity-access hardening,
+non-optional verification email, digest cadence/unsubscribe — are
+resolved; see §2. The push channel addition and its Web Push
+prerequisite are also resolved; see §2. The tag-follow mechanism the
+digest depends on is resolved; see §2.)</em></p>
 <h3 id="epic-h-subscriptionpayments">EPIC-H — Subscription/Payments</h3>
 <ul>
 <li><strong>FD-2 itself</strong>: pricing, trial length, and processor

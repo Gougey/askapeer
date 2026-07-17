@@ -143,9 +143,18 @@ general <code>identity</code>/<code>community</code> boundary (which
 Section 4 of that spec enforces via role grants), this narrower
 email-yes/name-no constraint is currently application discipline
 <em>within</em> an already-granted role.</li>
-<li><strong>Recommended hardening</strong>: a database view exposing
-only <code>email</code> — cheap to build, turns the norm into a
-structural guarantee. Flagged in Section 11.</li>
+<li><strong>Hardening — confirmed 2026-07-17</strong>: this
+<em>will</em> be enforced by a database view. A view exposing only
+<code>email</code>
+(e.g. <code>identity.member_emails(member_id, email)</code>) is created,
+and <code>NotificationService</code>’s database role is granted on the
+<strong>view, not the <code>identity.members</code> table</strong> —
+turning the email-yes/name-no norm into a structural guarantee rather
+than application discipline. Cheap to build; removes the one place the
+identity boundary rested on convention. The architecture spec’s Section
+4.1 note that <code>NotificationService</code> holds an
+<code>identity</code>-schema grant is refined accordingly: the grant
+targets the email-only view.</li>
 </ul>
 <p>This routine access is not an <code>identity_access_log</code> event,
 per the architecture spec’s Section 4.4 distinction (routine automated
@@ -278,8 +287,8 @@ per-type preferences</h3>
 <p><code>community.notification_preferences</code> lets a member
 configure <strong>three channels per notification type</strong>:
 <code>in_app_enabled</code>, <code>email_enabled</code>, and (new)
-<code>push_enabled</code> — with one proposed exception below (flagged
-in Section 11 as a proposal, not yet confirmed policy).</p>
+<code>push_enabled</code> — with one exception below (<strong>confirmed
+policy, 2026-07-17</strong>).</p>
 <ul>
 <li><strong><code>verification_status_change</code> email cannot be
 disabled</strong>, even though a member can disable email for
@@ -302,19 +311,25 @@ settings UI as <strong>greyed-out / “coming soon”</strong>, and the
 mechanism below is specified so it can be switched on without a schema
 or model change once the per-event triggers are validated in
 testing.</p>
-<p><strong>Transport — Web Push (MVP), native later.</strong> For the
-web MVP the transport is the <strong>W3C Web Push protocol</strong>: the
-browser’s Push API + a service worker + a <strong>VAPID</strong> key
-pair (application server identity; the private key is a server secret,
-config-managed like other secrets in the architecture spec’s Section 6).
-No third-party push SaaS — messages go from our delivery worker straight
-to the browser’s push service (the endpoint stored on the subscription),
-keeping delivery on first-party infrastructure, consistent with the
-platform’s data-residency/trust posture. Phase 2 adds
-<code>apns</code>/<code>fcm</code> rows to
-<code>push_subscriptions.transport</code> for native apps; the
-preference (<code>push_enabled</code>) and the worker’s fan-out logic
-are unchanged by that addition.</p>
+<p><strong>Transport — Web Push (early dev), native soon after.</strong>
+For the web MVP / early development the transport is the <strong>W3C Web
+Push protocol</strong>: the browser’s Push API + a service worker + a
+<strong>VAPID</strong> key pair (application server identity; the
+private key is a server secret, config-managed like other secrets in the
+architecture spec’s Section 6). No third-party push SaaS — messages go
+from our delivery worker straight to the browser’s push service (the
+endpoint stored on the subscription), keeping delivery on first-party
+infrastructure, consistent with the platform’s data-residency/trust
+posture. <strong>Native is a near-term intention, not a distant Phase
+2</strong> (Adrian, 2026-07-17): the app is a PWA for early development
+and moves to native (iOS/Android) <em>as soon as possible</em>, at which
+point <code>apns</code>/<code>fcm</code> rows are added to
+<code>push_subscriptions.transport</code>. The channel-generic modelling
+— one <code>push_enabled</code> preference, one fan-out worker, a
+<code>transport</code> discriminator on the subscription — is what makes
+that transition additive rather than a rewrite, and it pays off sooner
+than FD-3’s “Phase 2” wording implies. (This doesn’t change the
+web-first MVP itself; it’s a note on how quickly native follows.)</p>
 <p><strong>Subscription lifecycle:</strong></p>
 <table>
 <colgroup>
@@ -412,10 +427,10 @@ POST   /v1/push/subscriptions             { endpoint, keys: { p256dh, auth }, us
 DELETE /v1/push/subscriptions/:id         -- unsubscribe this device (soft-revoke)</code></pre>
 <p><code>PUT .../notification-preferences</code> rejects an attempt to
 set <code>email_enabled = false</code> for
-<code>verification_status_change</code>, per Section 6.1 (a proposal
-pending confirmation — see Section 11). It accepts
-<code>push_enabled</code> for any type, but at MVP the value is stored
-without effect (the delivery branch is inert, Section 6.2).</p>
+<code>verification_status_change</code>, per Section 6.1 (confirmed
+policy, 2026-07-17). It accepts <code>push_enabled</code> for any type,
+but at MVP the value is stored without effect (the delivery branch is
+inert, Section 6.2).</p>
 <p>The three <code>/v1/push/*</code> endpoints exist and function at MVP
 (a member <em>can</em> register a subscription and toggle the
 preference) — only the outbound delivery is gated off. This is
@@ -428,16 +443,20 @@ specific to EPIC-G</h2>
 <li><strong>Email deliverability</strong>: sent via SES in
 <code>eu-west-1</code> per the architecture spec, Section 6 — no new
 infrastructure needed here.</li>
-<li><strong>Unsubscribe/opt-out compliance</strong>: under UK PECR,
-marketing-flavoured communications generally require an easy opt-out;
-the weekly digest plausibly falls into that category (it’s engagement
-content, not a transactional account notice) and should carry an
-unsubscribe link, whereas <code>verification_status_change</code> and
-other account-critical notices are transactional and not subject to the
-same requirement — consistent with why Section 6 proposes making the
-latter non-optional. Worth a specific legal sanity-check alongside the
-DPIA already flagged in the architecture spec (Section 11) rather than
-assumed correct by this spec’s own reasoning.</li>
+<li><strong>Digest cadence and unsubscribe — confirmed
+2026-07-17</strong>: the digest is <strong>weekly, email-only</strong>
+(per the PRD’s own naming) and carries an <strong>unsubscribe
+link</strong>. Under UK PECR, marketing-flavoured communications require
+an easy opt-out; the weekly digest falls into that category (it’s
+engagement content, not a transactional account notice), whereas
+<code>verification_status_change</code> and other account-critical
+notices are transactional and not subject to the same requirement —
+consistent with Section 6.1 making the latter non-optional. The
+unsubscribe link is equivalent to setting
+<code>email_enabled = false</code> for <code>weekly_digest</code> (which
+is permitted, unlike <code>verification_status_change</code>). Still
+worth a specific legal sanity-check alongside the DPIA (architecture
+spec, Section 11), but the design is settled.</li>
 <li><strong>Payload shape</strong>:
 <code>community.notifications.payload</code> is <code>jsonb</code> and
 type-specific (a <code>reply</code> notification’s payload differs from
@@ -454,12 +473,19 @@ applicant (no handle) receives an email notification and no
 <code>community.notifications</code> row is ever created for them.</li>
 <li><strong>Non-optional email</strong>: an attempt to disable
 <code>email_enabled</code> for <code>verification_status_change</code>
-is rejected (pending Section 6’s confirmation).</li>
-<li><strong><code>NotificationService</code> field access</strong>: an
-automated test asserting the service’s queries against
-<code>identity.members</code> never select <code>legal_name</code>, only
-<code>email</code> — mirrors the access-boundary tests the EPIC-A and
-EPIC-B specs already establish for their own modules.</li>
+is rejected (confirmed policy, Section 6.1).</li>
+<li><strong><code>NotificationService</code> field access</strong>: the
+service’s database role has <strong>no grant on
+<code>identity.members</code></strong> — only on the email-only view
+(Section 3) — so a query selecting <code>legal_name</code> fails at the
+permission level, not merely by convention. Mirrors and strengthens the
+access-boundary tests the EPIC-A and EPIC-B specs establish for their
+own modules.</li>
+<li><strong>Digest unsubscribe</strong>: an unsubscribe action on a
+weekly digest sets <code>email_enabled = false</code> for
+<code>weekly_digest</code> and no further digests are sent, while
+<code>verification_status_change</code> email remains unaffected
+(Section 9).</li>
 <li><strong>Mention parsing</strong>: mentioning an
 <code>expelled</code> handle doesn’t error or leak status, consistent
 with EPIC-C’s Section 9 note on the same behavior.</li>
@@ -486,36 +512,39 @@ analogue of the <code>NotificationService</code> field-access test above
 <hr />
 <h2 id="open-questions">11. Open questions</h2>
 <ul>
-<li><strong>Column-level hardening of <code>NotificationService</code>’s
-identity access</strong> (Section 3): should this be enforced by a
-database view exposing only <code>email</code>, rather than relying on
-application discipline over a full-table grant? Recommended, not yet
-built.</li>
-<li><strong>Non-optional <code>verification_status_change</code>
-email</strong> (Section 6): needs confirmation — is it acceptable to
-remove member control over this one notification channel?</li>
+<li><del><strong>Column-level hardening of
+<code>NotificationService</code>’s identity access</strong></del>
+(Section 3) — <strong>resolved 2026-07-17</strong>: yes, enforced by an
+email-only database view; <code>NotificationService</code>’s grant
+targets the view, not <code>identity.members</code>.</li>
+<li><del><strong>Non-optional <code>verification_status_change</code>
+email</strong></del> (Section 6.1) — <strong>resolved
+2026-07-17</strong>: confirmed — this one channel cannot be disabled, as
+it’s account-critical.</li>
 <li><del><strong>Missing tag-follow mechanism</strong></del> —
 <strong>resolved 2026-07-14</strong>, see Section 7 above and EPIC-B’s
 spec, Section 8.</li>
-<li><strong>Digest cadence/unsubscribe mechanics</strong>: this spec
-assumes weekly, email-only, per the PRD’s own naming — no further design
-beyond that assumption has been done here.</li>
+<li><del><strong>Digest cadence/unsubscribe mechanics</strong></del>
+(Section 9) — <strong>resolved 2026-07-17</strong>: weekly, email-only,
+with an unsubscribe link (equivalent to disabling
+<code>email_enabled</code> for <code>weekly_digest</code>). Legal
+sanity-check still bundled with the DPIA, but the design is
+settled.</li>
 <li><strong>Push channel — which types push, and
-batching/throttling</strong> (Section 6.2): the mechanism and preference
-are specified and ship inert for MVP; the per-type trigger set
-(expected: <code>reply</code>, <code>mention</code>,
-<code>kudos_received</code>; <em>not</em> <code>weekly_digest</code>)
-and the batching/throttling rules to avoid nuisance are intentionally
-left to be settled during app testing, where real interaction volume
-will show what’s useful versus noise. Activating the delivery branch is
-a config flip, not a schema/model change.</li>
-<li><strong>Web Push prerequisites</strong> (Section 6.2): Web Push
-needs a service worker and a browser notification-permission grant; on
-iOS it additionally requires the web app be installed to the home screen
-(added-to-Home-Screen PWA). Worth confirming the web client is a PWA
-with a service worker (the <code>prototypes/mobile-lookfeel</code>
-prototype already leans PWA-style) before push is switched on, so the
-channel isn’t advertised where the platform can’t deliver it.</li>
+batching/throttling</strong> (Section 6.2): <em>not a decision pending
+now</em> — the mechanism and preference are specified and ship inert for
+MVP. The per-type trigger set (expected: <code>reply</code>,
+<code>mention</code>, <code>kudos_received</code>; <em>not</em>
+<code>weekly_digest</code>) and the batching/throttling rules to avoid
+nuisance are deliberately left to be tuned during app testing, where
+real interaction volume will show what’s useful versus noise. Activating
+the delivery branch is a config flip, not a schema/model change.</li>
+<li><del><strong>Web Push prerequisites</strong></del> (Section 6.2) —
+<strong>resolved 2026-07-17</strong>: the app is a <strong>PWA with a
+service worker for early development</strong> (so Web Push works), and
+moves to <strong>native as soon as possible</strong> (Adrian) — at which
+point delivery switches to native APNs/FCM. The channel-generic model
+makes that additive; see Section 6.2.</li>
 </ul>
 
 </main>

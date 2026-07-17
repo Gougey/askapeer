@@ -388,7 +388,13 @@ lookups), <code>BillingService</code> (invoicing), and
 <code>NotificationService</code> (email delivery). No other module’s
 database role has grants on this schema — enforced by PostgreSQL
 <code>GRANT</code>/<code>REVOKE</code>, verified by an automated test
-(Section 9).</p>
+(Section 9). <strong>Refinement (2026-07-17)</strong>:
+<code>NotificationService</code>’s grant is narrowed further — it
+targets an <strong>email-only view</strong>
+(<code>identity.member_emails</code>, exposing <code>member_id</code> +
+<code>email</code>), not <code>identity.members</code> itself, so it is
+structurally unable to read <code>legal_name</code>. See EPIC-G spec
+§3.</p>
 <pre><code>identity.members
   id                    uuid PK          -- the real &quot;member_id&quot;
   legal_name            text
@@ -728,12 +734,14 @@ in-app row. The channel is <strong>fully described in the EPIC-G spec
 (§6.2) but ships inert for the web-only MVP</strong> — the preference is
 present and visible (greyed-out) but no push is delivered at launch;
 which events push, and the batching/throttling rules, are settled during
-app testing. Native push transports (APNs/FCM) are Phase 2 with the
-native apps (FD-3); the preference and worker are modelled
-channel-generically so native is additive. Push copy carries only
-handle-attributed, non-identifying content — never real names or
-patient-identifying detail, since a payload can surface on a lock
-screen.</p>
+app testing. Native push transports (APNs/FCM) arrive with the native
+apps — a <strong>near-term intention rather than a distant Phase
+2</strong> (Adrian, 2026-07-17): the app is a PWA for early development
+and moves to native as soon as possible. The preference and worker are
+modelled channel-generically so native is additive, not a rewrite. Push
+copy carries only handle-attributed, non-identifying content — never
+real names or patient-identifying detail, since a payload can surface on
+a lock screen.</p>
 <hr />
 <h2 id="researchnews-feed-epic-i">8. Research/news feed (EPIC-I)</h2>
 <p>Re-architected onto the chosen Node.js/TypeScript stack from the
