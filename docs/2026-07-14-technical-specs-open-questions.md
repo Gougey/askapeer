@@ -37,20 +37,7 @@ The forum's category/tag taxonomy (EPIC-C, FD-4's hybrid model), Andrew Renshaw'
 
 *Source: EPIC-C spec §3 and §12, EPIC-I spec §5; taxonomy-standards research note.*
 
-### 1.3 Cross-spec schema amendments needed for EPIC-E
-
-Writing EPIC-E surfaced two small but real changes to specs that were already committed before EPIC-E was drafted:
-
-- **EPIC-C's `community.posts.status` enum** (currently `published, removed`) needs a `draft` value added, to support case discussions' multi-step publish flow (fill template → checklist → attestation → publish). Ordinary forum posts don't need this; case discussions do.
-- **EPIC-F's moderation `action_type` enum** needs a `request_correction` value, to match PRD §10.4's "request a corrected resubmission" for case discussions with de-identification problems.
-
-**Status**: EPIC-F's spec has already proposed adding `request_correction` (and, separately, `rename_handle` — see 1.4) to its own action-type enum, which would resolve the second bullet. The `draft` status addition to EPIC-C is not yet reflected back into EPIC-C's committed spec.
-
-**Needs**: confirmation that EPIC-F's proposed resolution is accepted, and a decision on whether to amend EPIC-C's spec directly or treat `draft` as an EPIC-E-specific extension.
-
-*Source: EPIC-E spec §9, EPIC-F spec §3.*
-
-### 1.4 Moderator-forced handle rename — where does it live?
+### 1.3 Moderator-forced handle rename — where does it live?
 
 EPIC-B's spec originally proposed a bespoke `POST /v1/admin/handles/:handle_id/rename` endpoint for the case where a handle name itself turns out to be identifying or impersonating. EPIC-F's spec later proposed folding this into its own moderation `action_type` enum as `rename_handle`, on the grounds that a moderator-initiated rename is a moderation action in substance.
 
@@ -58,7 +45,7 @@ EPIC-B's spec originally proposed a bespoke `POST /v1/admin/handles/:handle_id/r
 
 *Source: EPIC-B spec §13, EPIC-F spec §3/§10.*
 
-### 1.5 Two independent access-control gates: moderation status and billing status
+### 1.4 Two independent access-control gates: moderation status and billing status
 
 EPIC-H proposes that community access requires **both** a `community.handles.status` of `active` (EPIC-B/F's concern) **and** a non-lapsed `billing.subscriptions.status` (EPIC-H's concern) — deliberately kept as two separate gates rather than one combined status, on the reasoning that a moderation suspension and a billing lapse are different in kind (resolved by an appeal vs. resolved by paying). This is new design not anticipated by the architecture spec.
 
@@ -82,6 +69,7 @@ Decided, kept here for the record rather than deleted.
 - **Could-have scope + image-attachment deferral — resolved 2026-07-17.** Best-answer marker and polls are **in MVP**; **image attachments are deferred** (remain a future Could-have) on privacy grounds — images are the highest-risk vector for inadvertent patient identification (faces, tattoos, scars, EXIF, identifiable settings), which EXIF-stripping alone can't mitigate. Knock-on effect: EPIC-E case discussions are **text-only at MVP**, so the de-identification checklist is six items (1–5, 8) not eight; items 6/7 (image content, EXIF) return when image support lands. The `checklist_snapshot` records whichever items were live at attestation, so no schema change is needed for the reduction or its later restoration. *(EPIC-C spec §7, §12; EPIC-E spec §4, §12.)*
 - **"Trending" fallback-feed definition — resolved 2026-07-17.** Platform-wide, with an **adaptive** time window (start 24h; widen 24h → 7d → 30d → all-time until ≥ N results, proposed N = 10), ranked by kudos with recency tiebreak. Adaptive rather than fixed-24h to avoid an empty fallback feed at low launch volume — the fallback is a new member's first impression, so it must never look dead. *(EPIC-C spec §8, §12.)*
 - **EPIC-D (kudos) — all four questions resolved 2026-07-17.** (1) **Repeated award** = silent no-op, not 409. (2) **Retract** is supported. (3) **Moderation clawback** = yes: kudos on moderation-removed content is reversed out of the author's `kudos_total` (author self-delete does *not* claw back — the clawback keys on *why* content was removed). (4) **No public leaderboard**, but the same kudos ranking drives a **top-contributor badge** (top ~1% of active handles above a minimum floor, tunable) — consistent with the no-ego thesis since the badge is merit-earned, not rank/seniority. Introduces one new coupling: EPIC-F's `remove_content` now triggers the EPIC-D clawback. *(EPIC-D spec §3, §6, §7, §9, §10; EPIC-F spec §3.)*
+- **EPIC-E (case discussions) — all questions resolved 2026-07-17, including the former cross-epic schema-amendment item (old §1.3).** (1) **Structural enforcement of checklist items 3/4** (age-band selector, relative-timeline input) — agreed, now a settled requirement. (2) **Corrected resubmission mechanics** — Adrian's "what about kudos/answers?" question settled it: **same post** (preserves comments + kudos), unpublished to a new `needs_correction` state, whole thread hidden, author re-attests to restore; **kudos are *not* clawed back** (the key distinction from `remove_content` — correction is fix-and-restore, not removal). (3) **Draft visibility to moderators** — **no**, unattested drafts are not visible before publish. (4) **Schema amendments actioned**: EPIC-C's `posts.status` gains `draft` and `needs_correction` (case-discussion-only); EPIC-F's `request_correction` effect refined to the `needs_correction`/preserve-kudos semantics. (5) Image dependency already resolved (images deferred → six-item checklist). *(EPIC-E spec §4, §8, §9, §11, §12; EPIC-C spec §2; EPIC-F spec §3.)*
 
 ---
 
@@ -98,7 +86,7 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 - **Exact applicant-facing rejection wording for the expelled-reapplication case** (§2 above): this spec proposes a generic message that doesn't confirm expelled status to the applicant — worth a final check that this is the right call versus a legal/compliance preference for more explicit language.
 
 ### EPIC-B — Handles/Profile
-*(No local open questions remain. The moderator-forced rename is covered in §1.4 above; the handle length/character rules, blocklist storage, expulsion/re-registration gap, and tag-follow mechanism are all resolved — see §2.)*
+*(No local open questions remain. The moderator-forced rename is covered in §1.3 above; the handle length/character rules, blocklist storage, expulsion/re-registration gap, and tag-follow mechanism are all resolved — see §2.)*
 
 ### EPIC-C — Forum
 *(No local open questions remain. Taxonomy unification is covered in §1.2 above; the search design, edit/delete policy, Could-have scope, "trending" fallback definition, and personalised-feed follow mechanism are all resolved — see §2.)*
@@ -107,11 +95,7 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 *(No local open questions remain — all four resolved 2026-07-17; see §2.)*
 
 ### EPIC-E — Case Discussions
-- **Structural enforcement of checklist items 3/4** (age-banding, relative dates): should these be structurally restricted fields (e.g. an age-band selector) rather than relying purely on the attestation checkbox? This spec recommends yes — a stronger safeguard than the PRD strictly requires — and needs sign-off.
-- **Corrected resubmission mechanics**: does a correction create a new post, or unpublish/re-edit/re-attest the same one? The PRD names the action, not the mechanics.
-- **Draft visibility to moderators**: should an unattested, in-progress draft ever be visible to moderation (e.g. a safety escalation before publish)? Likely no, but not addressed by the PRD.
-
-*(The image-attachment dependency is resolved — images deferred, case discussions text-only at MVP; see §2. The two schema-amendment items are covered in §1.3 above.)*
+*(No local open questions remain — all resolved 2026-07-17; see §2. One minor implementation detail (a timeout for un-corrected cases) noted in the spec's §12, not a design question.)*
 
 ### EPIC-F — Moderation
 - **`anonymity_violation` as a priority report category**: proposed by this spec (on the reasoning that the zero-tolerance anonymity rule is at least as serious as the patient-information rule, which *is* explicitly named as priority in PRD §10.4) but not a PRD-stated requirement — needs explicit confirmation.
@@ -119,7 +103,7 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 - **No numeric moderation-response SLA**: the PRD's KPIs say response time "must be fast" without a figure — needed before building alerting/staffing plans.
 - **Full report-category list**: `harassment`, `spam`, `other` alongside the two priority categories is this spec's own proposal — worth sanity-checking with Andrew given his domain familiarity with what reports will actually look like in practice.
 
-*(The new action-type additions — `request_correction`, `rename_handle` — are covered in §1.3 and §1.4 above. The expulsion/re-registration gap is resolved — see §2.)*
+*(The `rename_handle` action-type ownership is covered in §1.3 above; `request_correction` is resolved (§2). The expulsion/re-registration gap is resolved — see §2.)*
 
 ### EPIC-G — Notifications
 - **Column-level hardening of `NotificationService`'s identity access**: should a database view restrict it to `email` only (rather than relying on application discipline over a full-table grant on `identity.members`)? Recommended, not yet built.
@@ -134,7 +118,7 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 - **Cancellation access timing**: this spec proposes access continues until the end of the paid period, not immediate revocation — standard SaaS practice, but needs confirming as a deliberate choice.
 - **Trial-length configurability**: the data model allows a per-cohort trial length (relevant to the university-partnership idea, FD-6), but no invite-code/cohort feature is designed — needs a decision once FD-6 is confirmed one way or the other.
 
-*(The billing-lapse access-gating design is covered in §1.5 above.)*
+*(The billing-lapse access-gating design is covered in §1.4 above.)*
 
 ### EPIC-I — Research Feed
 - **PRD update still pending**: EPIC-I needs adding to PRD §6.1's MoSCoW list — a standing item, not new.

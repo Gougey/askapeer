@@ -151,9 +151,13 @@ the same transaction; permanent</td>
 </tr>
 <tr>
 <td><code>request_correction</code></td>
-<td>Case discussion returns to an editable/unpublished state for
-resubmission</td>
-<td>EPIC-E</td>
+<td>Case discussion → <code>needs_correction</code> (EPIC-C
+<code>posts.status</code>): the whole thread is hidden from public view,
+its comments and kudos <strong>preserved</strong> (crucially, kudos are
+<strong>not</strong> clawed back — unlike <code>remove_content</code> —
+because this is a fix-and-restore, not a removal); the author re-edits
+and re-attests to republish</td>
+<td>EPIC-E (mechanics, its §8)</td>
 </tr>
 <tr>
 <td><code>rename_handle</code></td>

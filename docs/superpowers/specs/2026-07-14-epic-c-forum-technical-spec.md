@@ -59,7 +59,10 @@ community.posts
   type          enum(question, case_discussion)
   title         text
   body          text
-  status        enum(published, removed)                -- see Section 6
+  status        enum(published, removed, draft, needs_correction)  -- see Section 6;
+                                                          -- draft + needs_correction are
+                                                          -- used only by case discussions
+                                                          -- (EPIC-E), see note below
   tsv           tsvector generated                       -- see Section 4
   created_at    timestamptz
   edited_at     timestamptz nullable
@@ -80,6 +83,8 @@ community.post_tags   (post_id FK, tag_id FK, primary key(post_id, tag_id))
 ```
 
 `status = removed` (rather than a hard delete) is what Section 6 needs to distinguish "content that was here and got moderated" from "content that never existed" — a hard delete would break comment threads that reply to it and would be indistinguishable from the moderation action EPIC-F performs (`remove_content`), which needs something to act on.
+
+**`draft` and `needs_correction` are case-discussion-only states** (added 2026-07-17 for EPIC-E). Ordinary questions/answers publish immediately on creation and only ever use `published`/`removed`. Case discussions have a multi-step publish flow (`draft` → `published`, EPIC-E Section 3) and a corrected-resubmission path (`published` → `needs_correction` → back to `published` after re-attestation, EPIC-E Section 8). `needs_correction` hides the whole thread from public view while preserving its comments and kudos — see EPIC-E for the full semantics.
 
 ---
 

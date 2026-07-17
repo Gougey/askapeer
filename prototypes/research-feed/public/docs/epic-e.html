@@ -43,7 +43,7 @@ checklist</a></li>
 <li><a href="#api-endpoints">API endpoints</a></li>
 <li><a href="#disclaimer-and-priority-reporting">Disclaimer and
 priority reporting</a></li>
-<li><a href="#post-publish-editing">Post-publish editing</a></li>
+<li><a href="#post-publish-editing-and-corrected-resubmission">Post-publish editing</a></li>
 <li><a
 href="#cross-epic-dependencies-introduced-by-this-spec">Cross-epic
 dependencies introduced by this spec</a></li>
@@ -178,14 +178,14 @@ EPIC-B spec notes for handle names encoding a real identity)</td>
 </tr>
 <tr>
 <td>3, 4 (age bands, relative dates)</td>
-<td><strong>Structural enforcement proposed</strong> — an age-band
-selector (fixed set of bands, no free date-of-birth field) and a
-relative-timeline input (“X weeks post-injury”) built into the
-<code>community.case_details</code> template</td>
+<td><strong>Structural enforcement — agreed</strong> (Adrian,
+2026-07-17): an age-band selector (fixed set of bands, no free
+date-of-birth field) and a relative-timeline input (“X weeks
+post-injury”) built into the <code>community.case_details</code>
+template</td>
 <td>Meaningfully stronger than trusting an author to remember to phrase
-a free-text field as a band. A stronger safeguard than the PRD’s wording
-implies — flagged for confirmation in Section 12, not assumed
-authorised</td>
+a free-text field as a band — the identifying value simply can’t be
+entered. Now a settled requirement, not a proposal</td>
 </tr>
 <tr>
 <td>6, 7 (image content, EXIF)</td>
@@ -271,40 +271,82 @@ epic’s responsibility is only to confirm that category exists and is
 offered on this content type; the queue ordering and moderator actions
 themselves belong to EPIC-F.</p>
 <hr />
-<h2 id="post-publish-editing">8. Post-publish editing</h2>
-<p><strong>Proposed: published case discussions are not
-author-editable.</strong> (This spec’s own design position, not a PRD
-requirement — flagged in Section 12 alongside the new moderation-action
-type it implies for EPIC-F.)</p>
-<ul>
-<li><strong>Why</strong>: the attestation (Section 5) is tied to a
-specific <code>checklist_snapshot</code> at a specific moment. Free
+<h2 id="post-publish-editing-and-corrected-resubmission">8. Post-publish
+editing and corrected resubmission</h2>
+<p><strong>Published case discussions are not freely
+author-editable.</strong> The attestation (Section 5) is tied to a
+specific <code>checklist_snapshot</code> at a specific moment — free
 edits after publish would let the content diverge from what was attested
-to, silently invalidating the record’s meaning.</li>
-<li><strong>When a correction is genuinely needed</strong>: PRD Section
-10.4 already names “request a corrected resubmission” as a moderation
-action — this spec proposes that path, via EPIC-F, likely by
-unpublishing the case and re-attesting against a fresh checklist rather
-than a live in-place edit.</li>
+to, silently invalidating the record’s meaning.</p>
+<p><strong>When a correction is genuinely needed</strong> (PRD Section
+10.4’s “request a corrected resubmission” moderation action, e.g. an
+<code>identifiable_patient_information</code> report is upheld), the
+mechanics are as follows (agreed by Adrian, 2026-07-17, resolving the
+“what about kudos and answers?” question):</p>
+<ul>
+<li><strong>Same post, not a new one.</strong> The correction keeps the
+original <code>post_id</code>. This is the whole answer to the
+kudos/answers question — a case discussion accrues comments (answers)
+and kudos, all keyed to <code>post_id</code>; creating a fresh post
+would orphan every one of them. Preserving the post keeps them
+attached.</li>
+<li><strong>Immediately unpublished</strong> to a new
+<code>needs_correction</code> state (EPIC-C <code>posts.status</code> —
+Section 9). The identifying content is off public view at once (the
+urgent safety action), while nothing is destroyed. The <strong>whole
+thread hides</strong> while in this state — not just the post body —
+because answers may quote or reference the identifying detail; showing
+them without the post would be both confusing and potentially
+still-identifying.</li>
+<li><strong>Comments and kudos are preserved</strong>, hidden along with
+the post, and <strong>restored intact on republish</strong>. In
+particular, <strong>kudos are <em>not</em> clawed back</strong> — this
+is the key distinction from EPIC-F’s <code>remove_content</code> (which
+<em>does</em> claw back kudos, per EPIC-D Section 7). A corrected
+resubmission is a <em>fix-and-restore</em>, not a removal: the clinical
+contribution is still valued and stays in the community; only a
+compliance defect is being cleaned up. Removal ends a contribution;
+correction preserves it.</li>
+<li><strong>Author re-edits and re-attests</strong> against a fresh
+checklist. A new <code>identity.case_attestations</code> row is written;
+the prior one remains in the immutable log, so the record shows the case
+was corrected and re-attested (not that the original attestation
+vanished).</li>
+<li><strong>Scope of a correction is de-identification, not clinical
+rewriting</strong> — it changes identifying specifics (names, exact
+dates, unique facility names), not the clinical substance, so existing
+answers remain relevant when the thread reappears. If a specific
+<em>answer</em> itself contains identifying information, that’s handled
+separately by <code>remove_content</code> on that comment, not by
+correcting the whole case.</li>
+<li><strong>If the author never resubmits</strong>, the case stays in
+<code>needs_correction</code> indefinitely — which is safe (the
+identifying content is not public). A timeout after which an
+un-corrected case is treated as <code>removed</code> is worth setting
+but is not safety-critical, since the content is already off view
+(flagged in Section 12).</li>
 </ul>
 <hr />
 <h2 id="cross-epic-dependencies-introduced-by-this-spec">9. Cross-epic
 dependencies introduced by this spec</h2>
-<p>This epic requires two things of already-written specs that weren’t
-anticipated when those specs were drafted — surfaced explicitly rather
-than silently patched into a committed document:</p>
+<p>This epic requires two additions to other specs, <strong>actioned
+2026-07-17</strong> rather than left as flags:</p>
 <ul>
 <li><strong>EPIC-C’s <code>community.posts.status</code> enum</strong>
-(currently <code>published, removed</code>) needs a <code>draft</code>
-value added to support the multi-step publish flow in Section 3.
-Ordinary questions/answers don’t need a draft state (EPIC-C’s spec
-assumes immediate publish on creation); case discussions do.</li>
-<li><strong>EPIC-F’s moderation-action-type enum</strong> (currently
-<code>remove_content, warn, suspend, expel</code>, per the architecture
-spec, Section 7.2) needs a <code>request_correction</code> action to
-match PRD Section 10.4’s “request a corrected resubmission” — not yet
-written since EPIC-F’s spec doesn’t exist yet, but flagged here so it’s
-not missed when it is.</li>
+gains <strong>two</strong> values for case discussions:
+<code>draft</code> (the multi-step publish flow, Section 3) and
+<code>needs_correction</code> (the corrected-resubmission state, Section
+8). Ordinary questions/answers use only
+<code>published</code>/<code>removed</code>; case discussions use all
+four. Actioned in EPIC-C’s spec, Section 2.</li>
+<li><strong>EPIC-F’s moderation-action-type enum</strong> needs
+<code>request_correction</code> (PRD Section 10.4’s “request a corrected
+resubmission”). <strong>Already present</strong> — EPIC-F’s spec,
+Section 3, includes <code>request_correction</code>; its effect is now
+refined there to reference the <code>needs_correction</code> state and
+the preserve-comments-and-kudos semantics above (in particular, that —
+unlike <code>remove_content</code> — it does <em>not</em> claw back
+kudos).</li>
 </ul>
 <hr />
 <h2 id="non-functional-notes-specific-to-epic-e">10. Non-functional
@@ -336,54 +378,64 @@ trust client-side gating alone.</li>
 deleted (INSERT-only grant, same mechanism as
 <code>identity.verification_decisions</code> in the EPIC-A spec).</li>
 <li><strong>Draft privacy</strong>: a <code>draft</code> case discussion
-is not visible via any endpoint to any handle other than its author (and
-moderators, if EPIC-F needs draft visibility for some reason — flagged
-in Section 12) — it must not leak into search, feeds, or another
-member’s <code>GET /v1/posts</code> results before publish.</li>
+is visible only to its author — <strong>not to moderators</strong>
+(Adrian, 2026-07-17: no moderator visibility before publish) — and must
+not leak into search, feeds, or another member’s
+<code>GET /v1/posts</code> results before publish.</li>
 <li><strong>Post-publish edit lock</strong>:
 <code>PATCH /v1/case-discussions/:post_id</code> is rejected once
 <code>status = published</code>.</li>
 <li><strong>Disclaimer rendering</strong>: every case-discussion page
 includes the exact Section 7 text.</li>
-<li><strong>Age-band/relative-date structural fields</strong> (if the
-Section 4 recommendation is adopted): a free-text date of birth or
-absolute treatment date cannot be submitted in fields 3/4 at all, not
-merely discouraged by the checklist.</li>
+<li><strong>Age-band/relative-date structural fields</strong>: a
+free-text date of birth or absolute treatment date cannot be submitted
+in fields 3/4 at all, not merely discouraged by the checklist.</li>
+<li><strong>Corrected resubmission</strong>:
+<code>request_correction</code> moves the case to
+<code>needs_correction</code>, hides the whole thread (post + comments),
+preserves comments and kudos (no clawback), and on re-attestation
+restores the thread intact with a new <code>case_attestations</code> row
+(the prior one still present in the immutable log).</li>
 </ul>
 <hr />
 <h2 id="open-questions">12. Open questions</h2>
+<p>All resolved by Adrian on 2026-07-17:</p>
 <ul>
-<li><strong>Structural enforcement of checklist items 3/4</strong>
-(Section 4): should date-of-birth and treatment-date fields be
-structurally restricted to bands/relative-time rather than relying
-purely on the attestation checkbox? This spec recommends yes; needs
-sign-off since it’s a stronger (and more UI-involved) safeguard than the
-PRD’s own wording strictly requires.</li>
+<li><del><strong>Structural enforcement of checklist items
+3/4</strong></del> — <strong>resolved: agreed.</strong> Age-band
+selector and relative-timeline inputs are a settled requirement (Section
+4), not just a proposal.</li>
 <li><del><strong>Image attachment dependency</strong></del> —
-<strong>resolved 2026-07-17</strong>: image attachments are deferred on
-privacy grounds (EPIC-C Section 7), so case discussions are
-<strong>text-only at MVP</strong> and the checklist is six items (1–5,
-8), not eight. Items 6/7 return when image support lands. See Section
-4.</li>
-<li><strong>EPIC-C schema amendment</strong> (Section 9): adding
-<code>draft</code> to <code>posts.status</code> — a small change, but
-EPIC-C’s spec is already committed, so this should be reconciled
-explicitly (either an amendment to that spec or treated as
-EPIC-E-specific extension) rather than assumed.</li>
-<li><strong>EPIC-F action-type addition</strong> (Section 9):
-<code>request_correction</code> needs to land in EPIC-F’s spec when it’s
-written; flagged so it isn’t missed.</li>
-<li><strong>Corrected resubmission mechanics</strong> (Section 8): does
-a “corrected resubmission” create a new post, or
-unpublish/re-edit/re-attest the same one? The PRD names the action but
-not the mechanics — this spec’s proposal (unpublish, re-attest) is a
-starting point, not a decision.</li>
-<li><strong>Draft visibility to moderators</strong>: should an
-in-progress (unattested) draft ever be visible to moderation for any
-reason (e.g. a safety escalation before publish)? Not addressed by the
-PRD; likely no given nothing has been published yet, but worth an
-explicit answer rather than an assumption.</li>
+<strong>resolved</strong>: image attachments deferred on privacy grounds
+(EPIC-C Section 7), so case discussions are <strong>text-only at
+MVP</strong> and the checklist is six items (1–5, 8). Items 6/7 return
+when image support lands. See Section 4.</li>
+<li><del><strong>EPIC-C schema amendment</strong></del> —
+<strong>resolved (actioned)</strong>: EPIC-C’s <code>posts.status</code>
+enum gains <code>draft</code> and <code>needs_correction</code> for case
+discussions. Done in EPIC-C’s spec, Section 2 (Section 9).</li>
+<li><del><strong>EPIC-F action-type addition</strong></del> —
+<strong>resolved (already present)</strong>:
+<code>request_correction</code> is in EPIC-F’s action-type enum; its
+effect refined there to the <code>needs_correction</code> /
+preserve-kudos semantics (Section 9).</li>
+<li><del><strong>Corrected resubmission mechanics</strong></del> —
+<strong>resolved</strong>: same post (preserves comments + kudos),
+unpublished to <code>needs_correction</code>, re-attested; kudos are
+<em>not</em> clawed back (distinct from <code>remove_content</code>).
+Full mechanics in Section 8.</li>
+<li><del><strong>Draft visibility to moderators</strong></del> —
+<strong>resolved: no.</strong> An unattested draft is not visible to
+moderators before publish — nothing has been published or attested yet,
+so there’s nothing to moderate, and pre-publish visibility would be
+surveillance overreach inconsistent with the trust model.</li>
 </ul>
+<p>No open questions remain for EPIC-E.</p>
+<p><strong>Remaining minor implementation detail</strong> (not a design
+open question): a timeout after which an un-corrected
+<code>needs_correction</code> case is treated as <code>removed</code>
+(Section 8) — worth setting, but not safety-critical since the content
+is already off public view.</p>
 
 </main>
 </body>

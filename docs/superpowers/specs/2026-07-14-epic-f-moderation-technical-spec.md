@@ -70,7 +70,7 @@ community.moderation_actions           -- immutable: INSERT-only grant
 | `warn` | No status change; a logged, immutable record a member received a formal warning | This epic |
 | `suspend` | `community.handles.status = suspended`; see Section 7 for whether this should also touch `identity.members` | EPIC-B (status) |
 | `expel` | `community.handles.status = expelled` **and** `identity.members.verification_status = expelled`, both in the same transaction; permanent | EPIC-B (status), Section 7 (identity linkage — resolved) |
-| `request_correction` | Case discussion returns to an editable/unpublished state for resubmission | EPIC-E |
+| `request_correction` | Case discussion → `needs_correction` (EPIC-C `posts.status`): the whole thread is hidden from public view, its comments and kudos **preserved** (crucially, kudos are **not** clawed back — unlike `remove_content` — because this is a fix-and-restore, not a removal); the author re-edits and re-attests to republish | EPIC-E (mechanics, its §8) |
 | `rename_handle` | `community.handles.handle_name` changed, old name recorded in `community.handle_name_history` | EPIC-B |
 
 Every action writes one `community.moderation_actions` row regardless of type — this is the immutable trail the architecture spec's Section 4.4 requires for "moderation actions" generally, not just the four original action types.

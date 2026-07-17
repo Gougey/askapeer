@@ -98,7 +98,10 @@ community.posts
   type          enum(question, case_discussion)
   title         text
   body          text
-  status        enum(published, removed)                -- see Section 6
+  status        enum(published, removed, draft, needs_correction)  -- see Section 6;
+                                                          -- draft + needs_correction are
+                                                          -- used only by case discussions
+                                                          -- (EPIC-E), see note below
   tsv           tsvector generated                       -- see Section 4
   created_at    timestamptz
   edited_at     timestamptz nullable
@@ -122,6 +125,17 @@ from “content that never existed” — a hard delete would break comment
 threads that reply to it and would be indistinguishable from the
 moderation action EPIC-F performs (<code>remove_content</code>), which
 needs something to act on.</p>
+<p><strong><code>draft</code> and <code>needs_correction</code> are
+case-discussion-only states</strong> (added 2026-07-17 for EPIC-E).
+Ordinary questions/answers publish immediately on creation and only ever
+use <code>published</code>/<code>removed</code>. Case discussions have a
+multi-step publish flow (<code>draft</code> → <code>published</code>,
+EPIC-E Section 3) and a corrected-resubmission path
+(<code>published</code> → <code>needs_correction</code> → back to
+<code>published</code> after re-attestation, EPIC-E Section 8).
+<code>needs_correction</code> hides the whole thread from public view
+while preserving its comments and kudos — see EPIC-E for the full
+semantics.</p>
 <hr />
 <h2 id="tagging-and-the-hybrid-taxonomy-fd-4">3. Tagging and the hybrid
 taxonomy (FD-4)</h2>
