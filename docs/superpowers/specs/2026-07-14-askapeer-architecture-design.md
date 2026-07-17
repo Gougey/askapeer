@@ -297,6 +297,8 @@ Session mechanics: a short-lived access token (around 15 minutes) plus a rotatin
 
 Members who are not yet `approved_verified` receive a token scoped only to a holding-status endpoint — matching the PRD's requirement that "all other statuses see a holding page only."
 
+**Extension (2026-07-17)**: the EPIC-H spec (§4) reuses this same token-scoping pattern for a **billing-lapsed** scope — a member whose subscription has lapsed (past the configurable grace period) or cancelled (past the paid period) is downgraded to a "reactivate your subscription" holding view, not community content. Community access is therefore governed by **two independent gates** — handle/moderation status (EPIC-B/F) **and** subscription status (EPIC-H) — deliberately kept separate because a billing lapse (resolved by paying) and a moderation suspension (resolved by appeal) are different in kind. This resolves cross-epic open question §1.4.
+
 ### 5.3 API design principles
 
 - Representational State Transfer (REST) over JSON, versioned under `/v1`, cursor-based pagination on feeds (forum listings, notifications, research feed).

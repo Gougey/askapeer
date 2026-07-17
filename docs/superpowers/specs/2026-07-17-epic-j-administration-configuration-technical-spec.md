@@ -33,7 +33,7 @@ Source of truth: `docs/askapeer-prd-v0.1.md`, Section 4 (personas — the PRD al
 - Forum **categories** (EPIC-C Section 3 — "admin-managed")
 - The **tag vocabulary** and, once FD-4 lands, the **search synonym dictionary** (EPIC-C Sections 3–4)
 - The **handle-name blocklist** config table (EPIC-B Section 3, 11 — "config table" agreed)
-- **Tunable platform settings**: top-contributor badge threshold (EPIC-D Section 6), trending window / result-count N (EPIC-C Section 8), and similar knobs
+- **Tunable platform settings**: top-contributor badge threshold (EPIC-D Section 6), trending window / result-count N (EPIC-C Section 8), the **billing grace-period days** and **default trial-length days** (EPIC-H Sections 4, 7 — numeric values here, billing semantics stay in EPIC-H; see Section 7), and similar knobs
 
 **Out of scope** (owned elsewhere):
 
@@ -163,7 +163,7 @@ Every mutating call writes a `config.admin_audit_log` row in the same transactio
 - **EPIC-D (badge threshold)** and **EPIC-C (trending window/N)** define tunable knobs; their values live in `config.settings` and are edited here. The consuming epics read the setting; this epic owns editing it.
 - **EPIC-F (moderation)** is the sibling operator surface — enforcement, under the `moderator` claim — distinct from this epic's configuration surface under the `administrator` claim. The two share the physical `/admin` panel (architecture Section 7.2) but not their role claims or their concerns.
 - **EPIC-A (verification review)** is explicitly *not* here — it stays under EPIC-A, gated by its own admin access, per that spec.
-- **EPIC-H (billing config)** owns billing-coupled settings (trial defaults, invite/cohort codes); the generic `config.settings` store could physically hold them, but EPIC-H owns their semantics and any provider interaction. Boundary to confirm (Section 10).
+- **EPIC-H (billing config)** — **boundary resolved 2026-07-17**: the *numeric tunables* live in `config.settings` and are edited here (`billing.grace_period_days`, default 7; `billing.default_trial_days`) — the grace period was explicitly designated a settings-store value (Adrian) — while EPIC-H owns the *semantics* (when they apply, how a cohort override resolves, any provider interaction) and any cohort/invite-code mechanism (not built for MVP; depends on FD-6). So the split is: numeric values here, billing logic in EPIC-H. See EPIC-H Sections 4 and 7.
 
 ---
 
@@ -192,5 +192,5 @@ Every mutating call writes a `config.admin_audit_log` row in the same transactio
 - **PRD update**: EPIC-J is a scope addition beyond the PRD's original eight-epic MVP list (Section 6.1 / Section 12 roadmap) — the same status EPIC-I has. Both should be raised with Paul Gouge and Andrew Renshaw when the PRD is next revised. (Arguably EPIC-J was always *implied* by the PRD's Administrator persona and the "admin-managed" language scattered through the specs — but it was never an explicit epic.)
 - **New `config` schema** (Section 3): introducing a fifth schema is an architecture-level decision. The alternative is to put `config.*` tables in `community` and avoid a new schema. Recommended as-is (clean Administrator-write access boundary), but worth an explicit nod since it amends the architecture spec's four-schema model.
 - **Administrator/Moderator role split** (Section 2): refines the architecture spec's single "moderator-role claim" (Section 5.3) into two claims. Low-effort, but a deliberate change to a written assumption — confirm before build.
-- **Billing config boundary** (Section 7): do trial-length defaults and cohort/invite codes live in this epic's `config.settings` or stay entirely in EPIC-H? Recommendation: semantics stay in EPIC-H; revisit if it turns out an Administrator wants to edit them from the same settings screen.
+- ~~**Billing config boundary**~~ (Section 7) — **resolved 2026-07-17**: numeric billing tunables (`billing.grace_period_days`, `billing.default_trial_days`) live in this epic's `config.settings` and are Administrator-editable; EPIC-H owns their semantics and any provider/cohort mechanism. Settled by Adrian's call that the grace period is a settings-store value.
 - **Whether MVP needs all of this**: categories, blocklist, and settings management are genuinely needed for launch (someone has to create the categories and seed the blocklist). Tag merge and the synonym dictionary are lower-priority (tag merge matters once free-tagging has produced duplicates; the synonym dictionary depends on FD-4) — candidates to defer within the epic if MVP scope needs trimming.

@@ -143,12 +143,17 @@ identical in purpose to EPIC-A’s pending-scoped token (its spec, Section
 holding-style “reactivate your subscription” view, not community
 content.</li>
 <li>Issued when <code>billing.subscriptions.status</code> moves to
-<code>cancelled</code> (immediately) or <code>past_due</code> beyond a
-<strong>grace period</strong> (proposed: 7 days from the first failed
-payment, chosen arbitrarily and flagged in Section 10 — a
-<code>past_due</code> subscription still gets a short window since
-payment failures are often transient, e.g. an expired card, not a
-deliberate lapse).</li>
+<code>cancelled</code> (immediately, subject to the end-of-period rule
+below — Section 6) or <code>past_due</code> beyond a <strong>grace
+period</strong>. <strong>Resolved 2026-07-17</strong>: the grace period
+is a <strong>configurable threshold, not a hardcoded constant</strong>
+(Adrian’s call) — it lives in EPIC-J’s config store as a tunable numeric
+setting (<code>billing.grace_period_days</code>), read by
+<code>BillingService</code>, with a <strong>default of 7 days</strong>.
+A <code>past_due</code> subscription still gets this window because
+payment failures are often transient (an expired card, a momentary bank
+decline), not a deliberate lapse; making the length tunable lets it be
+adjusted from real dunning-recovery data without a deploy.</li>
 <li>Takes effect within one access-token lifetime (~15 minutes), reusing
 exactly the revocable-refresh-token mechanism the architecture spec
 already describes for suspension/expulsion (Section 7.2) — no new
@@ -157,8 +162,8 @@ be downgraded.</li>
 </ul>
 <p><strong>This is deliberately a separate gating dimension from
 <code>community.handles.status</code></strong> (EPIC-B/EPIC-F’s
-moderation states) — flagged for confirmation, since it’s a real
-architectural decision with no PRD precedent either way:</p>
+moderation states) — <strong>confirmed 2026-07-17</strong> (resolves
+cross-epic item §1.4 in the open-questions doc):</p>
 <ul>
 <li>A billing lapse and a moderation suspension are <strong>different in
 kind</strong>: one is resolved by paying, the other by an appeal or a
@@ -166,7 +171,10 @@ fixed suspension period.</li>
 <li>Conflating them into one status field would make “why can’t I access
 the platform” ambiguous to both the member and support staff.</li>
 <li>So: <strong>two independently-checked gates</strong> — handle status
-AND subscription status, both must permit access.</li>
+AND subscription status, both must permit access. This mirrors the same
+“different-in-kind, don’t-conflate” reasoning applied to EPIC-F’s
+<code>suspend</code> (which deliberately does <em>not</em> touch
+identity status).</li>
 </ul>
 <hr />
 <h2 id="webhook-handling">5. Webhook handling</h2>
@@ -193,8 +201,10 @@ boundary).</p>
      Elements setup) — provider-specific, abstracted behind PaymentProvider
 
 POST /v1/billing/cancel
-  -&gt; status -&gt; cancelled; access continues until current_period_end (Section 3) —
-     proposed, not PRD-specified; see Section 10
+  -&gt; status -&gt; cancelled; access continues until current_period_end
+     (Section 3) — confirmed 2026-07-17 (end-of-paid-period, not immediate
+     revocation): the member keeps what they&#39;ve already paid for, then the
+     billing gate applies
 
 GET  /v1/billing/me
   -&gt; { plan, status, trial_end, current_period_end }
@@ -210,14 +220,26 @@ content-seeding chicken-and-egg problem.</li>
 <li><strong>FD-6</strong> floats a university-partnership cohort that
 might need its own trial terms.</li>
 </ul>
-<p><strong>This spec’s proposal</strong>: <code>trial_end</code> is set
-per-subscription at creation time from a configurable value, not a
-hardcoded constant — so a different cohort (e.g. an invite-code-driven
-university trial) can get a different trial length without a schema
-change. Cheap to build in from the start, expensive to retrofit. No
-invite-code/cohort mechanism is designed further here, since none is
-confirmed scope — this section only ensures the data model doesn’t
-foreclose it.</p>
+<p><strong>Resolved 2026-07-17</strong> (Adrian): <code>trial_end</code>
+is set per-subscription at creation time from a <strong>configurable
+value, not a hardcoded constant</strong> — so a different cohort
+(e.g. an invite-code-driven university trial) can get a different trial
+length without a schema change. Cheap to build in from the start,
+expensive to retrofit. <strong>No invite-code/cohort mechanism is built
+for MVP</strong> — none is confirmed scope (it depends on FD-6, still
+open); this section only ensures the data model doesn’t foreclose it.
+The MVP runs a single platform-wide default trial length (illustratively
+3 months, pending FD-2).</p>
+<p><strong>Config boundary (informs EPIC-J’s open question)</strong>:
+like the grace period (Section 4), the <em>numeric</em> default trial
+length is a tunable setting suited to EPIC-J’s config store
+(<code>billing.default_trial_days</code>), while the trial
+<em>semantics</em> — when <code>trial_end</code> is applied, how a
+cohort override would resolve — stay owned by
+<code>BillingService</code> here in EPIC-H. That split (numeric tunables
+in EPIC-J config; billing logic in EPIC-H) is the emerging answer to
+EPIC-J’s “billing config boundary” question, to be formally confirmed in
+the EPIC-J review.</p>
 <hr />
 <h2 id="non-functional-notes-specific-to-epic-h">8. Non-functional notes
 specific to EPIC-H</h2>
@@ -249,11 +271,13 @@ charge at <code>trial_end</code> moves
 <code>trialing -&gt; active</code> and sets
 <code>current_period_end</code>.</li>
 <li><strong>Grace period</strong>: a <code>past_due</code> subscription
-retains full access until the grace period (Section 4) elapses, then the
-member’s next token refresh returns a billing-lapsed-scoped token.</li>
+retains full access until the configured grace period (Section 4;
+<code>billing.grace_period_days</code>, default 7) elapses, then the
+member’s next token refresh returns a billing-lapsed-scoped token. A
+test also asserts the value is read from config, not a constant.</li>
 <li><strong>Cancellation timing</strong>: cancelling mid-cycle retains
-access until <code>current_period_end</code>, not immediately (pending
-Section 10 confirmation).</li>
+access until <code>current_period_end</code>, not immediately
+(confirmed, Section 6).</li>
 <li><strong>Dual gating</strong>: a member who is both
 <code>suspended</code> (EPIC-F) and has an <code>active</code>
 subscription is still denied community access — confirms the two gates
@@ -264,26 +288,33 @@ other.</li>
 <h2 id="open-questions">10. Open questions</h2>
 <ul>
 <li><strong>FD-2 itself</strong>: pricing, trial length, and processor
-choice (Stripe vs. WorldPay) are all still formally open — this spec is
-written to be indifferent to the outcome, but a concrete choice is
-needed before <code>StripeProvider</code> can actually be built against
-real pricing.</li>
-<li><strong>Grace period length</strong> (Section 4): 7 days is this
-spec’s own placeholder, not a PRD or architecture figure.</li>
-<li><strong>Cancellation access timing</strong> (Section 6):
-end-of-period access (this spec’s proposal) vs. immediate revocation —
-standard SaaS practice favours the former, but needs confirming as a
-deliberate choice, not a default.</li>
-<li><strong>Billing-lapse token scope as a new mechanism</strong>
-(Section 4): this spec proposes extending EPIC-A’s pending-token pattern
-to billing; needs confirmation that a billing lapse and a moderation
-status should indeed be independently gated (Section 4) rather than
-collapsed into a single “can this handle access the platform” flag.</li>
+choice are still formally open <strong>stakeholder</strong> decisions —
+this spec is written to be indifferent to the outcome. Note the
+architecture spec already names <strong>Stripe as the first-built
+provider</strong> (<code>StripeProvider</code>), so Stripe-first is the
+working build target; WorldPay stays behind the same
+<code>PaymentProvider</code> interface if ever needed. A concrete
+pricing figure is still needed before <code>StripeProvider</code> is
+wired to real numbers, but nothing structural is blocked.</li>
+<li><del><strong>Grace period length</strong></del> (Section 4) —
+<strong>resolved 2026-07-17</strong>: a configurable threshold
+(<code>billing.grace_period_days</code>, EPIC-J config store), default 7
+days — not a hardcoded constant.</li>
+<li><del><strong>Cancellation access timing</strong></del> (Section 6) —
+<strong>resolved 2026-07-17</strong>: end-of-paid-period access, not
+immediate revocation.</li>
+<li><del><strong>Billing-lapse token scope as a new
+mechanism</strong></del> (Section 4) — <strong>resolved
+2026-07-17</strong>: yes, two independently-checked gates (handle status
+AND subscription status), extending EPIC-A’s pending-token pattern
+rather than collapsing into a single flag. Closes cross-epic §1.4.</li>
 <li><strong>Trial-length configurability and cohort mechanism</strong>
-(Section 7): the data model is left open for a per-cohort trial length,
-but no invite-code/cohort feature itself is designed — needs a decision
-once FD-6 (university partnership) is confirmed one way or the
-other.</li>
+(Section 7): <strong>partly resolved 2026-07-17</strong> — trial length
+is a configurable value (default trial in EPIC-J config; semantics in
+EPIC-H), and <strong>no cohort/invite-code feature is built for
+MVP</strong>. The remaining open part is purely FD-6 (university
+partnership): if it proceeds, a cohort mechanism gets designed then — a
+business decision, not a spec gap.</li>
 </ul>
 
 </main>

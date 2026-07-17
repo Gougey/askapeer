@@ -96,20 +96,19 @@ accepted (this is a proposed fix already reflected in EPIC-F’s spec,
 awaiting sign-off rather than being fully open).</p>
 <p><em>Source: EPIC-B spec §13, EPIC-F spec §3/§10.</em></p>
 <h3
-id="two-independent-access-control-gates-moderation-status-and-billing-status">1.4
+id="two-independent-access-control-gates-moderation-status-and-billing-status-resolved-2026-07-17">1.4
 Two independent access-control gates: moderation status and billing
-status</h3>
-<p>EPIC-H proposes that community access requires <strong>both</strong>
-a <code>community.handles.status</code> of <code>active</code>
-(EPIC-B/F’s concern) <strong>and</strong> a non-lapsed
-<code>billing.subscriptions.status</code> (EPIC-H’s concern) —
-deliberately kept as two separate gates rather than one combined status,
-on the reasoning that a moderation suspension and a billing lapse are
-different in kind (resolved by an appeal vs. resolved by paying). This
-is new design not anticipated by the architecture spec.</p>
-<p><strong>Needs</strong>: sign-off that two independently-checked gates
-is the right model, and that reusing EPIC-A’s pending-token pattern for
-a new “billing-lapsed” token scope is an acceptable mechanism.</p>
+status — RESOLVED 2026-07-17</h3>
+<p><strong>Resolved</strong> — see Section 2 (EPIC-H entry). Community
+access is governed by <strong>two independently-checked gates</strong> —
+<code>community.handles.status</code> (EPIC-B/F moderation)
+<strong>and</strong> <code>billing.subscriptions.status</code> (EPIC-H)
+— not one combined flag, because a moderation suspension (resolved by
+appeal) and a billing lapse (resolved by paying) are different in kind.
+The billing-lapsed token reuses EPIC-A’s pending-token scoping pattern.
+Architecture spec §5.2 amended. <em>(Heading kept in place so existing
+cross-references to “§1.4” resolve; full reasoning in Section
+2.)</em></p>
 <p><em>Source: EPIC-H spec §4.</em></p>
 <hr />
 <h2 id="already-resolved">2. Already resolved</h2>
@@ -243,6 +242,32 @@ a minimum floor, tunable) — consistent with the no-ego thesis since the
 badge is merit-earned, not rank/seniority. Introduces one new coupling:
 EPIC-F’s <code>remove_content</code> now triggers the EPIC-D clawback.
 <em>(EPIC-D spec §3, §6, §7, §9, §10; EPIC-F spec §3.)</em></li>
+<li><strong>EPIC-H (subscriptions/payments) — local questions resolved
+2026-07-17, including cross-epic §1.4.</strong> (1) <strong>Grace period
+is a configurable setting, not a hardcoded 7 days</strong> (Adrian:
+“should be configurable in settings”) — lives in EPIC-J’s
+<code>config.settings</code> as <code>billing.grace_period_days</code>
+(default 7), read by <code>BillingService</code>. (2)
+<strong>Cancellation = end-of-paid-period access</strong>, not immediate
+revocation — the member keeps what they paid for, then the billing gate
+applies. (3) <strong>Two independent access gates</strong> (was
+cross-epic §1.4): community access needs handle/moderation status AND
+subscription status to both permit — a billing-lapsed token reuses
+EPIC-A’s pending-token scoping pattern; a billing lapse and a moderation
+suspension are deliberately not collapsed into one flag (different in
+kind — pay vs. appeal). Architecture spec §5.2 amended. (4)
+<strong>Trial length is a configurable value, no cohort/invite-code
+mechanism for MVP</strong> — default trial in
+<code>config.settings</code> (<code>billing.default_trial_days</code>),
+semantics in EPIC-H; a cohort mechanism is designed only if FD-6
+(university partnership) proceeds. <strong>Config boundary
+settled</strong>: numeric billing tunables live in EPIC-J’s
+<code>config.settings</code>; billing semantics/logic stay in EPIC-H
+(this also resolves EPIC-J’s “billing config boundary” open question).
+<strong>Still open (business, not spec)</strong>: FD-2
+(pricing/trial-length/processor) — though Stripe-first is already the
+architecture’s working build target. <em>(EPIC-H spec §4, §6, §7, §9,
+§10; EPIC-J spec §1, §7, §10; architecture spec §5.2.)</em></li>
 <li><strong>EPIC-G (notifications) — three original local questions
 resolved 2026-07-17.</strong> (1)
 <strong><code>NotificationService</code> identity access is hardened by
@@ -410,25 +435,14 @@ resolved; see §2. The push channel addition and its Web Push
 prerequisite are also resolved; see §2. The tag-follow mechanism the
 digest depends on is resolved; see §2.)</em></p>
 <h3 id="epic-h-subscriptionpayments">EPIC-H — Subscription/Payments</h3>
-<ul>
-<li><strong>FD-2 itself</strong>: pricing, trial length, and processor
-choice (Stripe vs. WorldPay) all still formally open — this spec is
-written to be indifferent to the outcome, but a concrete choice is
-needed to actually build against.</li>
-<li><strong>Grace period length</strong>: 7 days (before a
-<code>past_due</code> subscription loses access) is this spec’s own
-placeholder.</li>
-<li><strong>Cancellation access timing</strong>: this spec proposes
-access continues until the end of the paid period, not immediate
-revocation — standard SaaS practice, but needs confirming as a
-deliberate choice.</li>
-<li><strong>Trial-length configurability</strong>: the data model allows
-a per-cohort trial length (relevant to the university-partnership idea,
-FD-6), but no invite-code/cohort feature is designed — needs a decision
-once FD-6 is confirmed one way or the other.</li>
-</ul>
-<p><em>(The billing-lapse access-gating design is covered in §1.4
-above.)</em></p>
+<p><em>(All local design questions resolved 2026-07-17 — grace period
+(now a configurable setting), cancellation timing (end-of-period), trial
+configurability (configurable value, no cohort mechanism for MVP), and
+the billing-lapse two-gates model (was §1.4) — see §2. The only residual
+is the standing business decision <strong>FD-2</strong>
+(pricing/trial-length/processor), tracked in §4; Stripe-first is already
+the architecture’s working build target, and a cohort mechanism is
+designed only if FD-6 proceeds. Neither blocks building.)</em></p>
 <h3 id="epic-i-research-feed">EPIC-I — Research Feed</h3>
 <ul>
 <li><strong>PRD update still pending</strong>: EPIC-I needs adding to
@@ -461,9 +475,12 @@ schema (an architecture amendment) — vs. putting config tables in
 <li><strong>Administrator/Moderator role split</strong>: refines the
 architecture spec’s single “moderator-role claim” (§5.3) into two
 claims. Confirm before build.</li>
-<li><strong>Billing config boundary</strong>: do trial-length/cohort
-settings live in EPIC-J’s settings store or stay in EPIC-H?
-Recommendation: semantics stay in EPIC-H.</li>
+<li><del><strong>Billing config boundary</strong></del> —
+<strong>resolved 2026-07-17</strong>: numeric billing tunables
+(<code>billing.grace_period_days</code>,
+<code>billing.default_trial_days</code>) live in EPIC-J’s
+<code>config.settings</code>; billing semantics/logic stay in EPIC-H.
+Settled alongside the EPIC-H grace-period decision — see §2.</li>
 <li><strong>MVP trimming</strong>: categories, blocklist, and settings
 management are needed for launch; tag-merge and the synonym dictionary
 are deferrable within the epic.</li>

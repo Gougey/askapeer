@@ -72,7 +72,10 @@ in earlier specs but owned by none:</p>
 Section 3, 11 — “config table” agreed)</li>
 <li><strong>Tunable platform settings</strong>: top-contributor badge
 threshold (EPIC-D Section 6), trending window / result-count N (EPIC-C
-Section 8), and similar knobs</li>
+Section 8), the <strong>billing grace-period days</strong> and
+<strong>default trial-length days</strong> (EPIC-H Sections 4, 7 —
+numeric values here, billing semantics stay in EPIC-H; see Section 7),
+and similar knobs</li>
 </ul>
 <p><strong>Out of scope</strong> (owned elsewhere):</p>
 <ul>
@@ -329,11 +332,16 @@ concerns.</li>
 <li><strong>EPIC-A (verification review)</strong> is explicitly
 <em>not</em> here — it stays under EPIC-A, gated by its own admin
 access, per that spec.</li>
-<li><strong>EPIC-H (billing config)</strong> owns billing-coupled
-settings (trial defaults, invite/cohort codes); the generic
-<code>config.settings</code> store could physically hold them, but
-EPIC-H owns their semantics and any provider interaction. Boundary to
-confirm (Section 10).</li>
+<li><strong>EPIC-H (billing config)</strong> — <strong>boundary resolved
+2026-07-17</strong>: the <em>numeric tunables</em> live in
+<code>config.settings</code> and are edited here
+(<code>billing.grace_period_days</code>, default 7;
+<code>billing.default_trial_days</code>) — the grace period was
+explicitly designated a settings-store value (Adrian) — while EPIC-H
+owns the <em>semantics</em> (when they apply, how a cohort override
+resolves, any provider interaction) and any cohort/invite-code mechanism
+(not built for MVP; depends on FD-6). So the split is: numeric values
+here, billing logic in EPIC-H. See EPIC-H Sections 4 and 7.</li>
 </ul>
 <hr />
 <h2 id="non-functional-notes-specific-to-epic-j">8. Non-functional notes
@@ -402,11 +410,13 @@ amends the architecture spec’s four-schema model.</li>
 refines the architecture spec’s single “moderator-role claim” (Section
 5.3) into two claims. Low-effort, but a deliberate change to a written
 assumption — confirm before build.</li>
-<li><strong>Billing config boundary</strong> (Section 7): do
-trial-length defaults and cohort/invite codes live in this epic’s
-<code>config.settings</code> or stay entirely in EPIC-H? Recommendation:
-semantics stay in EPIC-H; revisit if it turns out an Administrator wants
-to edit them from the same settings screen.</li>
+<li><del><strong>Billing config boundary</strong></del> (Section 7) —
+<strong>resolved 2026-07-17</strong>: numeric billing tunables
+(<code>billing.grace_period_days</code>,
+<code>billing.default_trial_days</code>) live in this epic’s
+<code>config.settings</code> and are Administrator-editable; EPIC-H owns
+their semantics and any provider/cohort mechanism. Settled by Adrian’s
+call that the grace period is a settings-store value.</li>
 <li><strong>Whether MVP needs all of this</strong>: categories,
 blocklist, and settings management are genuinely needed for launch
 (someone has to create the categories and seed the blocklist). Tag merge
