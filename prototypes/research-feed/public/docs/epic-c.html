@@ -42,16 +42,16 @@ hybrid taxonomy (FD-4)</a></li>
 <li><a href="#search">Search</a></li>
 <li><a href="#why-in-postgres-not-a-search-engine">API endpoints</a></li>
 <li><a href="#the-design">Edit/delete policy</a></li>
-<li><a href="#the-clinical-synonym-dictionary-the-domain-specific-part">Could-have features
-(Section 6.1)</a></li>
+<li><a href="#the-clinical-synonym-dictionary-the-domain-specific-part">Scope of the
+PRD’s three Could-have items</a></li>
 <li><a href="#api-endpoints">Personalised feed
 (Should-have)</a></li>
 <li><a href="#editdelete-policy">Boundaries with other
 epics</a></li>
-<li><a href="#could-have-features-section-6.1">Non-functional
+<li><a href="#scope-of-the-prds-three-could-have-items">Non-functional
 notes specific to EPIC-C</a></li>
-<li><a href="#personalised-feed-should-have">Test plan</a></li>
-<li><a href="#boundaries-with-other-epics">Open questions</a></li>
+<li><a href="#best-answer-marker-in-mvp">Test plan</a></li>
+<li><a href="#polls-in-mvp">Open questions</a></li>
 </ol>
 <hr />
 <h2 id="scope">1. Scope</h2>
@@ -351,32 +351,75 @@ member’s verified identity” specifically so it persists as a record
 </tbody>
 </table>
 <hr />
-<h2 id="could-have-features-section-6.1">7. Could-have features (Section
-6.1)</h2>
-<p>The PRD lists three Could-have (MVP stretch) items. Specified here at
-a level sufficient to build if prioritised, without over-engineering for
-features that may not ship in MVP:</p>
-<ul>
-<li><strong>Best answer marker</strong>: a nullable
-<code>community.posts.accepted_comment_id</code> set by the post’s own
-author (not moderators, not kudos-driven). Displayed above the
-kudos-ranked list, not replacing it — the PRD’s Must-have kudos ranking
-and this Could-have marker are complementary, not alternatives.</li>
-<li><strong>Image attachments</strong>: stored in S3 per the
-architecture spec, Section 3, with EXIF stripping by a worker before
-persistence (already specified generically there) and an upload-time
-content-warning prompt (author-supplied, e.g. “clinical image”). A
-<code>community.attachments (id, post_id, s3_key, content_warning boolean)</code>
-table would own this; not built out further here since it’s Could-have
-and the architecture spec already covers the EXIF-stripping mechanism it
-depends on.</li>
-<li><strong>Polls</strong>: a
-<code>community.polls (post_id, question, options jsonb)</code> plus a
-votes table — a lightweight, self-contained addition if built; no
-interaction with any other epic’s data.</li>
-</ul>
-<p>None of these three should be assumed in the MVP build plan — flagged
-in Section 12 for a scope confirmation.</p>
+<h2 id="scope-of-the-prds-three-could-have-items">7. Scope of the PRD’s
+three Could-have items</h2>
+<p>The PRD lists three Could-have (MVP stretch) items. Scope decided by
+Adrian, 2026-07-17:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Decision</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Best answer marker</strong></td>
+<td><strong>In MVP</strong></td>
+<td>See below</td>
+</tr>
+<tr>
+<td><strong>Polls</strong></td>
+<td><strong>In MVP</strong></td>
+<td>See below</td>
+</tr>
+<tr>
+<td><strong>Image attachments</strong></td>
+<td><strong>Deferred — remains a future Could-have</strong></td>
+<td>Held back on <strong>privacy grounds</strong> (Adrian, 2026-07-17):
+images are the highest-risk vector for inadvertent patient
+identification (faces, tattoos, scars, embedded EXIF/location,
+identifiable settings), which is exactly what the platform’s no-PHI
+policy exists to prevent. The EXIF-stripping and content-warning
+mechanics only mitigate <em>metadata</em> — they can’t stop a genuinely
+identifying image being uploaded. Not worth the risk for MVP; revisit
+post-launch with proper safeguards. <strong>This has a knock-on effect
+on EPIC-E</strong> (case-discussion checklist items 6/7 assume images
+exist) — see that spec’s Section 4 and the note below.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="best-answer-marker-in-mvp">Best answer marker (in MVP)</h3>
+<p>A nullable <code>community.posts.accepted_comment_id</code>, set by
+the post’s <strong>own author</strong> (not moderators, not
+kudos-driven). Displayed above the kudos-ranked answer list, not
+replacing it — the Must-have kudos ranking (EPIC-D) and this marker are
+complementary: kudos is the community’s signal, the accepted answer is
+the asker’s own “this solved it.”</p>
+<h3 id="polls-in-mvp">Polls (in MVP)</h3>
+<p>A lightweight, self-contained addition — a
+<code>community.polls (post_id, question, options jsonb)</code> table
+plus a votes table
+(<code>community.poll_votes (poll_id, option_index, handle_id, created_at)</code>,
+one vote per handle per poll via a unique constraint, the same
+one-per-handle pattern as kudos). No interaction with any other epic’s
+data; votes are handle-scoped like everything else in
+<code>community</code>.</p>
+<h3 id="consequence-of-deferring-images">Consequence of deferring
+images</h3>
+<p>EPIC-E’s de-identification checklist (its Section 4) includes two
+image-related items (6: no identifying photographs; 7: EXIF review).
+With image attachments deferred, <strong>those two checklist items have
+nothing to attach to for MVP</strong> — case discussions are text-only
+at launch. This should be reconciled in EPIC-E’s spec (drop or grey-out
+items 6/7 for MVP, restore them when images land). Flagged in Section 12
+and cross-referenced to EPIC-E.</p>
 <hr />
 <h2 id="personalised-feed-should-have">8. Personalised feed
 (Should-have)</h2>
@@ -497,10 +540,16 @@ fully built until FD-4/taxonomy lands.</li>
 2026-07-17</strong>: the Section 6 policy (15-minute no-marker edit
 window, <code>edited_at</code> after, soft-delete for ordinary posts,
 moderator-only removal for attested case discussions) is agreed.</li>
-<li><strong>Could-have scope confirmation</strong> (Section 7): whether
-any of best-answer marker, image attachments, or polls are actually
-being built for MVP launch, or deferred — affects sequencing/resourcing,
-not architecture.</li>
+<li><del><strong>Could-have scope confirmation</strong></del> —
+<strong>resolved 2026-07-17</strong> (Section 7): best-answer marker and
+polls are <strong>in MVP</strong>; image attachments are
+<strong>deferred</strong> on privacy grounds. Follow-up below.</li>
+<li><strong>EPIC-E image-checklist reconciliation</strong> (new, from
+the image deferral, Section 7): EPIC-E’s de-identification checklist
+items 6/7 assume image uploads exist. With images deferred, case
+discussions are text-only at MVP and those two items need
+dropping/greying-out in EPIC-E’s spec until images land. Tracked against
+EPIC-E.</li>
 <li><strong>“Trending” definition</strong> (Section 8): a
 kudos-in-a-time-window heuristic is this spec’s own placeholder for the
 PRD’s unspecified fallback view — needs a concrete definition (window

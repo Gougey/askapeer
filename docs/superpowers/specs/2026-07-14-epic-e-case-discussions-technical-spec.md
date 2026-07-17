@@ -119,7 +119,9 @@ How each item can actually be enforced differs — the PRD frames all eight as c
 |---|---|---|
 | 1, 2, 5, 8 (names, locations, facility names, document identifiers) | **Attestation only** — checkbox plus the member's signed declaration | The platform cannot algorithmically detect a patient name or a uniquely-identifying facility name in free text (the same limitation the EPIC-B spec notes for handle names encoding a real identity) |
 | 3, 4 (age bands, relative dates) | **Structural enforcement proposed** — an age-band selector (fixed set of bands, no free date-of-birth field) and a relative-timeline input ("X weeks post-injury") built into the `community.case_details` template | Meaningfully stronger than trusting an author to remember to phrase a free-text field as a band. A stronger safeguard than the PRD's wording implies — flagged for confirmation in Section 12, not assumed authorised |
-| 6, 7 (image content, EXIF) | **Depends on image attachments existing at all** | Currently only a Could-have in EPIC-C (Section 7 there) — a real gap between what this checklist assumes and what's confirmed to ship. Flagged prominently in Section 12 |
+| 6, 7 (image content, EXIF) | **Not applicable at MVP — case discussions are text-only** | Image attachments were **deferred** on privacy grounds (Adrian, 2026-07-17; EPIC-C Section 7). Since no images can be uploaded, checklist items 6 and 7 are dropped from the MVP checklist and restored when image support lands. This is the safest possible resolution — the highest-risk identification vector simply isn't present for launch |
+
+**MVP checklist is six items, not eight**: with images deferred, items 6 (identifying photographs) and 7 (EXIF review) don't apply, so the launch checklist is items 1–5 and 8. The `checklist_snapshot` (Section 2) captures whichever items were live at attestation time, so this reduction is naturally recorded rather than needing a schema change — and when images return, the checklist grows back to eight without any historical attestation becoming inconsistent.
 
 ---
 
@@ -208,7 +210,7 @@ This epic requires two things of already-written specs that weren't anticipated 
 ## 12. Open questions
 
 - **Structural enforcement of checklist items 3/4** (Section 4): should date-of-birth and treatment-date fields be structurally restricted to bands/relative-time rather than relying purely on the attestation checkbox? This spec recommends yes; needs sign-off since it's a stronger (and more UI-involved) safeguard than the PRD's own wording strictly requires.
-- **Image attachment dependency** (Section 4): checklist items 6/7 assume case discussions can carry images, but EPIC-C currently lists image attachments as Could-have, not committed MVP scope. If case discussions need images to be genuinely usable for clinical case sharing, this may need to become Must-have specifically for this epic even if general forum image attachments stay optional — needs a scope decision.
+- ~~**Image attachment dependency**~~ — **resolved 2026-07-17**: image attachments are deferred on privacy grounds (EPIC-C Section 7), so case discussions are **text-only at MVP** and the checklist is six items (1–5, 8), not eight. Items 6/7 return when image support lands. See Section 4.
 - **EPIC-C schema amendment** (Section 9): adding `draft` to `posts.status` — a small change, but EPIC-C's spec is already committed, so this should be reconciled explicitly (either an amendment to that spec or treated as EPIC-E-specific extension) rather than assumed.
 - **EPIC-F action-type addition** (Section 9): `request_correction` needs to land in EPIC-F's spec when it's written; flagged so it isn't missed.
 - **Corrected resubmission mechanics** (Section 8): does a "corrected resubmission" create a new post, or unpublish/re-edit/re-attest the same one? The PRD names the action but not the mechanics — this spec's proposal (unpublish, re-attest) is a starting point, not a decision.

@@ -235,6 +235,19 @@ Agreed: 15-minute no-marker edit window, <code>edited_at</code> shown
 after, author self-delete as soft-delete for ordinary posts,
 moderator-only removal for attested case discussions. <em>(EPIC-C spec
 §6, §12.)</em></li>
+<li><strong>Could-have scope + image-attachment deferral — resolved
+2026-07-17.</strong> Best-answer marker and polls are <strong>in
+MVP</strong>; <strong>image attachments are deferred</strong> (remain a
+future Could-have) on privacy grounds — images are the highest-risk
+vector for inadvertent patient identification (faces, tattoos, scars,
+EXIF, identifiable settings), which EXIF-stripping alone can’t mitigate.
+Knock-on effect: EPIC-E case discussions are <strong>text-only at
+MVP</strong>, so the de-identification checklist is six items (1–5, 8)
+not eight; items 6/7 (image content, EXIF) return when image support
+lands. The <code>checklist_snapshot</code> records whichever items were
+live at attestation, so no schema change is needed for the reduction or
+its later restoration. <em>(EPIC-C spec §7, §12; EPIC-E spec §4,
+§12.)</em></li>
 </ul>
 <hr />
 <h2 id="per-epic-open-questions">3. Per-epic open questions</h2>
@@ -272,17 +285,14 @@ storage, expulsion/re-registration gap, and tag-follow mechanism are all
 resolved — see §2.)</em></p>
 <h3 id="epic-c-forum">EPIC-C — Forum</h3>
 <ul>
-<li><strong>Could-have scope confirmation</strong>: whether best-answer
-marker, image attachments, or polls are actually being built for MVP, or
-deferred — a sequencing/resourcing question, not architectural.</li>
 <li><strong>“Trending” definition</strong>: the personalised feed’s
 fallback view (§8 there) needs a concrete definition (time window,
 platform-wide vs. category-scoped) — this spec’s kudos-in-a-time-window
 heuristic is only a placeholder.</li>
 </ul>
 <p><em>(Taxonomy unification is covered in §1.2 above. The search
-design, edit/delete policy, and personalised-feed follow mechanism are
-all resolved — see §2.)</em></p>
+design, edit/delete policy, Could-have scope, and personalised-feed
+follow mechanism are all resolved — see §2.)</em></p>
 <h3 id="epic-d-kudos">EPIC-D — Kudos</h3>
 <ul>
 <li><strong>Idempotency of a repeated award</strong>: should awarding
@@ -308,10 +318,6 @@ mistaken for confirmed scope.</li>
 fields (e.g. an age-band selector) rather than relying purely on the
 attestation checkbox? This spec recommends yes — a stronger safeguard
 than the PRD strictly requires — and needs sign-off.</li>
-<li><strong>Image attachment dependency</strong>: checklist items 6/7
-assume case discussions can carry images, but EPIC-C only lists images
-as Could-have. If case discussions need images to be clinically usable,
-this may need to become Must-have specifically for this epic.</li>
 <li><strong>Corrected resubmission mechanics</strong>: does a correction
 create a new post, or unpublish/re-edit/re-attest the same one? The PRD
 names the action, not the mechanics.</li>
@@ -320,8 +326,9 @@ unattested, in-progress draft ever be visible to moderation (e.g. a
 safety escalation before publish)? Likely no, but not addressed by the
 PRD.</li>
 </ul>
-<p><em>(The two schema-amendment items are covered in §1.3
-above.)</em></p>
+<p><em>(The image-attachment dependency is resolved — images deferred,
+case discussions text-only at MVP; see §2. The two schema-amendment
+items are covered in §1.3 above.)</em></p>
 <h3 id="epic-f-moderation">EPIC-F — Moderation</h3>
 <ul>
 <li><strong><code>anonymity_violation</code> as a priority report

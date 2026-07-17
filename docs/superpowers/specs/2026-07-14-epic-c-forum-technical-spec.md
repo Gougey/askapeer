@@ -17,7 +17,7 @@ Source of truth: `docs/askapeer-prd-v0.1.md`, Section 6.1 (Must/Should/Could fea
 4. [Search](#4-search)
 5. [API endpoints](#5-api-endpoints)
 6. [Edit/delete policy](#6-editdelete-policy)
-7. [Could-have features (Section 6.1)](#7-could-have-features-section-61)
+7. [Scope of the PRD's three Could-have items](#7-scope-of-the-prds-three-could-have-items)
 8. [Personalised feed (Should-have)](#8-personalised-feed-should-have)
 9. [Boundaries with other epics](#9-boundaries-with-other-epics)
 10. [Non-functional notes specific to EPIC-C](#10-non-functional-notes-specific-to-epic-c)
@@ -172,15 +172,27 @@ All write endpoints require a handle-scoped session token at `active` status (ar
 
 ---
 
-## 7. Could-have features (Section 6.1)
+## 7. Scope of the PRD's three Could-have items
 
-The PRD lists three Could-have (MVP stretch) items. Specified here at a level sufficient to build if prioritised, without over-engineering for features that may not ship in MVP:
+The PRD lists three Could-have (MVP stretch) items. Scope decided by Adrian, 2026-07-17:
 
-- **Best answer marker**: a nullable `community.posts.accepted_comment_id` set by the post's own author (not moderators, not kudos-driven). Displayed above the kudos-ranked list, not replacing it — the PRD's Must-have kudos ranking and this Could-have marker are complementary, not alternatives.
-- **Image attachments**: stored in S3 per the architecture spec, Section 3, with EXIF stripping by a worker before persistence (already specified generically there) and an upload-time content-warning prompt (author-supplied, e.g. "clinical image"). A `community.attachments (id, post_id, s3_key, content_warning boolean)` table would own this; not built out further here since it's Could-have and the architecture spec already covers the EXIF-stripping mechanism it depends on.
-- **Polls**: a `community.polls (post_id, question, options jsonb)` plus a votes table — a lightweight, self-contained addition if built; no interaction with any other epic's data.
+| Feature | Decision | Notes |
+|---|---|---|
+| **Best answer marker** | **In MVP** | See below |
+| **Polls** | **In MVP** | See below |
+| **Image attachments** | **Deferred — remains a future Could-have** | Held back on **privacy grounds** (Adrian, 2026-07-17): images are the highest-risk vector for inadvertent patient identification (faces, tattoos, scars, embedded EXIF/location, identifiable settings), which is exactly what the platform's no-PHI policy exists to prevent. The EXIF-stripping and content-warning mechanics only mitigate *metadata* — they can't stop a genuinely identifying image being uploaded. Not worth the risk for MVP; revisit post-launch with proper safeguards. **This has a knock-on effect on EPIC-E** (case-discussion checklist items 6/7 assume images exist) — see that spec's Section 4 and the note below. |
 
-None of these three should be assumed in the MVP build plan — flagged in Section 12 for a scope confirmation.
+### Best answer marker (in MVP)
+
+A nullable `community.posts.accepted_comment_id`, set by the post's **own author** (not moderators, not kudos-driven). Displayed above the kudos-ranked answer list, not replacing it — the Must-have kudos ranking (EPIC-D) and this marker are complementary: kudos is the community's signal, the accepted answer is the asker's own "this solved it."
+
+### Polls (in MVP)
+
+A lightweight, self-contained addition — a `community.polls (post_id, question, options jsonb)` table plus a votes table (`community.poll_votes (poll_id, option_index, handle_id, created_at)`, one vote per handle per poll via a unique constraint, the same one-per-handle pattern as kudos). No interaction with any other epic's data; votes are handle-scoped like everything else in `community`.
+
+### Consequence of deferring images
+
+EPIC-E's de-identification checklist (its Section 4) includes two image-related items (6: no identifying photographs; 7: EXIF review). With image attachments deferred, **those two checklist items have nothing to attach to for MVP** — case discussions are text-only at launch. This should be reconciled in EPIC-E's spec (drop or grey-out items 6/7 for MVP, restore them when images land). Flagged in Section 12 and cross-referenced to EPIC-E.
 
 ---
 
@@ -238,5 +250,6 @@ No new schema is introduced here — `community.follows` (EPIC-B) and `community
 - **Taxonomy unification** (Section 3): the forum's `category`/`tag` vocabulary, Andrew Renshaw's body-area list, and the research feed's `taxonomy.json` are three overlapping-but-not-identical vocabularies right now. Needs a single controlled vocabulary decided before build, and FD-4 needs formal closure regardless (it's still an open stakeholder decision, not just an implementation detail).
 - ~~**Search's "(to be discussed/confirmed)" hedge**~~ — **resolved 2026-07-17**: search design firmed up (Postgres FTS + `pg_trgm` + weighted `tsvector` + clinical synonym dictionary; no external/third-party engine), Section 4. One forward dependency remains: the synonym dictionary is seeded from the tag vocabulary, so it can't be fully built until FD-4/taxonomy lands.
 - ~~**Edit/delete policy**~~ — **resolved 2026-07-17**: the Section 6 policy (15-minute no-marker edit window, `edited_at` after, soft-delete for ordinary posts, moderator-only removal for attested case discussions) is agreed.
-- **Could-have scope confirmation** (Section 7): whether any of best-answer marker, image attachments, or polls are actually being built for MVP launch, or deferred — affects sequencing/resourcing, not architecture.
+- ~~**Could-have scope confirmation**~~ — **resolved 2026-07-17** (Section 7): best-answer marker and polls are **in MVP**; image attachments are **deferred** on privacy grounds. Follow-up below.
+- **EPIC-E image-checklist reconciliation** (new, from the image deferral, Section 7): EPIC-E's de-identification checklist items 6/7 assume image uploads exist. With images deferred, case discussions are text-only at MVP and those two items need dropping/greying-out in EPIC-E's spec until images land. Tracked against EPIC-E.
 - **"Trending" definition** (Section 8): a kudos-in-a-time-window heuristic is this spec's own placeholder for the PRD's unspecified fallback view — needs a concrete definition (window length, whether it's platform-wide or category-scoped) before build.

@@ -79,6 +79,7 @@ Decided, kept here for the record rather than deleted.
 - **Handle-name blocklist storage — resolved 2026-07-17.** Config table, not a code constant — so profession-specific terms (specialty names, credentials, professional-body abbreviations) can be added without a deploy, since they can't be fully enumerated upfront. *(EPIC-B spec §3, §11, §13.)*
 - **Search design — resolved 2026-07-17.** Stays in PostgreSQL for MVP (no third-party engine — Algolia-style SaaS ruled out on trust/data-residency grounds; self-hosted OpenSearch kept as a documented later upgrade). Firmed up as: weighted `tsvector` + GIN, `websearch_to_tsquery`, `pg_trgm` for typo tolerance, and a clinical synonym dictionary (ACL ⇄ anterior cruciate ligament, etc.). The synonym dictionary is seeded from the tag vocabulary — so it has a forward dependency on FD-4/taxonomy (§1.2), and MeSH entry-terms give the synonyms largely for free if the tag→MeSH mapping is adopted. Resolves the PRD's "(to be discussed/confirmed)" hedge on Search. *(EPIC-C spec §4, §12.)*
 - **Forum edit/delete policy — resolved 2026-07-17.** Agreed: 15-minute no-marker edit window, `edited_at` shown after, author self-delete as soft-delete for ordinary posts, moderator-only removal for attested case discussions. *(EPIC-C spec §6, §12.)*
+- **Could-have scope + image-attachment deferral — resolved 2026-07-17.** Best-answer marker and polls are **in MVP**; **image attachments are deferred** (remain a future Could-have) on privacy grounds — images are the highest-risk vector for inadvertent patient identification (faces, tattoos, scars, EXIF, identifiable settings), which EXIF-stripping alone can't mitigate. Knock-on effect: EPIC-E case discussions are **text-only at MVP**, so the de-identification checklist is six items (1–5, 8) not eight; items 6/7 (image content, EXIF) return when image support lands. The `checklist_snapshot` records whichever items were live at attestation, so no schema change is needed for the reduction or its later restoration. *(EPIC-C spec §7, §12; EPIC-E spec §4, §12.)*
 
 ---
 
@@ -98,10 +99,9 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 *(No local open questions remain. The moderator-forced rename is covered in §1.4 above; the handle length/character rules, blocklist storage, expulsion/re-registration gap, and tag-follow mechanism are all resolved — see §2.)*
 
 ### EPIC-C — Forum
-- **Could-have scope confirmation**: whether best-answer marker, image attachments, or polls are actually being built for MVP, or deferred — a sequencing/resourcing question, not architectural.
 - **"Trending" definition**: the personalised feed's fallback view (§8 there) needs a concrete definition (time window, platform-wide vs. category-scoped) — this spec's kudos-in-a-time-window heuristic is only a placeholder.
 
-*(Taxonomy unification is covered in §1.2 above. The search design, edit/delete policy, and personalised-feed follow mechanism are all resolved — see §2.)*
+*(Taxonomy unification is covered in §1.2 above. The search design, edit/delete policy, Could-have scope, and personalised-feed follow mechanism are all resolved — see §2.)*
 
 ### EPIC-D — Kudos
 - **Idempotency of a repeated award**: should awarding kudos twice 409, or silently no-op? Minor, but affects client error-handling.
@@ -111,11 +111,10 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 
 ### EPIC-E — Case Discussions
 - **Structural enforcement of checklist items 3/4** (age-banding, relative dates): should these be structurally restricted fields (e.g. an age-band selector) rather than relying purely on the attestation checkbox? This spec recommends yes — a stronger safeguard than the PRD strictly requires — and needs sign-off.
-- **Image attachment dependency**: checklist items 6/7 assume case discussions can carry images, but EPIC-C only lists images as Could-have. If case discussions need images to be clinically usable, this may need to become Must-have specifically for this epic.
 - **Corrected resubmission mechanics**: does a correction create a new post, or unpublish/re-edit/re-attest the same one? The PRD names the action, not the mechanics.
 - **Draft visibility to moderators**: should an unattested, in-progress draft ever be visible to moderation (e.g. a safety escalation before publish)? Likely no, but not addressed by the PRD.
 
-*(The two schema-amendment items are covered in §1.3 above.)*
+*(The image-attachment dependency is resolved — images deferred, case discussions text-only at MVP; see §2. The two schema-amendment items are covered in §1.3 above.)*
 
 ### EPIC-F — Moderation
 - **`anonymity_violation` as a priority report category**: proposed by this spec (on the reasoning that the zero-tolerance anonymity rule is at least as serious as the patient-information rule, which *is* explicitly named as priority in PRD §10.4) but not a PRD-stated requirement — needs explicit confirmation.

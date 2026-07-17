@@ -189,13 +189,24 @@ authorised</td>
 </tr>
 <tr>
 <td>6, 7 (image content, EXIF)</td>
-<td><strong>Depends on image attachments existing at all</strong></td>
-<td>Currently only a Could-have in EPIC-C (Section 7 there) — a real gap
-between what this checklist assumes and what’s confirmed to ship.
-Flagged prominently in Section 12</td>
+<td><strong>Not applicable at MVP — case discussions are
+text-only</strong></td>
+<td>Image attachments were <strong>deferred</strong> on privacy grounds
+(Adrian, 2026-07-17; EPIC-C Section 7). Since no images can be uploaded,
+checklist items 6 and 7 are dropped from the MVP checklist and restored
+when image support lands. This is the safest possible resolution — the
+highest-risk identification vector simply isn’t present for launch</td>
 </tr>
 </tbody>
 </table>
+<p><strong>MVP checklist is six items, not eight</strong>: with images
+deferred, items 6 (identifying photographs) and 7 (EXIF review) don’t
+apply, so the launch checklist is items 1–5 and 8. The
+<code>checklist_snapshot</code> (Section 2) captures whichever items
+were live at attestation time, so this reduction is naturally recorded
+rather than needing a schema change — and when images return, the
+checklist grows back to eight without any historical attestation
+becoming inconsistent.</p>
 <hr />
 <h2 id="the-attestation">5. The attestation</h2>
 <p>Exact wording, PRD Section 10.3:</p>
@@ -348,13 +359,12 @@ structurally restricted to bands/relative-time rather than relying
 purely on the attestation checkbox? This spec recommends yes; needs
 sign-off since it’s a stronger (and more UI-involved) safeguard than the
 PRD’s own wording strictly requires.</li>
-<li><strong>Image attachment dependency</strong> (Section 4): checklist
-items 6/7 assume case discussions can carry images, but EPIC-C currently
-lists image attachments as Could-have, not committed MVP scope. If case
-discussions need images to be genuinely usable for clinical case
-sharing, this may need to become Must-have specifically for this epic
-even if general forum image attachments stay optional — needs a scope
-decision.</li>
+<li><del><strong>Image attachment dependency</strong></del> —
+<strong>resolved 2026-07-17</strong>: image attachments are deferred on
+privacy grounds (EPIC-C Section 7), so case discussions are
+<strong>text-only at MVP</strong> and the checklist is six items (1–5,
+8), not eight. Items 6/7 return when image support lands. See Section
+4.</li>
 <li><strong>EPIC-C schema amendment</strong> (Section 9): adding
 <code>draft</code> to <code>posts.status</code> — a small change, but
 EPIC-C’s spec is already committed, so this should be reconciled
