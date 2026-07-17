@@ -45,6 +45,7 @@ community.kudos
 ```
 
 No new table is needed. This epic's only schema-level responsibility is the write path into `community.handles.kudos_total` (owned column, EPIC-B spec Section 9):
+
 - Implemented as a **same-transaction increment/decrement** alongside the `community.kudos` insert/delete — not a separately-scheduled recomputation.
 - **Why atomic matters here**: a batch-recompute job would introduce a window where a profile's displayed total lags reality. That matters more for kudos than for a less identity-adjacent number, because kudos is one of the few things a peer can see about a handle at all (PRD Section 9.2) — it has to be trustworthy as a reputation figure.
 

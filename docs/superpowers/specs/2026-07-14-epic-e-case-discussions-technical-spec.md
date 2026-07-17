@@ -130,6 +130,7 @@ Exact wording, PRD Section 10.3:
 > *"I confirm that this case discussion is de-identified in accordance with Askapeer's patient privacy policy. I understand that any breach of patient confidentiality is a serious professional and legal matter and may result in permanent removal from the platform and referral to my professional regulatory body."*
 
 Implementation points:
+
 - **The exact text is stored** in `attestation_text`, not just a boolean "attested = true" — if the wording is ever revised, historical attestations remain an accurate record of what the member actually agreed to at the time (architecture spec's audit-immutability philosophy, Section 4.4).
 - **`ip_address` is captured server-side** from the request, per the PRD's "recorded with timestamp and linked to the member's verified identity" requirement.
 - This is exactly the scenario the architecture spec's Section 4.3 "deliberate exception" describes — no new identity-boundary reasoning is needed beyond pointing at it.

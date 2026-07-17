@@ -59,6 +59,7 @@ Rigid professional hierarchies create several failure modes in sports medicine:
 ### 2.2 What is missing
 
 There is currently no platform that:
+
 - Guarantees all participants are qualified, registered professionals
 - Removes identity and hierarchy signals that suppress honest discourse
 - Provides a safe, structured mechanism for discussing de-identified patient cases
@@ -321,12 +322,14 @@ Anonymity is not an optional feature. Without it, the hierarchy problem the plat
 ### 9.2 The pseudonymous model
 
 **Visible to peers:**
+
 - Pseudonymous handle
 - Total kudos score
 - Approximate membership duration (e.g. "Member since 2025")
 - Post and answer history under the handle
 
 **Never visible to peers:**
+
 - Real name, employer, or institution
 - Geographic location
 - Specialty, grade, or years of experience
@@ -425,6 +428,7 @@ Members pay for access; the platform's only obligation is to those paying member
 A subscription model creates a chicken-and-egg problem: practitioners need to see value before paying, but value requires active membership. A 3-month trial may be insufficient to build the network density needed for the platform to feel genuinely valuable. A longer seeding period (e.g. 6 months for the initial launch cohort) should be considered.
 
 Other seeding strategies under consideration:
+
 - University partnership — postgraduate students with professional registration as an engaged early-adopter cohort (see FD-6)
 - Founder-created seed content during pre-launch
 - Invitation-led early access through Andrew Renshaw's professional network
@@ -532,6 +536,7 @@ Potential supplementary streams consistent with platform principles:
 | Registration lapse not caught post-approval | Medium | Medium | Phase 2 periodic reverification; Phase 1 community reporting |
 
 **Key assumptions:**
+
 - HCPC and GMC registers remain publicly queryable or accessible via API
 - UK sports medicine practitioners will pay a subscription for a tool that provides clear professional value
 - Andrew Renshaw's professional network provides meaningful early-adopter seeding

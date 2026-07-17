@@ -131,6 +131,7 @@ Acronyms are expanded at first use in the body text below; this table is a stand
 **Stack decision**: Node.js/TypeScript throughout, using the NestJS framework for the Application Programming Interface (API), organised as a **modular monolith** (not microservices) — the right size for a small team, avoiding distributed-systems overhead while still giving each module ("epic") a clean, testable boundary. TypeScript end-to-end means the web frontend and backend share types, and it's the stack AI coding agents are most fluent in, which matters given the team is building with AI assistance.
 
 **Components**:
+
 - **Web app** — Next.js (React), the sole MVP client, communicating with the API entirely over HTTPS. Built API-first (no server-only logic baked into the web app) so a future native mobile client is architecturally just another API consumer, not a rewrite.
 - **API** — a single NestJS service, organised into modules mapping 1:1 to the PRD epics (see Section 10).
 - **Background workers** — the same codebase, deployed as a second Elastic Container Service (ECS) service, driven by a Redis-backed job queue (BullMQ). Handles anything that shouldn't block a request: professional-register lookups, identity-check polling, email sending, EXIF stripping, digest generation, research-feed ingestion.
@@ -404,6 +405,7 @@ community.member_interests
 ## 9. Non-functional requirements
 
 **Security**
+
 - Transport Layer Security (TLS) everywhere; encryption at rest on the database, cache, and file storage (S3 server-side encryption).
 - JWT signing keys held in Secrets Manager with rotation; refresh tokens revocable server-side.
 - AWS WAF on CloudFront (common attack patterns, rate limiting) plus application-level rate limiting on authentication and reporting endpoints.
@@ -411,23 +413,28 @@ community.member_interests
 - A specific regression test class: automated tests asserting that the `community`-schema database role genuinely cannot query the `identity` schema — the core trust guarantee should be enforced by a test that fails the build, not by code review alone.
 
 **Privacy and compliance**
+
 - No PHI, enforced by policy and by the case-discussion attestation/checklist gate (Section 4.3).
 - Right-to-erasure default (worth explicit legal review before launch, as this is a policy decision as much as a technical one): on a deletion request, the `identity` record is hard-deleted; the handle's community content is retained but the handle is marked `deleted_member` with no possibility of re-linking to an identity. This preserves the forum's value as a knowledge archive while honouring the erasure request for real PII specifically.
 - A Data Protection Impact Assessment (DPIA) is worth commissioning before launch, given the verification pipeline processes professional-registration data at volume.
 
 **Availability and performance**
+
 - Target roughly 99.5% uptime for the MVP — deliberately not over-promising a level a small team cannot realistically staff for.
 - Multi-AZ database, application containers spread across two availability zones, rolling deployments with health checks.
 - 95th-percentile API latency target under 300 milliseconds for standard reads; feed and search queries backed by appropriate indexes.
 
 **Observability**
+
 - Structured JSON logging with a correlation ID threaded from an API request through to any worker jobs it triggers, so a single user action is traceable end-to-end.
 - CloudWatch alarms on error rate, queue depth, and database connection saturation; Sentry for application exception tracking.
 
 **Disaster recovery**
+
 - Database point-in-time recovery; Recovery Point Objective (RPO) of around 5 minutes, Recovery Time Objective (RTO) of a few hours — pragmatic for MVP scale, not a "five nines" commitment.
 
 **Testing strategy**
+
 - Unit tests per module; integration tests against a dockerised PostgreSQL instance in CI; contract tests for the pluggable interfaces (`PaymentProvider`, source adapters) so swapping an implementation cannot silently break the contract.
 
 ---

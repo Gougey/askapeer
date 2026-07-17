@@ -69,23 +69,28 @@ specifies the Should-have “follow” mechanism (PRD Section 6.1) —
 generalised (2026-07-14) to cover both following a handle and following
 a tag, resolving a gap identified across the EPIC-C/EPIC-G specs; see
 Section 8.</p>
-<p><strong>Out of scope for this spec</strong> (owned elsewhere): -
-Awarding/counting kudos itself — EPIC-D. This spec only owns the
+<p><strong>Out of scope for this spec</strong> (owned elsewhere):</p>
+<ul>
+<li>Awarding/counting kudos itself — EPIC-D. This spec only owns the
 <code>kudos_total</code> <em>column</em> on the handle record; EPIC-D
-owns writing to it (Section 9). - Post/answer history <em>content</em>
-(the posts themselves) — EPIC-C. This spec only specifies that a profile
-surfaces a handle’s post history, not the forum data model. - Moderation
-actions that <em>change</em> a handle’s status — EPIC-F. This spec only
-specifies what a profile looks like once a status change has already
-happened (Section 7). - Notification preferences — EPIC-G. - The
-optional “professional contact link (e.g. LinkedIn URL)” the PRD’s FD-5
-discussion (Section 16) floats as a DM alternative — deliberately
-<strong>not</strong> built into this spec’s data model. See Section 13;
-it isn’t in the PRD’s MoSCoW feature table (Section 6.1) as committed
-scope, and it appears to directly conflict with PRD Section 9.3’s
-zero-tolerance rule, which names “deliberately identifying yourself” as
-an expulsion trigger. That conflict needs stakeholder resolution before
-any such field is built, not a unilateral design call here.</p>
+owns writing to it (Section 9).</li>
+<li>Post/answer history <em>content</em> (the posts themselves) —
+EPIC-C. This spec only specifies that a profile surfaces a handle’s post
+history, not the forum data model.</li>
+<li>Moderation actions that <em>change</em> a handle’s status — EPIC-F.
+This spec only specifies what a profile looks like once a status change
+has already happened (Section 7).</li>
+<li>Notification preferences — EPIC-G.</li>
+<li>The optional “professional contact link (e.g. LinkedIn URL)” the
+PRD’s FD-5 discussion (Section 16) floats as a DM alternative —
+deliberately <strong>not</strong> built into this spec’s data model. See
+Section 13; it isn’t in the PRD’s MoSCoW feature table (Section 6.1) as
+committed scope, and it appears to directly conflict with PRD Section
+9.3’s zero-tolerance rule, which names “deliberately identifying
+yourself” as an expulsion trigger. That conflict needs stakeholder
+resolution before any such field is built, not a unilateral design call
+here.</li>
+</ul>
 <hr />
 <h2 id="data-model">2. Data model</h2>
 <p>This epic owns <code>community.handles</code>, already defined in the
@@ -111,14 +116,18 @@ community.handle_name_history            -- new: append-only, admin/support use 
   changed_at    timestamptz</code></pre>
 <p><strong>Why <code>handle_name_history</code> exists</strong>, even
 though Section 6 concludes handles shouldn’t be freely
-self-service-changeable: - The one legitimate case for a handle name
-ever changing is a moderator-forced rename (e.g. the name turns out to
-be identifying, or impersonates staff — see Section 3). - When that
-happens, the old name must not vanish untraceably — a moderator action
-changing a member-facing identifier is exactly what the architecture
-spec’s audit-logging philosophy (Section 4.4) says should leave a trail.
-- Without it, a renamed handle’s post history would look like it
-belonged to two different people, with no record of why.</p>
+self-service-changeable:</p>
+<ul>
+<li>The one legitimate case for a handle name ever changing is a
+moderator-forced rename (e.g. the name turns out to be identifying, or
+impersonates staff — see Section 3).</li>
+<li>When that happens, the old name must not vanish untraceably — a
+moderator action changing a member-facing identifier is exactly what the
+architecture spec’s audit-logging philosophy (Section 4.4) says should
+leave a trail.</li>
+<li>Without it, a renamed handle’s post history would look like it
+belonged to two different people, with no record of why.</li>
+</ul>
 <p>No new schema is introduced — this all lives in
 <code>community</code>, consistent with the architecture spec’s
 principle that pseudonymous, peer-facing data never touches
@@ -205,15 +214,18 @@ is <strong>structural</strong>, not a display-layer filter over data
 that could be requested some other way.</p>
 <p><strong><code>member_since</code> display is year-only</strong>
 (e.g. “Member since 2025”), even though the stored column is a full
-<code>date</code>. This isn’t cosmetic: - PRD Section 9.2’s own example
-uses year granularity. - A precise join date is a plausible
-<strong>correlation vector</strong>: if a real person is known (from
-off-platform context) to have started a new job or completed
-registration on a specific date, an exact <code>member_since</code>
-timestamp narrows the search for which handle is theirs far more than a
-year does. - The full date is still stored for internal/analytics use
-(e.g. KPI reporting, PRD Section 12) — a deliberate storage/display
-split, not an oversight.</p>
+<code>date</code>. This isn’t cosmetic:</p>
+<ul>
+<li>PRD Section 9.2’s own example uses year granularity.</li>
+<li>A precise join date is a plausible <strong>correlation
+vector</strong>: if a real person is known (from off-platform context)
+to have started a new job or completed registration on a specific date,
+an exact <code>member_since</code> timestamp narrows the search for
+which handle is theirs far more than a year does.</li>
+<li>The full date is still stored for internal/analytics use (e.g. KPI
+reporting, PRD Section 12) — a deliberate storage/display split, not an
+oversight.</li>
+</ul>
 <p><strong>Post/answer history</strong> on a profile is exactly the
 posts EPIC-C already attributes to that <code>handle_id</code> — this
 spec doesn’t duplicate that data, it specifies that the profile endpoint
@@ -332,10 +344,13 @@ archive.</p>
 <h2 id="follows-handles-and-tags-should-have">8. Follows — handles and
 tags (Should-have)</h2>
 <p>Two of PRD Section 6.1’s Should-have features turn out to need the
-same underlying mechanism: - <strong>“Personalised feed”</strong>
-(EPIC-C) — home view based on “<strong>tags and handles</strong>
-followed” - <strong>“Email digest”</strong> (EPIC-G) — weekly digest of
-“top-kudos content in <strong>followed tags</strong>”</p>
+same underlying mechanism:</p>
+<ul>
+<li><strong>“Personalised feed”</strong> (EPIC-C) — home view based on
+“<strong>tags and handles</strong> followed”</li>
+<li><strong>“Email digest”</strong> (EPIC-G) — weekly digest of
+“top-kudos content in <strong>followed tags</strong>”</li>
+</ul>
 <p>The PRD’s own language already treats following a person and
 following a topic as one verb applied to two target types — this spec
 follows that lead rather than building two separate mechanisms. (An
@@ -350,19 +365,23 @@ gap other specs had to flag; see
                                         depending on target_type
   created_at           timestamptz
   primary key (follower_handle_id, target_type, target_id)</code></pre>
-<p>Design notes: - <strong>Not a new modelling idiom</strong>: the
+<p>Design notes:</p>
+<ul>
+<li><strong>Not a new modelling idiom</strong>: the
 <code>target_type</code>/<code>target_id</code> discriminator is the
 same pattern <code>community.kudos</code> and
 <code>community.reports</code> already use to reference another epic’s
-tables without a single foreign key. - <strong>EPIC-B keeps
-ownership</strong> of the table and write path (as it did for the
-narrower <code>handle_follows</code> this replaces) — the natural owner
-of a follow relationship is the follower, a handle. - <strong>EPIC-C and
-EPIC-G are read-only consumers</strong>, filtering
-<code>WHERE target_type = 'tag'</code> for the personalised feed and
-digest respectively — the same “one epic owns the write path, others
-read” pattern used for kudos and notification preferences elsewhere in
-these specs.</p>
+tables without a single foreign key.</li>
+<li><strong>EPIC-B keeps ownership</strong> of the table and write path
+(as it did for the narrower <code>handle_follows</code> this replaces) —
+the natural owner of a follow relationship is the follower, a
+handle.</li>
+<li><strong>EPIC-C and EPIC-G are read-only consumers</strong>,
+filtering <code>WHERE target_type = 'tag'</code> for the personalised
+feed and digest respectively — the same “one epic owns the write path,
+others read” pattern used for kudos and notification preferences
+elsewhere in these specs.</li>
+</ul>
 <pre><code>POST   /v1/follows                    { target_type, target_id }   auth: handle-scoped token
 DELETE /v1/follows/:target_type/:target_id                          auth: handle-scoped token
 GET    /v1/follows/me?target_type=     -&gt; list of followed target_ids, optionally filtered</code></pre>

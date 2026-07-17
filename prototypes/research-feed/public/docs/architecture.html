@@ -344,26 +344,31 @@ while still giving each module (“epic”) a clean, testable boundary.
 TypeScript end-to-end means the web frontend and backend share types,
 and it’s the stack AI coding agents are most fluent in, which matters
 given the team is building with AI assistance.</p>
-<p><strong>Components</strong>: - <strong>Web app</strong> — Next.js
-(React), the sole MVP client, communicating with the API entirely over
-HTTPS. Built API-first (no server-only logic baked into the web app) so
-a future native mobile client is architecturally just another API
-consumer, not a rewrite. - <strong>API</strong> — a single NestJS
-service, organised into modules mapping 1:1 to the PRD epics (see
-Section 10). - <strong>Background workers</strong> — the same codebase,
-deployed as a second Elastic Container Service (ECS) service, driven by
-a Redis-backed job queue (BullMQ). Handles anything that shouldn’t block
-a request: professional-register lookups, identity-check polling, email
-sending, EXIF stripping, digest generation, research-feed ingestion. -
-<strong>PostgreSQL</strong> (Relational Database Service (RDS),
+<p><strong>Components</strong>:</p>
+<ul>
+<li><strong>Web app</strong> — Next.js (React), the sole MVP client,
+communicating with the API entirely over HTTPS. Built API-first (no
+server-only logic baked into the web app) so a future native mobile
+client is architecturally just another API consumer, not a rewrite.</li>
+<li><strong>API</strong> — a single NestJS service, organised into
+modules mapping 1:1 to the PRD epics (see Section 10).</li>
+<li><strong>Background workers</strong> — the same codebase, deployed as
+a second Elastic Container Service (ECS) service, driven by a
+Redis-backed job queue (BullMQ). Handles anything that shouldn’t block a
+request: professional-register lookups, identity-check polling, email
+sending, EXIF stripping, digest generation, research-feed
+ingestion.</li>
+<li><strong>PostgreSQL</strong> (Relational Database Service (RDS),
 Multi-AZ, <code>eu-west-2</code>/London) — a single instance with four
 schemas: <code>identity</code>, <code>community</code>,
-<code>billing</code>, <code>research</code> (Section 4). -
-<strong>Redis</strong> (ElastiCache) — job queue plus hot-path caching
-(e.g. kudos leaderboards). - <strong>S3</strong> (Simple Storage
-Service) — attachments and verification documents in private buckets,
-accessed via presigned Uniform Resource Locators (URLs); EXIF metadata
-stripped by a worker before anything is persisted.</p>
+<code>billing</code>, <code>research</code> (Section 4).</li>
+<li><strong>Redis</strong> (ElastiCache) — job queue plus hot-path
+caching (e.g. kudos leaderboards).</li>
+<li><strong>S3</strong> (Simple Storage Service) — attachments and
+verification documents in private buckets, accessed via presigned
+Uniform Resource Locators (URLs); EXIF metadata stripped by a worker
+before anything is persisted.</li>
+</ul>
 <hr />
 <h2 id="data-model-and-the-identitypseudonymity-boundary">4. Data model
 and the identity/pseudonymity boundary</h2>
@@ -782,50 +787,67 @@ open.</li>
 </ul>
 <hr />
 <h2 id="non-functional-requirements">9. Non-functional requirements</h2>
-<p><strong>Security</strong> - Transport Layer Security (TLS)
-everywhere; encryption at rest on the database, cache, and file storage
-(S3 server-side encryption). - JWT signing keys held in Secrets Manager
-with rotation; refresh tokens revocable server-side. - AWS WAF on
-CloudFront (common attack patterns, rate limiting) plus
+<p><strong>Security</strong></p>
+<ul>
+<li>Transport Layer Security (TLS) everywhere; encryption at rest on the
+database, cache, and file storage (S3 server-side encryption).</li>
+<li>JWT signing keys held in Secrets Manager with rotation; refresh
+tokens revocable server-side.</li>
+<li>AWS WAF on CloudFront (common attack patterns, rate limiting) plus
 application-level rate limiting on authentication and reporting
-endpoints. - Automated dependency vulnerability scanning in CI. - A
-specific regression test class: automated tests asserting that the
+endpoints.</li>
+<li>Automated dependency vulnerability scanning in CI.</li>
+<li>A specific regression test class: automated tests asserting that the
 <code>community</code>-schema database role genuinely cannot query the
 <code>identity</code> schema — the core trust guarantee should be
-enforced by a test that fails the build, not by code review alone.</p>
-<p><strong>Privacy and compliance</strong> - No PHI, enforced by policy
-and by the case-discussion attestation/checklist gate (Section 4.3). -
-Right-to-erasure default (worth explicit legal review before launch, as
-this is a policy decision as much as a technical one): on a deletion
+enforced by a test that fails the build, not by code review alone.</li>
+</ul>
+<p><strong>Privacy and compliance</strong></p>
+<ul>
+<li>No PHI, enforced by policy and by the case-discussion
+attestation/checklist gate (Section 4.3).</li>
+<li>Right-to-erasure default (worth explicit legal review before launch,
+as this is a policy decision as much as a technical one): on a deletion
 request, the <code>identity</code> record is hard-deleted; the handle’s
 community content is retained but the handle is marked
 <code>deleted_member</code> with no possibility of re-linking to an
 identity. This preserves the forum’s value as a knowledge archive while
-honouring the erasure request for real PII specifically. - A Data
-Protection Impact Assessment (DPIA) is worth commissioning before
-launch, given the verification pipeline processes
-professional-registration data at volume.</p>
-<p><strong>Availability and performance</strong> - Target roughly 99.5%
-uptime for the MVP — deliberately not over-promising a level a small
-team cannot realistically staff for. - Multi-AZ database, application
-containers spread across two availability zones, rolling deployments
-with health checks. - 95th-percentile API latency target under 300
-milliseconds for standard reads; feed and search queries backed by
-appropriate indexes.</p>
-<p><strong>Observability</strong> - Structured JSON logging with a
-correlation ID threaded from an API request through to any worker jobs
-it triggers, so a single user action is traceable end-to-end. -
-CloudWatch alarms on error rate, queue depth, and database connection
-saturation; Sentry for application exception tracking.</p>
-<p><strong>Disaster recovery</strong> - Database point-in-time recovery;
-Recovery Point Objective (RPO) of around 5 minutes, Recovery Time
-Objective (RTO) of a few hours — pragmatic for MVP scale, not a “five
-nines” commitment.</p>
-<p><strong>Testing strategy</strong> - Unit tests per module;
-integration tests against a dockerised PostgreSQL instance in CI;
-contract tests for the pluggable interfaces
+honouring the erasure request for real PII specifically.</li>
+<li>A Data Protection Impact Assessment (DPIA) is worth commissioning
+before launch, given the verification pipeline processes
+professional-registration data at volume.</li>
+</ul>
+<p><strong>Availability and performance</strong></p>
+<ul>
+<li>Target roughly 99.5% uptime for the MVP — deliberately not
+over-promising a level a small team cannot realistically staff for.</li>
+<li>Multi-AZ database, application containers spread across two
+availability zones, rolling deployments with health checks.</li>
+<li>95th-percentile API latency target under 300 milliseconds for
+standard reads; feed and search queries backed by appropriate
+indexes.</li>
+</ul>
+<p><strong>Observability</strong></p>
+<ul>
+<li>Structured JSON logging with a correlation ID threaded from an API
+request through to any worker jobs it triggers, so a single user action
+is traceable end-to-end.</li>
+<li>CloudWatch alarms on error rate, queue depth, and database
+connection saturation; Sentry for application exception tracking.</li>
+</ul>
+<p><strong>Disaster recovery</strong></p>
+<ul>
+<li>Database point-in-time recovery; Recovery Point Objective (RPO) of
+around 5 minutes, Recovery Time Objective (RTO) of a few hours —
+pragmatic for MVP scale, not a “five nines” commitment.</li>
+</ul>
+<p><strong>Testing strategy</strong></p>
+<ul>
+<li>Unit tests per module; integration tests against a dockerised
+PostgreSQL instance in CI; contract tests for the pluggable interfaces
 (<code>PaymentProvider</code>, source adapters) so swapping an
-implementation cannot silently break the contract.</p>
+implementation cannot silently break the contract.</li>
+</ul>
 <hr />
 <h2 id="epic-to-module-map">10. Epic-to-module map</h2>
 <p>Each row below is expected to become its own per-epic technical spec,

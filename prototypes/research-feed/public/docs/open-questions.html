@@ -75,16 +75,18 @@ specced.</p>
 <h3 id="cross-spec-schema-amendments-needed-for-epic-e">1.3 Cross-spec
 schema amendments needed for EPIC-E</h3>
 <p>Writing EPIC-E surfaced two small but real changes to specs that were
-already committed before EPIC-E was drafted: - <strong>EPIC-C’s
-<code>community.posts.status</code> enum</strong> (currently
-<code>published, removed</code>) needs a <code>draft</code> value added,
-to support case discussions’ multi-step publish flow (fill template →
-checklist → attestation → publish). Ordinary forum posts don’t need
-this; case discussions do. - <strong>EPIC-F’s moderation
-<code>action_type</code> enum</strong> needs a
-<code>request_correction</code> value, to match PRD §10.4’s “request a
-corrected resubmission” for case discussions with de-identification
-problems.</p>
+already committed before EPIC-E was drafted:</p>
+<ul>
+<li><strong>EPIC-C’s <code>community.posts.status</code> enum</strong>
+(currently <code>published, removed</code>) needs a <code>draft</code>
+value added, to support case discussions’ multi-step publish flow (fill
+template → checklist → attestation → publish). Ordinary forum posts
+don’t need this; case discussions do.</li>
+<li><strong>EPIC-F’s moderation <code>action_type</code> enum</strong>
+needs a <code>request_correction</code> value, to match PRD §10.4’s
+“request a corrected resubmission” for case discussions with
+de-identification problems.</li>
+</ul>
 <p><strong>Status</strong>: EPIC-F’s spec has already proposed adding
 <code>request_correction</code> (and, separately,
 <code>rename_handle</code> — see 1.4) to its own action-type enum, which

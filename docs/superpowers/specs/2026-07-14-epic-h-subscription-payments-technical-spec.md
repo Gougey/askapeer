@@ -111,6 +111,7 @@ cancelled  (access continues until current_period_end, then restricted — Secti
 - Takes effect within one access-token lifetime (~15 minutes), reusing exactly the revocable-refresh-token mechanism the architecture spec already describes for suspension/expulsion (Section 7.2) — no new session-invalidation mechanism needed, only a new reason a refresh can be downgraded.
 
 **This is deliberately a separate gating dimension from `community.handles.status`** (EPIC-B/EPIC-F's moderation states) — flagged for confirmation, since it's a real architectural decision with no PRD precedent either way:
+
 - A billing lapse and a moderation suspension are **different in kind**: one is resolved by paying, the other by an appeal or a fixed suspension period.
 - Conflating them into one status field would make "why can't I access the platform" ambiguous to both the member and support staff.
 - So: **two independently-checked gates** — handle status AND subscription status, both must permit access.
@@ -157,6 +158,7 @@ POST /v1/billing/webhook           -- Section 5, no session auth (processor-sign
 ## 7. Trial length flexibility
 
 Two PRD signals suggest trial length will need to vary:
+
 - **Section 11.3** raises a longer trial for the initial launch cohort (e.g. 6 months vs. the illustrative 3) to address the content-seeding chicken-and-egg problem.
 - **FD-6** floats a university-partnership cohort that might need its own trial terms.
 

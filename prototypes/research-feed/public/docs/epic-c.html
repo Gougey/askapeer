@@ -58,18 +58,22 @@ notes specific to EPIC-C</a></li>
 <p><strong>In scope</strong>: posts (questions and, structurally, case
 discussions — see Section 8), threaded comments/replies, the hybrid tag
 taxonomy, and full-text search across posts/comments/tags.</p>
-<p><strong>Out of scope for this spec</strong> (owned elsewhere): - The
-case-discussion-specific template, de-identification checklist, and
-attestation — EPIC-E, which builds directly on this epic’s
+<p><strong>Out of scope for this spec</strong> (owned elsewhere):</p>
+<ul>
+<li>The case-discussion-specific template, de-identification checklist,
+and attestation — EPIC-E, which builds directly on this epic’s
 <code>posts</code> table (a <code>type = case_discussion</code> row)
-rather than a separate table. - Kudos and answer ranking — EPIC-D. This
-spec’s threads display comments in an order EPIC-D determines
-(kudos-first); it doesn’t compute that order itself. - Reporting a
-post/comment — EPIC-F, which reads
+rather than a separate table.</li>
+<li>Kudos and answer ranking — EPIC-D. This spec’s threads display
+comments in an order EPIC-D determines (kudos-first); it doesn’t compute
+that order itself.</li>
+<li>Reporting a post/comment — EPIC-F, which reads
 <code>post_id</code>/<code>comment_id</code> as a foreign target, not
-owned here. - Notification triggers (new reply, mention) — EPIC-G reacts
-to this epic’s domain events; this spec doesn’t specify notification
-delivery.</p>
+owned here.</li>
+<li>Notification triggers (new reply, mention) — EPIC-G reacts to this
+epic’s domain events; this spec doesn’t specify notification
+delivery.</li>
+</ul>
 <hr />
 <h2 id="data-model">2. Data model</h2>
 <p>Builds on <code>community.posts</code>,

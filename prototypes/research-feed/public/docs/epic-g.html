@@ -82,18 +82,21 @@ being precise about in this spec, since it’s the one place this epic
 touches the identity boundary at all:</p>
 <p><strong><code>NotificationService</code> should read only
 <code>email</code> from <code>identity.members</code>, never
-<code>legal_name</code>.</strong> - Every email template this service
-sends must address the member by their <strong>handle</strong>, never
-their real name — even though the service technically has database
-access to do otherwise. - Nothing in the architecture spec structurally
-prevents a wider read: the grant is at the schema/table level, not
-column level. So unlike the general
-<code>identity</code>/<code>community</code> boundary (which Section 4
-of that spec enforces via role grants), this narrower email-yes/name-no
-constraint is currently application discipline <em>within</em> an
-already-granted role. - <strong>Recommended hardening</strong>: a
-database view exposing only <code>email</code> — cheap to build, turns
-the norm into a structural guarantee. Flagged in Section 11.</p>
+<code>legal_name</code>.</strong></p>
+<ul>
+<li>Every email template this service sends must address the member by
+their <strong>handle</strong>, never their real name — even though the
+service technically has database access to do otherwise.</li>
+<li>Nothing in the architecture spec structurally prevents a wider read:
+the grant is at the schema/table level, not column level. So unlike the
+general <code>identity</code>/<code>community</code> boundary (which
+Section 4 of that spec enforces via role grants), this narrower
+email-yes/name-no constraint is currently application discipline
+<em>within</em> an already-granted role.</li>
+<li><strong>Recommended hardening</strong>: a database view exposing
+only <code>email</code> — cheap to build, turns the norm into a
+structural guarantee. Flagged in Section 11.</li>
+</ul>
 <p>This routine access is not an <code>identity_access_log</code> event,
 per the architecture spec’s Section 4.4 distinction (routine automated
 access vs. moderator-initiated identity lookup) — consistent with what

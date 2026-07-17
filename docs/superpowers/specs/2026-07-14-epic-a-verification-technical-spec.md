@@ -32,6 +32,7 @@ EPIC-A is the foundation epic: no other epic can be built or tested end-to-end u
 **In scope**: applicant registration, automated register lookup (HCPC/GMC/BASRAT/SST), automated identity document check (Onfido), the resulting status state machine, the admin manual-review fallback, and the point at which a verified member is handed off to authentication (EPIC-B mints the handle itself — see Section 7).
 
 **Out of scope for this spec** (tracked elsewhere):
+
 - Handle creation/profile — EPIC-B, once `approved_verified` is reached.
 - Periodic reverification — explicitly Phase 2 per PRD Section 8.1, Step 4.
 - Appeals process for `rejected` decisions — not detailed in the PRD beyond "reason provided"; flagged as an open question (Section 11).
@@ -99,6 +100,7 @@ identity.verification_decisions        -- immutable: INSERT-only grant
 ```
 
 **Why a uniqueness constraint on `(professional_body, registration_number, registration_country)`**:
+
 - The PRD doesn't mention duplicate-registration abuse directly, but the trust proposition ("every member is a qualified professional") is undermined if one real registration can back multiple pseudonymous handles — a single practitioner could run sockpuppet accounts to manufacture apparent consensus.
 - Enforced at the database level, not just application logic, consistent with the architecture spec's general approach of using schema constraints over code discipline.
 

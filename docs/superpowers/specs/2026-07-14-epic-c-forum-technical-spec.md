@@ -31,6 +31,7 @@ Source of truth: `docs/askapeer-prd-v0.1.md`, Section 6.1 (Must/Should/Could fea
 **In scope**: posts (questions and, structurally, case discussions — see Section 8), threaded comments/replies, the hybrid tag taxonomy, and full-text search across posts/comments/tags.
 
 **Out of scope for this spec** (owned elsewhere):
+
 - The case-discussion-specific template, de-identification checklist, and attestation — EPIC-E, which builds directly on this epic's `posts` table (a `type = case_discussion` row) rather than a separate table.
 - Kudos and answer ranking — EPIC-D. This spec's threads display comments in an order EPIC-D determines (kudos-first); it doesn't compute that order itself.
 - Reporting a post/comment — EPIC-F, which reads `post_id`/`comment_id` as a foreign target, not owned here.

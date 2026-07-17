@@ -158,13 +158,16 @@ be downgraded.</li>
 <p><strong>This is deliberately a separate gating dimension from
 <code>community.handles.status</code></strong> (EPIC-B/EPIC-F’s
 moderation states) — flagged for confirmation, since it’s a real
-architectural decision with no PRD precedent either way: - A billing
-lapse and a moderation suspension are <strong>different in
+architectural decision with no PRD precedent either way:</p>
+<ul>
+<li>A billing lapse and a moderation suspension are <strong>different in
 kind</strong>: one is resolved by paying, the other by an appeal or a
-fixed suspension period. - Conflating them into one status field would
-make “why can’t I access the platform” ambiguous to both the member and
-support staff. - So: <strong>two independently-checked gates</strong> —
-handle status AND subscription status, both must permit access.</p>
+fixed suspension period.</li>
+<li>Conflating them into one status field would make “why can’t I access
+the platform” ambiguous to both the member and support staff.</li>
+<li>So: <strong>two independently-checked gates</strong> — handle status
+AND subscription status, both must permit access.</li>
+</ul>
 <hr />
 <h2 id="webhook-handling">5. Webhook handling</h2>
 <pre><code>POST /v1/billing/webhook
@@ -199,11 +202,14 @@ GET  /v1/billing/me
 POST /v1/billing/webhook           -- Section 5, no session auth (processor-signed instead)</code></pre>
 <hr />
 <h2 id="trial-length-flexibility">7. Trial length flexibility</h2>
-<p>Two PRD signals suggest trial length will need to vary: -
-<strong>Section 11.3</strong> raises a longer trial for the initial
+<p>Two PRD signals suggest trial length will need to vary:</p>
+<ul>
+<li><strong>Section 11.3</strong> raises a longer trial for the initial
 launch cohort (e.g. 6 months vs. the illustrative 3) to address the
-content-seeding chicken-and-egg problem. - <strong>FD-6</strong> floats
-a university-partnership cohort that might need its own trial terms.</p>
+content-seeding chicken-and-egg problem.</li>
+<li><strong>FD-6</strong> floats a university-partnership cohort that
+might need its own trial terms.</li>
+</ul>
 <p><strong>This spec’s proposal</strong>: <code>trial_end</code> is set
 per-subscription at creation time from a configurable value, not a
 hardcoded constant — so a different cohort (e.g. an invite-code-driven

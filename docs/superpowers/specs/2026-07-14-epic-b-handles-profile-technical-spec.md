@@ -32,6 +32,7 @@ Source of truth for product requirements: `docs/askapeer-prd-v0.1.md`, Section 9
 **In scope**: handle creation immediately after `approved_verified` (the EPIC-A → EPIC-B handoff), handle-name validation rules, the public profile view (handle, kudos total, membership duration, post history), handle immutability policy, and the effect of suspension/expulsion on a profile's visibility. Also specifies the Should-have "follow" mechanism (PRD Section 6.1) — generalised (2026-07-14) to cover both following a handle and following a tag, resolving a gap identified across the EPIC-C/EPIC-G specs; see Section 8.
 
 **Out of scope for this spec** (owned elsewhere):
+
 - Awarding/counting kudos itself — EPIC-D. This spec only owns the `kudos_total` *column* on the handle record; EPIC-D owns writing to it (Section 9).
 - Post/answer history *content* (the posts themselves) — EPIC-C. This spec only specifies that a profile surfaces a handle's post history, not the forum data model.
 - Moderation actions that *change* a handle's status — EPIC-F. This spec only specifies what a profile looks like once a status change has already happened (Section 7).
@@ -66,6 +67,7 @@ community.handle_name_history            -- new: append-only, admin/support use 
 ```
 
 **Why `handle_name_history` exists**, even though Section 6 concludes handles shouldn't be freely self-service-changeable:
+
 - The one legitimate case for a handle name ever changing is a moderator-forced rename (e.g. the name turns out to be identifying, or impersonates staff — see Section 3).
 - When that happens, the old name must not vanish untraceably — a moderator action changing a member-facing identifier is exactly what the architecture spec's audit-logging philosophy (Section 4.4) says should leave a trail.
 - Without it, a renamed handle's post history would look like it belonged to two different people, with no record of why.
@@ -102,6 +104,7 @@ Directly implements PRD Section 9.2's two lists:
 The "never visible" fields don't exist anywhere in the `community` schema in the first place (architecture spec, Section 4.2), so there's no field to accidentally leak — the guarantee is **structural**, not a display-layer filter over data that could be requested some other way.
 
 **`member_since` display is year-only** (e.g. "Member since 2025"), even though the stored column is a full `date`. This isn't cosmetic:
+
 - PRD Section 9.2's own example uses year granularity.
 - A precise join date is a plausible **correlation vector**: if a real person is known (from off-platform context) to have started a new job or completed registration on a specific date, an exact `member_since` timestamp narrows the search for which handle is theirs far more than a year does.
 - The full date is still stored for internal/analytics use (e.g. KPI reporting, PRD Section 12) — a deliberate storage/display split, not an oversight.
@@ -176,6 +179,7 @@ Reuses the `community.handles.status` enum already defined in the architecture s
 ## 8. Follows — handles and tags (Should-have)
 
 Two of PRD Section 6.1's Should-have features turn out to need the same underlying mechanism:
+
 - **"Personalised feed"** (EPIC-C) — home view based on "**tags and handles** followed"
 - **"Email digest"** (EPIC-G) — weekly digest of "top-kudos content in **followed tags**"
 
@@ -192,6 +196,7 @@ community.follows
 ```
 
 Design notes:
+
 - **Not a new modelling idiom**: the `target_type`/`target_id` discriminator is the same pattern `community.kudos` and `community.reports` already use to reference another epic's tables without a single foreign key.
 - **EPIC-B keeps ownership** of the table and write path (as it did for the narrower `handle_follows` this replaces) — the natural owner of a follow relationship is the follower, a handle.
 - **EPIC-C and EPIC-G are read-only consumers**, filtering `WHERE target_type = 'tag'` for the personalised feed and digest respectively — the same "one epic owns the write path, others read" pattern used for kudos and notification preferences elsewhere in these specs.

@@ -71,13 +71,16 @@ epic only specifies the data and actions those routes operate on.</p>
 <code>community.moderation_actions</code>, defined in the architecture
 spec, Section 4.2, with one addition: <strong><code>target_type</code>
 needs a <code>handle</code> value</strong>, not just
-<code>post</code>/<code>comment</code>. Why: - The PRD’s zero-tolerance
-rule (Section 9.3) explicitly covers “collusion to de-anonymise members
-on or off the platform.” - A report about a pattern of behaviour, or an
-off-platform incident, may have no specific post or comment to attach to
-— only a handle. - Restricting reports to content-only targets would
-leave no way to file exactly the kind of report the platform’s most
-serious rule anticipates.</p>
+<code>post</code>/<code>comment</code>. Why:</p>
+<ul>
+<li>The PRD’s zero-tolerance rule (Section 9.3) explicitly covers
+“collusion to de-anonymise members on or off the platform.”</li>
+<li>A report about a pattern of behaviour, or an off-platform incident,
+may have no specific post or comment to attach to — only a handle.</li>
+<li>Restricting reports to content-only targets would leave no way to
+file exactly the kind of report the platform’s most serious rule
+anticipates.</li>
+</ul>
 <pre><code>community.reports
   id, reporter_handle_id, target_type enum(post, comment, handle),
   target_id, category, priority boolean generated from category,
@@ -91,15 +94,17 @@ community.moderation_actions           -- immutable: INSERT-only grant
 <p><code>action_type</code> gains <strong>two values beyond the
 architecture spec’s original four</strong> (both proposed here as the
 natural home, since this spec owns the action-type vocabulary — see
-Section 10 for confirmation status): -
-<strong><code>request_correction</code></strong> — resolves EPIC-E’s
+Section 10 for confirmation status):</p>
+<ul>
+<li><strong><code>request_correction</code></strong> — resolves EPIC-E’s
 Section 9 dependency: the “request a corrected resubmission” action PRD
-Section 10.4 names for case discussions. -
-<strong><code>rename_handle</code></strong> — resolves EPIC-B’s Section
-13 open question: a moderator-forced handle rename (when the name itself
-is identifying or impersonating) is a moderation action in substance, so
-it belongs in this enum rather than as a bespoke EPIC-B-only
-endpoint.</p>
+Section 10.4 names for case discussions.</li>
+<li><strong><code>rename_handle</code></strong> — resolves EPIC-B’s
+Section 13 open question: a moderator-forced handle rename (when the
+name itself is identifying or impersonating) is a moderation action in
+substance, so it belongs in this enum rather than as a bespoke
+EPIC-B-only endpoint.</li>
+</ul>
 <hr />
 <h2 id="moderation-action-types">3. Moderation action types</h2>
 <table>

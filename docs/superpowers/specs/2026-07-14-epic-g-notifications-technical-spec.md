@@ -54,6 +54,7 @@ No new tables are needed for the in-app/email mechanics themselves; this spec's 
 The architecture spec (Section 4.1) grants `NotificationService` — alone among community-facing services, alongside `IdentityService` and `BillingService` — a database role with access to the `identity` schema, specifically to read `identity.members.email` for sending mail. This is worth being precise about in this spec, since it's the one place this epic touches the identity boundary at all:
 
 **`NotificationService` should read only `email` from `identity.members`, never `legal_name`.**
+
 - Every email template this service sends must address the member by their **handle**, never their real name — even though the service technically has database access to do otherwise.
 - Nothing in the architecture spec structurally prevents a wider read: the grant is at the schema/table level, not column level. So unlike the general `identity`/`community` boundary (which Section 4 of that spec enforces via role grants), this narrower email-yes/name-no constraint is currently application discipline *within* an already-granted role.
 - **Recommended hardening**: a database view exposing only `email` — cheap to build, turns the norm into a structural guarantee. Flagged in Section 11.

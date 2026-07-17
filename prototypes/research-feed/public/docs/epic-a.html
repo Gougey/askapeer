@@ -58,14 +58,19 @@ lookup (HCPC/GMC/BASRAT/SST), automated identity document check
 (Onfido), the resulting status state machine, the admin manual-review
 fallback, and the point at which a verified member is handed off to
 authentication (EPIC-B mints the handle itself — see Section 7).</p>
-<p><strong>Out of scope for this spec</strong> (tracked elsewhere): -
-Handle creation/profile — EPIC-B, once <code>approved_verified</code> is
-reached. - Periodic reverification — explicitly Phase 2 per PRD Section
-8.1, Step 4. - Appeals process for <code>rejected</code> decisions — not
-detailed in the PRD beyond “reason provided”; flagged as an open
-question (Section 11). - Admin panel UI framework — covered generically
-in the architecture spec, Section 7.2; this document only specifies the
-queue’s data and ordering requirements.</p>
+<p><strong>Out of scope for this spec</strong> (tracked elsewhere):</p>
+<ul>
+<li>Handle creation/profile — EPIC-B, once
+<code>approved_verified</code> is reached.</li>
+<li>Periodic reverification — explicitly Phase 2 per PRD Section 8.1,
+Step 4.</li>
+<li>Appeals process for <code>rejected</code> decisions — not detailed
+in the PRD beyond “reason provided”; flagged as an open question
+(Section 11).</li>
+<li>Admin panel UI framework — covered generically in the architecture
+spec, Section 7.2; this document only specifies the queue’s data and
+ordering requirements.</li>
+</ul>
 <hr />
 <h2 id="data-model">2. Data model</h2>
 <p>This epic owns the <code>identity.members</code>,
@@ -126,14 +131,17 @@ identity.verification_decisions        -- immutable: INSERT-only grant
   reason        text
   created_at    timestamptz</code></pre>
 <p><strong>Why a uniqueness constraint on
-<code>(professional_body, registration_number, registration_country)</code></strong>:
-- The PRD doesn’t mention duplicate-registration abuse directly, but the
-trust proposition (“every member is a qualified professional”) is
+<code>(professional_body, registration_number, registration_country)</code></strong>:</p>
+<ul>
+<li>The PRD doesn’t mention duplicate-registration abuse directly, but
+the trust proposition (“every member is a qualified professional”) is
 undermined if one real registration can back multiple pseudonymous
 handles — a single practitioner could run sockpuppet accounts to
-manufacture apparent consensus. - Enforced at the database level, not
-just application logic, consistent with the architecture spec’s general
-approach of using schema constraints over code discipline.</p>
+manufacture apparent consensus.</li>
+<li>Enforced at the database level, not just application logic,
+consistent with the architecture spec’s general approach of using schema
+constraints over code discipline.</li>
+</ul>
 <p><strong>Expelled-member reapplication is deliberately more than a
 silent 409</strong> (Adrian’s decision, 2026-07-14, resolving the gap
 flagged in the EPIC-B and EPIC-F specs):</p>

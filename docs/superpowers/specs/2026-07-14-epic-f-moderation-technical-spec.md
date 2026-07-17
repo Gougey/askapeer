@@ -37,6 +37,7 @@ This epic is where the platform's two highest-stakes policies — zero-tolerance
 ## 2. Data model
 
 Reuses `community.reports` and `community.moderation_actions`, defined in the architecture spec, Section 4.2, with one addition: **`target_type` needs a `handle` value**, not just `post`/`comment`. Why:
+
 - The PRD's zero-tolerance rule (Section 9.3) explicitly covers "collusion to de-anonymise members on or off the platform."
 - A report about a pattern of behaviour, or an off-platform incident, may have no specific post or comment to attach to — only a handle.
 - Restricting reports to content-only targets would leave no way to file exactly the kind of report the platform's most serious rule anticipates.
@@ -55,6 +56,7 @@ community.moderation_actions           -- immutable: INSERT-only grant
 ```
 
 `action_type` gains **two values beyond the architecture spec's original four** (both proposed here as the natural home, since this spec owns the action-type vocabulary — see Section 10 for confirmation status):
+
 - **`request_correction`** — resolves EPIC-E's Section 9 dependency: the "request a corrected resubmission" action PRD Section 10.4 names for case discussions.
 - **`rename_handle`** — resolves EPIC-B's Section 13 open question: a moderator-forced handle rename (when the name itself is identifying or impersonating) is a moderation action in substance, so it belongs in this enum rather than as a bespoke EPIC-B-only endpoint.
 

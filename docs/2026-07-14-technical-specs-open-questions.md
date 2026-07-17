@@ -38,6 +38,7 @@ The forum's category/tag taxonomy (EPIC-C, FD-4's hybrid model), Andrew Renshaw'
 ### 1.3 Cross-spec schema amendments needed for EPIC-E
 
 Writing EPIC-E surfaced two small but real changes to specs that were already committed before EPIC-E was drafted:
+
 - **EPIC-C's `community.posts.status` enum** (currently `published, removed`) needs a `draft` value added, to support case discussions' multi-step publish flow (fill template → checklist → attestation → publish). Ordinary forum posts don't need this; case discussions do.
 - **EPIC-F's moderation `action_type` enum** needs a `request_correction` value, to match PRD §10.4's "request a corrected resubmission" for case discussions with de-identification problems.
 

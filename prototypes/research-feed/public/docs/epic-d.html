@@ -68,15 +68,18 @@ architecture spec, Section 4.2:</p>
   unique(target_type, target_id, given_by_handle_id)   -- one kudos per handle per item</code></pre>
 <p>No new table is needed. This epic’s only schema-level responsibility
 is the write path into <code>community.handles.kudos_total</code> (owned
-column, EPIC-B spec Section 9): - Implemented as a
-<strong>same-transaction increment/decrement</strong> alongside the
-<code>community.kudos</code> insert/delete — not a separately-scheduled
-recomputation. - <strong>Why atomic matters here</strong>: a
-batch-recompute job would introduce a window where a profile’s displayed
-total lags reality. That matters more for kudos than for a less
-identity-adjacent number, because kudos is one of the few things a peer
-can see about a handle at all (PRD Section 9.2) — it has to be
-trustworthy as a reputation figure.</p>
+column, EPIC-B spec Section 9):</p>
+<ul>
+<li>Implemented as a <strong>same-transaction
+increment/decrement</strong> alongside the <code>community.kudos</code>
+insert/delete — not a separately-scheduled recomputation.</li>
+<li><strong>Why atomic matters here</strong>: a batch-recompute job
+would introduce a window where a profile’s displayed total lags reality.
+That matters more for kudos than for a less identity-adjacent number,
+because kudos is one of the few things a peer can see about a handle at
+all (PRD Section 9.2) — it has to be trustworthy as a reputation
+figure.</li>
+</ul>
 <hr />
 <h2 id="awarding-and-un-awarding-kudos">3. Awarding and un-awarding
 kudos</h2>
