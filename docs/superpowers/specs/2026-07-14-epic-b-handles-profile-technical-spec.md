@@ -142,12 +142,14 @@ GET /v1/handles/me
 
 --- admin-only, moderator-role JWT claim required ---
 
-POST /v1/admin/handles/:handle_id/rename
-  body: { new_handle_name, reason }
-  -> writes community.handle_name_history, updates community.handles.handle_name
-  -> used only for the moderator-forced-rename case (Section 2); not a
-     self-service endpoint
+# (moderator-forced rename) — resolved 2026-07-17: NOT an EPIC-B endpoint.
+# The rename is executed via EPIC-F's rename_handle moderation action
+# (POST /v1/admin/.../action, action_type = rename_handle). EPIC-B still
+# owns the DATA and RULES that action reuses: community.handle_name_history,
+# and the same blocklist/uniqueness validation as handle creation (Section 3).
 ```
+
+The moderator-forced rename was originally sketched here as a bespoke `POST /v1/admin/handles/:handle_id/rename` endpoint. **Resolved 2026-07-17 (open-questions §1.3):** a moderator-initiated rename is a moderation action in substance, so it lives in **EPIC-F's `rename_handle` action type**, not a separate EPIC-B endpoint. EPIC-B keeps ownership of the underlying data and rules the action relies on — `community.handle_name_history` (the audit trail) and the creation-time blocklist/uniqueness validation (Section 3) that EPIC-F's `rename_handle` re-runs on the new name.
 
 ---
 
@@ -158,7 +160,7 @@ POST /v1/admin/handles/:handle_id/rename
 - **Reputation laundering**: kudos, post history, and "member since" are all reputation signals *of the handle*. A freely renameable handle would let a member shed a damaged reputation (e.g. after public disagreement or a formal warning short of expulsion) just by picking a new name while keeping the same `member_id` — undermining the "ideas win on merit" thesis, since merit is tracked per-handle.
 - **Audit volume**: if renaming were self-service, every rename would need the audit trail Section 2's `handle_name_history` table provides — but at a much higher volume of events than the rare moderator-forced case it was designed for.
 
-**The one exception** (Section 5) is a moderator-forced rename, when the handle name itself becomes a problem — later found to be identifying, or an impersonation attempt that slipped past the Section 3 blocklist. This is a moderation action in substance and probably belongs in EPIC-F's action types rather than a bespoke EPIC-B-only workflow — flagged in Section 13.
+**The one exception** (Section 5) is a moderator-forced rename, when the handle name itself becomes a problem — later found to be identifying, or an impersonation attempt that slipped past the Section 3 blocklist. This is a moderation action in substance and **lives in EPIC-F's `rename_handle` action type** (confirmed 2026-07-17, open-questions §1.3), not a bespoke EPIC-B workflow — EPIC-B provides only the `handle_name_history` data and validation rules it reuses.
 
 ---
 
@@ -261,6 +263,6 @@ Several fields and behaviors on `community.handles` are written by other epics; 
 
 - ~~**The FD-5 professional-contact-link tension**~~ — **resolved 2026-07-14**: confirmed not to build it, given the direct conflict with PRD Section 9.3's zero-tolerance rule. See `docs/2026-07-14-technical-specs-open-questions.md`, Section 2.
 - ~~**Handle length/character rules**~~ — **resolved 2026-07-17**: 3–30 characters, alphanumeric plus underscore/hyphen, agreed by Adrian. See Section 3.
-- **Moderator-forced rename as a first-class moderation action**: should `POST /v1/admin/handles/:handle_id/rename` (Section 5) actually live in EPIC-F's action-type enum (`remove_content`, `warn`, `suspend`, `expel` per the architecture spec, Section 7.2) rather than as a separate EPIC-B-only endpoint? Flagged for reconciliation once the EPIC-F spec is written.
+- ~~**Moderator-forced rename as a first-class moderation action**~~ — **resolved 2026-07-17** (open-questions §1.3): yes, it lives in EPIC-F's action-type enum as `rename_handle`, not a bespoke EPIC-B endpoint. EPIC-B retains the `handle_name_history` table and the blocklist/uniqueness validation that EPIC-F's action reuses (Sections 5, 6).
 - ~~**Expelled-member re-registration gap**~~ — **resolved 2026-07-14**, see Section 10 above and EPIC-A/EPIC-F's specs.
 - ~~**Blocklist storage/maintenance mechanism**~~ — **resolved 2026-07-17**: config table (not a code constant), so profession-specific terms can be added without a deploy. See Sections 3 and 11.

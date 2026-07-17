@@ -262,11 +262,21 @@ GET /v1/handles/me
 
 --- admin-only, moderator-role JWT claim required ---
 
-POST /v1/admin/handles/:handle_id/rename
-  body: { new_handle_name, reason }
-  -&gt; writes community.handle_name_history, updates community.handles.handle_name
-  -&gt; used only for the moderator-forced-rename case (Section 2); not a
-     self-service endpoint</code></pre>
+# (moderator-forced rename) — resolved 2026-07-17: NOT an EPIC-B endpoint.
+# The rename is executed via EPIC-F&#39;s rename_handle moderation action
+# (POST /v1/admin/.../action, action_type = rename_handle). EPIC-B still
+# owns the DATA and RULES that action reuses: community.handle_name_history,
+# and the same blocklist/uniqueness validation as handle creation (Section 3).</code></pre>
+<p>The moderator-forced rename was originally sketched here as a bespoke
+<code>POST /v1/admin/handles/:handle_id/rename</code> endpoint.
+<strong>Resolved 2026-07-17 (open-questions §1.3):</strong> a
+moderator-initiated rename is a moderation action in substance, so it
+lives in <strong>EPIC-F’s <code>rename_handle</code> action
+type</strong>, not a separate EPIC-B endpoint. EPIC-B keeps ownership of
+the underlying data and rules the action relies on —
+<code>community.handle_name_history</code> (the audit trail) and the
+creation-time blocklist/uniqueness validation (Section 3) that EPIC-F’s
+<code>rename_handle</code> re-runs on the new name.</p>
 <hr />
 <h2 id="handle-immutability">6. Handle immutability</h2>
 <p><strong>Members cannot self-service rename their handle after
@@ -290,8 +300,11 @@ for.</li>
 rename, when the handle name itself becomes a problem — later found to
 be identifying, or an impersonation attempt that slipped past the
 Section 3 blocklist. This is a moderation action in substance and
-probably belongs in EPIC-F’s action types rather than a bespoke
-EPIC-B-only workflow — flagged in Section 13.</p>
+<strong>lives in EPIC-F’s <code>rename_handle</code> action
+type</strong> (confirmed 2026-07-17, open-questions §1.3), not a bespoke
+EPIC-B workflow — EPIC-B provides only the
+<code>handle_name_history</code> data and validation rules it
+reuses.</p>
 <hr />
 <h2 id="status-effects-suspendedexpelled">7. Status effects
 (suspended/expelled)</h2>
@@ -563,14 +576,13 @@ zero-tolerance rule. See
 <li><del><strong>Handle length/character rules</strong></del> —
 <strong>resolved 2026-07-17</strong>: 3–30 characters, alphanumeric plus
 underscore/hyphen, agreed by Adrian. See Section 3.</li>
-<li><strong>Moderator-forced rename as a first-class moderation
-action</strong>: should
-<code>POST /v1/admin/handles/:handle_id/rename</code> (Section 5)
-actually live in EPIC-F’s action-type enum (<code>remove_content</code>,
-<code>warn</code>, <code>suspend</code>, <code>expel</code> per the
-architecture spec, Section 7.2) rather than as a separate EPIC-B-only
-endpoint? Flagged for reconciliation once the EPIC-F spec is
-written.</li>
+<li><del><strong>Moderator-forced rename as a first-class moderation
+action</strong></del> — <strong>resolved 2026-07-17</strong>
+(open-questions §1.3): yes, it lives in EPIC-F’s action-type enum as
+<code>rename_handle</code>, not a bespoke EPIC-B endpoint. EPIC-B
+retains the <code>handle_name_history</code> table and the
+blocklist/uniqueness validation that EPIC-F’s action reuses (Sections 5,
+6).</li>
 <li><del><strong>Expelled-member re-registration gap</strong></del> —
 <strong>resolved 2026-07-14</strong>, see Section 10 above and
 EPIC-A/EPIC-F’s specs.</li>

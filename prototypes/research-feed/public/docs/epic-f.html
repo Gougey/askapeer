@@ -430,14 +430,16 @@ moderation suspension and the identity-level <code>suspended</code>
 status (lapsed registration) are deliberately separate events, resolved
 by different means; there’s no re-registration loophole to close as
 there was for <code>expel</code>.</li>
-<li><strong><code>rename_handle</code> and
-<code>request_correction</code> as new action types</strong>: proposed
-here as the natural resolution of two other specs’ forward-references
-(Section 3) — worth a final check that EPIC-B and EPIC-E’s specs should
-indeed be read as pointing here, rather than wanting their own bespoke
-handling. <em>(Tracked as cross-epic item §1.3 in the open-questions
-doc; EPIC-E’s <code>request_correction</code> half is already accepted —
-see that doc’s §2.)</em></li>
+<li><del><strong><code>rename_handle</code> and
+<code>request_correction</code> as new action types</strong></del> —
+<strong>resolved</strong>: both confirmed to live here as moderation
+action types. <code>request_correction</code> (EPIC-E’s
+forward-reference) accepted with the EPIC-E resolution (open-questions
+§2); <code>rename_handle</code> (EPIC-B’s forward-reference, cross-epic
+§1.3) <strong>confirmed 2026-07-17</strong> — a moderator-forced rename
+is a moderation action, owned here; EPIC-B provides only the
+<code>handle_name_history</code> data and validation rules this action
+reuses.</li>
 <li><del><strong>No numeric moderation-response SLA</strong></del>
 (Section 8) — <strong>resolved 2026-07-17</strong>: working targets
 adopted — priority &lt; 4h, standard &lt; 48h — marked illustrative
