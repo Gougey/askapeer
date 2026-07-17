@@ -219,6 +219,22 @@ profession-specific terms (specialty names, credentials,
 professional-body abbreviations) can be added without a deploy, since
 they can’t be fully enumerated upfront. <em>(EPIC-B spec §3, §11,
 §13.)</em></li>
+<li><strong>Search design — resolved 2026-07-17.</strong> Stays in
+PostgreSQL for MVP (no third-party engine — Algolia-style SaaS ruled out
+on trust/data-residency grounds; self-hosted OpenSearch kept as a
+documented later upgrade). Firmed up as: weighted <code>tsvector</code>
++ GIN, <code>websearch_to_tsquery</code>, <code>pg_trgm</code> for typo
+tolerance, and a clinical synonym dictionary (ACL ⇄ anterior cruciate
+ligament, etc.). The synonym dictionary is seeded from the tag
+vocabulary — so it has a forward dependency on FD-4/taxonomy (§1.2), and
+MeSH entry-terms give the synonyms largely for free if the tag→MeSH
+mapping is adopted. Resolves the PRD’s “(to be discussed/confirmed)”
+hedge on Search. <em>(EPIC-C spec §4, §12.)</em></li>
+<li><strong>Forum edit/delete policy — resolved 2026-07-17.</strong>
+Agreed: 15-minute no-marker edit window, <code>edited_at</code> shown
+after, author self-delete as soft-delete for ordinary posts,
+moderator-only removal for attested case discussions. <em>(EPIC-C spec
+§6, §12.)</em></li>
 </ul>
 <hr />
 <h2 id="per-epic-open-questions">3. Per-epic open questions</h2>
@@ -256,14 +272,6 @@ storage, expulsion/re-registration gap, and tag-follow mechanism are all
 resolved — see §2.)</em></p>
 <h3 id="epic-c-forum">EPIC-C — Forum</h3>
 <ul>
-<li><strong>Search’s PRD hedge</strong>: the PRD lists full-text search
-as Must-have but flags it “(to be discussed/confirmed)” in the same
-table row — worth checking whether that hedge is still live or was
-resolved verbally and never updated in the document.</li>
-<li><strong>Edit/delete policy</strong>: entirely this spec’s own
-proposal (15-minute no-marker edit window, case-discussion delete
-restriction, whether kudos-bearing comments should be edit-restricted
-too) — needs sign-off, no PRD basis.</li>
 <li><strong>Could-have scope confirmation</strong>: whether best-answer
 marker, image attachments, or polls are actually being built for MVP, or
 deferred — a sequencing/resourcing question, not architectural.</li>
@@ -272,8 +280,9 @@ fallback view (§8 there) needs a concrete definition (time window,
 platform-wide vs. category-scoped) — this spec’s kudos-in-a-time-window
 heuristic is only a placeholder.</li>
 </ul>
-<p><em>(Taxonomy unification is covered in §1.2 above. The personalised
-feed’s underlying follow mechanism is resolved — see §2.)</em></p>
+<p><em>(Taxonomy unification is covered in §1.2 above. The search
+design, edit/delete policy, and personalised-feed follow mechanism are
+all resolved — see §2.)</em></p>
 <h3 id="epic-d-kudos">EPIC-D — Kudos</h3>
 <ul>
 <li><strong>Idempotency of a repeated award</strong>: should awarding

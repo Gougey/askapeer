@@ -101,18 +101,38 @@ Per the architecture spec's assumption (Section 1) and the PRD's own recommendat
 
 ## 4. Search
 
-Per the architecture spec, Section 6: PostgreSQL full-text search via a generated `tsvector` column (`tsv`, combining title/body for posts, body for comments) with a GIN index — no dedicated search service for MVP. Tag names and category names are included in the query construction (searching "ACL tear" should surface posts tagged `Anterior cruciate ligament` even if that exact phrase isn't in the body), not merely a `tsvector`-against-body match.
+Firmed up (Adrian, 2026-07-17) — this resolves the PRD's "(to be discussed/confirmed)" hedge on Search (Section 6.1), subject to stakeholder sign-off. Search stays **in PostgreSQL** for MVP (per the architecture spec, Section 6), specified properly rather than left as "tsvector and hope."
+
+### Why in-Postgres, not a search engine
+
+- **Third-party managed search (e.g. Algolia) is ruled out on principle**, not just cost: it means shipping forum content — including de-identified case discussions — to an external service, which cuts directly against the platform's trust proposition and the architecture's data-residency stance (`eu-west-2`, nothing sold or leaked). This is a *don't*, not a trade-off.
+- **Self-hosted OpenSearch/Elasticsearch is premature**: better relevance out of the box, but a second datastore to run, secure, and keep in sync — real overhead for a small team, at a scale Postgres handles comfortably. It's the right answer *later* (Section 6 upgrade path in the architecture spec), not for MVP.
+- **Postgres full-text search is sufficient at this scale, needs no new infrastructure, and stays transactionally consistent** with the content it indexes.
+
+### The design
+
+| Element | Choice | Why |
+|---|---|---|
+| Index | `tsvector` generated column + **GIN** index, on both `community.posts` and `community.comments` | The base full-text mechanism (architecture spec, Section 6) |
+| Field weighting | `setweight` — title = A, body = B, tags/category = C, comment body = D | A title hit outranks a passing mention in a reply |
+| Query parser | **`websearch_to_tsquery`** | Familiar search-box syntax (quoted phrases, `-exclude`) without exposing raw tsquery operators to members |
+| Typo tolerance | **`pg_trgm`** extension (trigram matching) alongside the tsvector | Handles misspellings and partial matches plain tsvector misses ("achiles" → "achilles"), and powers a "did you mean" |
+| Tag/category in query | Tag and category names folded into query construction | Searching "ACL tear" surfaces posts tagged `Anterior cruciate ligament` even when that phrase isn't in the body |
+| Ranking | `ts_rank_cd` (relevance) → recency → a small kudos tiebreak | Text relevance leads; recency breaks ties; kudos is a light signal among equally-relevant results (a softening of the earlier "not kudos-weighted at all" position — kudos still doesn't *drive* search rank, it only nudges ties) |
 
 ```
 GET /v1/search?q=...&category=&tag=&cursor=...
   -> cursor-paginated results across posts (and, transitively, their comments,
      surfaced as "N replies match" rather than as separate top-level results)
-  -> ranked by PostgreSQL's ts_rank combined with recency; not kudos-weighted
-     (kudos ranks answers within a thread, per EPIC-D — it doesn't rank search
-     relevance across threads, a different question)
+  -> ranked as above; a suspended/expelled handle's content and removed posts
+     are excluded from results
 ```
 
-The PRD (Section 6.1) marks Search itself "(to be discussed/confirmed)" even though it's in the Must-have table — an odd hedge worth surfacing rather than silently treating as fully settled (Section 12).
+### The clinical synonym dictionary — the domain-specific part
+
+The single most important search-quality feature for this audience, and the reason Postgres FTS is genuinely good enough here: practitioners write "ACL" / "anterior cruciate ligament", "OA" / "osteoarthritis", "physio" / "physiotherapy" interchangeably, and search that doesn't reconcile these feels broken. Postgres supports **synonym and thesaurus dictionaries** configured into the text-search configuration, so those terms match each other.
+
+This depends on the tag vocabulary decision (FD-4, still open — see Section 3 and `docs/2026-07-17-taxonomy-standards-research.md`): the same curated vocabulary that anchors tags can *seed the search synonym dictionary*, and **MeSH ships "entry terms" (synonyms) for every concept**, so if the tag vocabulary is mapped to MeSH (the current recommendation), the synonym list comes largely for free. One piece of curation, two payoffs (tags + search synonyms). Until FD-4 lands, this is a forward dependency, not buildable in isolation — flagged in Section 12.
 
 ---
 
@@ -141,7 +161,7 @@ All write endpoints require a handle-scoped session token at `active` status (ar
 
 ## 6. Edit/delete policy
 
-**Not specified in the PRD** — this spec proposes a policy and flags it for confirmation (Section 12) rather than assuming it:
+**Agreed (Adrian, 2026-07-17.)** Not specified in the PRD; this is now a settled decision rather than a proposal:
 
 | Action | Proposed policy | Rationale |
 |---|---|---|
@@ -216,7 +236,7 @@ No new schema is introduced here — `community.follows` (EPIC-B) and `community
 ## 12. Open questions
 
 - **Taxonomy unification** (Section 3): the forum's `category`/`tag` vocabulary, Andrew Renshaw's body-area list, and the research feed's `taxonomy.json` are three overlapping-but-not-identical vocabularies right now. Needs a single controlled vocabulary decided before build, and FD-4 needs formal closure regardless (it's still an open stakeholder decision, not just an implementation detail).
-- **Search's "(to be discussed/confirmed)" hedge** (Section 4): the PRD lists full-text search as Must-have but flags it for discussion in the same breath — worth Adrian confirming with Paul/Andrew whether that hedge is still live or was resolved verbally and just never updated in the document.
-- **Edit/delete policy** (Section 6): entirely this spec's proposal, not a PRD requirement — the 15-minute window, the case-discussion delete restriction, and whether comments with kudos already awarded should be edit-restricted too, all need sign-off.
+- ~~**Search's "(to be discussed/confirmed)" hedge**~~ — **resolved 2026-07-17**: search design firmed up (Postgres FTS + `pg_trgm` + weighted `tsvector` + clinical synonym dictionary; no external/third-party engine), Section 4. One forward dependency remains: the synonym dictionary is seeded from the tag vocabulary, so it can't be fully built until FD-4/taxonomy lands.
+- ~~**Edit/delete policy**~~ — **resolved 2026-07-17**: the Section 6 policy (15-minute no-marker edit window, `edited_at` after, soft-delete for ordinary posts, moderator-only removal for attested case discussions) is agreed.
 - **Could-have scope confirmation** (Section 7): whether any of best-answer marker, image attachments, or polls are actually being built for MVP launch, or deferred — affects sequencing/resourcing, not architecture.
 - **"Trending" definition** (Section 8): a kudos-in-a-time-window heuristic is this spec's own placeholder for the PRD's unspecified fallback view — needs a concrete definition (window length, whether it's platform-wide or category-scoped) before build.

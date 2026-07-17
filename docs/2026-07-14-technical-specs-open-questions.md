@@ -77,6 +77,8 @@ Decided, kept here for the record rather than deleted.
 - **FD-5 professional contact link**: confirmed **not** to build a LinkedIn/contact-link field on the handle profile. EPIC-B's spec had already flagged that the PRD's FD-5 discussion (recommending such a field, §16) directly conflicts with the PRD's own zero-tolerance anonymity rule (§9.3, "deliberately identifying yourself" is an expulsion offence). Decision: leave it out. *(EPIC-B spec §1, §13.)*
 - **Handle length/character rules — resolved 2026-07-17.** Agreed by Adrian: **3–30 characters, alphanumeric plus underscore/hyphen**. Not a PRD requirement, but now settled rather than a placeholder. *(EPIC-B spec §3, §13.)*
 - **Handle-name blocklist storage — resolved 2026-07-17.** Config table, not a code constant — so profession-specific terms (specialty names, credentials, professional-body abbreviations) can be added without a deploy, since they can't be fully enumerated upfront. *(EPIC-B spec §3, §11, §13.)*
+- **Search design — resolved 2026-07-17.** Stays in PostgreSQL for MVP (no third-party engine — Algolia-style SaaS ruled out on trust/data-residency grounds; self-hosted OpenSearch kept as a documented later upgrade). Firmed up as: weighted `tsvector` + GIN, `websearch_to_tsquery`, `pg_trgm` for typo tolerance, and a clinical synonym dictionary (ACL ⇄ anterior cruciate ligament, etc.). The synonym dictionary is seeded from the tag vocabulary — so it has a forward dependency on FD-4/taxonomy (§1.2), and MeSH entry-terms give the synonyms largely for free if the tag→MeSH mapping is adopted. Resolves the PRD's "(to be discussed/confirmed)" hedge on Search. *(EPIC-C spec §4, §12.)*
+- **Forum edit/delete policy — resolved 2026-07-17.** Agreed: 15-minute no-marker edit window, `edited_at` shown after, author self-delete as soft-delete for ordinary posts, moderator-only removal for attested case discussions. *(EPIC-C spec §6, §12.)*
 
 ---
 
@@ -96,12 +98,10 @@ Smaller items, local to a single spec, not part of a larger cross-epic conflict.
 *(No local open questions remain. The moderator-forced rename is covered in §1.4 above; the handle length/character rules, blocklist storage, expulsion/re-registration gap, and tag-follow mechanism are all resolved — see §2.)*
 
 ### EPIC-C — Forum
-- **Search's PRD hedge**: the PRD lists full-text search as Must-have but flags it "(to be discussed/confirmed)" in the same table row — worth checking whether that hedge is still live or was resolved verbally and never updated in the document.
-- **Edit/delete policy**: entirely this spec's own proposal (15-minute no-marker edit window, case-discussion delete restriction, whether kudos-bearing comments should be edit-restricted too) — needs sign-off, no PRD basis.
 - **Could-have scope confirmation**: whether best-answer marker, image attachments, or polls are actually being built for MVP, or deferred — a sequencing/resourcing question, not architectural.
 - **"Trending" definition**: the personalised feed's fallback view (§8 there) needs a concrete definition (time window, platform-wide vs. category-scoped) — this spec's kudos-in-a-time-window heuristic is only a placeholder.
 
-*(Taxonomy unification is covered in §1.2 above. The personalised feed's underlying follow mechanism is resolved — see §2.)*
+*(Taxonomy unification is covered in §1.2 above. The search design, edit/delete policy, and personalised-feed follow mechanism are all resolved — see §2.)*
 
 ### EPIC-D — Kudos
 - **Idempotency of a repeated award**: should awarding kudos twice 409, or silently no-op? Minor, but affects client error-handling.
