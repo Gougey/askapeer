@@ -68,7 +68,7 @@ community.moderation_actions           -- immutable: INSERT-only grant
 |---|---|---|
 | `remove_content` | `community.posts`/`comments.status = removed`; also **claws back** the kudos that content earned, from the author's `kudos_total` (EPIC-D Section 7) — moderation removal, unlike author self-delete, reverses earned reputation | EPIC-C (status), EPIC-D (kudos clawback) |
 | `warn` | No status change; a logged, immutable record a member received a formal warning | This epic |
-| `suspend` | `community.handles.status = suspended`; see Section 7 for whether this should also touch `identity.members` | EPIC-B (status) |
+| `suspend` | `community.handles.status = suspended` **only** — deliberately does *not* touch `identity.members.verification_status` (resolved 2026-07-17; see Section 7) | EPIC-B (status) |
 | `expel` | `community.handles.status = expelled` **and** `identity.members.verification_status = expelled`, both in the same transaction; permanent | EPIC-B (status), Section 7 (identity linkage — resolved) |
 | `request_correction` | Case discussion → `needs_correction` (EPIC-C `posts.status`): the whole thread is hidden from public view, its comments and kudos **preserved** (crucially, kudos are **not** clawed back — unlike `remove_content` — because this is a fix-and-restore, not a removal); the author re-edits and re-attests to republish | EPIC-E (mechanics, its §8) |
 | `rename_handle` | `community.handles.handle_name` changed, old name recorded in `community.handle_name_history` | EPIC-B |
@@ -79,15 +79,15 @@ Every action writes one `community.moderation_actions` row regardless of type �
 
 ## 4. Report categories and queue ordering
 
-The PRD names one specific category explicitly — `identifiable_patient_information` (Section 10.4), which "trigger[s] a priority review flag and are actioned before other report types." It does not enumerate a full list. This spec proposes the following, since a report form needs *some* fixed set of categories to be usable — but the full list is this spec's own construction, not a PRD requirement:
+The PRD names one specific category explicitly — `identifiable_patient_information` (Section 10.4), which "trigger[s] a priority review flag and are actioned before other report types." It does not enumerate a full list. The following is the working set (confirmed by Adrian, 2026-07-17), since a report form needs *some* fixed set of categories to be usable. The list is not a PRD requirement — the non-priority categories are flagged for Andrew Renshaw's domain review (Section 10) — but the two priority categories are settled:
 
 | Category | Priority? | Basis |
 |---|---|---|
 | `identifiable_patient_information` | **Yes** | Explicit PRD requirement (Section 10.4) |
-| `anonymity_violation` — attempting to reveal one's own or another's identity | **Yes — proposed** (needs confirmation, Section 10) | Not PRD-stated, but the zero-tolerance rule (Sections 9.3/9.5) is described in equally or more severe terms ("immediate and permanent expulsion... no exceptions") than the patient-privacy policy — an odd asymmetry if the platform's other founding guarantee sat in the ordinary queue |
-| `harassment` | No | This spec's proposal |
-| `spam` | No | This spec's proposal |
-| `other` | No | This spec's proposal |
+| `anonymity_violation` — attempting to reveal one's own or another's identity | **Yes** (confirmed 2026-07-17) | Not PRD-stated, but the zero-tolerance rule (Sections 9.3/9.5) is described in equally or more severe terms ("immediate and permanent expulsion... no exceptions") than the patient-privacy policy — leaving the platform's other founding guarantee in the ordinary queue would be an odd asymmetry. Adrian confirmed it belongs in the priority tier. |
+| `harassment` | No | Working set — flagged for Andrew (Section 10) |
+| `spam` | No | Working set — flagged for Andrew (Section 10) |
+| `other` | No | Working set — flagged for Andrew (Section 10) |
 
 **Queue ordering**: priority categories first, then by report age within each tier — the same pattern the EPIC-A spec established for its (structurally separate) verification queue, Section 6 there.
 
@@ -131,25 +131,32 @@ POST   /v1/admin/handles/:handle_id/reveal-identity   -- Section 5
 This section originally flagged a real gap spanning three specs (EPIC-A, EPIC-B, and this one); Adrian resolved it on 2026-07-14 and it's kept here, marked resolved, for the history rather than deleted:
 
 - `identity.members.verification_status` (architecture spec, Section 4.1) was `pending | needs_more_info | approved_verified | rejected | suspended` — no `expelled` value existed.
-- `community.handles.status` (Section 4.2) is `active | suspended | expelled` — no `rejected`/`needs_more_info` value, and its `suspended` isn't necessarily the same event as the identity-side `suspended` (that question — whether this epic's `suspend` action should also touch `identity.members` — remains genuinely open; see Section 10).
+- `community.handles.status` (Section 4.2) is `active | suspended | expelled` — no `rejected`/`needs_more_info` value, and its `suspended` is deliberately *not* the same event as the identity-side `suspended` (that question — whether this epic's `suspend` action should also touch `identity.members` — is now resolved: it should not; see the "Resolved" note at the end of this section).
 - **The consequence**: when this epic's `expel` action set `community.handles.status = expelled`, nothing updated `identity.members.verification_status`, so a permanently expelled person's registration was still sitting at `approved_verified` — nothing stopped them re-registering with the same credentials.
 
 **Decision**: `identity.members.verification_status` gains an `expelled` value (architecture spec amended, Section 4.1). This epic's `expel` action now writes an `identity.verification_decisions` transition to `expelled` in the same transaction as the `community.handles` update (Section 3's table, above). EPIC-A's uniqueness constraint already blocks any non-`rejected` status by construction (its spec, Section 2), so `expelled` is covered automatically — and per Adrian's direction, a blocked reapplication attempt is additionally logged to `identity.reapplication_attempts` and surfaced for admin review (EPIC-A's spec, Section 6), not just silently rejected. Full history in `docs/2026-07-14-technical-specs-open-questions.md`, Section 2.
 
-**Still open**: whether `suspend` should similarly write to `identity.members` (see Section 10) — suspension's temporary/reversible nature makes this a less clear-cut case than expulsion's permanence.
+**Resolved (2026-07-17)**: `suspend` does **not** write to `identity.members.verification_status` — the two suspensions are deliberately kept as separate events. A handle-level moderation suspension and the identity-level `suspended` status (EPIC-A's, covering *lapsed professional registration*) differ in kind and in how they're resolved: a moderation suspension is lifted by a moderator/appeal, a registration lapse is cleared by re-verifying the credential. Unlike the `expel` case there is no re-registration loophole to close, because suspension is reversible and does not release the credential for reuse. This mirrors the "two independent access gates" reasoning applied to billing vs. moderation status (open-questions doc §1.4).
 
 ---
 
 ## 8. Non-functional notes specific to EPIC-F
 
 - **Immutable actions**: `community.moderation_actions` and `identity.identity_access_log` are both INSERT-only at the database-role level, per the architecture spec, Section 4.4 — this epic introduces no new tables needing that treatment, only new `action_type` values within the existing immutable table.
-- **Response-time KPIs**: the PRD (Section 13) names "median moderation response time" and "PHI report resolution time — must be fast" as KPIs, without a numeric target. This epic's data model supports measuring both (`created_at` on the report, `created_at` on the resulting `moderation_actions` row), but no SLA is defined to build alerting against — flagged in Section 10.
+- **Response-time KPIs**: the PRD (Section 13) names "median moderation response time" and "PHI report resolution time — must be fast" as KPIs, without a numeric target. This epic's data model supports measuring both (`created_at` on the report, `created_at` on the resulting `moderation_actions` row). Working targets adopted 2026-07-17 (illustrative, pending ops/staffing sign-off from Paul — same "working example" status as the pricing figure):
+
+  | Tier | Target time-to-first-action |
+  |---|---|
+  | **Priority** (`identifiable_patient_information`, `anonymity_violation`) | **< 4 hours** |
+  | **Standard** (`harassment`, `spam`, `other`) | **< 48 hours** |
+
+  These give alerting and staffing plans something concrete to build against; the numbers themselves are expected to be revised once real report volume and moderator coverage are known.
 
 ---
 
 ## 9. Test plan
 
-- **Priority ordering**: `identifiable_patient_information` and (pending confirmation) `anonymity_violation` reports surface before other categories regardless of submission order.
+- **Priority ordering**: `identifiable_patient_information` and `anonymity_violation` reports surface before other categories regardless of submission order.
 - **Handle-targeted reports**: a report with `target_type = handle` and no associated post/comment is valid and appears in the queue (covers the "off-platform collusion" case PRD Section 9.3 anticipates).
 - **Identity reveal is separately logged**: viewing a report never itself produces an `identity_access_log` row; only `POST .../reveal-identity` does, and it requires a `reason_code`.
 - **Action immutability**: no `UPDATE`/`DELETE` grant exists on `community.moderation_actions` at the database-role level (mirrors the EPIC-A spec's equivalent test for `identity.verification_decisions`).
@@ -160,9 +167,9 @@ This section originally flagged a real gap spanning three specs (EPIC-A, EPIC-B,
 
 ## 10. Open questions
 
-- **`anonymity_violation` as a priority category** (Section 4): proposed here but not a PRD-stated requirement — needs explicit confirmation given the PRD only names patient-information reports as priority.
+- ~~**`anonymity_violation` as a priority category**~~ (Section 4) — **resolved 2026-07-17**: yes, it joins `identifiable_patient_information` in the priority tier. The zero-tolerance anonymity rule is a founding guarantee described in equally-severe terms; it would be an odd asymmetry for it to sit in the ordinary queue.
 - ~~**The expulsion/re-registration gap**~~ — **resolved 2026-07-14**, see Section 7 above.
-- **Should `suspend` also write to `identity.members.verification_status`** (Section 7): unlike `expel`, this is genuinely unresolved — a handle-level suspension (this epic's action) and the identity-level `suspended` status (EPIC-A's, covering lapsed registration) may or may not be intended as the same event. Needs a decision, though it's lower-stakes than the expulsion case since suspension is reversible either way.
-- **`rename_handle` and `request_correction` as new action types**: proposed here as the natural resolution of two other specs' forward-references (Section 3) — worth a final check that EPIC-B and EPIC-E's specs should indeed be read as pointing here, rather than wanting their own bespoke handling.
-- **No numeric moderation-response SLA** (Section 8): the PRD's KPIs name "must be fast" without a figure — worth a concrete target before building alerting/staffing plans around it.
-- **Full report-category list** (Section 4): `harassment`, `spam`, `other` alongside the two priority categories is this spec's own proposal, not confirmed against the PRD (which doesn't enumerate a full list) — worth a sanity check with Andrew Renshaw given his domain familiarity with what reports are likely to actually look like in practice.
+- ~~**Should `suspend` also write to `identity.members.verification_status`**~~ (Section 7) — **resolved 2026-07-17**: no. A handle-level moderation suspension and the identity-level `suspended` status (lapsed registration) are deliberately separate events, resolved by different means; there's no re-registration loophole to close as there was for `expel`.
+- **`rename_handle` and `request_correction` as new action types**: proposed here as the natural resolution of two other specs' forward-references (Section 3) — worth a final check that EPIC-B and EPIC-E's specs should indeed be read as pointing here, rather than wanting their own bespoke handling. *(Tracked as cross-epic item §1.3 in the open-questions doc; EPIC-E's `request_correction` half is already accepted — see that doc's §2.)*
+- ~~**No numeric moderation-response SLA**~~ (Section 8) — **resolved 2026-07-17**: working targets adopted — priority < 4h, standard < 48h — marked illustrative pending ops sign-off from Paul, so alerting/staffing plans have a concrete figure to build against.
+- ~~**Full report-category list**~~ (Section 4) — **resolved 2026-07-17**: the five-category working set (two priority + `harassment`/`spam`/`other`) is accepted so the report form is buildable; the three non-priority categories remain **flagged for Andrew Renshaw's domain review** and may change once he weighs in on what reports actually look like in practice.

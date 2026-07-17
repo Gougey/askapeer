@@ -137,8 +137,10 @@ formal warning</td>
 </tr>
 <tr>
 <td><code>suspend</code></td>
-<td><code>community.handles.status = suspended</code>; see Section 7 for
-whether this should also touch <code>identity.members</code></td>
+<td><code>community.handles.status = suspended</code>
+<strong>only</strong> — deliberately does <em>not</em> touch
+<code>identity.members.verification_status</code> (resolved 2026-07-17;
+see Section 7)</td>
 <td>EPIC-B (status)</td>
 </tr>
 <tr>
@@ -177,10 +179,12 @@ queue ordering</h2>
 <p>The PRD names one specific category explicitly —
 <code>identifiable_patient_information</code> (Section 10.4), which
 “trigger[s] a priority review flag and are actioned before other report
-types.” It does not enumerate a full list. This spec proposes the
-following, since a report form needs <em>some</em> fixed set of
-categories to be usable — but the full list is this spec’s own
-construction, not a PRD requirement:</p>
+types.” It does not enumerate a full list. The following is the working
+set (confirmed by Adrian, 2026-07-17), since a report form needs
+<em>some</em> fixed set of categories to be usable. The list is not a
+PRD requirement — the non-priority categories are flagged for Andrew
+Renshaw’s domain review (Section 10) — but the two priority categories
+are settled:</p>
 <table>
 <colgroup>
 <col style="width: 33%" />
@@ -203,28 +207,27 @@ construction, not a PRD requirement:</p>
 <tr>
 <td><code>anonymity_violation</code> — attempting to reveal one’s own or
 another’s identity</td>
-<td><strong>Yes — proposed</strong> (needs confirmation, Section
-10)</td>
+<td><strong>Yes</strong> (confirmed 2026-07-17)</td>
 <td>Not PRD-stated, but the zero-tolerance rule (Sections 9.3/9.5) is
 described in equally or more severe terms (“immediate and permanent
-expulsion… no exceptions”) than the patient-privacy policy — an odd
-asymmetry if the platform’s other founding guarantee sat in the ordinary
-queue</td>
+expulsion… no exceptions”) than the patient-privacy policy — leaving the
+platform’s other founding guarantee in the ordinary queue would be an
+odd asymmetry. Adrian confirmed it belongs in the priority tier.</td>
 </tr>
 <tr>
 <td><code>harassment</code></td>
 <td>No</td>
-<td>This spec’s proposal</td>
+<td>Working set — flagged for Andrew (Section 10)</td>
 </tr>
 <tr>
 <td><code>spam</code></td>
 <td>No</td>
-<td>This spec’s proposal</td>
+<td>Working set — flagged for Andrew (Section 10)</td>
 </tr>
 <tr>
 <td><code>other</code></td>
 <td>No</td>
-<td>This spec’s proposal</td>
+<td>Working set — flagged for Andrew (Section 10)</td>
 </tr>
 </tbody>
 </table>
@@ -284,11 +287,11 @@ spec, Section 4.1) was
 <li><code>community.handles.status</code> (Section 4.2) is
 <code>active | suspended | expelled</code> — no
 <code>rejected</code>/<code>needs_more_info</code> value, and its
-<code>suspended</code> isn’t necessarily the same event as the
-identity-side <code>suspended</code> (that question — whether this
+<code>suspended</code> is deliberately <em>not</em> the same event as
+the identity-side <code>suspended</code> (that question — whether this
 epic’s <code>suspend</code> action should also touch
-<code>identity.members</code> — remains genuinely open; see Section
-10).</li>
+<code>identity.members</code> — is now resolved: it should not; see the
+“Resolved” note at the end of this section).</li>
 <li><strong>The consequence</strong>: when this epic’s
 <code>expel</code> action set
 <code>community.handles.status = expelled</code>, nothing updated
@@ -313,34 +316,72 @@ review (EPIC-A’s spec, Section 6), not just silently rejected. Full
 history in
 <code>docs/2026-07-14-technical-specs-open-questions.md</code>, Section
 2.</p>
-<p><strong>Still open</strong>: whether <code>suspend</code> should
-similarly write to <code>identity.members</code> (see Section 10) —
-suspension’s temporary/reversible nature makes this a less clear-cut
-case than expulsion’s permanence.</p>
+<p><strong>Resolved (2026-07-17)</strong>: <code>suspend</code> does
+<strong>not</strong> write to
+<code>identity.members.verification_status</code> — the two suspensions
+are deliberately kept as separate events. A handle-level moderation
+suspension and the identity-level <code>suspended</code> status
+(EPIC-A’s, covering <em>lapsed professional registration</em>) differ in
+kind and in how they’re resolved: a moderation suspension is lifted by a
+moderator/appeal, a registration lapse is cleared by re-verifying the
+credential. Unlike the <code>expel</code> case there is no
+re-registration loophole to close, because suspension is reversible and
+does not release the credential for reuse. This mirrors the “two
+independent access gates” reasoning applied to billing vs. moderation
+status (open-questions doc §1.4).</p>
 <hr />
 <h2 id="non-functional-notes-specific-to-epic-f">8. Non-functional notes
 specific to EPIC-F</h2>
 <ul>
-<li><strong>Immutable actions</strong>:
+<li><p><strong>Immutable actions</strong>:
 <code>community.moderation_actions</code> and
 <code>identity.identity_access_log</code> are both INSERT-only at the
 database-role level, per the architecture spec, Section 4.4 — this epic
 introduces no new tables needing that treatment, only new
 <code>action_type</code> values within the existing immutable
-table.</li>
-<li><strong>Response-time KPIs</strong>: the PRD (Section 13) names
+table.</p></li>
+<li><p><strong>Response-time KPIs</strong>: the PRD (Section 13) names
 “median moderation response time” and “PHI report resolution time — must
 be fast” as KPIs, without a numeric target. This epic’s data model
 supports measuring both (<code>created_at</code> on the report,
 <code>created_at</code> on the resulting <code>moderation_actions</code>
-row), but no SLA is defined to build alerting against — flagged in
-Section 10.</li>
+row). Working targets adopted 2026-07-17 (illustrative, pending
+ops/staffing sign-off from Paul — same “working example” status as the
+pricing figure):</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Target time-to-first-action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Priority</strong>
+(<code>identifiable_patient_information</code>,
+<code>anonymity_violation</code>)</td>
+<td><strong>&lt; 4 hours</strong></td>
+</tr>
+<tr>
+<td><strong>Standard</strong> (<code>harassment</code>,
+<code>spam</code>, <code>other</code>)</td>
+<td><strong>&lt; 48 hours</strong></td>
+</tr>
+</tbody>
+</table>
+<p>These give alerting and staffing plans something concrete to build
+against; the numbers themselves are expected to be revised once real
+report volume and moderator coverage are known.</p></li>
 </ul>
 <hr />
 <h2 id="test-plan">9. Test plan</h2>
 <ul>
 <li><strong>Priority ordering</strong>:
-<code>identifiable_patient_information</code> and (pending confirmation)
+<code>identifiable_patient_information</code> and
 <code>anonymity_violation</code> reports surface before other categories
 regardless of submission order.</li>
 <li><strong>Handle-targeted reports</strong>: a report with
@@ -373,35 +414,42 @@ is blocked and logged (EPIC-A spec, Section 10).</li>
 <hr />
 <h2 id="open-questions">10. Open questions</h2>
 <ul>
-<li><strong><code>anonymity_violation</code> as a priority
-category</strong> (Section 4): proposed here but not a PRD-stated
-requirement — needs explicit confirmation given the PRD only names
-patient-information reports as priority.</li>
+<li><del><strong><code>anonymity_violation</code> as a priority
+category</strong></del> (Section 4) — <strong>resolved
+2026-07-17</strong>: yes, it joins
+<code>identifiable_patient_information</code> in the priority tier. The
+zero-tolerance anonymity rule is a founding guarantee described in
+equally-severe terms; it would be an odd asymmetry for it to sit in the
+ordinary queue.</li>
 <li><del><strong>The expulsion/re-registration gap</strong></del> —
 <strong>resolved 2026-07-14</strong>, see Section 7 above.</li>
-<li><strong>Should <code>suspend</code> also write to
-<code>identity.members.verification_status</code></strong> (Section 7):
-unlike <code>expel</code>, this is genuinely unresolved — a handle-level
-suspension (this epic’s action) and the identity-level
-<code>suspended</code> status (EPIC-A’s, covering lapsed registration)
-may or may not be intended as the same event. Needs a decision, though
-it’s lower-stakes than the expulsion case since suspension is reversible
-either way.</li>
+<li><del><strong>Should <code>suspend</code> also write to
+<code>identity.members.verification_status</code></strong></del>
+(Section 7) — <strong>resolved 2026-07-17</strong>: no. A handle-level
+moderation suspension and the identity-level <code>suspended</code>
+status (lapsed registration) are deliberately separate events, resolved
+by different means; there’s no re-registration loophole to close as
+there was for <code>expel</code>.</li>
 <li><strong><code>rename_handle</code> and
 <code>request_correction</code> as new action types</strong>: proposed
 here as the natural resolution of two other specs’ forward-references
 (Section 3) — worth a final check that EPIC-B and EPIC-E’s specs should
 indeed be read as pointing here, rather than wanting their own bespoke
-handling.</li>
-<li><strong>No numeric moderation-response SLA</strong> (Section 8): the
-PRD’s KPIs name “must be fast” without a figure — worth a concrete
-target before building alerting/staffing plans around it.</li>
-<li><strong>Full report-category list</strong> (Section 4):
-<code>harassment</code>, <code>spam</code>, <code>other</code> alongside
-the two priority categories is this spec’s own proposal, not confirmed
-against the PRD (which doesn’t enumerate a full list) — worth a sanity
-check with Andrew Renshaw given his domain familiarity with what reports
-are likely to actually look like in practice.</li>
+handling. <em>(Tracked as cross-epic item §1.3 in the open-questions
+doc; EPIC-E’s <code>request_correction</code> half is already accepted —
+see that doc’s §2.)</em></li>
+<li><del><strong>No numeric moderation-response SLA</strong></del>
+(Section 8) — <strong>resolved 2026-07-17</strong>: working targets
+adopted — priority &lt; 4h, standard &lt; 48h — marked illustrative
+pending ops sign-off from Paul, so alerting/staffing plans have a
+concrete figure to build against.</li>
+<li><del><strong>Full report-category list</strong></del> (Section 4) —
+<strong>resolved 2026-07-17</strong>: the five-category working set (two
+priority + <code>harassment</code>/<code>spam</code>/<code>other</code>)
+is accepted so the report form is buildable; the three non-priority
+categories remain <strong>flagged for Andrew Renshaw’s domain
+review</strong> and may change once he weighs in on what reports
+actually look like in practice.</li>
 </ul>
 
 </main>
