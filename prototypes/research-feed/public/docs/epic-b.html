@@ -162,10 +162,10 @@ impersonating platform roles (<code>admin</code>,
 close variants) are rejected at creation time — this one <em>is</em>
 technically enforceable and prevents an obvious trust/impersonation
 failure mode before it reaches a human moderator.</li>
-<li><strong>Length and character constraints</strong>: a sensible bound
-(proposed: 3–30 characters, alphanumeric plus underscore/hyphen) —
-arbitrary but needs deciding; not a PRD requirement, flagged in Section
-13.</li>
+<li><strong>Length and character constraints</strong>: <strong>3–30
+characters, alphanumeric plus underscore/hyphen</strong> (agreed by
+Adrian, 2026-07-17). Not a PRD requirement, but now a settled decision
+rather than a placeholder.</li>
 <li><strong>No reuse of a previously-expelled handle’s exact
 name</strong> — checked against
 <code>community.handle_name_history</code> as well as current
@@ -553,10 +553,9 @@ not to build it, given the direct conflict with PRD Section 9.3’s
 zero-tolerance rule. See
 <code>docs/2026-07-14-technical-specs-open-questions.md</code>, Section
 2.</li>
-<li><strong>Handle length/character rules</strong> (Section 3): the 3–30
-character, alphanumeric-plus-underscore/hyphen proposal is this spec’s
-own placeholder, not a PRD requirement — needs a real decision, though
-it has no architectural consequence either way.</li>
+<li><del><strong>Handle length/character rules</strong></del> —
+<strong>resolved 2026-07-17</strong>: 3–30 characters, alphanumeric plus
+underscore/hyphen, agreed by Adrian. See Section 3.</li>
 <li><strong>Moderator-forced rename as a first-class moderation
 action</strong>: should
 <code>POST /v1/admin/handles/:handle_id/rename</code> (Section 5)
