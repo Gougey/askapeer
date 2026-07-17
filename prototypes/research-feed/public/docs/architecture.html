@@ -363,9 +363,12 @@ request: professional-register lookups, identity-check polling, email
 sending, EXIF stripping, digest generation, research-feed
 ingestion.</li>
 <li><strong>PostgreSQL</strong> (Relational Database Service (RDS),
-Multi-AZ, <code>eu-west-2</code>/London) — a single instance with four
-schemas: <code>identity</code>, <code>community</code>,
-<code>billing</code>, <code>research</code> (Section 4).</li>
+Multi-AZ, <code>eu-west-2</code>/London) — a single instance with
+<strong>five</strong> schemas: <code>identity</code>,
+<code>community</code>, <code>billing</code>, <code>research</code>
+(Section 4), and <code>config</code> (added by EPIC-J, approved
+2026-07-17 — platform settings, handle blocklist, config audit log; see
+the amendment at the end of this document).</li>
 <li><strong>Redis</strong> (ElastiCache) — job queue plus hot-path
 caching (e.g. kudos leaderboards).</li>
 <li><strong>S3</strong> (Simple Storage Service) — attachments and
@@ -603,9 +606,12 @@ notifications, research feed).</li>
 calls ever returns <code>member_id</code> or <code>legal_name</code> —
 response shapes (Data Transfer Objects, or DTOs) for standard endpoints
 are built purely from <code>community</code>-schema data.</li>
-<li>Admin/moderation endpoints require a moderator-role claim on the
-JWT; any call that resolves a handle to a real identity requires a
-<code>reason_code</code> parameter and is exactly what populates
+<li>Admin/moderation endpoints require a moderator or administrator role
+claim on the JWT (the single “moderator-role” claim was split into
+<code>moderator</code> (enforcement, EPIC-F) and
+<code>administrator</code> (configuration, EPIC-J), confirmed
+2026-07-17); any call that resolves a handle to a real identity requires
+a <code>reason_code</code> parameter and is exactly what populates
 <code>identity_access_log</code>.</li>
 <li>Rate limiting (Redis-backed, per-IP and per-account) on
 authentication and reporting endpoints.</li>
@@ -710,11 +716,11 @@ tooling — same web app, role-gated</h3>
 <p>Rather than a separate admin application (which would double the
 frontend work for a small team), the moderation/admin panel is a set of
 <code>/admin/*</code> routes in the same Next.js web app, gated by a
-moderator-role claim on the JWT, calling the same API’s
-<code>/v1/admin/*</code> endpoints. This is a logical isolation via
-authentication and authorisation, not a physical one — cheap to split
-into a separate deployment later if that stronger isolation is ever
-needed.</p>
+moderator/administrator role claim on the JWT (the two-claim split of
+EPIC-J), calling the same API’s <code>/v1/admin/*</code> endpoints. This
+is a logical isolation via authentication and authorisation, not a
+physical one — cheap to split into a separate deployment later if that
+stronger isolation is ever needed.</p>
 <ul>
 <li><strong>Queue ordering</strong>: reports categorised
 <code>identifiable_patient_information</code> are surfaced first (PRD
@@ -976,13 +982,16 @@ building directly on the foundations in this document.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Amendment, 17 July 2026</strong>: EPIC-J (Administration
-&amp; Platform Configuration) added as a scope addition beyond the PRD’s
-original eight-epic list (like EPIC-I). It introduces a fifth schema,
+<p><strong>Amendment, 17 July 2026 (confirmed 2026-07-17)</strong>:
+EPIC-J (Administration &amp; Platform Configuration) added as a scope
+addition beyond the PRD’s original eight-epic list (like EPIC-I) — now
+reflected in the PRD’s §6.1. It introduces a fifth schema,
 <code>config</code> (platform settings, handle blocklist, config audit
-log), and splits the single “moderator-role” JWT claim (Section 5.3)
-into <code>moderator</code> (enforcement, EPIC-F) and
-<code>administrator</code> (configuration, EPIC-J). See
+log) — <strong>approved</strong>, not folded into <code>community</code>
+— and splits the single “moderator-role” JWT claim (Section 5.3) into
+<code>moderator</code> (enforcement, EPIC-F) and
+<code>administrator</code> (configuration, EPIC-J) —
+<strong>confirmed</strong>. All of EPIC-J is in MVP scope. See
 <code>docs/superpowers/specs/2026-07-17-epic-j-administration-configuration-technical-spec.md</code>.</p>
 <hr />
 <h2 id="open-follow-ups">11. Open follow-ups</h2>

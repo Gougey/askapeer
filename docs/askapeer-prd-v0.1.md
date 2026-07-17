@@ -202,6 +202,8 @@ The MVP is intentionally narrow: prove the core thesis — that verified, pseudo
 | **Member profile** | Pseudonymous handle, kudos score, member-since date, post history. No real name, employer, location, or specialty visible to peers. |
 | **Notifications** | In-app and email notifications for replies, mentions, and kudos received. Configurable per member. |
 | **Subscription and payment** | Payment processing for monthly subscription. Free trial period. |
+| **Research / news feed** *(scope addition — EPIC-I)* | Curated feed of relevant sports-medicine research and news, scored against each member's clinical interests (which draw on the same tag vocabulary as the forum). Added during technical design; agreed as a scope addition beyond the original eight epics. |
+| **Administration & platform configuration** *(scope addition — EPIC-J)* | Administrator tools for managing reference data and settings — forum categories, the tag vocabulary, the search synonym dictionary, the handle blocklist, and tunable thresholds. Distinct from moderation (EPIC-F); surfaces the "admin-managed" functions the other epics assume. Added during technical design; agreed as a scope addition. |
 
 #### Should have
 
@@ -459,6 +461,10 @@ Potential supplementary streams consistent with platform principles:
 | **EPIC-F** | Content reporting and moderation tools |
 | **EPIC-G** | Notifications (in-app and email) |
 | **EPIC-H** | Subscription and payment processing |
+| **EPIC-I** *(scope addition)* | Research / news feed, scored against member clinical interests |
+| **EPIC-J** *(scope addition)* | Administration & platform configuration (reference data, settings) |
+
+*EPIC-I and EPIC-J were added during technical design (2026-07), beyond this PRD's original eight-epic MVP list, and are agreed scope additions. Their full technical specs live in `docs/superpowers/specs/`.*
 
 ### Phase 2 — Growth
 

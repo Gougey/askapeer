@@ -54,7 +54,7 @@ The PRD's personas (Section 4) already distinguish two operator roles, and this 
 | **Moderator** | Content/behaviour enforcement, audited identity access | EPIC-F reports & actions; EPIC-A verification review |
 | **Administrator** | Platform configuration, operations, compliance | This epic — categories, tags, blocklist, settings |
 
-This **refines the architecture spec's Section 5.3**, which currently assumes a single "moderator-role claim" covers all `/admin/*` endpoints. This epic splits that into two JWT claims — `moderator` and `administrator` — so config mutation and enforcement can carry different privileges.
+This **refines the architecture spec's Section 5.3** (confirmed 2026-07-17), which originally assumed a single "moderator-role claim" covers all `/admin/*` endpoints. This epic splits that into two JWT claims — `moderator` and `administrator` — so config mutation and enforcement can carry different privileges.
 
 **At MVP the two roles will very likely collapse to the same people** (verification and moderation are founder-led per PRD Section 8.3, and the founders will also be the ones configuring categories). The point of the split is clean access-control design, not a requirement to staff two teams — a single person can hold both claims. Stated explicitly so nobody over-builds a role/permissions system for MVP: two boolean-ish claims on the JWT is enough; a full RBAC system is not MVP scope.
 
@@ -62,7 +62,7 @@ This **refines the architecture spec's Section 5.3**, which currently assumes a 
 
 ## 3. Data model
 
-Introduces a **new `config` schema** — flagged as an **architecture addition** (the architecture spec, Section 4, defines four schemas: `identity`, `community`, `billing`, `research`; this adds a fifth). Rationale: operational configuration is neither member content (`community`) nor sensitive PII (`identity`), and giving it its own schema makes the Administrator-write / everyone-else-read access grant clean, mirroring how `identity` gets restricted grants. Categories and tags are the exception — they stay in `community` (they're content-organisation structure members interact with directly); this epic provides only the *management* endpoints over them.
+Introduces a **new `config` schema** — an **architecture addition, approved 2026-07-17** (the architecture spec, Section 4, defined four schemas: `identity`, `community`, `billing`, `research`; this adds a fifth). Rationale: operational configuration is neither member content (`community`) nor sensitive PII (`identity`), and giving it its own schema makes the Administrator-write / everyone-else-read access grant clean, mirroring how `identity` gets restricted grants. Categories and tags are the exception — they stay in `community` (they're content-organisation structure members interact with directly); this epic provides only the *management* endpoints over them.
 
 ```
 config.settings                        -- key/value tunable platform settings
@@ -189,8 +189,8 @@ Every mutating call writes a `config.admin_audit_log` row in the same transactio
 
 ## 10. Open questions
 
-- **PRD update**: EPIC-J is a scope addition beyond the PRD's original eight-epic MVP list (Section 6.1 / Section 12 roadmap) — the same status EPIC-I has. Both should be raised with Paul Gouge and Andrew Renshaw when the PRD is next revised. (Arguably EPIC-J was always *implied* by the PRD's Administrator persona and the "admin-managed" language scattered through the specs — but it was never an explicit epic.)
-- **New `config` schema** (Section 3): introducing a fifth schema is an architecture-level decision. The alternative is to put `config.*` tables in `community` and avoid a new schema. Recommended as-is (clean Administrator-write access boundary), but worth an explicit nod since it amends the architecture spec's four-schema model.
-- **Administrator/Moderator role split** (Section 2): refines the architecture spec's single "moderator-role claim" (Section 5.3) into two claims. Low-effort, but a deliberate change to a written assumption — confirm before build.
+- ~~**PRD update**~~ — **actioned 2026-07-17**: EPIC-I and EPIC-J are now added to the PRD's §6.1 MoSCoW (Must-have) list and the Phase-1 epic table, marked as agreed post-v0.1 scope additions. (Draft for the founders' review; Paul and Andrew to confirm formally.)
+- ~~**New `config` schema**~~ (Section 3) — **approved 2026-07-17**: the fifth schema goes ahead (clean Administrator-write access boundary), amending the architecture spec's four-schema model. Config tables are *not* folded into `community`.
+- ~~**Administrator/Moderator role split**~~ (Section 2) — **confirmed 2026-07-17**: the single "moderator-role claim" (architecture §5.3) splits into `moderator` (enforcement) and `administrator` (configuration) claims. A single person can hold both at MVP; the split is for clean access-control design, not two teams.
 - ~~**Billing config boundary**~~ (Section 7) — **resolved 2026-07-17**: numeric billing tunables (`billing.grace_period_days`, `billing.default_trial_days`) live in this epic's `config.settings` and are Administrator-editable; EPIC-H owns their semantics and any provider/cohort mechanism. Settled by Adrian's call that the grace period is a settings-store value.
-- **Whether MVP needs all of this**: categories, blocklist, settings management, **and seeding the tag vocabulary** are genuinely needed for launch (someone has to create the categories, seed the blocklist, and load the agreed tag seed list — `docs/2026-07-17-taxonomy-standards-research.md`). Tag *merge* and the synonym dictionary are lower-priority (merge matters once duplicates accumulate; the synonym dictionary now has its source — `community.tags.synonyms` — but can be populated post-launch) — candidates to defer within the epic if MVP scope needs trimming.
+- ~~**Whether MVP needs all of this**~~ — **resolved 2026-07-17**: **all of EPIC-J is in MVP** (Adrian's call) — category management, handle blocklist, platform settings, tag-vocabulary seeding **and** tag-merge **and** the synonym dictionary. Nothing deferred within the epic; the admin tooling ships complete for launch.

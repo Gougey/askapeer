@@ -135,7 +135,7 @@ Acronyms are expanded at first use in the body text below; this table is a stand
 - **Web app** — Next.js (React), the sole MVP client, communicating with the API entirely over HTTPS. Built API-first (no server-only logic baked into the web app) so a future native mobile client is architecturally just another API consumer, not a rewrite.
 - **API** — a single NestJS service, organised into modules mapping 1:1 to the PRD epics (see Section 10).
 - **Background workers** — the same codebase, deployed as a second Elastic Container Service (ECS) service, driven by a Redis-backed job queue (BullMQ). Handles anything that shouldn't block a request: professional-register lookups, identity-check polling, email sending, EXIF stripping, digest generation, research-feed ingestion.
-- **PostgreSQL** (Relational Database Service (RDS), Multi-AZ, `eu-west-2`/London) — a single instance with four schemas: `identity`, `community`, `billing`, `research` (Section 4).
+- **PostgreSQL** (Relational Database Service (RDS), Multi-AZ, `eu-west-2`/London) — a single instance with **five** schemas: `identity`, `community`, `billing`, `research` (Section 4), and `config` (added by EPIC-J, approved 2026-07-17 — platform settings, handle blocklist, config audit log; see the amendment at the end of this document).
 - **Redis** (ElastiCache) — job queue plus hot-path caching (e.g. kudos leaderboards).
 - **S3** (Simple Storage Service) — attachments and verification documents in private buckets, accessed via presigned Uniform Resource Locators (URLs); EXIF metadata stripped by a worker before anything is persisted.
 
@@ -307,7 +307,7 @@ Members who are not yet `approved_verified` receive a token scoped only to a hol
 
 - Representational State Transfer (REST) over JSON, versioned under `/v1`, cursor-based pagination on feeds (forum listings, notifications, research feed).
 - No endpoint outside `IdentityService`'s own internal calls ever returns `member_id` or `legal_name` — response shapes (Data Transfer Objects, or DTOs) for standard endpoints are built purely from `community`-schema data.
-- Admin/moderation endpoints require a moderator-role claim on the JWT; any call that resolves a handle to a real identity requires a `reason_code` parameter and is exactly what populates `identity_access_log`.
+- Admin/moderation endpoints require a moderator or administrator role claim on the JWT (the single "moderator-role" claim was split into `moderator` (enforcement, EPIC-F) and `administrator` (configuration, EPIC-J), confirmed 2026-07-17); any call that resolves a handle to a real identity requires a `reason_code` parameter and is exactly what populates `identity_access_log`.
 - Rate limiting (Redis-backed, per-IP and per-account) on authentication and reporting endpoints.
 - No server-rendered-only logic — every user-facing action is reachable via a versioned API endpoint, which is what makes native mobile clients additive later rather than a rewrite.
 
@@ -366,7 +366,7 @@ Billing data lives in its own `billing` schema (not `identity`) — `subscriptio
 
 ### 7.2 Moderation tooling — same web app, role-gated
 
-Rather than a separate admin application (which would double the frontend work for a small team), the moderation/admin panel is a set of `/admin/*` routes in the same Next.js web app, gated by a moderator-role claim on the JWT, calling the same API's `/v1/admin/*` endpoints. This is a logical isolation via authentication and authorisation, not a physical one — cheap to split into a separate deployment later if that stronger isolation is ever needed.
+Rather than a separate admin application (which would double the frontend work for a small team), the moderation/admin panel is a set of `/admin/*` routes in the same Next.js web app, gated by a moderator/administrator role claim on the JWT (the two-claim split of EPIC-J), calling the same API's `/v1/admin/*` endpoints. This is a logical isolation via authentication and authorisation, not a physical one — cheap to split into a separate deployment later if that stronger isolation is ever needed.
 
 - **Queue ordering**: reports categorised `identifiable_patient_information` are surfaced first (PRD Section 10.4's priority queue), then ordered by report age.
 - **Actions** (`remove_content`, `warn`, `suspend`, `expel`) write to `community.moderation_actions` (immutable) and update `community.handles.status`. Suspension or expulsion takes effect within one access-token lifetime (about 15 minutes), since refresh tokens are revocable server-side — a suspended handle's next token refresh fails and routes them to the holding page.
@@ -467,7 +467,7 @@ Each row below is expected to become its own per-epic technical spec, building d
 | EPIC-I — Research feed | `research-feed` | `research`, `community.member_interests` |
 | EPIC-J — Administration & configuration | `admin-config` + admin panel routes | `config` (new schema), management of `community.categories`/`community.tags` |
 
-**Amendment, 17 July 2026**: EPIC-J (Administration & Platform Configuration) added as a scope addition beyond the PRD's original eight-epic list (like EPIC-I). It introduces a fifth schema, `config` (platform settings, handle blocklist, config audit log), and splits the single "moderator-role" JWT claim (Section 5.3) into `moderator` (enforcement, EPIC-F) and `administrator` (configuration, EPIC-J). See `docs/superpowers/specs/2026-07-17-epic-j-administration-configuration-technical-spec.md`.
+**Amendment, 17 July 2026 (confirmed 2026-07-17)**: EPIC-J (Administration & Platform Configuration) added as a scope addition beyond the PRD's original eight-epic list (like EPIC-I) — now reflected in the PRD's §6.1. It introduces a fifth schema, `config` (platform settings, handle blocklist, config audit log) — **approved**, not folded into `community` — and splits the single "moderator-role" JWT claim (Section 5.3) into `moderator` (enforcement, EPIC-F) and `administrator` (configuration, EPIC-J) — **confirmed**. All of EPIC-J is in MVP scope. See `docs/superpowers/specs/2026-07-17-epic-j-administration-configuration-technical-spec.md`.
 
 ---
 

@@ -127,11 +127,12 @@ roles, and this epic implements that split:</p>
 </tr>
 </tbody>
 </table>
-<p>This <strong>refines the architecture spec’s Section 5.3</strong>,
-which currently assumes a single “moderator-role claim” covers all
-<code>/admin/*</code> endpoints. This epic splits that into two JWT
-claims — <code>moderator</code> and <code>administrator</code> — so
-config mutation and enforcement can carry different privileges.</p>
+<p>This <strong>refines the architecture spec’s Section 5.3</strong>
+(confirmed 2026-07-17), which originally assumed a single
+“moderator-role claim” covers all <code>/admin/*</code> endpoints. This
+epic splits that into two JWT claims — <code>moderator</code> and
+<code>administrator</code> — so config mutation and enforcement can
+carry different privileges.</p>
 <p><strong>At MVP the two roles will very likely collapse to the same
 people</strong> (verification and moderation are founder-led per PRD
 Section 8.3, and the founders will also be the ones configuring
@@ -142,18 +143,18 @@ MVP: two boolean-ish claims on the JWT is enough; a full RBAC system is
 not MVP scope.</p>
 <hr />
 <h2 id="data-model">3. Data model</h2>
-<p>Introduces a <strong>new <code>config</code> schema</strong> —
-flagged as an <strong>architecture addition</strong> (the architecture
-spec, Section 4, defines four schemas: <code>identity</code>,
-<code>community</code>, <code>billing</code>, <code>research</code>;
-this adds a fifth). Rationale: operational configuration is neither
-member content (<code>community</code>) nor sensitive PII
-(<code>identity</code>), and giving it its own schema makes the
-Administrator-write / everyone-else-read access grant clean, mirroring
-how <code>identity</code> gets restricted grants. Categories and tags
-are the exception — they stay in <code>community</code> (they’re
-content-organisation structure members interact with directly); this
-epic provides only the <em>management</em> endpoints over them.</p>
+<p>Introduces a <strong>new <code>config</code> schema</strong> — an
+<strong>architecture addition, approved 2026-07-17</strong> (the
+architecture spec, Section 4, defined four schemas:
+<code>identity</code>, <code>community</code>, <code>billing</code>,
+<code>research</code>; this adds a fifth). Rationale: operational
+configuration is neither member content (<code>community</code>) nor
+sensitive PII (<code>identity</code>), and giving it its own schema
+makes the Administrator-write / everyone-else-read access grant clean,
+mirroring how <code>identity</code> gets restricted grants. Categories
+and tags are the exception — they stay in <code>community</code>
+(they’re content-organisation structure members interact with directly);
+this epic provides only the <em>management</em> endpoints over them.</p>
 <pre><code>config.settings                        -- key/value tunable platform settings
   key           text PK               -- e.g. &#39;badge.top_contributor_percentile&#39;,
                                           &#39;feed.trending_min_results&#39;, &#39;feed.trending_window_steps&#39;
@@ -402,23 +403,22 @@ attempt.</li>
 <hr />
 <h2 id="open-questions">10. Open questions</h2>
 <ul>
-<li><strong>PRD update</strong>: EPIC-J is a scope addition beyond the
-PRD’s original eight-epic MVP list (Section 6.1 / Section 12 roadmap) —
-the same status EPIC-I has. Both should be raised with Paul Gouge and
-Andrew Renshaw when the PRD is next revised. (Arguably EPIC-J was always
-<em>implied</em> by the PRD’s Administrator persona and the
-“admin-managed” language scattered through the specs — but it was never
-an explicit epic.)</li>
-<li><strong>New <code>config</code> schema</strong> (Section 3):
-introducing a fifth schema is an architecture-level decision. The
-alternative is to put <code>config.*</code> tables in
-<code>community</code> and avoid a new schema. Recommended as-is (clean
-Administrator-write access boundary), but worth an explicit nod since it
-amends the architecture spec’s four-schema model.</li>
-<li><strong>Administrator/Moderator role split</strong> (Section 2):
-refines the architecture spec’s single “moderator-role claim” (Section
-5.3) into two claims. Low-effort, but a deliberate change to a written
-assumption — confirm before build.</li>
+<li><del><strong>PRD update</strong></del> — <strong>actioned
+2026-07-17</strong>: EPIC-I and EPIC-J are now added to the PRD’s §6.1
+MoSCoW (Must-have) list and the Phase-1 epic table, marked as agreed
+post-v0.1 scope additions. (Draft for the founders’ review; Paul and
+Andrew to confirm formally.)</li>
+<li><del><strong>New <code>config</code> schema</strong></del> (Section
+3) — <strong>approved 2026-07-17</strong>: the fifth schema goes ahead
+(clean Administrator-write access boundary), amending the architecture
+spec’s four-schema model. Config tables are <em>not</em> folded into
+<code>community</code>.</li>
+<li><del><strong>Administrator/Moderator role split</strong></del>
+(Section 2) — <strong>confirmed 2026-07-17</strong>: the single
+“moderator-role claim” (architecture §5.3) splits into
+<code>moderator</code> (enforcement) and <code>administrator</code>
+(configuration) claims. A single person can hold both at MVP; the split
+is for clean access-control design, not two teams.</li>
 <li><del><strong>Billing config boundary</strong></del> (Section 7) —
 <strong>resolved 2026-07-17</strong>: numeric billing tunables
 (<code>billing.grace_period_days</code>,
@@ -426,16 +426,12 @@ assumption — confirm before build.</li>
 <code>config.settings</code> and are Administrator-editable; EPIC-H owns
 their semantics and any provider/cohort mechanism. Settled by Adrian’s
 call that the grace period is a settings-store value.</li>
-<li><strong>Whether MVP needs all of this</strong>: categories,
-blocklist, settings management, <strong>and seeding the tag
-vocabulary</strong> are genuinely needed for launch (someone has to
-create the categories, seed the blocklist, and load the agreed tag seed
-list — <code>docs/2026-07-17-taxonomy-standards-research.md</code>). Tag
-<em>merge</em> and the synonym dictionary are lower-priority (merge
-matters once duplicates accumulate; the synonym dictionary now has its
-source — <code>community.tags.synonyms</code> — but can be populated
-post-launch) — candidates to defer within the epic if MVP scope needs
-trimming.</li>
+<li><del><strong>Whether MVP needs all of this</strong></del> —
+<strong>resolved 2026-07-17</strong>: <strong>all of EPIC-J is in
+MVP</strong> (Adrian’s call) — category management, handle blocklist,
+platform settings, tag-vocabulary seeding <strong>and</strong> tag-merge
+<strong>and</strong> the synonym dictionary. Nothing deferred within the
+epic; the admin tooling ships complete for launch.</li>
 </ul>
 
 </main>
