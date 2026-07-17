@@ -194,7 +194,7 @@ The MVP is intentionally narrow: prove the core thesis — that verified, pseudo
 | **Professional forum** | Organised discussion threads. Members post questions, contribute answers, and reply in threads. |
 | **Kudos system** | Members award kudos to contributions they find valuable. Answers within a thread are ranked by kudos (highest first). Each handle accumulates a total kudos score — their community reputation. |
 | **Tagging system** | Posts tagged by the author (body area, condition, clinical topic, modality). Tags are browsable and filterable. |
-| **Search** | Full-text keyword search across all posts, answers, and tags. (to be discussed/confirmed)|
+| **Search** | Full-text keyword search across all posts, answers, and tags. *(Design resolved 2026-07-17, EPIC-C §4: PostgreSQL full-text search — weighted `tsvector` + `pg_trgm` typo tolerance + a clinical synonym dictionary seeded from the tag vocabulary; no third-party search engine for MVP. Subject to stakeholder sign-off.)* |
 | **De-identified case discussion** | Structured template for case sharing, with mandatory de-identification checklist and attestation. Cannot be published without completion. |
 | **Content reporting** | Any member can report a post or comment with a category and optional comment. |
 | **Moderation tools** | Moderator review queue; actions: remove content, warn member, suspend account, permanently expel. All actions immutably logged. |
@@ -600,6 +600,8 @@ Andrew Renshaw's input is particularly important here.
 - **D) Hybrid** — curated top-level categories (body areas plus a small set of professional topics: Research, Career, Equipment) with free tagging within them
 
 **Recommendation**: Option D. A stable top-level structure gives new members an immediate mental map; free tagging provides flexibility and search depth as the archive grows.
+
+**Update (2026-07-17 — taxonomy substance resolved with Andrew Renshaw)**: Option D is adopted, but with a refinement to what the two halves are. **Categories are the *content type*** (Clinical Case, Research, Career, Equipment, General) — *not* body areas — and are admin-managed. **Body areas, muscles, structures, and pathologies are all *tags***, drawn from a single curated, admin-managed **unified vocabulary** (`community.tags`, faceted by region/muscle/structure/pathology) that is shared by both the forum and the research feed. Tags are curated, not free member tagging. OSIICS was considered and omitted (too complex for the audience); MeSH is retained only as an internal mapping. Full record: `docs/2026-07-17-taxonomy-standards-research.md` and EPIC-C §3. FD-4's design substance is settled; formal stakeholder sign-off of the hybrid model remains.
 
 ---
 

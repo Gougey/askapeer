@@ -107,15 +107,16 @@ policy update.</p>
 <pre><code>1. Draft creation
    POST /v1/case-discussions  { category_id, tag_ids[], &lt;9 template fields&gt; }
    -&gt; community.posts (type=case_discussion, status=draft), community.case_details row
-   -- &quot;draft&quot; is a status value this epic requires EPIC-C&#39;s posts.status enum to gain;
-      see Section 9 — EPIC-C&#39;s spec, already written, only has (published, removed).
+   -- &quot;draft&quot; is a status value EPIC-C&#39;s posts.status enum now carries (added for this
+      epic, alongside &quot;needs_correction&quot;); see Section 9 and EPIC-C spec §2.
 
 2. Editing
    PATCH /v1/case-discussions/:post_id     -- freely editable while status=draft
 
 3. Checklist completion
-   PUT /v1/case-discussions/:post_id/checklist   { 8 boolean items, Section 4 }
-   -&gt; all 8 must be true before step 4 is reachable
+   PUT /v1/case-discussions/:post_id/checklist   { the live checklist items, Section 4 }
+   -&gt; every live item must be true before step 4 is reachable
+      (MVP = six items, since images are deferred; eight when image support lands — Section 4)
 
 4. Attestation and publish
    POST /v1/case-discussions/:post_id/attest     { confirms the Section 5 attestation text }
@@ -129,8 +130,8 @@ combined submit, so the UI can show the checklist as a genuine gate
 (each item individually checkable, reviewable before commitment) with
 the attestation as a separate, deliberate final action — matching the
 PRD’s own framing of the attestation as something recorded “with
-timestamp” as a specific event, not incidental to checking eight
-boxes.</p>
+timestamp” as a specific event, not incidental to checking the boxes
+(six at MVP — Section 4).</p>
 <hr />
 <h2 id="the-de-identification-checklist">4. The de-identification
 checklist</h2>

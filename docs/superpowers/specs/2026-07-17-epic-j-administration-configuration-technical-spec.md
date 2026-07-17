@@ -160,7 +160,7 @@ Every mutating call writes a `config.admin_audit_log` row in the same transactio
 
 ## 7. Boundaries with other epics
 
-- **EPIC-C (categories, tags)** owns the *table definitions*; this epic owns the *management endpoints* over them, and needs one small addition to EPIC-C's schema: a `retired_at` column on `community.categories` and `community.tags` (Section 4). Flagged for reconciliation into EPIC-C's spec.
+- **EPIC-C (categories, tags)** owns the *table definitions*; this epic owns the *management endpoints* over them. The `retired_at` column this epic's retire operation needs is **now present on both `community.categories` and `community.tags`** in EPIC-C's spec (its §2) — reconciled 2026-07-17.
 - **EPIC-B (handle blocklist)** agreed the blocklist lives in a config table (its Section 3, 11); this epic is where that table (`config.handle_blocklist`) and its management actually live. EPIC-B's creation-time validation *reads* it; this epic *writes* it.
 - **EPIC-D (badge threshold)** and **EPIC-C (trending window/N)** define tunable knobs; their values live in `config.settings` and are edited here. The consuming epics read the setting; this epic owns editing it.
 - **EPIC-F (moderation)** is the sibling operator surface — enforcement, under the `moderator` claim — distinct from this epic's configuration surface under the `administrator` claim. The two share the physical `/admin` panel (architecture Section 7.2) but not their role claims or their concerns.

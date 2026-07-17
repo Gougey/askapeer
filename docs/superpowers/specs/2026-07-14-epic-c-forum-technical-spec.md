@@ -51,6 +51,7 @@ community.categories                  -- fixed, admin-managed, small set (CONTEN
                                        -- "Equipment", "General" (final set TBD, admin-managed)
   description  text
   sort_order   int
+  retired_at   timestamptz nullable   -- EPIC-J retire (hide from composer, keep on old posts)
 
 community.posts
   id            uuid PK
@@ -214,7 +215,7 @@ A lightweight, self-contained addition — a `community.polls (post_id, question
 
 ### Consequence of deferring images
 
-EPIC-E's de-identification checklist (its Section 4) includes two image-related items (6: no identifying photographs; 7: EXIF review). With image attachments deferred, **those two checklist items have nothing to attach to for MVP** — case discussions are text-only at launch. This should be reconciled in EPIC-E's spec (drop or grey-out items 6/7 for MVP, restore them when images land). Flagged in Section 12 and cross-referenced to EPIC-E.
+EPIC-E's de-identification checklist (its Section 4) includes two image-related items (6: no identifying photographs; 7: EXIF review). With image attachments deferred, **those two checklist items have nothing to attach to for MVP** — case discussions are text-only at launch. **This is now reconciled in EPIC-E's spec (its Section 4): the MVP checklist is six items (1–5, 8), with 6/7 restored when images land.**
 
 ---
 
@@ -277,7 +278,7 @@ No new schema is introduced — `community.follows` (EPIC-B) and `community.post
 ## 11. Test plan
 
 - **Category/tag integrity**: a post always has exactly one `category_id` (not nullable); zero-or-more tags.
-- **Soft delete**: deleting a post sets `status = removed`, doesn't cascade-delete comments; a `removed` post's comments remain readable in-thread but the post body is replaced with a removal notice (or however EPIC-F's spec eventually defines display — flagged for reconciliation there).
+- **Soft delete**: deleting a post sets `status = removed`, doesn't cascade-delete comments; a `removed` post's comments remain readable in-thread but the post body is replaced with a removal notice. (The exact removal-notice *wording/display* is a visual-design detail — EPIC-F owns the moderation *action* and audit, not UI, which it scopes out in its §1 — so this is settled at the data level here; presentation is finalised in visual design.)
 - **Search ranking**: a query matching a tag name surfaces the tagged post even when the exact phrase isn't in the body (Section 4).
 - **Edit window**: a comment edited within the proposed 15-minute window shows no `edited_at` marker; after, it does.
 - **Case-discussion delete restriction**: an attested case discussion (once EPIC-E exists to create one) cannot be author-deleted, only moderator-removed.
@@ -291,5 +292,5 @@ No new schema is introduced — `community.follows` (EPIC-B) and `community.post
 - ~~**Search's "(to be discussed/confirmed)" hedge**~~ — **resolved 2026-07-17**: search design firmed up (Postgres FTS + `pg_trgm` + weighted `tsvector` + clinical synonym dictionary; no external/third-party engine), Section 4. The former forward dependency is now cleared: the synonym dictionary seeds from `community.tags.synonyms` (§2), which the taxonomy resolution above defines.
 - ~~**Edit/delete policy**~~ — **resolved 2026-07-17**: the Section 6 policy (15-minute no-marker edit window, `edited_at` after, soft-delete for ordinary posts, moderator-only removal for attested case discussions) is agreed.
 - ~~**Could-have scope confirmation**~~ — **resolved 2026-07-17** (Section 7): best-answer marker and polls are **in MVP**; image attachments are **deferred** on privacy grounds. Follow-up below.
-- **EPIC-E image-checklist reconciliation** (new, from the image deferral, Section 7): EPIC-E's de-identification checklist items 6/7 assume image uploads exist. With images deferred, case discussions are text-only at MVP and those two items need dropping/greying-out in EPIC-E's spec until images land. Tracked against EPIC-E.
+- ~~**EPIC-E image-checklist reconciliation**~~ (from the image deferral, Section 7) — **resolved 2026-07-17**: EPIC-E's spec (its Section 4) now specifies a six-item MVP checklist (items 1–5, 8), with the two image items (6/7) restored when image support lands.
 - ~~**"Trending" definition**~~ — **resolved 2026-07-17** (Section 8): platform-wide, adaptive time window (start 24h, widen to 7d/30d/all-time until ≥ N results), ranked by kudos with recency tiebreak. The adaptive window avoids an empty fallback feed at low launch volume.

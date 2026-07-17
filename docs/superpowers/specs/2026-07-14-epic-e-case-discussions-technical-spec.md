@@ -77,15 +77,16 @@ identity.case_attestations
 1. Draft creation
    POST /v1/case-discussions  { category_id, tag_ids[], <9 template fields> }
    -> community.posts (type=case_discussion, status=draft), community.case_details row
-   -- "draft" is a status value this epic requires EPIC-C's posts.status enum to gain;
-      see Section 9 — EPIC-C's spec, already written, only has (published, removed).
+   -- "draft" is a status value EPIC-C's posts.status enum now carries (added for this
+      epic, alongside "needs_correction"); see Section 9 and EPIC-C spec §2.
 
 2. Editing
    PATCH /v1/case-discussions/:post_id     -- freely editable while status=draft
 
 3. Checklist completion
-   PUT /v1/case-discussions/:post_id/checklist   { 8 boolean items, Section 4 }
-   -> all 8 must be true before step 4 is reachable
+   PUT /v1/case-discussions/:post_id/checklist   { the live checklist items, Section 4 }
+   -> every live item must be true before step 4 is reachable
+      (MVP = six items, since images are deferred; eight when image support lands — Section 4)
 
 4. Attestation and publish
    POST /v1/case-discussions/:post_id/attest     { confirms the Section 5 attestation text }
@@ -96,7 +97,7 @@ identity.case_attestations
       as the attestation write
 ```
 
-The checklist and attestation are two distinct steps rather than one combined submit, so the UI can show the checklist as a genuine gate (each item individually checkable, reviewable before commitment) with the attestation as a separate, deliberate final action — matching the PRD's own framing of the attestation as something recorded "with timestamp" as a specific event, not incidental to checking eight boxes.
+The checklist and attestation are two distinct steps rather than one combined submit, so the UI can show the checklist as a genuine gate (each item individually checkable, reviewable before commitment) with the attestation as a separate, deliberate final action — matching the PRD's own framing of the attestation as something recorded "with timestamp" as a specific event, not incidental to checking the boxes (six at MVP — Section 4).
 
 ---
 

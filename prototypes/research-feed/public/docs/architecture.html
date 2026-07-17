@@ -474,13 +474,16 @@ community.kudos
 
 community.reports
   id, reporter_handle_id, target_type, target_id,
-  category enum(..., identifiable_patient_information, ...),
-  priority boolean generated from category,
+  category enum(identifiable_patient_information, anonymity_violation,
+                harassment, spam, other),   -- full set + priority tiering in EPIC-F §4
+  priority boolean generated from category,   -- true for the two priority categories above
   status enum(open, actioned, dismissed), created_at
 
 community.moderation_actions           -- immutable: INSERT-only grant
   id, report_id nullable, target_handle_id,
-  action_type enum(remove_content, warn, suspend, expel),
+  action_type enum(remove_content, warn, suspend, expel,
+                   request_correction, rename_handle),   -- last two added by EPIC-F
+                                                          -- (§3), confirmed 2026-07-17
   moderator_id, reason, created_at
 
 community.notifications              (handle_id, type, payload, read_at, created_at)
@@ -722,9 +725,11 @@ is a logical isolation via authentication and authorisation, not a
 physical one — cheap to split into a separate deployment later if that
 stronger isolation is ever needed.</p>
 <ul>
-<li><strong>Queue ordering</strong>: reports categorised
-<code>identifiable_patient_information</code> are surfaced first (PRD
-Section 10.4’s priority queue), then ordered by report age.</li>
+<li><strong>Queue ordering</strong>: reports in the <strong>priority
+tier</strong> — <code>identifiable_patient_information</code> (PRD
+Section 10.4) and <code>anonymity_violation</code> (added by EPIC-F §4,
+confirmed 2026-07-17) — are surfaced first, then ordered by report age
+within each tier.</li>
 <li><strong>Actions</strong> (<code>remove_content</code>,
 <code>warn</code>, <code>suspend</code>, <code>expel</code>) write to
 <code>community.moderation_actions</code> (immutable) and update

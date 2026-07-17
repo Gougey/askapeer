@@ -7,7 +7,7 @@
 
 Source of truth: `docs/askapeer-prd-v0.1.md`, Section 9.3–9.5 (zero-tolerance rule, moderation access to identity, inadvertent disclosure) and Section 10.4 (case-discussion priority reporting).
 
-This epic is where the platform's two highest-stakes policies — zero-tolerance anonymity enforcement and the "no PHI" rule — actually get executed, not just stated. It's also where a real inconsistency between two already-written specs surfaces (Section 7) and needs flagging for the consolidated review, per your instruction to hold cross-epic conflicts until every spec is drafted.
+This epic is where the platform's two highest-stakes policies — zero-tolerance anonymity enforcement and the "no PHI" rule — actually get executed, not just stated. It's also where a real inconsistency between two specs first surfaced (Section 7, the expulsion/re-registration gap) — since **resolved** (2026-07-14), and kept there marked resolved for the history.
 
 ---
 

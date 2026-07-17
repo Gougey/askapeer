@@ -90,6 +90,7 @@ model:</p>
                                        -- &quot;Equipment&quot;, &quot;General&quot; (final set TBD, admin-managed)
   description  text
   sort_order   int
+  retired_at   timestamptz nullable   -- EPIC-J retire (hide from composer, keep on old posts)
 
 community.posts
   id            uuid PK
@@ -466,9 +467,9 @@ images</h3>
 image-related items (6: no identifying photographs; 7: EXIF review).
 With image attachments deferred, <strong>those two checklist items have
 nothing to attach to for MVP</strong> — case discussions are text-only
-at launch. This should be reconciled in EPIC-E’s spec (drop or grey-out
-items 6/7 for MVP, restore them when images land). Flagged in Section 12
-and cross-referenced to EPIC-E.</p>
+at launch. <strong>This is now reconciled in EPIC-E’s spec (its Section
+4): the MVP checklist is six items (1–5, 8), with 6/7 restored when
+images land.</strong></p>
 <hr />
 <h2 id="personalised-feed-should-have">8. Personalised feed
 (Should-have)</h2>
@@ -578,8 +579,11 @@ one <code>category_id</code> (not nullable); zero-or-more tags.</li>
 <li><strong>Soft delete</strong>: deleting a post sets
 <code>status = removed</code>, doesn’t cascade-delete comments; a
 <code>removed</code> post’s comments remain readable in-thread but the
-post body is replaced with a removal notice (or however EPIC-F’s spec
-eventually defines display — flagged for reconciliation there).</li>
+post body is replaced with a removal notice. (The exact removal-notice
+<em>wording/display</em> is a visual-design detail — EPIC-F owns the
+moderation <em>action</em> and audit, not UI, which it scopes out in its
+§1 — so this is settled at the data level here; presentation is
+finalised in visual design.)</li>
 <li><strong>Search ranking</strong>: a query matching a tag name
 surfaces the tagged post even when the exact phrase isn’t in the body
 (Section 4).</li>
@@ -622,12 +626,11 @@ moderator-only removal for attested case discussions) is agreed.</li>
 <strong>resolved 2026-07-17</strong> (Section 7): best-answer marker and
 polls are <strong>in MVP</strong>; image attachments are
 <strong>deferred</strong> on privacy grounds. Follow-up below.</li>
-<li><strong>EPIC-E image-checklist reconciliation</strong> (new, from
-the image deferral, Section 7): EPIC-E’s de-identification checklist
-items 6/7 assume image uploads exist. With images deferred, case
-discussions are text-only at MVP and those two items need
-dropping/greying-out in EPIC-E’s spec until images land. Tracked against
-EPIC-E.</li>
+<li><del><strong>EPIC-E image-checklist reconciliation</strong></del>
+(from the image deferral, Section 7) — <strong>resolved
+2026-07-17</strong>: EPIC-E’s spec (its Section 4) now specifies a
+six-item MVP checklist (items 1–5, 8), with the two image items (6/7)
+restored when image support lands.</li>
 <li><del><strong>“Trending” definition</strong></del> — <strong>resolved
 2026-07-17</strong> (Section 8): platform-wide, adaptive time window
 (start 24h, widen to 7d/30d/all-time until ≥ N results), ranked by kudos

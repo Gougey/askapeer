@@ -223,13 +223,16 @@ community.kudos
 
 community.reports
   id, reporter_handle_id, target_type, target_id,
-  category enum(..., identifiable_patient_information, ...),
-  priority boolean generated from category,
+  category enum(identifiable_patient_information, anonymity_violation,
+                harassment, spam, other),   -- full set + priority tiering in EPIC-F §4
+  priority boolean generated from category,   -- true for the two priority categories above
   status enum(open, actioned, dismissed), created_at
 
 community.moderation_actions           -- immutable: INSERT-only grant
   id, report_id nullable, target_handle_id,
-  action_type enum(remove_content, warn, suspend, expel),
+  action_type enum(remove_content, warn, suspend, expel,
+                   request_correction, rename_handle),   -- last two added by EPIC-F
+                                                          -- (§3), confirmed 2026-07-17
   moderator_id, reason, created_at
 
 community.notifications              (handle_id, type, payload, read_at, created_at)
@@ -368,7 +371,7 @@ Billing data lives in its own `billing` schema (not `identity`) — `subscriptio
 
 Rather than a separate admin application (which would double the frontend work for a small team), the moderation/admin panel is a set of `/admin/*` routes in the same Next.js web app, gated by a moderator/administrator role claim on the JWT (the two-claim split of EPIC-J), calling the same API's `/v1/admin/*` endpoints. This is a logical isolation via authentication and authorisation, not a physical one — cheap to split into a separate deployment later if that stronger isolation is ever needed.
 
-- **Queue ordering**: reports categorised `identifiable_patient_information` are surfaced first (PRD Section 10.4's priority queue), then ordered by report age.
+- **Queue ordering**: reports in the **priority tier** — `identifiable_patient_information` (PRD Section 10.4) and `anonymity_violation` (added by EPIC-F §4, confirmed 2026-07-17) — are surfaced first, then ordered by report age within each tier.
 - **Actions** (`remove_content`, `warn`, `suspend`, `expel`) write to `community.moderation_actions` (immutable) and update `community.handles.status`. Suspension or expulsion takes effect within one access-token lifetime (about 15 minutes), since refresh tokens are revocable server-side — a suspended handle's next token refresh fails and routes them to the holding page.
 - **Viewing a member's real identity** from the admin panel is a distinct, explicit action — not implicit in viewing a report — and is exactly what triggers the `reason_code`-gated `IdentityService` call and the `identity_access_log` write.
 

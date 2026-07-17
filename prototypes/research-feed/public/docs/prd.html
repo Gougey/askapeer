@@ -447,8 +447,12 @@ modality). Tags are browsable and filterable.</td>
 </tr>
 <tr>
 <td><strong>Search</strong></td>
-<td>Full-text keyword search across all posts, answers, and tags. (to be
-discussed/confirmed)</td>
+<td>Full-text keyword search across all posts, answers, and tags.
+<em>(Design resolved 2026-07-17, EPIC-C §4: PostgreSQL full-text search
+— weighted <code>tsvector</code> + <code>pg_trgm</code> typo tolerance +
+a clinical synonym dictionary seeded from the tag vocabulary; no
+third-party search engine for MVP. Subject to stakeholder
+sign-off.)</em></td>
 </tr>
 <tr>
 <td><strong>De-identified case discussion</strong></td>
@@ -1325,6 +1329,21 @@ Equipment) with free tagging within them</li>
 <p><strong>Recommendation</strong>: Option D. A stable top-level
 structure gives new members an immediate mental map; free tagging
 provides flexibility and search depth as the archive grows.</p>
+<p><strong>Update (2026-07-17 — taxonomy substance resolved with Andrew
+Renshaw)</strong>: Option D is adopted, but with a refinement to what
+the two halves are. <strong>Categories are the <em>content
+type</em></strong> (Clinical Case, Research, Career, Equipment, General)
+— <em>not</em> body areas — and are admin-managed. <strong>Body areas,
+muscles, structures, and pathologies are all <em>tags</em></strong>,
+drawn from a single curated, admin-managed <strong>unified
+vocabulary</strong> (<code>community.tags</code>, faceted by
+region/muscle/structure/pathology) that is shared by both the forum and
+the research feed. Tags are curated, not free member tagging. OSIICS was
+considered and omitted (too complex for the audience); MeSH is retained
+only as an internal mapping. Full record:
+<code>docs/2026-07-17-taxonomy-standards-research.md</code> and EPIC-C
+§3. FD-4’s design substance is settled; formal stakeholder sign-off of
+the hybrid model remains.</p>
 <hr />
 <h3 id="fd-5-11-private-messaging">FD-5 — 1:1 private messaging</h3>
 <p><strong>Decision</strong>: include in MVP or defer to Phase 2?</p>

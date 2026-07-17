@@ -323,10 +323,10 @@ in the same transaction as the change.</p>
 <ul>
 <li><strong>EPIC-C (categories, tags)</strong> owns the <em>table
 definitions</em>; this epic owns the <em>management endpoints</em> over
-them, and needs one small addition to EPIC-C’s schema: a
-<code>retired_at</code> column on <code>community.categories</code> and
-<code>community.tags</code> (Section 4). Flagged for reconciliation into
-EPIC-C’s spec.</li>
+them. The <code>retired_at</code> column this epic’s retire operation
+needs is <strong>now present on both <code>community.categories</code>
+and <code>community.tags</code></strong> in EPIC-C’s spec (its §2) —
+reconciled 2026-07-17.</li>
 <li><strong>EPIC-B (handle blocklist)</strong> agreed the blocklist
 lives in a config table (its Section 3, 11); this epic is where that
 table (<code>config.handle_blocklist</code>) and its management actually
