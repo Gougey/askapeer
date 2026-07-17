@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Taxonomy Standards Research — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">Taxonomy Standards Research</span>
+</div>
+<main>
+<h1 id="standard-medical-taxonomies-research-note">Standard Medical
+Taxonomies — Research Note</h1>
+<p><strong>Status</strong>: Reference — input to FD-4 / taxonomy
+unification <strong>Date</strong>: 17 July 2026 <strong>Author</strong>:
+Adrian Hall (Technical Lead), researched with Claude Code</p>
+<p>Background research on whether Askapeer’s forum tag vocabulary should
+be built from scratch or anchored to an existing standard medical
+taxonomy. Supports the still-open FD-4 decision (forum organisation) and
+the taxonomy-unification item in
+<code>docs/2026-07-14-technical-specs-open-questions.md</code> (§1.2).
+Not a decision — input for the conversation with Andrew Renshaw.</p>
+<p>Related design context: the agreed forum structure is <strong>one
+category + many tags per post</strong> (EPIC-C spec, Sections 2–3;
+category = content type, tags = body areas / conditions / treatments).
+This note is about where the <em>tag</em> vocabulary comes from.</p>
+<hr />
+<h2 id="the-landscape">The landscape</h2>
+<p>Several standard vocabularies exist, but they serve different
+purposes and most are far heavier than a discussion forum needs:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Taxonomy</th>
+<th>Purpose</th>
+<th>Fit for Askapeer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SNOMED CT</strong></td>
+<td>Comprehensive clinical terminology for coding patient records;
+NHS-mandated in England</td>
+<td>Overkill — hundreds of thousands of concepts, designed to code
+patient data (which we must not store). Too granular for tagging
+discussions</td>
+</tr>
+<tr>
+<td><strong>ICD-11</strong> (WHO)</td>
+<td>Diagnosis/disease classification</td>
+<td>A diagnosis-coding axis, not a browsing or free-tagging one</td>
+</tr>
+<tr>
+<td><strong>ICF</strong> (WHO)</td>
+<td>Functioning, disability &amp; health — function-focused</td>
+<td>Physiotherapy-native and a good conceptual fit, but a rehab
+framework, probably too structured for casual tagging</td>
+</tr>
+<tr>
+<td><strong>MeSH</strong> (US NLM)</td>
+<td>Indexing the medical literature (PubMed/MEDLINE)</td>
+<td>Strong candidate — see below</td>
+</tr>
+<tr>
+<td><strong>OSIICS</strong> (Orchard)</td>
+<td>Sports-injury surveillance classification</td>
+<td>Sports-medicine-native — the domain source Andrew will
+recognise</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mesh-availability-verified-17-july-2026">MeSH — availability
+(verified 17 July 2026)</h2>
+<p>The reason MeSH is interesting here: <strong>the research feed
+(EPIC-I) already pulls from Europe PMC / PubMed, and those databases
+index everything with MeSH terms.</strong> Anchoring or mapping the
+forum tags to MeSH means forum tags and research-feed classification
+share one vocabulary — directly addressing the “three unreconciled
+vocabularies” gap (§1.2).</p>
+<ul>
+<li><strong>Free</strong>: publicly available from the US National
+Library of Medicine (a US government body). No fee.</li>
+<li><strong>License</strong>: NLM Terms and Conditions (replaced the old
+MoU in Nov 2018) — effectively free to use/redistribute with
+acknowledgement; no restriction on the kind of reuse we’d need.</li>
+<li><strong>Formats</strong>: XML, MARC 21, and <strong>RDF</strong>,
+all regularly updated. <strong>The plain ASCII format was discontinued
+in January 2026</strong> — do not build against it.</li>
+<li><strong>Programmatic access</strong>: NCBI E-utilities; a MeSH RDF
+API (SPARQL endpoint + RESTful interface at
+<code>id.nlm.nih.gov/mesh/</code>, with a Swagger UI); and direct file
+downloads.</li>
+<li><strong>Structure</strong>: hierarchical tree — Anatomy [A],
+Diseases [C], Techniques [E], etc. — which maps naturally onto both
+body-area and condition/treatment tags.</li>
+</ul>
+<p><strong>Assessment</strong>: the “map our tags to MeSH” plan is
+low-effort and well-supported (live API <em>and</em> downloadable files,
+free), and it’s the one genuinely load-bearing reason to anchor to a
+standard — literature interop with the feed.</p>
+<h2 id="osiics-availability-verified-17-july-2026">OSIICS — availability
+(verified 17 July 2026)</h2>
+<ul>
+<li><strong>Free</strong>: for researchers and sports-medicine
+professionals.</li>
+<li><strong>License</strong>: <strong>Version 16 is CC BY 4.0</strong>
+(permissive — reuse freely with attribution). Version 15 was the more
+restrictive CC BY-NC-ND, so <strong>use v16</strong> (released 1
+November 2025).</li>
+<li><strong>Format</strong>: an <strong>online spreadsheet</strong> of
+the full code set (English + Spanish/Italian translations) — genuinely
+machine-readable, not just a PDF.</li>
+<li><strong>Size/structure</strong>: ~1,500+ codes, hierarchical — body
+region (letter, e.g. C = chest) → tissue type (letter) → pathology
+(number), e.g. <code>CxBxx</code>. v16 notably expanded female-athlete
+diagnoses.</li>
+<li><strong>Attribution</strong>: acknowledgement requested for
+commercial/scientific use.</li>
+</ul>
+<p><strong>Assessment</strong>: usable (a CC BY spreadsheet, importable
+directly), but it’s a <em>diagnosis-coding</em> system (fine-grained
+injury pathology), not a browsing taxonomy. ~1,500 codes is far too many
+to put in front of a member choosing a tag. Better as a
+<strong>reference/mapping source for the condition/injury tags, and a
+credibility signal for Andrew</strong>, than as the literal
+member-facing list.</p>
+<h2 id="recommendation">Recommendation</h2>
+<p>Neither availability nor licensing blocks the approach. Refined
+recommendation for the FD-4 / Andrew conversation:</p>
+<ul>
+<li><strong>Member-facing tags</strong>: a short, curated,
+human-friendly list — small enough to browse — starting from Andrew’s
+existing body-part list.</li>
+<li><strong>Map that list to MeSH</strong> underneath, for the
+research-feed interop (the real payoff of anchoring to a standard).</li>
+<li><strong>Use OSIICS v16 as a reference</strong> when building the
+condition/injury portion of the curated list — sports-medicine-native
+and the name Andrew knows — but don’t expose its ~1,500 codes
+directly.</li>
+<li><strong>Do not</strong> adopt SNOMED/ICD wholesale — too granular;
+would make tagging a chore and browsing overwhelming.</li>
+</ul>
+<h2 id="sources">Sources</h2>
+<ul>
+<li>MeSH download (NLM):
+https://www.nlm.nih.gov/databases/download/mesh.html</li>
+<li>MeSH RDF: https://id.nlm.nih.gov/mesh/</li>
+<li>OSIICS v16 (PMC):
+https://pmc.ncbi.nlm.nih.gov/articles/PMC13008443/</li>
+<li>About OSIICS (John Orchard):
+https://www.johnorchard.com/about-osiics.html</li>
+</ul>
+
+</main>
+</body>
+</html>

@@ -33,7 +33,9 @@ The forum's category/tag taxonomy (EPIC-C, FD-4's hybrid model), Andrew Renshaw'
 
 **Needs**: FD-4 formally closed (still an open stakeholder decision, not just an implementation detail) and a single controlled vocabulary chosen before EPIC-C or EPIC-I can be built as specced.
 
-*Source: EPIC-C spec §3 and §12, EPIC-I spec §5.*
+**Input available**: `docs/2026-07-17-taxonomy-standards-research.md` researches standard medical taxonomies as candidate anchors — recommends a curated member-facing list (from Andrew's body-part list) mapped to **MeSH** (the vocabulary PubMed/Europe PMC already index with, so it unifies the forum tags and the research feed for free), with **OSIICS v16** (CC BY, sports-medicine-native) as a reference for the injury/condition tags. Both are free and machine-readable. Pending the conversation with Andrew.
+
+*Source: EPIC-C spec §3 and §12, EPIC-I spec §5; taxonomy-standards research note.*
 
 ### 1.3 Cross-spec schema amendments needed for EPIC-E
 
