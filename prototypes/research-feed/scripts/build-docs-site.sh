@@ -27,6 +27,7 @@ DOCS=(
   "epic-h|$SPECS/2026-07-14-epic-h-subscription-payments-technical-spec.md|EPIC-H — Subscription/Payments|Subscription lifecycle, billing, access gating.|Epics"
   "epic-i|$SPECS/2026-07-14-epic-i-research-feed-technical-spec.md|EPIC-I — Research Feed|Research/news feed ingestion, scoring, member interests.|Epics"
   "epic-j|$SPECS/2026-07-17-epic-j-administration-configuration-technical-spec.md|EPIC-J — Administration & Configuration|Categories, taxonomy, handle blocklist, tunable settings, admin audit — the Administrator role.|Epics"
+  "screen-functional-spec|$REPO_ROOT/docs/2026-07-18-screen-functional-spec.md|Screen & Functional Spec|Mobile-first mapping of the tech specs onto app screens: navigation, per-screen content, data→API, and surfaced spec-gaps.|Client"
   "open-questions|$REPO_ROOT/docs/2026-07-14-technical-specs-open-questions.md|Consolidated Open Questions|Every open question/conflict across all specs, gathered for team review.|Review"
   "taxonomy-standards|$REPO_ROOT/docs/2026-07-17-taxonomy-standards-research.md|Taxonomy Standards Research|Candidate standard medical taxonomies (MeSH, OSIICS) for the forum tag vocabulary — input to FD-4.|Review"
 )
