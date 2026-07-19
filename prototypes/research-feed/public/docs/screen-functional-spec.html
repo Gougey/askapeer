@@ -202,13 +202,12 @@ security event). At that point they sign in again — via a <strong>fresh
 magic link</strong>, <em>or</em>, if enabled, an <strong>instant
 passkey</strong> (this is the passkey’s real value: it replaces the
 <em>repeat magic link</em>, not the persistent session).</li>
-<li><strong>App-lock — optional, a separate privacy feature (DECISION
-PENDING).</strong> A biometric gate on <em>every</em> app open, even
-while the session is valid, for shared-device privacy. This is
-independent of session validity. <strong>Recommendation: ship it as an
-opt-in setting, off by default</strong> — extra privacy for those who
-want it without forcing friction on everyone. Awaiting Adrian’s
-call.</li>
+<li><strong>App-lock — optional, a separate privacy feature (RESOLVED
+2026-07-19: offer it, opt-in &amp; off by default).</strong> A biometric
+gate on <em>every</em> app open, even while the session is valid, for
+shared-device privacy — independent of session validity. Available in
+Settings → Sign-in &amp; security (F8), off by default so it adds no
+friction for everyone else; meaningful once passkeys exist.</li>
 </ul>
 <p><strong>Biometric mechanism = a passkey</strong> (WebAuthn platform
 authenticator: Face ID / Touch ID / Android biometric / Windows Hello).
@@ -220,12 +219,14 @@ per-device, and carry unchanged from the PWA to future native apps.
 Managed in <strong>Settings → Sign-in &amp; security</strong> (F8):
 enable/disable, list registered devices, revoke.</p>
 <ul>
-<li><strong>Build-timing is an open decision (MVP
-vs. fast-follow)</strong> — magic-link + persistent session are
-sufficient to launch; biometrics are a strong mobile-UX addition.
-Mechanism logged as spec-gap <strong>G-9</strong> (EPIC-A / architecture
-§5.2 additions: WebAuthn register/assert endpoints + an
-<code>identity.webauthn_credentials</code> table).</li>
+<li><strong>Build-timing — resolved 2026-07-19 (Adrian):
+fast-follow</strong> (early Phase 1.x), not the initial release.
+Magic-link + persistent session ship at launch; passkeys land shortly
+after (re-auth is infrequent, so the wait is painless). Mechanism per
+<strong>G-9</strong> (EPIC-A / architecture §5.2: WebAuthn
+register/assert endpoints + <code>identity.webauthn_credentials</code>).
+The A9 permission screen + F8 management screen exist in the design but
+activate when the passkey feature ships.</li>
 </ul>
 <h3
 id="internationalisation-strings-externalised-from-day-one-added-2026-07-19">1.7
@@ -1922,11 +1923,19 @@ pending legal</em>); <strong>G-14, G-16, G-22</strong> → EPIC-I §10
 <code>billing/portal-session</code>); <strong>G-24</strong> → EPIC-F §5
 (reveal-identity field set enumerated).</li>
 </ul>
-<p><strong>Decision-gaps flagged (not fabricated):</strong> G-13 (record
-anonymity acknowledgement — recommend yes), G-15 (paywall flip-timing),
-G-20 (erasure flow — pending legal), G-22 (saves scope — Should-have).
-Each is a recommendation inside its target spec awaiting Adrian’s /
-legal’s call.</p>
+<p><strong>Decision-gaps — resolved 2026-07-19 (Adrian):</strong>
+<strong>G-9</strong> biometric = <strong>fast-follow</strong> (Phase
+1.x); <strong>app-lock</strong> = <strong>offer, opt-in &amp;
+off</strong>; <strong>G-13</strong> = <strong>record</strong> the
+acknowledgement (<code>anonymity_acknowledged_at</code>);
+<strong>G-22</strong> saves = <strong>deferred post-launch</strong>
+(shape specced); <strong>G-15</strong> = seed members get a
+<strong>grace window</strong> at paywall flip (flip-<em>timing</em>
+remains a business/launch call); <strong>G-20</strong> = <strong>working
+design adopted</strong> (arch erasure default), exact retention
+<strong>legal-gated</strong>. No decision-gaps remain open except the
+two external dependencies (G-15 flip date; G-20 legal retention
+specifics).</p>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -2160,15 +2169,15 @@ area G (§6.G) are specced. The screen inventory is fully mapped.</li>
 <li><del><strong>Reconcile the spec-gaps</strong></del> —
 <strong>done</strong> (§7): all G-1…G-24 folded into the epic specs
 (2026-07-19).</li>
-<li><strong>Resolve the open decisions</strong> — G-9 biometric
-build-timing; the app-lock offer; G-13 (record anonymity
-acknowledgement?); G-15 (paywall flip-timing); G-20 (erasure flow —
-legal); G-22 (saves scope). (Each has a recommendation in its target
-spec.)</li>
+<li><del><strong>Resolve the open decisions</strong></del> —
+<strong>done 2026-07-19</strong> (§7): biometric fast-follow, app-lock
+opt-in/off, record acknowledgement, defer saves, seed grace-window,
+erasure working-design. Only two external dependencies remain (G-15 flip
+<em>date</em> → launch/business; G-20 retention specifics → legal).</li>
 <li><strong>Derive the tracer-bullet slice backlog</strong> from the
 completed inventory + flows (slice 1 = A1→A5, the onboarding spine) —
-the natural next step now that specs + screens + gaps are all
-reconciled.</li>
+the natural next step now that specs + screens + gaps + decisions are
+all settled.</li>
 </ol>
 
 </main>

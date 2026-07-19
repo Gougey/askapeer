@@ -57,6 +57,9 @@ identity.members
   verification_status   enum(pending, needs_more_info, approved_verified,
                               rejected, suspended, expelled)
   status_updated_at     timestamptz
+  anonymity_acknowledged_at timestamptz nullable   -- set at onboarding (A7) when the
+                                                     -- member acknowledges the zero-tolerance
+                                                     -- rule (added 2026-07-19, gap G-13)
   created_at            timestamptz
 
   unique(professional_body, registration_number, registration_country)
@@ -344,16 +347,13 @@ This closes the one place the state machine (Section 3) had a dead end for the a
 
 The registration form's `professional_body` options (`hcpc`/`gmc`/`basrat`/`sst`, Section 2) are **FD-1-dependent**: if the MVP launches physio-first (the PRD's own recommendation), **HCPC is the primary/only register offered at launch**, with GMC/BASRAT/SST added as scope widens. A scope link for the composer, not a new mechanism — noted so the picker isn't hardcoded to all four before FD-1 is settled.
 
-### 12.3 Onboarding anonymity acknowledgement (gap G-13) — DECISION, recommendation below
+### 12.3 Onboarding anonymity acknowledgement (gap G-13) — RESOLVED 2026-07-19
 
-The zero-tolerance anonymity rule is *shown* at registration and onboarding (screen A7), but nothing currently **records** the member's acknowledgement. Given expulsion is the rule's consequence, a recorded acknowledgement is worth having for legal defensibility — mirroring how the case-discussion attestation is recorded.
+**Decision (Adrian): record it.** The zero-tolerance anonymity rule is shown at registration and onboarding (screen A7); the member's acknowledgement is now **recorded** — `identity.members.anonymity_acknowledged_at` (Section 2), written when the member confirms at A7. Given expulsion is the rule's consequence, this makes "they agreed to this" answerable — legal defensibility, mirroring how the case-discussion attestation is recorded. The **exact acknowledgement wording** is bundled with the DPIA / legal review (open-questions §4); the *mechanism* is settled. (If policy versions ever need tracking, this generalises to an `identity.policy_acknowledgements` row later — not needed for MVP.)
 
-- **Recommendation**: record it — an `identity.members.anonymity_acknowledged_at timestamptz` (or a small `identity.policy_acknowledgements` row if multiple policy versions need tracking), written when the member confirms at A7. Cheap, and it makes "they agreed to this" answerable.
-- **Status**: pending Adrian/legal confirmation (bundle with the DPIA / legal review). Not build-blocking.
+### 12.4 Account deletion / right-to-erasure member flow (gap G-20) — WORKING DESIGN ADOPTED, legal-gated
 
-### 12.4 Account deletion / right-to-erasure member flow (gap G-20) — DECISION, recommendation below
-
-The architecture sets the erasure *default* (hard-delete the `identity` row, retain de-linked/anonymised community content) but flags it for legal; there is **no member-facing deletion flow or endpoint** (screen F7 needs one). Recommended shape:
+**Decision (Adrian): adopt the architecture's erasure default as the working design; exact retention confirmed by legal before build.** A member-initiated deletion request is built (GDPR right-to-erasure is not optional for a UK service handling this PII), implementing the architecture's stated default:
 
 ```
 POST /v1/account/deletion-request
@@ -361,11 +361,11 @@ POST /v1/account/deletion-request
   -> initiates erasure: confirmation step, then (per the arch default) hard-deletes
      the identity.members row and severs member_id from community content (the
      handle + posts remain as de-linked archive, per architecture §4 / right-to-
-     erasure default). Consider a short cancellable grace window.
+     erasure default), with a short cancellable grace window.
 ```
 
-- **Recommendation**: build a member-initiated deletion request (GDPR right-to-erasure is not optional for a UK service handling this PII), implementing the architecture's stated default, with the exact retention/anonymisation behaviour **confirmed by legal counsel** first (already on the standing legal-review list, open-questions §4).
-- **Status**: needs the legal confirmation before build; the endpoint shape is otherwise clear.
+- **Settled**: the endpoint + the hard-delete-identity / retain-de-linked-content approach are the working design.
+- **Legal-gated**: the *exact* retention/anonymisation behaviour is confirmed by legal counsel before build (already on the standing legal-review list, open-questions §4) — the one part not decidable internally.
 
 ### 12.5 Gap cross-reference
 
@@ -373,6 +373,6 @@ POST /v1/account/deletion-request
 |---|---|
 | G-1 | `POST /v1/auth/verification/resubmit` (§12.1) |
 | G-2 | Onfido resume via the same endpoint (§12.1) |
-| G-13 | Record acknowledgement — recommended, pending legal (§12.3) |
+| G-13 | **Resolved** — record acknowledgement (`anonymity_acknowledged_at`); wording with DPIA (§12.3) |
 | G-18 | FD-1 scope link for the body picker (§12.2) |
-| G-20 | Member deletion-request endpoint — recommended, pending legal (§12.4) |
+| G-20 | **Working design adopted** — deletion-request endpoint; exact retention legal-gated (§12.4) |

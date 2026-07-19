@@ -220,8 +220,8 @@ POST /v1/billing/portal-session
 Monetisation (PRD §11) specifies a **free seed period before the paywall**. During it, screen A8 is skipped and the **billing gate (§4) is inactive** — members reach the community without subscribing. The switch that activates the paywall was undefined. Recommended mechanism:
 
 - A **platform setting** (EPIC-J config) — `billing.paywall_active` (bool) or `billing.seed_period_until` (date). While in the seed period: `POST /v1/billing/subscribe` is optional, A8 is skipped, and the billing gate permits access regardless of `billing.subscriptions.status`. When it flips: A8 becomes part of onboarding and the gate enforces.
-- **Open question**: *when* to flip it (a launch-timing / business call), and whether seed-period members get a grace/trial window to subscribe once the paywall activates (recommend yes — don't lock out early adopters abruptly).
-- **Status**: mechanism settled (a config flag); the timing + transition-treatment are the decision.
+- **Seed-member transition — resolved 2026-07-19 (Adrian): yes, a grace/trial window.** When the paywall activates, existing seed-period members get a window (a trial) to subscribe rather than being locked out immediately — early adopters aren't cut off abruptly.
+- **Still a business/launch call**: *when* to flip the paywall (dependent on launch timing / seeding progress) — the mechanism (config flag) and the transition treatment (grace window) are settled; the date is not a spec decision.
 
 ### 11.3 Gap cross-reference
 

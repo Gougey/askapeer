@@ -618,12 +618,15 @@ phishing-resistant, first-party, per-device, and carry unchanged to
 native. Adds
 <code>identity.webauthn_credentials (member_id, credential_id, public_key, sign_count, transports, device_label, created_at, last_used_at)</code>
 and WebAuthn <strong>registration</strong> + <strong>assertion</strong>
-endpoints under <code>IdentityService</code>. An optional biometric
-<strong>app-lock</strong> (gate every app open even mid-session) is a
-separate client-side privacy feature. <strong>Build-timing (MVP
-vs. fast-follow) and the app-lock offer are open decisions</strong> —
-the magic-link + persistent session is sufficient to launch without
-them.</p>
+endpoints under <code>IdentityService</code>. <strong>Build-timing —
+resolved 2026-07-19 (Adrian): fast-follow</strong> (early Phase 1.x),
+not the initial release — the magic-link + persistent session is
+sufficient to launch, and re-auth is infrequent, so passkeys land
+shortly after rather than gating launch. An optional biometric
+<strong>app-lock</strong> (gate every app open even mid-session) is
+<strong>offered as an opt-in setting, off by default</strong> (resolved
+2026-07-19) — shared-device privacy without forcing friction; managed on
+the sign-in &amp; security screen, meaningful once passkeys exist.</p>
 <p>Members who are not yet <code>approved_verified</code> receive a
 token scoped only to a holding-status endpoint — matching the PRD’s
 requirement that “all other statuses see a holding page only.”</p>

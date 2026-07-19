@@ -286,11 +286,12 @@ POST   /v1/saves { target_type, target_id }
 DELETE /v1/saves/:target_type/:target_id
 GET    /v1/me/saves?target_type=      -- powers screen E3</code></pre>
 <ul>
-<li><strong>Recommendation</strong>: build the unified
-<code>community.saves</code> table (posts + articles in one place;
-small, handle-scoped like everything else in <code>community</code>).
-It’s a <strong>Should-have</strong> (PRD §6.1), so a candidate to defer
-if MVP scope needs trimming — but the shape is settled either way.
+<li><strong>Decision (Adrian, 2026-07-19): deferred to
+post-launch.</strong> Saves are a retention nicety, not core to proving
+the thesis; the MVP ships <strong>without</strong> save buttons (screens
+B2/E3 lose that affordance at launch). The unified
+<code>community.saves</code> shape above is <strong>specced and
+settled</strong>, so adding it later is cheap and non-disruptive.
 <em>(Table is <code>community</code>-side even though articles are
 EPIC-I’s, because saves are member-relationship data alongside
 <code>community.follows</code>.)</em></li>

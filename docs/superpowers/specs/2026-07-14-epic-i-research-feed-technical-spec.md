@@ -170,7 +170,7 @@ DELETE /v1/saves/:target_type/:target_id
 GET    /v1/me/saves?target_type=      -- powers screen E3
 ```
 
-- **Recommendation**: build the unified `community.saves` table (posts + articles in one place; small, handle-scoped like everything else in `community`). It's a **Should-have** (PRD §6.1), so a candidate to defer if MVP scope needs trimming — but the shape is settled either way. *(Table is `community`-side even though articles are EPIC-I's, because saves are member-relationship data alongside `community.follows`.)*
+- **Decision (Adrian, 2026-07-19): deferred to post-launch.** Saves are a retention nicety, not core to proving the thesis; the MVP ships **without** save buttons (screens B2/E3 lose that affordance at launch). The unified `community.saves` shape above is **specced and settled**, so adding it later is cheap and non-disruptive. *(Table is `community`-side even though articles are EPIC-I's, because saves are member-relationship data alongside `community.follows`.)*
 
 ### 10.3 Gap cross-reference
 

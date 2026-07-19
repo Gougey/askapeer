@@ -91,6 +91,9 @@ spec requires:</p>
   verification_status   enum(pending, needs_more_info, approved_verified,
                               rejected, suspended, expelled)
   status_updated_at     timestamptz
+  anonymity_acknowledged_at timestamptz nullable   -- set at onboarding (A7) when the
+                                                     -- member acknowledges the zero-tolerance
+                                                     -- rule (added 2026-07-19, gap G-13)
   created_at            timestamptz
 
   unique(professional_body, registration_number, registration_country)
@@ -756,48 +759,43 @@ added as scope widens. A scope link for the composer, not a new
 mechanism — noted so the picker isn’t hardcoded to all four before FD-1
 is settled.</p>
 <h3
-id="onboarding-anonymity-acknowledgement-gap-g-13-decision-recommendation-below">12.3
-Onboarding anonymity acknowledgement (gap G-13) — DECISION,
-recommendation below</h3>
-<p>The zero-tolerance anonymity rule is <em>shown</em> at registration
-and onboarding (screen A7), but nothing currently
-<strong>records</strong> the member’s acknowledgement. Given expulsion
-is the rule’s consequence, a recorded acknowledgement is worth having
-for legal defensibility — mirroring how the case-discussion attestation
-is recorded.</p>
-<ul>
-<li><strong>Recommendation</strong>: record it — an
-<code>identity.members.anonymity_acknowledged_at timestamptz</code> (or
-a small <code>identity.policy_acknowledgements</code> row if multiple
-policy versions need tracking), written when the member confirms at A7.
-Cheap, and it makes “they agreed to this” answerable.</li>
-<li><strong>Status</strong>: pending Adrian/legal confirmation (bundle
-with the DPIA / legal review). Not build-blocking.</li>
-</ul>
+id="onboarding-anonymity-acknowledgement-gap-g-13-resolved-2026-07-19">12.3
+Onboarding anonymity acknowledgement (gap G-13) — RESOLVED
+2026-07-19</h3>
+<p><strong>Decision (Adrian): record it.</strong> The zero-tolerance
+anonymity rule is shown at registration and onboarding (screen A7); the
+member’s acknowledgement is now <strong>recorded</strong> —
+<code>identity.members.anonymity_acknowledged_at</code> (Section 2),
+written when the member confirms at A7. Given expulsion is the rule’s
+consequence, this makes “they agreed to this” answerable — legal
+defensibility, mirroring how the case-discussion attestation is
+recorded. The <strong>exact acknowledgement wording</strong> is bundled
+with the DPIA / legal review (open-questions §4); the <em>mechanism</em>
+is settled. (If policy versions ever need tracking, this generalises to
+an <code>identity.policy_acknowledgements</code> row later — not needed
+for MVP.)</p>
 <h3
-id="account-deletion-right-to-erasure-member-flow-gap-g-20-decision-recommendation-below">12.4
-Account deletion / right-to-erasure member flow (gap G-20) — DECISION,
-recommendation below</h3>
-<p>The architecture sets the erasure <em>default</em> (hard-delete the
-<code>identity</code> row, retain de-linked/anonymised community
-content) but flags it for legal; there is <strong>no member-facing
-deletion flow or endpoint</strong> (screen F7 needs one). Recommended
-shape:</p>
+id="account-deletion-right-to-erasure-member-flow-gap-g-20-working-design-adopted-legal-gated">12.4
+Account deletion / right-to-erasure member flow (gap G-20) — WORKING
+DESIGN ADOPTED, legal-gated</h3>
+<p><strong>Decision (Adrian): adopt the architecture’s erasure default
+as the working design; exact retention confirmed by legal before
+build.</strong> A member-initiated deletion request is built (GDPR
+right-to-erasure is not optional for a UK service handling this PII),
+implementing the architecture’s stated default:</p>
 <pre><code>POST /v1/account/deletion-request
   auth: handle-scoped token
   -&gt; initiates erasure: confirmation step, then (per the arch default) hard-deletes
      the identity.members row and severs member_id from community content (the
      handle + posts remain as de-linked archive, per architecture §4 / right-to-
-     erasure default). Consider a short cancellable grace window.</code></pre>
+     erasure default), with a short cancellable grace window.</code></pre>
 <ul>
-<li><strong>Recommendation</strong>: build a member-initiated deletion
-request (GDPR right-to-erasure is not optional for a UK service handling
-this PII), implementing the architecture’s stated default, with the
-exact retention/anonymisation behaviour <strong>confirmed by legal
-counsel</strong> first (already on the standing legal-review list,
-open-questions §4).</li>
-<li><strong>Status</strong>: needs the legal confirmation before build;
-the endpoint shape is otherwise clear.</li>
+<li><strong>Settled</strong>: the endpoint + the hard-delete-identity /
+retain-de-linked-content approach are the working design.</li>
+<li><strong>Legal-gated</strong>: the <em>exact</em>
+retention/anonymisation behaviour is confirmed by legal counsel before
+build (already on the standing legal-review list, open-questions §4) —
+the one part not decidable internally.</li>
 </ul>
 <h3 id="gap-cross-reference">12.5 Gap cross-reference</h3>
 <table>
@@ -822,7 +820,8 @@ the endpoint shape is otherwise clear.</li>
 </tr>
 <tr>
 <td>G-13</td>
-<td>Record acknowledgement — recommended, pending legal (§12.3)</td>
+<td><strong>Resolved</strong> — record acknowledgement
+(<code>anonymity_acknowledged_at</code>); wording with DPIA (§12.3)</td>
 </tr>
 <tr>
 <td>G-18</td>
@@ -830,8 +829,8 @@ the endpoint shape is otherwise clear.</li>
 </tr>
 <tr>
 <td>G-20</td>
-<td>Member deletion-request endpoint — recommended, pending legal
-(§12.4)</td>
+<td><strong>Working design adopted</strong> — deletion-request endpoint;
+exact retention legal-gated (§12.4)</td>
 </tr>
 </tbody>
 </table>
