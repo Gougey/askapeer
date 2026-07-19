@@ -1,0 +1,34 @@
+# Local development infrastructure for Askapeer (prove-then-migrate on Fly; AWS later).
+# Brings up Postgres + Redis for the API to run against locally.
+#   docker compose up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: askapeer-postgres
+    environment:
+      POSTGRES_USER: askapeer
+      POSTGRES_PASSWORD: askapeer
+      POSTGRES_DB: askapeer
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U askapeer -d askapeer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: askapeer-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

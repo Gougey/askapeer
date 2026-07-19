@@ -13,3 +13,10 @@ node_modules/
 dist/
 .env
 .env.*
+!.env.example
+
+# Next.js / build output
+.next/
+out/
+*.tsbuildinfo
+coverage/

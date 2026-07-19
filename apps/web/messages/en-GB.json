@@ -1,0 +1,15 @@
+{
+  "home": {
+    "title": "Askapeer",
+    "tagline": "The No Ego Sports Medicine Network",
+    "walkingSkeleton": "Walking skeleton (S0) — the stack is wired end-to-end.",
+    "healthHeading": "System health",
+    "apiUp": "API reachable",
+    "apiDown": "API not reachable — start it with: npm run dev:api",
+    "version": "API version",
+    "dbReachable": "Database reachable",
+    "migrationsApplied": "Migrations applied",
+    "yes": "yes",
+    "no": "no"
+  }
+}

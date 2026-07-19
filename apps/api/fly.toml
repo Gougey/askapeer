@@ -1,0 +1,24 @@
+# Fly config for the API (staging, prove-then-migrate phase).
+# Deploy from the repo root:  flyctl deploy --config apps/api/fly.toml
+app = "askapeer-api"
+primary_region = "lhr"
+
+[build]
+  # Relative to this config file's directory (apps/api). Deploy from the repo
+  # root with the root as build context: flyctl deploy . --config apps/api/fly.toml
+  dockerfile = "Dockerfile"
+
+[deploy]
+  # Runs migrations before the new release goes live (WORKDIR = /app/apps/api).
+  release_command = "node dist/db/migrate.js"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
