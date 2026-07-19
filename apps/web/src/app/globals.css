@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/*
+  Themeable token layer. The style guide (later) overrides these CSS variables;
+  components reference the tokens, so applying the design system is a theming pass,
+  not a rewrite. Light + dark are both defined.
+*/
+@theme {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-fg: #0f172a;
+  --color-muted: #64748b;
+  --color-accent: #0ea5e9;
+  --color-ok: #16a34a;
+  --color-bad: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-bg: #0b1220;
+    --color-surface: #111a2b;
+    --color-fg: #e2e8f0;
+    --color-muted: #94a3b8;
+  }
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
