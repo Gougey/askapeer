@@ -316,6 +316,77 @@ MVP</strong>. The remaining open part is purely FD-6 (university
 partnership): if it proceeds, a cohort mechanism gets designed then — a
 business decision, not a spec gap.</li>
 </ul>
+<hr />
+<h2 id="screen-spec-reconciliation-2026-07-19">11. Screen-spec
+reconciliation (2026-07-19)</h2>
+<p>The screen &amp; functional spec surfaced two gaps in this epic’s
+surfaces (the paywall step A8, and the manage-subscription screen
+F6).</p>
+<h3 id="manage-subscription-endpoints-gap-g-19">11.1 Manage-subscription
+endpoints (gap G-19)</h3>
+<p>Section 6 had <code>subscribe</code> / <code>cancel</code> /
+<code>me</code> / <code>webhook</code>, but screen F6 also needs
+<strong>update payment method</strong> and <strong>change plan</strong>.
+Rather than build bespoke endpoints, use the <strong>provider-hosted
+billing portal</strong> (Stripe Customer Portal or the
+<code>PaymentProvider</code> equivalent), which covers update-payment,
+change-plan, and cancel in one PCI-offloaded surface:</p>
+<pre><code>POST /v1/billing/portal-session
+  -&gt; returns a short-lived provider-hosted management URL (update payment method,
+     change plan, view invoices, cancel); provider-specific, abstracted behind
+     PaymentProvider like the rest of this epic</code></pre>
+<p><code>POST /v1/billing/cancel</code> (Section 6) stays for the in-app
+cancel affordance; the portal is the fuller management surface. Keeps
+card handling entirely off Askapeer servers (Section 8).</p>
+<h3
+id="free-seed-period-paywall-trigger-gap-g-15-decision-recommendation-below">11.2
+Free-seed-period → paywall trigger (gap G-15) — DECISION, recommendation
+below</h3>
+<p>Monetisation (PRD §11) specifies a <strong>free seed period before
+the paywall</strong>. During it, screen A8 is skipped and the
+<strong>billing gate (§4) is inactive</strong> — members reach the
+community without subscribing. The switch that activates the paywall was
+undefined. Recommended mechanism:</p>
+<ul>
+<li>A <strong>platform setting</strong> (EPIC-J config) —
+<code>billing.paywall_active</code> (bool) or
+<code>billing.seed_period_until</code> (date). While in the seed period:
+<code>POST /v1/billing/subscribe</code> is optional, A8 is skipped, and
+the billing gate permits access regardless of
+<code>billing.subscriptions.status</code>. When it flips: A8 becomes
+part of onboarding and the gate enforces.</li>
+<li><strong>Open question</strong>: <em>when</em> to flip it (a
+launch-timing / business call), and whether seed-period members get a
+grace/trial window to subscribe once the paywall activates (recommend
+yes — don’t lock out early adopters abruptly).</li>
+<li><strong>Status</strong>: mechanism settled (a config flag); the
+timing + transition-treatment are the decision.</li>
+</ul>
+<h3 id="gap-cross-reference">11.3 Gap cross-reference</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G-19</td>
+<td><code>POST /v1/billing/portal-session</code> (provider-hosted
+management) — §11.1</td>
+</tr>
+<tr>
+<td>G-15</td>
+<td><code>billing.paywall_active</code>/<code>seed_period_until</code>
+config flag; flip-timing is the decision — §11.2</td>
+</tr>
+</tbody>
+</table>
 
 </main>
 </body>

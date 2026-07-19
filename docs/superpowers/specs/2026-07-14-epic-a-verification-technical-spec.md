@@ -317,3 +317,62 @@ This spec does not define the handle-creation endpoint itself (`community.handle
 - ~~**Onfido webhook timeout value**~~ — **resolved 2026-07-17**: **configurable, default 48 hours** (`verification.onfido_timeout_hours`, EPIC-J config). Onfido itself returns in minutes (researched), so this window only guards an applicant who abandons their upload — tunable without a deploy, consistent with the billing grace-period-as-config decision.
 - ~~**Identity-access-log boundary (Section 9)**~~ — **confirmed 2026-07-17**: routine admin verification-queue review is **not** an `identity_access_log` event (that log is for a moderator revealing an existing verified member's real identity behind their handle — PRD §9.4). Reviewing a pending applicant's own submitted evidence is the ordinary function `IdentityService` exists for; logging it would dilute the log's value as a trust artifact.
 - ~~**Exact applicant-facing rejection wording for the expelled-reapplication case** (Section 2)~~ — **resolved 2026-07-17**: keep the **generic** message (do not confirm expelled status to the applicant — confirming it would hand a bad-faith actor certainty their identity was detected). The *exact wording* is folded into the pre-launch legal-counsel review already bundled with the right-to-erasure / DPIA work (open-questions doc §4), in case compliance prefers more explicit language — but the default is generic.
+
+---
+
+## 12. Screen-spec reconciliation (2026-07-19)
+
+The screen & functional spec surfaced gaps that land in this epic. Clear technical additions are folded in; two items carry a decision, recorded with a recommendation.
+
+### 12.1 Responding to `needs_more_info` / resuming the identity check (gaps G-1, G-2)
+
+The holding page (screen A5) showed the member their `needs_more_info` reason and a "provide the requested information" action — but **no applicant endpoint existed** to act on it, and the Onfido capture (A4) had no defined resume path. Added:
+
+```
+POST /v1/auth/verification/resubmit
+  auth: pending-scoped token; only valid while verification_status = needs_more_info
+  -> re-opens the identity-check step: re-enqueues the verification job and, where
+     the reason is an incomplete/failed Onfido check, issues a fresh Onfido SDK
+     session so the applicant can re-capture (resolves the A4<->A5 resume path, G-2)
+  -> transitions needs_more_info -> pending (the applicant re-enters the automated
+     pipeline / admin queue); writes the verification_decisions audit row
+```
+
+This closes the one place the state machine (Section 3) had a dead end for the applicant.
+
+### 12.2 Professional-body picker launch set (gap G-18)
+
+The registration form's `professional_body` options (`hcpc`/`gmc`/`basrat`/`sst`, Section 2) are **FD-1-dependent**: if the MVP launches physio-first (the PRD's own recommendation), **HCPC is the primary/only register offered at launch**, with GMC/BASRAT/SST added as scope widens. A scope link for the composer, not a new mechanism — noted so the picker isn't hardcoded to all four before FD-1 is settled.
+
+### 12.3 Onboarding anonymity acknowledgement (gap G-13) — DECISION, recommendation below
+
+The zero-tolerance anonymity rule is *shown* at registration and onboarding (screen A7), but nothing currently **records** the member's acknowledgement. Given expulsion is the rule's consequence, a recorded acknowledgement is worth having for legal defensibility — mirroring how the case-discussion attestation is recorded.
+
+- **Recommendation**: record it — an `identity.members.anonymity_acknowledged_at timestamptz` (or a small `identity.policy_acknowledgements` row if multiple policy versions need tracking), written when the member confirms at A7. Cheap, and it makes "they agreed to this" answerable.
+- **Status**: pending Adrian/legal confirmation (bundle with the DPIA / legal review). Not build-blocking.
+
+### 12.4 Account deletion / right-to-erasure member flow (gap G-20) — DECISION, recommendation below
+
+The architecture sets the erasure *default* (hard-delete the `identity` row, retain de-linked/anonymised community content) but flags it for legal; there is **no member-facing deletion flow or endpoint** (screen F7 needs one). Recommended shape:
+
+```
+POST /v1/account/deletion-request
+  auth: handle-scoped token
+  -> initiates erasure: confirmation step, then (per the arch default) hard-deletes
+     the identity.members row and severs member_id from community content (the
+     handle + posts remain as de-linked archive, per architecture §4 / right-to-
+     erasure default). Consider a short cancellable grace window.
+```
+
+- **Recommendation**: build a member-initiated deletion request (GDPR right-to-erasure is not optional for a UK service handling this PII), implementing the architecture's stated default, with the exact retention/anonymisation behaviour **confirmed by legal counsel** first (already on the standing legal-review list, open-questions §4).
+- **Status**: needs the legal confirmation before build; the endpoint shape is otherwise clear.
+
+### 12.5 Gap cross-reference
+
+| Gap | Resolution |
+|---|---|
+| G-1 | `POST /v1/auth/verification/resubmit` (§12.1) |
+| G-2 | Onfido resume via the same endpoint (§12.1) |
+| G-13 | Record acknowledgement — recommended, pending legal (§12.3) |
+| G-18 | FD-1 scope link for the body picker (§12.2) |
+| G-20 | Member deletion-request endpoint — recommended, pending legal (§12.4) |

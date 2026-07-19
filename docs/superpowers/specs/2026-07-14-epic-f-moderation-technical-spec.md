@@ -102,7 +102,10 @@ POST /v1/admin/handles/:handle_id/reveal-identity
   body: { reason_code: reported_violation | legal_request | safety_escalation, reason_note }
   -> resolves handle_id -> member_id via IdentityService
   -> writes identity.identity_access_log (architecture spec, Section 4.1)
-  -> returns real identity fields to the moderator
+  -> returns the real-identity field set (enumerated 2026-07-19, gap G-24):
+     { legal_name, email, professional_body, registration_number,
+       registration_country } -- and nothing beyond what the reason_code
+     justifies; rendered on the audited reveal screen (screen spec G3)
 ```
 
 A moderator reviewing a report (Section 4) does **not** automatically see the reported handle's real identity — the report queue itself operates entirely on `handle_id`s, consistent with every other community-facing surface in the platform. Only this explicit, separately-logged action crosses the boundary, exactly matching the architecture spec's stated design intent.

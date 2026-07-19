@@ -126,7 +126,56 @@ These are already identified in the architecture spec's Section 11 as EPIC-I pre
 
 ## 9. Open questions
 
-- **PRD update**: EPIC-I still needs adding to Section 6.1's MoSCoW list — a standing item from the architecture spec, restated here since it's this epic specifically that's affected.
+- ~~**PRD update**~~ — **actioned 2026-07-17**: EPIC-I is now in the PRD's §6.1 Must-have list and the Phase-1 epic table (as an agreed post-v0.1 scope addition, pending Paul/Andrew's formal confirmation).
 - **`member_interests` vs. `community.follows` unification** (Section 4): **narrowed 2026-07-17** — the *vocabulary* both use is now unified (one `community.tags`), which was the substance of §1.1. What remains is only whether the two *relationship mechanisms* (weighted vs. binary) should collapse into one — a smaller, separable call; keeping both is defensible.
 - ~~**Taxonomy reconciliation**~~ (Section 5) — **resolved 2026-07-17** (Andrew's input): one unified `community.tags` vocabulary, faceted, MeSH-mapped internally, used by both forum and feed. Closes §1.2.
 - **The three carried-forward items** (Section 7): DOAJ/Retraction Watch integration, PEDro enquiry, and licensing review all remain open pre-launch work, unchanged from the architecture spec's own assessment.
+
+---
+
+## 10. Screen-spec reconciliation (2026-07-19)
+
+The screen & functional spec surfaced three endpoint gaps in this epic's surfaces (the Feed tab B1/B2, interests F5/A7, saved E3). Reconciled:
+
+### 10.1 Interest-selection endpoints (gap G-14)
+
+Onboarding (A7) and Settings › Interests (F5) let a member choose the clinical interests that drive both the research feed and the personalised forum feed — but no read/write for that existed. Added:
+
+```
+GET /v1/tags?facet=region,muscle,structure,pathology   -- the selectable vocabulary,
+                                                           facet-grouped (community.tags)
+GET /v1/me/interests                 -- the caller's current member_interests
+PUT /v1/me/interests { tag_ids[] }   -- bulk set (replaces the set); writes
+                                        community.member_interests for the handle
+```
+
+(The `GET /v1/tags` read is shared with EPIC-C's composer typeahead; the interest surface uses the facet-grouped form.)
+
+### 10.2 Article detail + save (gaps G-16, G-22)
+
+EPIC-I §6 specified the feed list but not a single-article read or a save mechanism (screens B2, E3). Added:
+
+```
+GET /v1/research-feed/:articleId     -- single article: title, authors, source/journal,
+                                        date, abstract, matched tags, quality flags
+```
+
+**Saves/bookmarks (gap G-22) — Should-have, scope decision.** Screens B2 (save article) and E3 (saved posts) both want a bookmark. Recommended as a single unified store rather than two:
+
+```
+community.saves (handle_id, target_type(post|article), target_id, created_at)
+                 unique(handle_id, target_type, target_id)      -- one save per item
+POST   /v1/saves { target_type, target_id }
+DELETE /v1/saves/:target_type/:target_id
+GET    /v1/me/saves?target_type=      -- powers screen E3
+```
+
+- **Recommendation**: build the unified `community.saves` table (posts + articles in one place; small, handle-scoped like everything else in `community`). It's a **Should-have** (PRD §6.1), so a candidate to defer if MVP scope needs trimming — but the shape is settled either way. *(Table is `community`-side even though articles are EPIC-I's, because saves are member-relationship data alongside `community.follows`.)*
+
+### 10.3 Gap cross-reference
+
+| Gap | Resolution |
+|---|---|
+| G-14 | `GET /v1/tags` (facet) + `GET`/`PUT /v1/me/interests` (§10.1) |
+| G-16 | `GET /v1/research-feed/:articleId` + saves (§10.2) |
+| G-22 | Unified `community.saves` + endpoints — Should-have (§10.2) |

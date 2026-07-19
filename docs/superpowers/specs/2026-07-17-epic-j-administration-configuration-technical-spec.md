@@ -69,6 +69,7 @@ config.settings                        -- key/value tunable platform settings
   key           text PK               -- e.g. 'badge.top_contributor_percentile',
                                           'feed.trending_min_results', 'feed.trending_window_steps',
                                           'billing.grace_period_days', 'billing.default_trial_days',
+                                          'billing.paywall_active' (or 'billing.seed_period_until'),
                                           'verification.onfido_timeout_hours',
                                           'auth.session_inactivity_days', 'auth.session_absolute_max_days'
   value         jsonb

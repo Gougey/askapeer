@@ -232,9 +232,10 @@ interest endpoints.</li>
 <hr />
 <h2 id="open-questions">9. Open questions</h2>
 <ul>
-<li><strong>PRD update</strong>: EPIC-I still needs adding to Section
-6.1’s MoSCoW list — a standing item from the architecture spec, restated
-here since it’s this epic specifically that’s affected.</li>
+<li><del><strong>PRD update</strong></del> — <strong>actioned
+2026-07-17</strong>: EPIC-I is now in the PRD’s §6.1 Must-have list and
+the Phase-1 epic table (as an agreed post-v0.1 scope addition, pending
+Paul/Andrew’s formal confirmation).</li>
 <li><strong><code>member_interests</code>
 vs. <code>community.follows</code> unification</strong> (Section 4):
 <strong>narrowed 2026-07-17</strong> — the <em>vocabulary</em> both use
@@ -251,6 +252,74 @@ DOAJ/Retraction Watch integration, PEDro enquiry, and licensing review
 all remain open pre-launch work, unchanged from the architecture spec’s
 own assessment.</li>
 </ul>
+<hr />
+<h2 id="screen-spec-reconciliation-2026-07-19">10. Screen-spec
+reconciliation (2026-07-19)</h2>
+<p>The screen &amp; functional spec surfaced three endpoint gaps in this
+epic’s surfaces (the Feed tab B1/B2, interests F5/A7, saved E3).
+Reconciled:</p>
+<h3 id="interest-selection-endpoints-gap-g-14">10.1 Interest-selection
+endpoints (gap G-14)</h3>
+<p>Onboarding (A7) and Settings › Interests (F5) let a member choose the
+clinical interests that drive both the research feed and the
+personalised forum feed — but no read/write for that existed. Added:</p>
+<pre><code>GET /v1/tags?facet=region,muscle,structure,pathology   -- the selectable vocabulary,
+                                                           facet-grouped (community.tags)
+GET /v1/me/interests                 -- the caller&#39;s current member_interests
+PUT /v1/me/interests { tag_ids[] }   -- bulk set (replaces the set); writes
+                                        community.member_interests for the handle</code></pre>
+<p>(The <code>GET /v1/tags</code> read is shared with EPIC-C’s composer
+typeahead; the interest surface uses the facet-grouped form.)</p>
+<h3 id="article-detail-save-gaps-g-16-g-22">10.2 Article detail + save
+(gaps G-16, G-22)</h3>
+<p>EPIC-I §6 specified the feed list but not a single-article read or a
+save mechanism (screens B2, E3). Added:</p>
+<pre><code>GET /v1/research-feed/:articleId     -- single article: title, authors, source/journal,
+                                        date, abstract, matched tags, quality flags</code></pre>
+<p><strong>Saves/bookmarks (gap G-22) — Should-have, scope
+decision.</strong> Screens B2 (save article) and E3 (saved posts) both
+want a bookmark. Recommended as a single unified store rather than
+two:</p>
+<pre><code>community.saves (handle_id, target_type(post|article), target_id, created_at)
+                 unique(handle_id, target_type, target_id)      -- one save per item
+POST   /v1/saves { target_type, target_id }
+DELETE /v1/saves/:target_type/:target_id
+GET    /v1/me/saves?target_type=      -- powers screen E3</code></pre>
+<ul>
+<li><strong>Recommendation</strong>: build the unified
+<code>community.saves</code> table (posts + articles in one place;
+small, handle-scoped like everything else in <code>community</code>).
+It’s a <strong>Should-have</strong> (PRD §6.1), so a candidate to defer
+if MVP scope needs trimming — but the shape is settled either way.
+<em>(Table is <code>community</code>-side even though articles are
+EPIC-I’s, because saves are member-relationship data alongside
+<code>community.follows</code>.)</em></li>
+</ul>
+<h3 id="gap-cross-reference">10.3 Gap cross-reference</h3>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G-14</td>
+<td><code>GET /v1/tags</code> (facet) +
+<code>GET</code>/<code>PUT /v1/me/interests</code> (§10.1)</td>
+</tr>
+<tr>
+<td>G-16</td>
+<td><code>GET /v1/research-feed/:articleId</code> + saves (§10.2)</td>
+</tr>
+<tr>
+<td>G-22</td>
+<td>Unified <code>community.saves</code> + endpoints — Should-have
+(§10.2)</td>
+</tr>
+</tbody>
+</table>
 
 </main>
 </body>

@@ -195,3 +195,37 @@ Two PRD signals suggest trial length will need to vary:
 - ~~**Cancellation access timing**~~ (Section 6) — **resolved 2026-07-17**: end-of-paid-period access, not immediate revocation.
 - ~~**Billing-lapse token scope as a new mechanism**~~ (Section 4) — **resolved 2026-07-17**: yes, two independently-checked gates (handle status AND subscription status), extending EPIC-A's pending-token pattern rather than collapsing into a single flag. Closes cross-epic §1.4.
 - **Trial-length configurability and cohort mechanism** (Section 7): **partly resolved 2026-07-17** — trial length is a configurable value (default trial in EPIC-J config; semantics in EPIC-H), and **no cohort/invite-code feature is built for MVP**. The remaining open part is purely FD-6 (university partnership): if it proceeds, a cohort mechanism gets designed then — a business decision, not a spec gap.
+
+---
+
+## 11. Screen-spec reconciliation (2026-07-19)
+
+The screen & functional spec surfaced two gaps in this epic's surfaces (the paywall step A8, and the manage-subscription screen F6).
+
+### 11.1 Manage-subscription endpoints (gap G-19)
+
+Section 6 had `subscribe` / `cancel` / `me` / `webhook`, but screen F6 also needs **update payment method** and **change plan**. Rather than build bespoke endpoints, use the **provider-hosted billing portal** (Stripe Customer Portal or the `PaymentProvider` equivalent), which covers update-payment, change-plan, and cancel in one PCI-offloaded surface:
+
+```
+POST /v1/billing/portal-session
+  -> returns a short-lived provider-hosted management URL (update payment method,
+     change plan, view invoices, cancel); provider-specific, abstracted behind
+     PaymentProvider like the rest of this epic
+```
+
+`POST /v1/billing/cancel` (Section 6) stays for the in-app cancel affordance; the portal is the fuller management surface. Keeps card handling entirely off Askapeer servers (Section 8).
+
+### 11.2 Free-seed-period → paywall trigger (gap G-15) — DECISION, recommendation below
+
+Monetisation (PRD §11) specifies a **free seed period before the paywall**. During it, screen A8 is skipped and the **billing gate (§4) is inactive** — members reach the community without subscribing. The switch that activates the paywall was undefined. Recommended mechanism:
+
+- A **platform setting** (EPIC-J config) — `billing.paywall_active` (bool) or `billing.seed_period_until` (date). While in the seed period: `POST /v1/billing/subscribe` is optional, A8 is skipped, and the billing gate permits access regardless of `billing.subscriptions.status`. When it flips: A8 becomes part of onboarding and the gate enforces.
+- **Open question**: *when* to flip it (a launch-timing / business call), and whether seed-period members get a grace/trial window to subscribe once the paywall activates (recommend yes — don't lock out early adopters abruptly).
+- **Status**: mechanism settled (a config flag); the timing + transition-treatment are the decision.
+
+### 11.3 Gap cross-reference
+
+| Gap | Resolution |
+|---|---|
+| G-19 | `POST /v1/billing/portal-session` (provider-hosted management) — §11.1 |
+| G-15 | `billing.paywall_active`/`seed_period_until` config flag; flip-timing is the decision — §11.2 |

@@ -246,7 +246,10 @@ action is actually triggered from:</p>
   body: { reason_code: reported_violation | legal_request | safety_escalation, reason_note }
   -&gt; resolves handle_id -&gt; member_id via IdentityService
   -&gt; writes identity.identity_access_log (architecture spec, Section 4.1)
-  -&gt; returns real identity fields to the moderator</code></pre>
+  -&gt; returns the real-identity field set (enumerated 2026-07-19, gap G-24):
+     { legal_name, email, professional_body, registration_number,
+       registration_country } -- and nothing beyond what the reason_code
+     justifies; rendered on the audited reveal screen (screen spec G3)</code></pre>
 <p>A moderator reviewing a report (Section 4) does <strong>not</strong>
 automatically see the reported handle’s real identity — the report queue
 itself operates entirely on <code>handle_id</code>s, consistent with

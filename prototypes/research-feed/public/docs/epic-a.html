@@ -721,6 +721,120 @@ review already bundled with the right-to-erasure / DPIA work
 (open-questions doc §4), in case compliance prefers more explicit
 language — but the default is generic.</li>
 </ul>
+<hr />
+<h2 id="screen-spec-reconciliation-2026-07-19">12. Screen-spec
+reconciliation (2026-07-19)</h2>
+<p>The screen &amp; functional spec surfaced gaps that land in this
+epic. Clear technical additions are folded in; two items carry a
+decision, recorded with a recommendation.</p>
+<h3
+id="responding-to-needs_more_info-resuming-the-identity-check-gaps-g-1-g-2">12.1
+Responding to <code>needs_more_info</code> / resuming the identity check
+(gaps G-1, G-2)</h3>
+<p>The holding page (screen A5) showed the member their
+<code>needs_more_info</code> reason and a “provide the requested
+information” action — but <strong>no applicant endpoint existed</strong>
+to act on it, and the Onfido capture (A4) had no defined resume path.
+Added:</p>
+<pre><code>POST /v1/auth/verification/resubmit
+  auth: pending-scoped token; only valid while verification_status = needs_more_info
+  -&gt; re-opens the identity-check step: re-enqueues the verification job and, where
+     the reason is an incomplete/failed Onfido check, issues a fresh Onfido SDK
+     session so the applicant can re-capture (resolves the A4&lt;-&gt;A5 resume path, G-2)
+  -&gt; transitions needs_more_info -&gt; pending (the applicant re-enters the automated
+     pipeline / admin queue); writes the verification_decisions audit row</code></pre>
+<p>This closes the one place the state machine (Section 3) had a dead
+end for the applicant.</p>
+<h3 id="professional-body-picker-launch-set-gap-g-18">12.2
+Professional-body picker launch set (gap G-18)</h3>
+<p>The registration form’s <code>professional_body</code> options
+(<code>hcpc</code>/<code>gmc</code>/<code>basrat</code>/<code>sst</code>,
+Section 2) are <strong>FD-1-dependent</strong>: if the MVP launches
+physio-first (the PRD’s own recommendation), <strong>HCPC is the
+primary/only register offered at launch</strong>, with GMC/BASRAT/SST
+added as scope widens. A scope link for the composer, not a new
+mechanism — noted so the picker isn’t hardcoded to all four before FD-1
+is settled.</p>
+<h3
+id="onboarding-anonymity-acknowledgement-gap-g-13-decision-recommendation-below">12.3
+Onboarding anonymity acknowledgement (gap G-13) — DECISION,
+recommendation below</h3>
+<p>The zero-tolerance anonymity rule is <em>shown</em> at registration
+and onboarding (screen A7), but nothing currently
+<strong>records</strong> the member’s acknowledgement. Given expulsion
+is the rule’s consequence, a recorded acknowledgement is worth having
+for legal defensibility — mirroring how the case-discussion attestation
+is recorded.</p>
+<ul>
+<li><strong>Recommendation</strong>: record it — an
+<code>identity.members.anonymity_acknowledged_at timestamptz</code> (or
+a small <code>identity.policy_acknowledgements</code> row if multiple
+policy versions need tracking), written when the member confirms at A7.
+Cheap, and it makes “they agreed to this” answerable.</li>
+<li><strong>Status</strong>: pending Adrian/legal confirmation (bundle
+with the DPIA / legal review). Not build-blocking.</li>
+</ul>
+<h3
+id="account-deletion-right-to-erasure-member-flow-gap-g-20-decision-recommendation-below">12.4
+Account deletion / right-to-erasure member flow (gap G-20) — DECISION,
+recommendation below</h3>
+<p>The architecture sets the erasure <em>default</em> (hard-delete the
+<code>identity</code> row, retain de-linked/anonymised community
+content) but flags it for legal; there is <strong>no member-facing
+deletion flow or endpoint</strong> (screen F7 needs one). Recommended
+shape:</p>
+<pre><code>POST /v1/account/deletion-request
+  auth: handle-scoped token
+  -&gt; initiates erasure: confirmation step, then (per the arch default) hard-deletes
+     the identity.members row and severs member_id from community content (the
+     handle + posts remain as de-linked archive, per architecture §4 / right-to-
+     erasure default). Consider a short cancellable grace window.</code></pre>
+<ul>
+<li><strong>Recommendation</strong>: build a member-initiated deletion
+request (GDPR right-to-erasure is not optional for a UK service handling
+this PII), implementing the architecture’s stated default, with the
+exact retention/anonymisation behaviour <strong>confirmed by legal
+counsel</strong> first (already on the standing legal-review list,
+open-questions §4).</li>
+<li><strong>Status</strong>: needs the legal confirmation before build;
+the endpoint shape is otherwise clear.</li>
+</ul>
+<h3 id="gap-cross-reference">12.5 Gap cross-reference</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G-1</td>
+<td><code>POST /v1/auth/verification/resubmit</code> (§12.1)</td>
+</tr>
+<tr>
+<td>G-2</td>
+<td>Onfido resume via the same endpoint (§12.1)</td>
+</tr>
+<tr>
+<td>G-13</td>
+<td>Record acknowledgement — recommended, pending legal (§12.3)</td>
+</tr>
+<tr>
+<td>G-18</td>
+<td>FD-1 scope link for the body picker (§12.2)</td>
+</tr>
+<tr>
+<td>G-20</td>
+<td>Member deletion-request endpoint — recommended, pending legal
+(§12.4)</td>
+</tr>
+</tbody>
+</table>
 
 </main>
 </body>

@@ -1899,24 +1899,34 @@ from this pass</h2>
 across the <strong>complete</strong> screen inventory. G-1…G-8
 (exemplars); G-9…G-11 (auth review, 2026-07-19); G-12…G-18 (member areas
 A–C); G-19…G-23 (areas D–F); G-24 (admin area G).</p>
-<p><strong>Reconciliation status</strong> (folding gaps back into the
-epic specs):</p>
+<p><strong>Reconciliation status</strong> — <strong>ALL 24 gaps
+reconciled into the epic specs (2026-07-19).</strong> Each target spec
+carries a “Screen-spec reconciliation” section (or inline edit).</p>
 <ul>
-<li><strong>Batch 1 done (2026-07-19)</strong> — <strong>G-3, G-4, G-5,
-G-6, G-7, G-8, G-17, G-21</strong> → EPIC-C (new §13: thread/list DTOs,
+<li><strong>Batch 1</strong> — <strong>G-3, G-4, G-5, G-6, G-7, G-8,
+G-17, G-21</strong> → EPIC-C §13 (thread/list DTOs,
 <code>accepted_comment_id</code> column, poll-vote + accepted-answer +
 author-scoped endpoints, visibility &amp; anonymity-reminder rules);
 <strong>G-9, G-10, G-11</strong> → architecture §5.2/§2 (passkeys +
 <code>identity.webauthn_credentials</code>, refresh-token lifetime
-tunables, i18n) + EPIC-J config keys; <strong>G-12, G-23</strong> →
-EPIC-B (<code>GET /v1/handles/availability</code>, no editable
-profile).</li>
-<li><strong>Remaining</strong> (batch 2) — G-1, G-2 (EPIC-A verification
-resubmit/resume); G-13 (EPIC-A acknowledgement); G-14, G-16, G-22
-(EPIC-I interests/article/saves); G-15, G-19 (EPIC-H
-seed-trigger/manage-subscription); G-20 (EPIC-A/legal erasure); G-24
-(EPIC-F reveal fields); G-18 (FD-1 scope).</li>
+tunables, i18n) + EPIC-J config; <strong>G-12, G-23</strong> → EPIC-B
+(<code>GET /v1/handles/availability</code>, no editable profile).</li>
+<li><strong>Batch 2</strong> — <strong>G-1, G-2, G-13, G-18,
+G-20</strong> → EPIC-A §12
+(<code>POST /v1/auth/verification/resubmit</code>; FD-1 body-picker
+scope; acknowledgement-recording + erasure-flow <em>recommendations
+pending legal</em>); <strong>G-14, G-16, G-22</strong> → EPIC-I §10
+(interests read/write, article detail, unified
+<code>community.saves</code>); <strong>G-15, G-19</strong> → EPIC-H §11
+(<code>billing.paywall_active</code> flag; provider-hosted
+<code>billing/portal-session</code>); <strong>G-24</strong> → EPIC-F §5
+(reveal-identity field set enumerated).</li>
 </ul>
+<p><strong>Decision-gaps flagged (not fabricated):</strong> G-13 (record
+anonymity acknowledgement — recommend yes), G-15 (paywall flip-timing),
+G-20 (erasure flow — pending legal), G-22 (saves scope — Should-have).
+Each is a recommendation inside its target spec awaiting Adrian’s /
+legal’s call.</p>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -2147,17 +2157,18 @@ approved 2026-07-19.</li>
 <li><del><strong>Fan out</strong> the screens</del> —
 <strong>complete</strong>: all member areas A–F (§6.A–6.F) and the admin
 area G (§6.G) are specced. The screen inventory is fully mapped.</li>
-<li><strong>Reconcile the spec-gaps</strong> (§7,
-<strong>G-1…G-24</strong>) back into the epic specs — the next
-substantive pass; each gap has a named target spec.</li>
+<li><del><strong>Reconcile the spec-gaps</strong></del> —
+<strong>done</strong> (§7): all G-1…G-24 folded into the epic specs
+(2026-07-19).</li>
 <li><strong>Resolve the open decisions</strong> — G-9 biometric
 build-timing; the app-lock offer; G-13 (record anonymity
-acknowledgement?); G-15 (seed-period → paywall trigger); G-18 (FD-1 body
-set); G-20 (erasure flow — legal); G-22 (saves scope); G-23 (profile
-editability).</li>
+acknowledgement?); G-15 (paywall flip-timing); G-20 (erasure flow —
+legal); G-22 (saves scope). (Each has a recommendation in its target
+spec.)</li>
 <li><strong>Derive the tracer-bullet slice backlog</strong> from the
-completed inventory + flows (slice 1 = A1→A5, the onboarding
-spine).</li>
+completed inventory + flows (slice 1 = A1→A5, the onboarding spine) —
+the natural next step now that specs + screens + gaps are all
+reconciled.</li>
 </ol>
 
 </main>
