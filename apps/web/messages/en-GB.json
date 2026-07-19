@@ -1,15 +1,46 @@
 {
   "home": {
     "title": "Askapeer",
-    "tagline": "The No Ego Sports Medicine Network",
-    "walkingSkeleton": "Walking skeleton (S0) — the stack is wired end-to-end.",
-    "healthHeading": "System health",
-    "apiUp": "API reachable",
-    "apiDown": "API not reachable — start it with: npm run dev:api",
-    "version": "API version",
-    "dbReachable": "Database reachable",
-    "migrationsApplied": "Migrations applied",
-    "yes": "yes",
-    "no": "no"
+    "tagline": "The No Ego Sports Medicine Network"
+  },
+  "auth": {
+    "signInTitle": "Sign in",
+    "registerTitle": "Create your account",
+    "email": "Email",
+    "legalName": "Full name (as on your professional register)",
+    "professionalBody": "Professional body",
+    "registrationNumber": "Registration number",
+    "sendLink": "Email me a sign-in link",
+    "sending": "Sending…",
+    "createAccount": "Create account",
+    "registering": "Creating account…",
+    "checkEmailTitle": "Check your email",
+    "checkEmailBody": "We've sent you a secure sign-in link. There is no password.",
+    "devOpenLink": "Open your sign-in link (dev)",
+    "anonymityNotice": "Askapeer is pseudonymous. Your real name and details are never shown to other members. Attempting to identify yourself or anyone else results in immediate, permanent removal — no exceptions.",
+    "noAccount": "No account yet?",
+    "register": "Register",
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign in"
+  },
+  "holding": {
+    "pending": {
+      "title": "We're verifying your registration",
+      "body": "This usually takes a short while. We'll email you the moment it's done — you can close this page."
+    },
+    "needs_more_info": {
+      "title": "We need a little more information",
+      "body": "Please check your email for what we need to complete your verification."
+    },
+    "rejected": {
+      "title": "We couldn't verify your registration",
+      "body": "You can register again with corrected details."
+    },
+    "default": {
+      "title": "Your account status has changed",
+      "body": "Please check your email for details."
+    },
+    "registerAgain": "Register again",
+    "signOut": "Sign out"
   }
 }
