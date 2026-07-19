@@ -21,7 +21,11 @@ export class AuthController {
   async requestLink(@Body() dto: RequestLinkDto) {
     const { devToken } = await this.auth.requestLink(dto.email);
     const body: { sent: true; devToken?: string } = { sent: true };
-    if (process.env.NODE_ENV !== 'production' && devToken) body.devToken = devToken;
+    // Surfaced in local dev, or on the Fly staging env (AUTH_DEV_MAGIC_LINK=true) so the
+    // flow is demoable before real email delivery lands (S10). Never in real production.
+    const exposeDevLink =
+      process.env.NODE_ENV !== 'production' || process.env.AUTH_DEV_MAGIC_LINK === 'true';
+    if (exposeDevLink && devToken) body.devToken = devToken;
     return body;
   }
 

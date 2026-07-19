@@ -22,3 +22,9 @@ primary_region = "lhr"
 [[vm]]
   size = "shared-cpu-1x"
   memory = "512mb"
+
+[env]
+  # Staging (prove-phase) only: surface the magic-link token in the request-link
+  # response so the auth flow is demoable before email delivery (S10). The AWS
+  # production target will NOT set this.
+  AUTH_DEV_MAGIC_LINK = "true"
