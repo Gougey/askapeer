@@ -8,6 +8,13 @@
       "when": 1784478896969,
       "tag": "0000_supreme_corsair",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784496071420,
+      "tag": "0001_bored_switch",
+      "breakpoints": true
     }
   ]
 }
