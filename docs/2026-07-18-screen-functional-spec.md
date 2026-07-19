@@ -1,6 +1,6 @@
 # Askapeer — Screen & Functional Specification (mobile-first)
 
-**Status**: Draft — fan-out in progress. Exemplars approved 2026-07-19; cross-cutting patterns added (auth/session/biometric §1.6, i18n §1.7); **member areas A–C fully specced (§6)**; areas D–F and admin (G) remaining.
+**Status**: Draft — fan-out in progress. Exemplars approved 2026-07-19; cross-cutting patterns added (auth/session/biometric §1.6, i18n §1.7); **all member areas A–F fully specced (§6)**; only the admin area (G) remaining.
 **Date**: 18 July 2026 (updated 19 July 2026)
 **Author**: Adrian Hall (Technical Lead), with Claude Code
 
@@ -464,11 +464,143 @@ The first flow: unauthenticated → verified → handle → in-app. No bottom-na
 - **States**: idle/prompt; results; **no results** (suggest broadening / check spelling — trgm already softens this); loading.
 - **Spec-gaps**: **G-17** (shared list DTO) applies to results.
 
+### 6.D — Create (the ➕ button, EPIC-C/E)
+
+#### D1 — Create chooser · `/create` · overlay
+
+- **Purpose**: pick what to create. Opened by the centre ➕ nav.
+- **Content**: two choices — **Question** (a discussion / ask) and **Case discussion** (structured, de-identified); a one-line description of each; the case-discussion option carries a "de-identification required" hint.
+- **Actions → nav**: Question → D2; Case discussion → D3; dismiss → back.
+- **Note**: exactly two post types (`posts.type`); no third "story" type.
+
+#### D2 — Compose question · `/create/question` · shell
+
+- **Purpose**: create a `type = question` post (publishes immediately — EPIC-C, no draft state for questions).
+- **Content**: **category** picker (content-type: Clinical Case / Research / Career / Equipment / General); **tags** — *selected from the curated vocabulary*, facet-grouped, multi-select (members cannot create new tags — EPIC-C §3); **title**; **body**; **optional poll** (attach question + options); the **zero-tolerance anonymity reminder** (mandated §1.4); post.
+- **Data → source**: categories + selectable tags (read side of EPIC-J-managed vocabulary).
+- **Actions → API**: Post → `POST /v1/posts { category_id, type: "question", title, body, tag_ids[], poll? }` (EPIC-C) → C4.
+- **States**: editing; validation (category required, title/body required); submitting.
+- **Spec-gaps**: **G-6** (poll payload on create); **note** — confirm tag application is *select-only* from the vocabulary (no free-text tag creation), consistent with admin-managed tags.
+
+#### D3 — Compose case discussion · `/create/case` · shell
+
+- **Purpose**: the gated, multi-step case-discussion flow (EPIC-E) — the platform's highest-value/highest-risk surface.
+- **Access**: handle-scoped.
+- **Content & flow** (EPIC-E §3):
+  1. **Draft** — category (Clinical Case) + tags + the **nine structured template fields**; fields 3/4 use a **structural age-band selector** and **relative-timeline input** (no free date-of-birth / absolute-date fields — EPIC-E §4). `status = draft`.
+  2. **Edit** — freely editable while draft.
+  3. **De-identification checklist** — the **six** live items at MVP (1–5, 8; image items 6/7 absent — text-only, EPIC-E §4); every item must be true to proceed.
+  4. **Attestation** — the attestation text; confirm → server re-checks the checklist → publish (`status = published`).
+- **Data → API**: `POST /v1/case-discussions` (draft), `PATCH …` (edit), `PUT …/checklist`, `POST …/attest` (EPIC-E §6).
+- **States**: draft; checklist-incomplete (attest blocked, server-enforced); published; **`needs_correction`** (moderator requested a correction → banner + re-edit + re-attest, EPIC-E §8).
+- **Mandated surfaces**: de-id checklist + attestation gate; structural age-band/relative-date fields; the **platform disclaimer**; anonymity reminder (all §1.4 / EPIC-E).
+- **Note**: the nine-field template on a phone needs progressive disclosure (a mobile density concern for the style guide, not a spec gap).
+
+#### D4 — My drafts & corrections · `/create/drafts` · shell
+
+- **Purpose**: resume unpublished case-discussion **drafts** and handle **`needs_correction`** cases (both author-private).
+- **Content**: list of my posts where `status ∈ {draft, needs_correction}`; each opens the D3 flow at the right step; delete-draft.
+- **Data → source**: an **author-scoped** read including `draft`/`needs_correction` (which are hidden from everyone else) — **gap G-21**.
+- **Actions → API**: open → D3; delete draft → delete.
+- **Spec-gaps**: **G-21** — this author-private read (drafts + needs_correction) isn't enumerated; distinct from public list reads because of the visibility rule (G-8).
+
+### 6.E — Activity tab (EPIC-G + own content)
+
+#### E1 — Notifications · `/activity` · shell
+
+- **Purpose**: the member's notification inbox.
+- **Content**: reverse-chron list — `reply`, `mention`, `kudos_received`, `verification_status_change` (post-handle, e.g. a suspension notice); each shows type, actor handle (where applicable), snippet, timestamp, read/unread; unread badge on the tab.
+- **Data → source**: `GET /v1/notifications?cursor=&unread_only=` (EPIC-G §8).
+- **Actions → API**: tap → deep-link (C4 / comment / status); mark read → `PATCH /v1/notifications/:id/read`; mark all → `POST /v1/notifications/read-all`.
+- **States**: unread/read; empty ("You're all caught up"); loading. Push delivery is inert at MVP (EPIC-G §6.2) — no effect on this in-app list.
+
+#### E2 — My questions & answers · `/activity/mine` · shell
+
+- **Purpose**: the member's own **published** contributions and their reception.
+- **Content**: my questions/case discussions and my answers, each with kudos count + best-answer status; tabbed or sectioned (Questions · Answers).
+- **Data → source**: an **author-scoped** content read (published only; drafts live in D4) — **gap G-21**; card fields per the list DTO (**G-17**).
+- **Actions → API**: open → C4.
+- **States**: content; empty ("You haven't posted yet"); loading.
+
+#### E3 — Saved / bookmarked · `/activity/saved` · shell
+
+- **Purpose**: quick access to saved posts (and saved articles). *Should-have* (EPIC-C) — candidate to defer.
+- **Content**: saved posts (and, if unified, saved research articles from B2).
+- **Data → source**: a **saves store** + endpoints — **gap G-22** (not specified; also the home of B2's article saves, G-16).
+- **Actions → API**: open → C4 / B2; unsave.
+- **Spec-gaps**: **G-22** — the bookmark/save mechanism (posts and articles) has no table or endpoints; decide scope (MVP Should-have vs. defer).
+
+### 6.F — Profile & settings (EPIC-B/G/H/I)
+
+#### F1 — My profile · `/profile` · shell
+
+- **Purpose**: the member's own pseudonymous profile.
+- **Content**: handle; **kudos total**; **top-contributor badge** (if qualifying, EPIC-D §6); member-since; **my post history**; entry to Settings (F3).
+- **Data → source**: `GET /v1/handles/me` (EPIC-B) + author-scoped post history (G-21).
+- **Note / gap G-23**: by the anonymity model, the profile likely has **no member-editable identity fields** (no real name, employer, bio-that-could-identify; handle is immutable — EPIC-B §6). Confirm whether *anything* is editable here (e.g. an optional non-identifying blurb) or whether "profile editing" is purely the settings screens. Pin the answer.
+
+#### F2 — Public handle profile · `/u/:handle` · shell
+
+- **Purpose**: view another member's handle (never real identity).
+- **Content**: their handle, kudos total, badge, member-since, public post history; **Follow**; **Report** (→ X1).
+- **Data → source**: `GET /v1/handles/:handle` — the public projection (EPIC-B; never real identity).
+- **Actions → API**: follow/unfollow → `POST`/`DELETE /v1/follows` (EPIC-B); report handle → X1 → `POST /v1/reports` (target_type=handle).
+- **States**: normal; an `expelled`/`suspended` handle renders neutrally — never leak status (EPIC-B/C §9).
+
+#### F3 — Settings hub · `/settings` · shell
+
+- **Purpose**: navigation to the settings screens.
+- **Content**: links → Notifications (F4), Interests (F5), Subscription (F6), Account & legal (F7), Sign-in & security (F8).
+
+#### F4 — Notification preferences · `/settings/notifications` · shell
+
+- **Purpose**: per-type notification control across the three channels.
+- **Content**: a matrix of notification type × channel (**in-app**, **email**, **push**): `verification_status_change` **email is locked on** (non-optional, EPIC-G §6.1); **push toggles are greyed-out / "coming soon"** (inert at MVP, EPIC-G §6.2); the weekly digest has an email toggle (unsubscribe).
+- **Data → API**: `GET /v1/notification-preferences`; change → `PUT /v1/notification-preferences { type, in_app_enabled, email_enabled, push_enabled }` — rejects disabling the verification email.
+- **Note**: this screen is a direct validation of the resolved EPIC-G decisions; no new gaps.
+
+#### F5 — Interests / news-feed choices · `/settings/interests` · shell
+
+- **Purpose**: manage the clinical interests that drive the research feed + personalised forum feed.
+- **Content**: the selectable tag vocabulary, facet-grouped (region/muscle/structure/pathology), each toggle on/off; current selections reflected.
+- **Data → API**: selectable-tags read + current interests + bulk set — **gap G-14** (shared with A7).
+- **States**: default; saving.
+
+#### F6 — Subscription & billing · `/settings/billing` · shell
+
+- **Purpose**: view and manage the subscription (EPIC-H).
+- **Content**: plan; **status** (trialing / active / past_due / cancelled) with the meaningful detail (trial days left; `current_period_end`; grace note if past_due); **cancel** (access continues to period end); **update payment**; **change plan**; **reactivate** (if lapsed).
+- **Data → API**: `GET /v1/billing/me` (EPIC-H §6); cancel → `POST /v1/billing/cancel`.
+- **Spec-gaps**: **G-19** — **manage-subscription endpoints** beyond subscribe/cancel/me — **update payment method** and **change plan** — aren't enumerated in EPIC-H §6.
+- **States**: trialing / active / past_due (grace) / cancelled (access to period end). Cross-ref **H2** when access is actually revoked.
+
+#### F7 — Account & legal · `/settings/account` · shell
+
+- **Purpose**: legal surfaces, the member's own email, sign-out, and account deletion.
+- **Content**: the **zero-tolerance anonymity policy**, terms, privacy; the member's **real email** (shown only to themselves); **sign out**; **delete account / request data erasure**.
+- **Actions → API**: sign out → session/refresh revoke; delete account → an erasure flow — **gap G-20**.
+- **Spec-gaps**: **G-20** — the architecture sets a right-to-erasure *default* (hard-delete identity, retain de-linked community content) but flags it for legal review; the **member-facing deletion request flow + endpoint** are unspecified. Needs both a decision (legal) and an endpoint. GDPR-relevant.
+
+#### F8 — Sign-in & security · `/settings/security` · shell
+
+- **Purpose**: manage biometric sign-in (§1.6).
+- **Content**: **passkey management** — enable/disable, list registered devices (label + last-used), revoke a device; the optional **app-lock** toggle (if that decision lands as opt-in).
+- **Data → API**: WebAuthn credential list; register/remove ceremonies — **gap G-9**.
+- **States**: no passkeys (offer to add) / passkeys present. App-lock toggle present only if the app-lock decision is "yes".
+
+#### H2 — Billing-lapsed holding page · `/reactivate` · no shell
+
+- **Purpose**: the billing analogue of the verification holding page — access is paused; reactivate to restore it (EPIC-H §4, gate §1.2).
+- **Access**: **billing-lapsed-scoped token** — only billing endpoints + this view are reachable; no community content.
+- **Content**: "Your access is paused"; the reason (lapsed/cancelled past period); **Reactivate** (payment); sign out.
+- **Data → API**: `GET /v1/billing/me`; reactivate → subscription payment flow → on success, restores the handle-scoped session.
+- **Note**: distinct from a **moderation** block (suspend/expel) — different token, different resolution path (pay vs. appeal), per the two-gate model (§1.2).
+
 ---
 
 ## 7. Consolidated spec-gaps from this pass
 
-The running list of concrete, actionable items the mapping has surfaced. G-1…G-8 came from the two exemplars; G-9…G-11 from Adrian's 2026-07-19 auth review; **G-12…G-18 from fanning out member areas A–C**. Updated as more screens are specced.
+The running list of concrete, actionable items the mapping has surfaced. G-1…G-8 came from the two exemplars; G-9…G-11 from Adrian's 2026-07-19 auth review; G-12…G-18 from member areas A–C; **G-19…G-23 from areas D–F**. Updated as more screens are specced.
 
 | # | Gap | Affects | Suggested action |
 |---|---|---|---|
@@ -490,6 +622,11 @@ The running list of concrete, actionable items the mapping has surfaced. G-1…G
 | G-16 | **Article detail read + save/bookmark unenumerated** (B2) | EPIC-I | EPIC-I §6 specs the feed list; a single-article GET and a save endpoint/store aren't defined |
 | G-17 | **List-surface DTOs unenumerated** (B1, C1, C2, C3) | EPIC-I / EPIC-C | The article-summary and post-summary card DTOs (incl. author kudos/badge join + counts) aren't specified — the list-surface analogue of the thread-DTO gaps G-3/G-4 |
 | G-18 | **Professional-body picker launch set is FD-1-dependent** (A2) | FD-1 | Confirm which of hcpc/gmc/basrat/sst are offered at launch (physio-first → HCPC primary). A scope link, not a new mechanism |
+| G-19 | **Manage-subscription endpoints missing** (F6) | EPIC-H | `POST /v1/billing/subscribe`/`cancel`/`GET me` exist; **update-payment-method** and **change-plan** don't. Add to EPIC-H §6 |
+| G-20 | **Account-deletion / right-to-erasure member flow unspecified** (F7) | EPIC-A / arch / legal | The erasure *default* is set (hard-delete identity, retain de-linked content) but flagged for legal; the **member-facing deletion request flow + endpoint** aren't specified. GDPR-relevant — needs decision + endpoint |
+| G-21 | **Author-scoped content reads unenumerated** (D4, E2, F1) | EPIC-C | "My posts/answers" (published) and "my drafts" (incl. `draft`/`needs_correction`, author-private) reads aren't specified; the drafts read has a distinct visibility rule (G-8) |
+| G-22 | **Saved/bookmark store + endpoints missing** (E3, B2) | EPIC-C / EPIC-I | The Should-have saves mechanism (posts and articles) has no table/endpoints; decide MVP-Should-have vs. defer |
+| G-23 | **Profile editability undefined** (F1) | EPIC-B | Confirm whether *anything* on the member's own profile is editable (anonymity implies little/nothing beyond the settings screens) — pin the answer |
 
 None are blockers; all are exactly the cheap-to-fix-now, expensive-to-discover-mid-build items this exercise exists to catch. They will be reconciled into the epic specs (the source of truth) as the inventory is fleshed out. **Two items need a decision, not just reconciliation:** G-9's build-timing (MVP vs. fast-follow), and whether to offer the optional biometric **app-lock** (§1.6 — recommendation: opt-in, off by default).
 
@@ -498,7 +635,7 @@ None are blockers; all are exactly the cheap-to-fix-now, expensive-to-discover-m
 ## 8. Next steps
 
 1. ~~**Calibrate**~~ — exemplar detail/altitude approved by Adrian 2026-07-19.
-2. **Fan out** the member screens at the same altitude — **areas A, B, C done** (§6.A–6.C); **D (create), E (activity), F (profile/settings + billing holding) remaining**; then the admin area (G).
-3. Reconcile the accumulating **spec-gaps** (§7, now G-1…G-18) back into the epic specs — a dedicated pass once the inventory is complete.
+2. **Fan out** the member screens at the same altitude — **all member areas A–F done** (§6.A–6.F). Remaining: the **admin area (G)** — moderator + administrator surfaces (desktop-first).
+3. Reconcile the accumulating **spec-gaps** (§7, now G-1…G-23) back into the epic specs — a dedicated pass once the inventory is complete.
 4. Resolve the **open decisions** (G-9 biometric build-timing; app-lock; G-13/G-15 policy calls; G-18/FD-1).
 5. Derive the **tracer-bullet slice backlog** from the completed inventory + flows (slice 1 = A1→A5, the onboarding spine).
