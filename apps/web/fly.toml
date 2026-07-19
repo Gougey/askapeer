@@ -4,7 +4,9 @@ app = "askapeer-web"
 primary_region = "lhr"
 
 [build]
-  dockerfile = "apps/web/Dockerfile"
+  # Relative to this config file's directory (apps/web). Deploy from the repo
+  # root with the root as build context: flyctl deploy . --config apps/web/fly.toml
+  dockerfile = "Dockerfile"
 
 [http_service]
   internal_port = 3000

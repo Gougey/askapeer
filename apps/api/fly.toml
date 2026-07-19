@@ -4,7 +4,9 @@ app = "askapeer-api"
 primary_region = "lhr"
 
 [build]
-  dockerfile = "apps/api/Dockerfile"
+  # Relative to this config file's directory (apps/api). Deploy from the repo
+  # root with the root as build context: flyctl deploy . --config apps/api/fly.toml
+  dockerfile = "Dockerfile"
 
 [deploy]
   # Runs migrations before the new release goes live (WORKDIR = /app/apps/api).
