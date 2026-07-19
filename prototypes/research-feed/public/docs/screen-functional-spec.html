@@ -15,7 +15,9 @@
 <h1 id="askapeer-screen-functional-specification-mobile-first">Askapeer
 — Screen &amp; Functional Specification (mobile-first)</h1>
 <p><strong>Status</strong>: Draft — calibration pass (navigation map +
-two exemplar screens) <strong>Date</strong>: 18 July 2026
+two exemplar screens); exemplar detail approved by Adrian 2026-07-19,
+with two cross-cutting additions folded in (biometric sign-in §1.6, i18n
+§1.7) <strong>Date</strong>: 18 July 2026 (updated 19 July 2026)
 <strong>Author</strong>: Adrian Hall (Technical Lead), with Claude
 Code</p>
 <h2 id="purpose-and-scope">Purpose and scope</h2>
@@ -171,6 +173,62 @@ inputs, not free date fields (EPIC-E §4).</li>
 (area G) are role-gated (two-claim split, EPIC-J §2), share the
 <code>/admin/*</code> shell, and are primarily desktop-web; they are
 inventoried here but specced later.</p>
+<h3 id="authentication-biometric-sign-in-added-2026-07-19">1.6
+Authentication &amp; biometric sign-in (added 2026-07-19)</h3>
+<ul>
+<li><strong>The auth model is passwordless</strong> (architecture §5.2):
+registration collects professional details; a <strong>magic
+link</strong> emailed to the member establishes the session —
+<strong>there is no password to create</strong>. A short-lived access
+token + rotating refresh token maintain the session thereafter.</li>
+<li><strong>Biometric sign-in = a passkey</strong> (WebAuthn platform
+authenticator: Face ID / Touch ID / Android biometric / Windows Hello).
+After the first magic-link sign-in, the member is offered <strong>Enable
+biometric sign-in</strong>, which triggers the OS <strong>permission
+prompt</strong> and registers a platform passkey; subsequent sign-ins
+use the biometric instead of re-requesting a magic link. Passkeys are
+phishing-resistant, first-party (no third party), and carry unchanged
+from the PWA to future native apps.</li>
+<li>Managed in <strong>Settings → Sign-in &amp; security</strong> (F8):
+enable/disable, list registered devices, revoke.</li>
+<li><strong>Build-timing is an open decision (MVP
+vs. fast-follow)</strong> — magic-link alone is sufficient to launch;
+biometrics are a strong mobile-UX addition. The mechanism is logged as
+spec-gap <strong>G-9</strong> (EPIC-A / architecture §5.2 additions:
+WebAuthn register/assert endpoints + an
+<code>identity.webauthn_credentials</code> table).</li>
+</ul>
+<h3
+id="internationalisation-strings-externalised-from-day-one-added-2026-07-19">1.7
+Internationalisation — strings externalised from day one (added
+2026-07-19)</h3>
+<ul>
+<li><strong>Every user-facing string</strong> (labels, buttons,
+messages, empty/error copy, and the mandated anonymity-reminder /
+disclaimer / attestation text) is referenced by a <strong>message
+key</strong>, resolved at render time from <strong>per-locale message
+catalogs</strong> (resource files keyed by id) — never a hardcoded
+literal in a component.</li>
+<li><strong>MVP ships a single <code>en-GB</code> catalog.</strong> This
+is a translation-<em>readiness</em> discipline, <strong>not</strong>
+multi-language delivery — shipping other languages remains Won’t-have
+for MVP (PRD §6.1) — but externalising strings now avoids an expensive
+retrofit when the stated international-expansion aspiration
+arrives.</li>
+<li><strong>Not a database table.</strong> UI copy is developer-owned
+and versioned with the code; a DB “language table” adds
+query/caching/deploy coupling for no MVP benefit. DB-backed translation
+is only for user/admin-managed content that needs translating — of which
+the MVP has essentially none (member posts are authored English
+content). So: <strong>catalog files, not a DB table.</strong></li>
+<li>The i18n layer also owns <strong>locale-aware formatting</strong> —
+dates/relative timelines, numbers, currency (£), and the case-template
+age-bands — so those aren’t hardcoded either.</li>
+<li><strong>Consequence for this spec:</strong> screen content below is
+written in English for readability, but each string maps to a message
+key at build time. Logged as spec-gap <strong>G-10</strong> (a
+client-architecture / frontend pattern, not an epic change).</li>
+</ul>
 <hr />
 <h2 id="navigation-map-screen-inventory">2. Navigation map / screen
 inventory</h2>
@@ -198,7 +256,8 @@ authentication (pre-shell)</h3>
 <tbody>
 <tr>
 <td>A1</td>
-<td>Landing / sign-in entry</td>
+<td>Landing / sign-in (magic link; <strong>biometric if a passkey
+exists</strong> on device)</td>
 <td><code>/</code></td>
 <td>no</td>
 <td>EPIC-A</td>
@@ -212,7 +271,7 @@ authentication (pre-shell)</h3>
 </tr>
 <tr>
 <td>A3</td>
-<td>Passwordless link sent / check email</td>
+<td>Magic-link sent / check email (passwordless — no password step)</td>
 <td><code>/auth/sent</code></td>
 <td>no</td>
 <td>EPIC-A (§5.2)</td>
@@ -252,6 +311,13 @@ needs_more_info / rejected)</td>
 <td><code>/onboarding/subscribe</code></td>
 <td>no</td>
 <td>EPIC-H</td>
+</tr>
+<tr>
+<td>A9</td>
+<td>Enable biometric sign-in (permission prompt → register passkey)</td>
+<td><code>/onboarding/biometric</code></td>
+<td>no</td>
+<td>EPIC-A/auth (§1.6)</td>
 </tr>
 </tbody>
 </table>
@@ -502,6 +568,13 @@ own content)</h3>
 <td><code>/settings/account</code></td>
 <td>yes</td>
 <td>EPIC-A/legal</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>Sign-in &amp; security (biometric / passkey management)</td>
+<td><code>/settings/security</code></td>
+<td>yes</td>
+<td>EPIC-A/auth (§1.6)</td>
 </tr>
 <tr>
 <td>H2</td>
@@ -1015,7 +1088,8 @@ explicit).</li>
 <h2 id="consolidated-spec-gaps-from-this-pass">6. Consolidated spec-gaps
 from this pass</h2>
 <p>A first taste of the payoff — mapping just <strong>two</strong>
-screens surfaced concrete, actionable items for the tech specs:</p>
+screens surfaced G-1…G-8; Adrian’s 2026-07-19 review added G-9…G-10. All
+are concrete, actionable items for the tech specs:</p>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -1088,12 +1162,31 @@ read layer</td>
 <td>EPIC-C/E</td>
 <td>Make the read-layer visibility rule explicit</td>
 </tr>
+<tr>
+<td>G-9</td>
+<td><strong>Biometric sign-in</strong> has no auth-method mechanism</td>
+<td>EPIC-A / architecture §5.2</td>
+<td>Add passkeys (WebAuthn): register/assert endpoints +
+<code>identity.webauthn_credentials</code> table; A9 permission prompt +
+F8 management screens. <strong>Decide MVP vs. fast-follow</strong></td>
+</tr>
+<tr>
+<td>G-10</td>
+<td><strong>UI strings not externalised</strong></td>
+<td>client-architecture / frontend</td>
+<td>Adopt message-catalog i18n (keyed message ids, per-locale files,
+<code>en-GB</code> at MVP); locale-aware formatting;
+<strong>not</strong> a DB table. Reflect in architecture §7.2 frontend
+note</td>
+</tr>
 </tbody>
 </table>
 <p>None are blockers; all are exactly the cheap-to-fix-now,
 expensive-to-discover-mid-build items this exercise exists to catch.
 They will be reconciled into the epic specs (the source of truth) as the
-inventory is fleshed out.</p>
+inventory is fleshed out. <strong>G-9’s build-timing (MVP
+vs. fast-follow) is the one item needing a decision rather than just
+reconciliation.</strong></p>
 <hr />
 <h2 id="next-steps">7. Next steps</h2>
 <ol type="1">

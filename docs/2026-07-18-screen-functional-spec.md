@@ -1,7 +1,7 @@
 # Askapeer — Screen & Functional Specification (mobile-first)
 
-**Status**: Draft — calibration pass (navigation map + two exemplar screens)
-**Date**: 18 July 2026
+**Status**: Draft — calibration pass (navigation map + two exemplar screens); exemplar detail approved by Adrian 2026-07-19, with two cross-cutting additions folded in (biometric sign-in §1.6, i18n §1.7)
+**Date**: 18 July 2026 (updated 19 July 2026)
 **Author**: Adrian Hall (Technical Lead), with Claude Code
 
 ## Purpose and scope
@@ -73,6 +73,21 @@ The domain rules require specific content to appear in specific places. The scre
 
 Member screens (below, areas A–F) are the MVP focus. **Moderator** and **Administrator** surfaces (area G) are role-gated (two-claim split, EPIC-J §2), share the `/admin/*` shell, and are primarily desktop-web; they are inventoried here but specced later.
 
+### 1.6 Authentication & biometric sign-in (added 2026-07-19)
+
+- **The auth model is passwordless** (architecture §5.2): registration collects professional details; a **magic link** emailed to the member establishes the session — **there is no password to create**. A short-lived access token + rotating refresh token maintain the session thereafter.
+- **Biometric sign-in = a passkey** (WebAuthn platform authenticator: Face ID / Touch ID / Android biometric / Windows Hello). After the first magic-link sign-in, the member is offered **Enable biometric sign-in**, which triggers the OS **permission prompt** and registers a platform passkey; subsequent sign-ins use the biometric instead of re-requesting a magic link. Passkeys are phishing-resistant, first-party (no third party), and carry unchanged from the PWA to future native apps.
+- Managed in **Settings → Sign-in & security** (F8): enable/disable, list registered devices, revoke.
+- **Build-timing is an open decision (MVP vs. fast-follow)** — magic-link alone is sufficient to launch; biometrics are a strong mobile-UX addition. The mechanism is logged as spec-gap **G-9** (EPIC-A / architecture §5.2 additions: WebAuthn register/assert endpoints + an `identity.webauthn_credentials` table).
+
+### 1.7 Internationalisation — strings externalised from day one (added 2026-07-19)
+
+- **Every user-facing string** (labels, buttons, messages, empty/error copy, and the mandated anonymity-reminder / disclaimer / attestation text) is referenced by a **message key**, resolved at render time from **per-locale message catalogs** (resource files keyed by id) — never a hardcoded literal in a component.
+- **MVP ships a single `en-GB` catalog.** This is a translation-*readiness* discipline, **not** multi-language delivery — shipping other languages remains Won't-have for MVP (PRD §6.1) — but externalising strings now avoids an expensive retrofit when the stated international-expansion aspiration arrives.
+- **Not a database table.** UI copy is developer-owned and versioned with the code; a DB "language table" adds query/caching/deploy coupling for no MVP benefit. DB-backed translation is only for user/admin-managed content that needs translating — of which the MVP has essentially none (member posts are authored English content). So: **catalog files, not a DB table.**
+- The i18n layer also owns **locale-aware formatting** — dates/relative timelines, numbers, currency (£), and the case-template age-bands — so those aren't hardcoded either.
+- **Consequence for this spec:** screen content below is written in English for readability, but each string maps to a message key at build time. Logged as spec-gap **G-10** (a client-architecture / frontend pattern, not an epic change).
+
 ---
 
 ## 2. Navigation map / screen inventory
@@ -83,14 +98,15 @@ Grouped by area. Routes are indicative (mobile-web PWA paths). "Shell" = whether
 
 | ID | Screen | Route | Shell | Primary epic |
 |---|---|---|---|---|
-| A1 | Landing / sign-in entry | `/` | no | EPIC-A |
+| A1 | Landing / sign-in (magic link; **biometric if a passkey exists** on device) | `/` | no | EPIC-A |
 | A2 | Register (professional details) | `/register` | no | EPIC-A |
-| A3 | Passwordless link sent / check email | `/auth/sent` | no | EPIC-A (§5.2) |
+| A3 | Magic-link sent / check email (passwordless — no password step) | `/auth/sent` | no | EPIC-A (§5.2) |
 | A4 | Identity check capture (Onfido document + selfie) | `/verify/capture` | no | EPIC-A (§5B) |
 | **A5** | **Verification holding page** (pending / needs_more_info / rejected) | `/status` | no | EPIC-A — **exemplar 1** |
 | A6 | Choose handle | `/onboarding/handle` | no | EPIC-B |
 | A7 | Onboarding: anonymity acknowledgement + pick interests | `/onboarding/setup` | no | domain rule + EPIC-I |
 | A8 | Start subscription / trial (paywall) | `/onboarding/subscribe` | no | EPIC-H |
+| A9 | Enable biometric sign-in (permission prompt → register passkey) | `/onboarding/biometric` | no | EPIC-A/auth (§1.6) |
 
 ### B. Feed tab — news & research (EPIC-I)
 
@@ -136,6 +152,7 @@ Grouped by area. Routes are indicative (mobile-web PWA paths). "Shell" = whether
 | F5 | News-feed / interest choices (tag interests) | `/settings/interests` | yes | EPIC-I |
 | F6 | Subscription & billing | `/settings/billing` | yes | EPIC-H |
 | F7 | Account & legal (policy, terms, sign out) | `/settings/account` | yes | EPIC-A/legal |
+| F8 | Sign-in & security (biometric / passkey management) | `/settings/security` | yes | EPIC-A/auth (§1.6) |
 | H2 | Billing-lapsed holding page | `/reactivate` | no | EPIC-H (§4) |
 
 ### G. Moderator / Administrator (role-gated, `/admin/*`, desktop-first — inventory only)
@@ -320,7 +337,7 @@ Each fully-specced screen uses these fields:
 
 ## 6. Consolidated spec-gaps from this pass
 
-A first taste of the payoff — mapping just **two** screens surfaced concrete, actionable items for the tech specs:
+A first taste of the payoff — mapping just **two** screens surfaced G-1…G-8; Adrian's 2026-07-19 review added G-9…G-10. All are concrete, actionable items for the tech specs:
 
 | # | Gap | Affects | Suggested action |
 |---|---|---|---|
@@ -332,8 +349,10 @@ A first taste of the payoff — mapping just **two** screens surfaced concrete, 
 | G-6 | Poll payload, vote endpoint, and `viewer_vote` not enumerated | EPIC-C §7 | Add poll to thread DTO + `POST /v1/polls/:id/vote` |
 | G-7 | Anonymity-reminder UI surfaces not explicitly listed | EPIC-C/E | Pin composer placements as a build requirement |
 | G-8 | `needs_correction` author-only visibility not explicit at read layer | EPIC-C/E | Make the read-layer visibility rule explicit |
+| G-9 | **Biometric sign-in** has no auth-method mechanism | EPIC-A / architecture §5.2 | Add passkeys (WebAuthn): register/assert endpoints + `identity.webauthn_credentials` table; A9 permission prompt + F8 management screens. **Decide MVP vs. fast-follow** |
+| G-10 | **UI strings not externalised** | client-architecture / frontend | Adopt message-catalog i18n (keyed message ids, per-locale files, `en-GB` at MVP); locale-aware formatting; **not** a DB table. Reflect in architecture §7.2 frontend note |
 
-None are blockers; all are exactly the cheap-to-fix-now, expensive-to-discover-mid-build items this exercise exists to catch. They will be reconciled into the epic specs (the source of truth) as the inventory is fleshed out.
+None are blockers; all are exactly the cheap-to-fix-now, expensive-to-discover-mid-build items this exercise exists to catch. They will be reconciled into the epic specs (the source of truth) as the inventory is fleshed out. **G-9's build-timing (MVP vs. fast-follow) is the one item needing a decision rather than just reconciliation.**
 
 ---
 
