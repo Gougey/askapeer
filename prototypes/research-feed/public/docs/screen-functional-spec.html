@@ -14,10 +14,11 @@
 <main>
 <h1 id="askapeer-screen-functional-specification-mobile-first">Askapeer
 — Screen &amp; Functional Specification (mobile-first)</h1>
-<p><strong>Status</strong>: Draft — calibration pass (navigation map +
-two exemplar screens); exemplar detail approved by Adrian 2026-07-19,
-with two cross-cutting additions folded in (biometric sign-in §1.6, i18n
-§1.7) <strong>Date</strong>: 18 July 2026 (updated 19 July 2026)
+<p><strong>Status</strong>: Draft — fan-out in progress. Exemplars
+approved 2026-07-19; cross-cutting patterns added
+(auth/session/biometric §1.6, i18n §1.7); <strong>member areas A–C fully
+specced (§6)</strong>; areas D–F and admin (G) remaining.
+<strong>Date</strong>: 18 July 2026 (updated 19 July 2026)
 <strong>Author</strong>: Adrian Hall (Technical Lead), with Claude
 Code</p>
 <h2 id="purpose-and-scope">Purpose and scope</h2>
@@ -1112,11 +1113,295 @@ to others (EPIC-E §8 implies it; make the read-layer rule
 explicit).</li>
 </ol>
 <hr />
-<h2 id="consolidated-spec-gaps-from-this-pass">6. Consolidated spec-gaps
+<h2 id="member-screen-specifications">6. Member screen
+specifications</h2>
+<p>Fanned-out specs for the member-facing screens, at functional
+altitude. <strong>A5</strong> (verification holding page) and
+<strong>C4</strong> (thread/post detail) are specced above as exemplars
+(§4, §5) and not repeated. Simple screens are kept brief; richer screens
+carry the full template. New spec-gaps continue the numbering (G-12+)
+and are consolidated in §7.</p>
+<h3 id="a-onboarding-authentication">6.A — Onboarding &amp;
+authentication</h3>
+<p>The first flow: unauthenticated → verified → handle → in-app. No
+bottom-nav shell until it completes. This flow contains
+<strong>tracer-bullet slice 1</strong> (A1→A2→A3→A5).</p>
+<h4 id="a1-landing-sign-in-no-shell">A1 — Landing / sign-in ·
+<code>/</code> · no shell</h4>
+<ul>
+<li><strong>Purpose</strong>: entry point for a returning or new user;
+start sign-in or registration.</li>
+<li><strong>Access</strong>: unauthenticated.</li>
+<li><strong>Content</strong>: brand; <strong>Sign in</strong> (magic
+link) primary; <strong>Register</strong> secondary; if a <strong>passkey
+exists on this device</strong>, a <strong>Sign in with
+biometric</strong> option (§1.6).</li>
+<li><strong>Actions → API</strong>: Sign in →
+<code>POST /v1/auth/request-link { email }</code>; Sign in with
+biometric → WebAuthn assertion (gap G-9); Register → A2.</li>
+<li><strong>States</strong>: default; passkey-present variant (biometric
+affordance shown).</li>
+</ul>
+<h4 id="a2-register-professional-details-register-no-shell">A2 —
+Register (professional details) · <code>/register</code> · no shell</h4>
+<ul>
+<li><strong>Purpose</strong>: collect the details needed to verify a
+practitioner.</li>
+<li><strong>Access</strong>: unauthenticated.</li>
+<li><strong>Content</strong>: form — email; <strong>professional
+body</strong> picker; <strong>registration number</strong>;
+<strong>registration country</strong> (UK-only at MVP, field present per
+EPIC-A §2); the <strong>zero-tolerance anonymity notice</strong>
+(mandated surface §1.4); submit.</li>
+<li><strong>Data → source</strong>: professional-body options — the
+<code>professional_body</code> enum (<code>hcpc</code>,
+<code>gmc</code>, <code>basrat</code>, <code>sst</code>); <em>which are
+offered at launch depends on FD-1</em> (physio-first → HCPC
+primary).</li>
+<li><strong>Actions → API</strong>: Submit →
+<code>POST /v1/auth/register</code> (EPIC-A §4) →
+<code>201 {member_id, pending}</code> or <code>409</code> duplicate →
+A3. On <code>409</code>, show the generic “you may already have an
+account” message (no info leak).</li>
+<li><strong>States</strong>: validation errors (per field); duplicate
+(generic); submitting.</li>
+<li><strong>Spec-gaps</strong>: <strong>G-18</strong> — the
+professional-body picker’s launch options are FD-1-dependent; confirm
+the launch set (not a new mechanism, a scope link).</li>
+</ul>
+<h4 id="a3-magic-link-sent-check-email-authsent-no-shell">A3 —
+Magic-link sent / check email · <code>/auth/sent</code> · no shell</h4>
+<ul>
+<li><strong>Purpose</strong>: tell the user a sign-in link was emailed;
+there is <strong>no password</strong>.</li>
+<li><strong>Content</strong>: confirmation (“We’ve emailed a sign-in
+link to …”); resend; change email; help.</li>
+<li><strong>Actions → API</strong>: Resend →
+<code>POST /v1/auth/request-link</code> (rate-limited, EPIC-A §9); the
+link itself lands the user authenticated → routes by status (→ A4/A5 or,
+if already verified with a handle, the app).</li>
+<li><strong>States</strong>: sent; resend cooldown.</li>
+</ul>
+<h4 id="a4-identity-check-capture-onfido-verifycapture-no-shell">A4 —
+Identity check capture (Onfido) · <code>/verify/capture</code> · no
+shell</h4>
+<ul>
+<li><strong>Purpose</strong>: capture the document + selfie that binds
+the person to the registration (EPIC-A §5B).</li>
+<li><strong>Access</strong>: pending-scoped token.</li>
+<li><strong>Content</strong>: the Onfido SDK capture flow (document,
+then selfie), embedded; guidance copy.</li>
+<li><strong>Actions → API</strong>: hands off to Onfido SDK → Onfido
+posts back via webhook (EPIC-A §5); on completion → A5.</li>
+<li><strong>States</strong>: capture steps; upload; abandoned/resume
+(ties to gaps G-1/G-2 — resumability).</li>
+<li><strong>Spec-gaps</strong>: see <strong>G-1/G-2</strong> (resuming
+an abandoned capture; the applicant-side path).</li>
+</ul>
+<h4 id="a6-choose-handle-onboardinghandle-no-shell">A6 — Choose handle ·
+<code>/onboarding/handle</code> · no shell</h4>
+<ul>
+<li><strong>Purpose</strong>: pick the pseudonymous handle (EPIC-B) —
+the first post-verification step.</li>
+<li><strong>Access</strong>: <code>approved_verified</code>, pre-handle
+token.</li>
+<li><strong>Content</strong>: handle input with <strong>live
+availability + rule feedback</strong> (3–30 chars, alphanumeric +
+<code>_</code>/<code>-</code>, not on blocklist); explanation that the
+handle is <strong>permanent</strong> (no self-rename, EPIC-B §6);
+confirm.</li>
+<li><strong>Actions → API</strong>: check availability (as-you-type) →
+<strong>gap G-12</strong>; confirm → <code>POST /v1/handles</code>
+(EPIC-B) → mints handle-scoped session → A7.</li>
+<li><strong>States</strong>: available / taken / invalid / blocked;
+confirming.</li>
+<li><strong>Spec-gaps</strong>: <strong>G-12</strong> — no
+handle-availability endpoint is specified; needs
+<code>GET /v1/handles/availability?name=</code> (uniqueness + blocklist
++ rule check) for real-time feedback rather than only failing on
+submit.</li>
+</ul>
+<h4
+id="a7-onboarding-setup-anonymity-acknowledgement-interests-onboardingsetup-no-shell">A7
+— Onboarding setup: anonymity acknowledgement + interests ·
+<code>/onboarding/setup</code> · no shell</h4>
+<ul>
+<li><strong>Purpose</strong>: record the member’s acknowledgement of the
+zero-tolerance rule, and seed their clinical interests (feeds the
+research feed + personalised forum feed).</li>
+<li><strong>Access</strong>: handle-scoped.</li>
+<li><strong>Content</strong>: (1) the <strong>zero-tolerance anonymity
+rule</strong> in full + an explicit <strong>acknowledgement</strong>
+control (mandated surface §1.4); (2) <strong>pick interests</strong> —
+selectable tags from the unified vocabulary, grouped by facet/region
+(EPIC-I / <code>community.tags</code>).</li>
+<li><strong>Actions → API</strong>: acknowledge → <strong>gap
+G-13</strong> (record it); set interests → <strong>gap G-14</strong>;
+continue → A8 (or the app, if seed period).</li>
+<li><strong>Spec-gaps</strong>: <strong>G-13</strong> — is the
+onboarding anonymity acknowledgement <em>recorded</em> (timestamped
+against the member) for compliance, as the case attestation is?
+Currently unspecified. <strong>G-14</strong> — needs a selectable-tags
+read (facet-filtered <code>community.tags</code>) and a bulk
+<strong>set-interests</strong> write (<code>member_interests</code>,
+EPIC-I) — neither enumerated.</li>
+</ul>
+<h4 id="a8-start-subscription-trial-onboardingsubscribe-no-shell">A8 —
+Start subscription / trial · <code>/onboarding/subscribe</code> · no
+shell</h4>
+<ul>
+<li><strong>Purpose</strong>: begin the subscription/trial
+(EPIC-H).</li>
+<li><strong>Access</strong>: handle-scoped.</li>
+<li><strong>Content</strong>: plan(s) + trial terms; payment capture
+(Stripe Elements handoff, EPIC-H §6); the pricing figures are
+FD-2-illustrative.</li>
+<li><strong>Actions → API</strong>: subscribe →
+<code>POST /v1/billing/subscribe { plan }</code> (EPIC-H §6) → provider
+client step → the app.</li>
+<li><strong>Spec-gaps</strong>: <strong>G-15</strong> — monetisation
+specifies a <strong>free seed period before the paywall</strong> (PRD
+§11): during the seed period A8 is skipped/deferred, and the billing
+gate (§1.2) is inactive. The <em>trigger</em> that switches the paywall
+on is undefined — needs an EPIC-H seed-period flag/decision.</li>
+</ul>
+<h4 id="a9-enable-biometric-sign-in-onboardingbiometric-no-shell">A9 —
+Enable biometric sign-in · <code>/onboarding/biometric</code> · no
+shell</h4>
+<ul>
+<li><strong>Purpose</strong>: offer to register a passkey for future
+biometric sign-in (§1.6).</li>
+<li><strong>Content</strong>: benefit explanation;
+<strong>Enable</strong> (→ OS permission prompt → WebAuthn
+registration); <strong>Skip for now</strong>.</li>
+<li><strong>Actions → API</strong>: Enable → WebAuthn registration
+ceremony → store credential (gap G-9); Skip → the app.</li>
+<li><strong>States</strong>: permission granted / denied / unsupported
+device (hide the option gracefully).</li>
+<li><strong>Spec-gaps</strong>: <strong>G-9</strong> (mechanism);
+build-timing decision.</li>
+</ul>
+<h3 id="b-feed-tab-news-research-epic-i">6.B — Feed tab (news &amp;
+research, EPIC-I)</h3>
+<h4 id="b1-researchnews-feed-home-feed-shell">B1 — Research/news feed
+home · <code>/feed</code> · shell</h4>
+<ul>
+<li><strong>Purpose</strong>: the default tab — a feed of research/news
+articles scored to the member’s interests (EPIC-I).</li>
+<li><strong>Access</strong>: in-app (both gates).</li>
+<li><strong>Content</strong>: a ranked list of <strong>article
+cards</strong> (title, source/journal, date, one-line
+“<strong>recommended because it matches your interest in X</strong>”,
+save control); pull-to-refresh; infinite scroll.</li>
+<li><strong>Data → source</strong>: <code>GET /v1/research-feed</code>
+(EPIC-I §6) — scored articles + explanation strings, computed from
+<code>member_interests</code> × precomputed article scores.</li>
+<li><strong>Actions → API</strong>: open article → B2; save/bookmark →
+save endpoint (EPIC-I — see G-16); adjust interests → F5.</li>
+<li><strong>States</strong>: loading (skeleton cards); <strong>empty —
+no interests set</strong> → prompt to pick interests (→ F5/A7);
+error/offline.</li>
+<li><strong>Spec-gaps</strong>: <strong>G-17</strong> — the
+<strong>article-summary list DTO</strong> (card fields) isn’t enumerated
+in EPIC-I §6; specify it.</li>
+</ul>
+<h4 id="b2-article-detail-feedarticleid-shell">B2 — Article detail ·
+<code>/feed/:articleId</code> · shell</h4>
+<ul>
+<li><strong>Purpose</strong>: read an article’s summary and link out to
+the source.</li>
+<li><strong>Content</strong>: title; authors; source/journal + date;
+<strong>abstract</strong>; tags/facets matched; <strong>Open
+source</strong> (external link, opens in browser);
+<strong>Save</strong>; provenance/quality flags if any
+(e.g. retraction/predatory — future, EPIC-I §7 carry-forwards).</li>
+<li><strong>Data → source</strong>: single-article read — <strong>see
+G-16</strong> (may not exist yet).</li>
+<li><strong>Actions → API</strong>: Open source → external URL; Save →
+save endpoint (G-16).</li>
+<li><strong>Spec-gaps</strong>: <strong>G-16</strong> — EPIC-I §6
+specifies the <em>feed</em>; a <strong>single-article GET</strong> and a
+<strong>save/bookmark</strong> endpoint + store aren’t enumerated.
+Confirm whether article detail reads from the feed payload or a
+dedicated endpoint, and where saves live (member-scoped,
+<code>community</code>-side).</li>
+</ul>
+<h3 id="c-discussions-tab-the-forum-epic-cde">6.C — Discussions tab (the
+forum, EPIC-C/D/E)</h3>
+<h4 id="c1-discussions-home-discussions-shell">C1 — Discussions home ·
+<code>/discussions</code> · shell</h4>
+<ul>
+<li><strong>Purpose</strong>: the forum landing — a personalised feed of
+posts, with a trending fallback.</li>
+<li><strong>Access</strong>: in-app.</li>
+<li><strong>Content</strong>: a list of <strong>post summary
+cards</strong> (category chip, title, author handle + kudos/badge, tag
+chips, answer count, post kudos count, snippet, timestamp, best-answer
+indicator); the <strong>➕ create</strong> affordance (centre nav); a
+browse/search entry (header).</li>
+<li><strong>Data → source</strong>: personalised feed = posts in the
+member’s <strong>followed tags + handles</strong>
+(<code>community.follows</code>, EPIC-C §8); <strong>trending
+fallback</strong> (adaptive window, kudos-ranked) when the personalised
+feed is sparse (EPIC-C §8).</li>
+<li><strong>Actions → API</strong>: open → C4; create → D1; browse → C2;
+search → C3; follow/unfollow from a card (optional).</li>
+<li><strong>States</strong>: personalised content; <strong>empty
+personalised → trending fallback</strong> (never a dead screen — EPIC-C
+§8); loading; error.</li>
+<li><strong>Spec-gaps</strong>: <strong>G-17</strong> (shared) — the
+<strong>post-summary list DTO</strong> (card fields incl. author
+kudos/badge join and counts) isn’t enumerated in EPIC-C; specify it (the
+list-surface analogue of the thread DTO gaps G-3/G-4).</li>
+</ul>
+<h4 id="c2-browse-by-category-tag-discussionsbrowse-shell">C2 — Browse
+by category / tag · <code>/discussions/browse</code> · shell</h4>
+<ul>
+<li><strong>Purpose</strong>: explore the forum by content-type category
+or by clinical tag.</li>
+<li><strong>Content</strong>: <strong>category</strong> list
+(content-type: Clinical Case / Research / Career / Equipment / General);
+<strong>tag</strong> browser grouped by facet (region / muscle /
+structure / pathology) and Upper/Lower-limb grouping (EPIC-C §3);
+selecting a filter → a filtered post list (post-summary cards as
+C1).</li>
+<li><strong>Data → source</strong>: <code>community.categories</code> +
+<code>community.tags</code> (facet/grouping) — the read side of
+EPIC-J-managed vocabulary; filtered posts via the same list DTO
+(G-17).</li>
+<li><strong>Actions → API</strong>: pick category/tag → filtered list;
+open post → C4; follow a tag → <code>POST /v1/follows</code>
+(EPIC-B).</li>
+<li><strong>States</strong>: default; retired categories/tags hidden
+from the browser (EPIC-J retire).</li>
+</ul>
+<h4 id="c3-search-search-shell">C3 — Search · <code>/search</code> ·
+shell</h4>
+<ul>
+<li><strong>Purpose</strong>: full-text search across posts, answers,
+and tags.</li>
+<li><strong>Content</strong>: query input; results as post-summary
+cards; possibly a tag-match section; recent/suggested (optional).</li>
+<li><strong>Data → source</strong>: <code>GET /v1/search?q=…</code>
+(EPIC-C §4) — Postgres FTS (weighted <code>tsvector</code> +
+<code>pg_trgm</code> typo tolerance + the clinical synonym dictionary
+seeded from <code>community.tags.synonyms</code>). Synonym/typo
+expansion is server-side and invisible to the client.</li>
+<li><strong>Actions → API</strong>: submit query → results; open → C4;
+tag chip → C2.</li>
+<li><strong>States</strong>: idle/prompt; results; <strong>no
+results</strong> (suggest broadening / check spelling — trgm already
+softens this); loading.</li>
+<li><strong>Spec-gaps</strong>: <strong>G-17</strong> (shared list DTO)
+applies to results.</li>
+</ul>
+<hr />
+<h2 id="consolidated-spec-gaps-from-this-pass">7. Consolidated spec-gaps
 from this pass</h2>
-<p>A first taste of the payoff — mapping just <strong>two</strong>
-screens surfaced G-1…G-8; Adrian’s 2026-07-19 review added G-9…G-10. All
-are concrete, actionable items for the tech specs:</p>
+<p>The running list of concrete, actionable items the mapping has
+surfaced. G-1…G-8 came from the two exemplars; G-9…G-11 from Adrian’s
+2026-07-19 auth review; <strong>G-12…G-18 from fanning out member areas
+A–C</strong>. Updated as more screens are specced.</p>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -1217,6 +1502,66 @@ explicit value (e.g. sliding inactivity window + absolute max, with
 rotation + reuse-detection) and make it a <strong>tunable</strong> like
 the other thresholds (EPIC-J config)</td>
 </tr>
+<tr>
+<td>G-12</td>
+<td><strong>No handle-availability endpoint</strong> (A6)</td>
+<td>EPIC-B</td>
+<td>Add <code>GET /v1/handles/availability?name=</code> (uniqueness +
+blocklist + 3–30/charset rules) for live feedback, rather than only
+failing on <code>POST /v1/handles</code></td>
+</tr>
+<tr>
+<td>G-13</td>
+<td><strong>Onboarding anonymity acknowledgement not recorded</strong>
+(A7)</td>
+<td>EPIC-A / domain</td>
+<td>The zero-tolerance rule is <em>shown</em> at
+registration/onboarding, but is the member’s acknowledgement
+<em>recorded</em> (timestamped) as the case attestation is? Decide +
+specify storage</td>
+</tr>
+<tr>
+<td>G-14</td>
+<td><strong>Interest selection endpoints missing</strong> (A7, F5)</td>
+<td>EPIC-I</td>
+<td>Needs a selectable-tags read (facet-filtered
+<code>community.tags</code>) and a bulk <strong>set-interests</strong>
+write (<code>member_interests</code>) — neither enumerated</td>
+</tr>
+<tr>
+<td>G-15</td>
+<td><strong>Free-seed-period → paywall trigger undefined</strong>
+(A8)</td>
+<td>EPIC-H</td>
+<td>Monetisation specifies a free seed period before the paywall (PRD
+§11); the switch that activates the billing gate is unspecified — needs
+an EPIC-H seed flag + decision</td>
+</tr>
+<tr>
+<td>G-16</td>
+<td><strong>Article detail read + save/bookmark unenumerated</strong>
+(B2)</td>
+<td>EPIC-I</td>
+<td>EPIC-I §6 specs the feed list; a single-article GET and a save
+endpoint/store aren’t defined</td>
+</tr>
+<tr>
+<td>G-17</td>
+<td><strong>List-surface DTOs unenumerated</strong> (B1, C1, C2,
+C3)</td>
+<td>EPIC-I / EPIC-C</td>
+<td>The article-summary and post-summary card DTOs (incl. author
+kudos/badge join + counts) aren’t specified — the list-surface analogue
+of the thread-DTO gaps G-3/G-4</td>
+</tr>
+<tr>
+<td>G-18</td>
+<td><strong>Professional-body picker launch set is
+FD-1-dependent</strong> (A2)</td>
+<td>FD-1</td>
+<td>Confirm which of hcpc/gmc/basrat/sst are offered at launch
+(physio-first → HCPC primary). A scope link, not a new mechanism</td>
+</tr>
 </tbody>
 </table>
 <p>None are blockers; all are exactly the cheap-to-fix-now,
@@ -1227,17 +1572,22 @@ reconciliation:</strong> G-9’s build-timing (MVP vs. fast-follow), and
 whether to offer the optional biometric <strong>app-lock</strong> (§1.6
 — recommendation: opt-in, off by default).</p>
 <hr />
-<h2 id="next-steps">7. Next steps</h2>
+<h2 id="next-steps">8. Next steps</h2>
 <ol type="1">
-<li><strong>Calibrate</strong> — review this pass: is the template
-altitude right? Is the inventory complete and correctly grouped?</li>
-<li>On sign-off, <strong>fan out</strong> the remaining member screens
-(areas A–F), then the admin area (G), each at the same functional
-altitude.</li>
-<li>Reconcile the accumulating <strong>spec-gaps</strong> back into the
-epic specs.</li>
+<li><del><strong>Calibrate</strong></del> — exemplar detail/altitude
+approved by Adrian 2026-07-19.</li>
+<li><strong>Fan out</strong> the member screens at the same altitude —
+<strong>areas A, B, C done</strong> (§6.A–6.C); <strong>D (create), E
+(activity), F (profile/settings + billing holding) remaining</strong>;
+then the admin area (G).</li>
+<li>Reconcile the accumulating <strong>spec-gaps</strong> (§7, now
+G-1…G-18) back into the epic specs — a dedicated pass once the inventory
+is complete.</li>
+<li>Resolve the <strong>open decisions</strong> (G-9 biometric
+build-timing; app-lock; G-13/G-15 policy calls; G-18/FD-1).</li>
 <li>Derive the <strong>tracer-bullet slice backlog</strong> from the
-completed inventory + flows.</li>
+completed inventory + flows (slice 1 = A1→A5, the onboarding
+spine).</li>
 </ol>
 
 </main>

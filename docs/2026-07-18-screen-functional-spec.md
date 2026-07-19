@@ -1,6 +1,6 @@
 # Askapeer — Screen & Functional Specification (mobile-first)
 
-**Status**: Draft — calibration pass (navigation map + two exemplar screens); exemplar detail approved by Adrian 2026-07-19, with two cross-cutting additions folded in (biometric sign-in §1.6, i18n §1.7)
+**Status**: Draft — fan-out in progress. Exemplars approved 2026-07-19; cross-cutting patterns added (auth/session/biometric §1.6, i18n §1.7); **member areas A–C fully specced (§6)**; areas D–F and admin (G) remaining.
 **Date**: 18 July 2026 (updated 19 July 2026)
 **Author**: Adrian Hall (Technical Lead), with Claude Code
 
@@ -340,9 +340,135 @@ Each fully-specced screen uses these fields:
 
 ---
 
-## 6. Consolidated spec-gaps from this pass
+## 6. Member screen specifications
 
-A first taste of the payoff — mapping just **two** screens surfaced G-1…G-8; Adrian's 2026-07-19 review added G-9…G-10. All are concrete, actionable items for the tech specs:
+Fanned-out specs for the member-facing screens, at functional altitude. **A5** (verification holding page) and **C4** (thread/post detail) are specced above as exemplars (§4, §5) and not repeated. Simple screens are kept brief; richer screens carry the full template. New spec-gaps continue the numbering (G-12+) and are consolidated in §7.
+
+### 6.A — Onboarding & authentication
+
+The first flow: unauthenticated → verified → handle → in-app. No bottom-nav shell until it completes. This flow contains **tracer-bullet slice 1** (A1→A2→A3→A5).
+
+#### A1 — Landing / sign-in · `/` · no shell
+
+- **Purpose**: entry point for a returning or new user; start sign-in or registration.
+- **Access**: unauthenticated.
+- **Content**: brand; **Sign in** (magic link) primary; **Register** secondary; if a **passkey exists on this device**, a **Sign in with biometric** option (§1.6).
+- **Actions → API**: Sign in → `POST /v1/auth/request-link { email }`; Sign in with biometric → WebAuthn assertion (gap G-9); Register → A2.
+- **States**: default; passkey-present variant (biometric affordance shown).
+
+#### A2 — Register (professional details) · `/register` · no shell
+
+- **Purpose**: collect the details needed to verify a practitioner.
+- **Access**: unauthenticated.
+- **Content**: form — email; **professional body** picker; **registration number**; **registration country** (UK-only at MVP, field present per EPIC-A §2); the **zero-tolerance anonymity notice** (mandated surface §1.4); submit.
+- **Data → source**: professional-body options — the `professional_body` enum (`hcpc`, `gmc`, `basrat`, `sst`); *which are offered at launch depends on FD-1* (physio-first → HCPC primary).
+- **Actions → API**: Submit → `POST /v1/auth/register` (EPIC-A §4) → `201 {member_id, pending}` or `409` duplicate → A3. On `409`, show the generic "you may already have an account" message (no info leak).
+- **States**: validation errors (per field); duplicate (generic); submitting.
+- **Spec-gaps**: **G-18** — the professional-body picker's launch options are FD-1-dependent; confirm the launch set (not a new mechanism, a scope link).
+
+#### A3 — Magic-link sent / check email · `/auth/sent` · no shell
+
+- **Purpose**: tell the user a sign-in link was emailed; there is **no password**.
+- **Content**: confirmation ("We've emailed a sign-in link to …"); resend; change email; help.
+- **Actions → API**: Resend → `POST /v1/auth/request-link` (rate-limited, EPIC-A §9); the link itself lands the user authenticated → routes by status (→ A4/A5 or, if already verified with a handle, the app).
+- **States**: sent; resend cooldown.
+
+#### A4 — Identity check capture (Onfido) · `/verify/capture` · no shell
+
+- **Purpose**: capture the document + selfie that binds the person to the registration (EPIC-A §5B).
+- **Access**: pending-scoped token.
+- **Content**: the Onfido SDK capture flow (document, then selfie), embedded; guidance copy.
+- **Actions → API**: hands off to Onfido SDK → Onfido posts back via webhook (EPIC-A §5); on completion → A5.
+- **States**: capture steps; upload; abandoned/resume (ties to gaps G-1/G-2 — resumability).
+- **Spec-gaps**: see **G-1/G-2** (resuming an abandoned capture; the applicant-side path).
+
+#### A6 — Choose handle · `/onboarding/handle` · no shell
+
+- **Purpose**: pick the pseudonymous handle (EPIC-B) — the first post-verification step.
+- **Access**: `approved_verified`, pre-handle token.
+- **Content**: handle input with **live availability + rule feedback** (3–30 chars, alphanumeric + `_`/`-`, not on blocklist); explanation that the handle is **permanent** (no self-rename, EPIC-B §6); confirm.
+- **Actions → API**: check availability (as-you-type) → **gap G-12**; confirm → `POST /v1/handles` (EPIC-B) → mints handle-scoped session → A7.
+- **States**: available / taken / invalid / blocked; confirming.
+- **Spec-gaps**: **G-12** — no handle-availability endpoint is specified; needs `GET /v1/handles/availability?name=` (uniqueness + blocklist + rule check) for real-time feedback rather than only failing on submit.
+
+#### A7 — Onboarding setup: anonymity acknowledgement + interests · `/onboarding/setup` · no shell
+
+- **Purpose**: record the member's acknowledgement of the zero-tolerance rule, and seed their clinical interests (feeds the research feed + personalised forum feed).
+- **Access**: handle-scoped.
+- **Content**: (1) the **zero-tolerance anonymity rule** in full + an explicit **acknowledgement** control (mandated surface §1.4); (2) **pick interests** — selectable tags from the unified vocabulary, grouped by facet/region (EPIC-I / `community.tags`).
+- **Actions → API**: acknowledge → **gap G-13** (record it); set interests → **gap G-14**; continue → A8 (or the app, if seed period).
+- **Spec-gaps**: **G-13** — is the onboarding anonymity acknowledgement *recorded* (timestamped against the member) for compliance, as the case attestation is? Currently unspecified. **G-14** — needs a selectable-tags read (facet-filtered `community.tags`) and a bulk **set-interests** write (`member_interests`, EPIC-I) — neither enumerated.
+
+#### A8 — Start subscription / trial · `/onboarding/subscribe` · no shell
+
+- **Purpose**: begin the subscription/trial (EPIC-H).
+- **Access**: handle-scoped.
+- **Content**: plan(s) + trial terms; payment capture (Stripe Elements handoff, EPIC-H §6); the pricing figures are FD-2-illustrative.
+- **Actions → API**: subscribe → `POST /v1/billing/subscribe { plan }` (EPIC-H §6) → provider client step → the app.
+- **Spec-gaps**: **G-15** — monetisation specifies a **free seed period before the paywall** (PRD §11): during the seed period A8 is skipped/deferred, and the billing gate (§1.2) is inactive. The *trigger* that switches the paywall on is undefined — needs an EPIC-H seed-period flag/decision.
+
+#### A9 — Enable biometric sign-in · `/onboarding/biometric` · no shell
+
+- **Purpose**: offer to register a passkey for future biometric sign-in (§1.6).
+- **Content**: benefit explanation; **Enable** (→ OS permission prompt → WebAuthn registration); **Skip for now**.
+- **Actions → API**: Enable → WebAuthn registration ceremony → store credential (gap G-9); Skip → the app.
+- **States**: permission granted / denied / unsupported device (hide the option gracefully).
+- **Spec-gaps**: **G-9** (mechanism); build-timing decision.
+
+### 6.B — Feed tab (news & research, EPIC-I)
+
+#### B1 — Research/news feed home · `/feed` · shell
+
+- **Purpose**: the default tab — a feed of research/news articles scored to the member's interests (EPIC-I).
+- **Access**: in-app (both gates).
+- **Content**: a ranked list of **article cards** (title, source/journal, date, one-line "**recommended because it matches your interest in X**", save control); pull-to-refresh; infinite scroll.
+- **Data → source**: `GET /v1/research-feed` (EPIC-I §6) — scored articles + explanation strings, computed from `member_interests` × precomputed article scores.
+- **Actions → API**: open article → B2; save/bookmark → save endpoint (EPIC-I — see G-16); adjust interests → F5.
+- **States**: loading (skeleton cards); **empty — no interests set** → prompt to pick interests (→ F5/A7); error/offline.
+- **Spec-gaps**: **G-17** — the **article-summary list DTO** (card fields) isn't enumerated in EPIC-I §6; specify it.
+
+#### B2 — Article detail · `/feed/:articleId` · shell
+
+- **Purpose**: read an article's summary and link out to the source.
+- **Content**: title; authors; source/journal + date; **abstract**; tags/facets matched; **Open source** (external link, opens in browser); **Save**; provenance/quality flags if any (e.g. retraction/predatory — future, EPIC-I §7 carry-forwards).
+- **Data → source**: single-article read — **see G-16** (may not exist yet).
+- **Actions → API**: Open source → external URL; Save → save endpoint (G-16).
+- **Spec-gaps**: **G-16** — EPIC-I §6 specifies the *feed*; a **single-article GET** and a **save/bookmark** endpoint + store aren't enumerated. Confirm whether article detail reads from the feed payload or a dedicated endpoint, and where saves live (member-scoped, `community`-side).
+
+### 6.C — Discussions tab (the forum, EPIC-C/D/E)
+
+#### C1 — Discussions home · `/discussions` · shell
+
+- **Purpose**: the forum landing — a personalised feed of posts, with a trending fallback.
+- **Access**: in-app.
+- **Content**: a list of **post summary cards** (category chip, title, author handle + kudos/badge, tag chips, answer count, post kudos count, snippet, timestamp, best-answer indicator); the **➕ create** affordance (centre nav); a browse/search entry (header).
+- **Data → source**: personalised feed = posts in the member's **followed tags + handles** (`community.follows`, EPIC-C §8); **trending fallback** (adaptive window, kudos-ranked) when the personalised feed is sparse (EPIC-C §8).
+- **Actions → API**: open → C4; create → D1; browse → C2; search → C3; follow/unfollow from a card (optional).
+- **States**: personalised content; **empty personalised → trending fallback** (never a dead screen — EPIC-C §8); loading; error.
+- **Spec-gaps**: **G-17** (shared) — the **post-summary list DTO** (card fields incl. author kudos/badge join and counts) isn't enumerated in EPIC-C; specify it (the list-surface analogue of the thread DTO gaps G-3/G-4).
+
+#### C2 — Browse by category / tag · `/discussions/browse` · shell
+
+- **Purpose**: explore the forum by content-type category or by clinical tag.
+- **Content**: **category** list (content-type: Clinical Case / Research / Career / Equipment / General); **tag** browser grouped by facet (region / muscle / structure / pathology) and Upper/Lower-limb grouping (EPIC-C §3); selecting a filter → a filtered post list (post-summary cards as C1).
+- **Data → source**: `community.categories` + `community.tags` (facet/grouping) — the read side of EPIC-J-managed vocabulary; filtered posts via the same list DTO (G-17).
+- **Actions → API**: pick category/tag → filtered list; open post → C4; follow a tag → `POST /v1/follows` (EPIC-B).
+- **States**: default; retired categories/tags hidden from the browser (EPIC-J retire).
+
+#### C3 — Search · `/search` · shell
+
+- **Purpose**: full-text search across posts, answers, and tags.
+- **Content**: query input; results as post-summary cards; possibly a tag-match section; recent/suggested (optional).
+- **Data → source**: `GET /v1/search?q=…` (EPIC-C §4) — Postgres FTS (weighted `tsvector` + `pg_trgm` typo tolerance + the clinical synonym dictionary seeded from `community.tags.synonyms`). Synonym/typo expansion is server-side and invisible to the client.
+- **Actions → API**: submit query → results; open → C4; tag chip → C2.
+- **States**: idle/prompt; results; **no results** (suggest broadening / check spelling — trgm already softens this); loading.
+- **Spec-gaps**: **G-17** (shared list DTO) applies to results.
+
+---
+
+## 7. Consolidated spec-gaps from this pass
+
+The running list of concrete, actionable items the mapping has surfaced. G-1…G-8 came from the two exemplars; G-9…G-11 from Adrian's 2026-07-19 auth review; **G-12…G-18 from fanning out member areas A–C**. Updated as more screens are specced.
 
 | # | Gap | Affects | Suggested action |
 |---|---|---|---|
@@ -357,14 +483,22 @@ A first taste of the payoff — mapping just **two** screens surfaced G-1…G-8;
 | G-9 | **Biometric sign-in** has no auth-method mechanism | EPIC-A / architecture §5.2 | Add passkeys (WebAuthn): register/assert endpoints + `identity.webauthn_credentials` table; A9 permission prompt + F8 management screens. **Decide MVP vs. fast-follow** |
 | G-10 | **UI strings not externalised** | client-architecture / frontend | Adopt message-catalog i18n (keyed message ids, per-locale files, `en-GB` at MVP); locale-aware formatting; **not** a DB table. Reflect in architecture §7.2 frontend note |
 | G-11 | **Refresh-token lifetime / inactivity policy unspecified** | architecture §5.2 | The spec says "rotating refresh token" but not *how long* — this single parameter sets how often members re-authenticate. Pin an explicit value (e.g. sliding inactivity window + absolute max, with rotation + reuse-detection) and make it a **tunable** like the other thresholds (EPIC-J config) |
+| G-12 | **No handle-availability endpoint** (A6) | EPIC-B | Add `GET /v1/handles/availability?name=` (uniqueness + blocklist + 3–30/charset rules) for live feedback, rather than only failing on `POST /v1/handles` |
+| G-13 | **Onboarding anonymity acknowledgement not recorded** (A7) | EPIC-A / domain | The zero-tolerance rule is *shown* at registration/onboarding, but is the member's acknowledgement *recorded* (timestamped) as the case attestation is? Decide + specify storage |
+| G-14 | **Interest selection endpoints missing** (A7, F5) | EPIC-I | Needs a selectable-tags read (facet-filtered `community.tags`) and a bulk **set-interests** write (`member_interests`) — neither enumerated |
+| G-15 | **Free-seed-period → paywall trigger undefined** (A8) | EPIC-H | Monetisation specifies a free seed period before the paywall (PRD §11); the switch that activates the billing gate is unspecified — needs an EPIC-H seed flag + decision |
+| G-16 | **Article detail read + save/bookmark unenumerated** (B2) | EPIC-I | EPIC-I §6 specs the feed list; a single-article GET and a save endpoint/store aren't defined |
+| G-17 | **List-surface DTOs unenumerated** (B1, C1, C2, C3) | EPIC-I / EPIC-C | The article-summary and post-summary card DTOs (incl. author kudos/badge join + counts) aren't specified — the list-surface analogue of the thread-DTO gaps G-3/G-4 |
+| G-18 | **Professional-body picker launch set is FD-1-dependent** (A2) | FD-1 | Confirm which of hcpc/gmc/basrat/sst are offered at launch (physio-first → HCPC primary). A scope link, not a new mechanism |
 
 None are blockers; all are exactly the cheap-to-fix-now, expensive-to-discover-mid-build items this exercise exists to catch. They will be reconciled into the epic specs (the source of truth) as the inventory is fleshed out. **Two items need a decision, not just reconciliation:** G-9's build-timing (MVP vs. fast-follow), and whether to offer the optional biometric **app-lock** (§1.6 — recommendation: opt-in, off by default).
 
 ---
 
-## 7. Next steps
+## 8. Next steps
 
-1. **Calibrate** — review this pass: is the template altitude right? Is the inventory complete and correctly grouped?
-2. On sign-off, **fan out** the remaining member screens (areas A–F), then the admin area (G), each at the same functional altitude.
-3. Reconcile the accumulating **spec-gaps** back into the epic specs.
-4. Derive the **tracer-bullet slice backlog** from the completed inventory + flows.
+1. ~~**Calibrate**~~ — exemplar detail/altitude approved by Adrian 2026-07-19.
+2. **Fan out** the member screens at the same altitude — **areas A, B, C done** (§6.A–6.C); **D (create), E (activity), F (profile/settings + billing holding) remaining**; then the admin area (G).
+3. Reconcile the accumulating **spec-gaps** (§7, now G-1…G-18) back into the epic specs — a dedicated pass once the inventory is complete.
+4. Resolve the **open decisions** (G-9 biometric build-timing; app-lock; G-13/G-15 policy calls; G-18/FD-1).
+5. Derive the **tracer-bullet slice backlog** from the completed inventory + flows (slice 1 = A1→A5, the onboarding spine).
