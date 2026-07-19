@@ -5,6 +5,9 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  // Emit a minimal self-contained server for the Docker/Fly image.
+  output: 'standalone',
+};
 
 export default withNextIntl(nextConfig);

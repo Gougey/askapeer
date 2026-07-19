@@ -19,7 +19,9 @@ async function main(): Promise<void> {
   const db = drizzle(pool);
 
   console.log('Running migrations…');
-  await migrate(db, { migrationsFolder: resolve(process.cwd(), 'drizzle') });
+  // __dirname works for both `tsx src/db/migrate.ts` (dev) and the compiled
+  // dist/db/migrate.js (prod release_command): ../../drizzle == apps/api/drizzle.
+  await migrate(db, { migrationsFolder: resolve(__dirname, '..', '..', 'drizzle') });
 
   // Seed a single app-version row so the health check proves a real table round-trip.
   await db
