@@ -1,6 +1,6 @@
 # Askapeer — Screen & Functional Specification (mobile-first)
 
-**Status**: Draft — fan-out in progress. Exemplars approved 2026-07-19; cross-cutting patterns added (auth/session/biometric §1.6, i18n §1.7); **all member areas A–F fully specced (§6)**; only the admin area (G) remaining.
+**Status**: Draft — **screen inventory fully mapped**. Exemplars approved 2026-07-19; cross-cutting patterns (auth/session/biometric §1.6, i18n §1.7); **all member areas A–F and the admin area G specced (§6)**. Next: reconcile the G-1…G-24 spec-gaps into the epic specs, resolve the open decisions, and derive the slice backlog.
 **Date**: 18 July 2026 (updated 19 July 2026)
 **Author**: Adrian Hall (Technical Lead), with Claude Code
 
@@ -596,11 +596,87 @@ The first flow: unauthenticated → verified → handle → in-app. No bottom-na
 - **Data → API**: `GET /v1/billing/me`; reactivate → subscription payment flow → on success, restores the handle-scoped session.
 - **Note**: distinct from a **moderation** block (suspend/expel) — different token, different resolution path (pay vs. appeal), per the two-gate model (§1.2).
 
+### 6.G — Moderator & Administrator (role-gated, `/admin/*`)
+
+**Desktop-first**, not mobile — these are operator surfaces in the *same* Next.js app (architecture §7.2), gated by the two-claim split (EPIC-J §2): **Moderator** sees moderation + verification (G1–G6); **Administrator** sees configuration (G7–G10); one person may hold both at MVP. *(Screen IDs here are G1–G10, distinct from the hyphenated spec-gap IDs G-1…)*
+
+The admin surfaces map cleanly onto the well-specified EPIC-F / EPIC-A / EPIC-J — a good sign those specs were thorough. Only one small new gap (G-24).
+
+#### G1 — Moderation report queue · `/admin/reports` · moderator
+
+- **Purpose**: triage reported content/handles.
+- **Content**: queue ordered **priority tier first** (`identifiable_patient_information`, `anonymity_violation`), then by age within tier (EPIC-F §4); each row: category (priority flag), target type (post/comment/handle), snippet/handle, age, status; an **overdue** indicator against the working SLA (priority < 4h, standard < 48h — EPIC-F §8); filter by status.
+- **Data → API**: `GET /v1/admin/reports?status=open&cursor=` (EPIC-F §6).
+- **Actions → API**: open → G2.
+
+#### G2 — Report detail + actions · `/admin/reports/:id` · moderator
+
+- **Purpose**: review a report and take a moderation action.
+- **Content**: the reported content/handle **in context** (operates on `handle_id` only — viewing a report does **not** reveal real identity, EPIC-F §5); category; reporter comment; the **action controls** — `remove_content`, `warn`, `suspend`, `expel`, `request_correction` (case discussions), `rename_handle` — each requiring a `reason`; a separate, prominent **Reveal identity** action (→ G3).
+- **Data → API**: `GET /v1/admin/reports/:report_id` (EPIC-F §6).
+- **Actions → API**: `POST /v1/admin/reports/:report_id/action { action_type, target_handle_id, reason, …type-specific }` (EPIC-F §6). Effects wire to other epics: `remove_content` → EPIC-D kudos clawback; `expel` → writes handle + identity status atomically; `request_correction` → `needs_correction`; `rename_handle` → `new_handle_name` (reuses EPIC-B validation).
+- **Mandated**: every action writes an immutable `community.moderation_actions` row.
+- **States**: open → actioned / dismissed.
+
+#### G3 — Reveal identity (audited) · `/admin/handles/:id/reveal-identity` · moderator
+
+- **Purpose**: the **explicit, separately-logged** crossing of the identity boundary — the platform's most sensitive action.
+- **Content**: a **reason_code** selector (`reported_violation` | `legal_request` | `safety_escalation`) + **reason_note**; confirm; *then* the real identity fields are shown. The friction is deliberate.
+- **Data → API**: `POST /v1/admin/handles/:handle_id/reveal-identity { reason_code, reason_note }` → writes `identity.identity_access_log` → returns identity (EPIC-F §5).
+- **Mandated**: every access immutably logged with moderator identity, reason, timestamp (PRD §9.4 / domain constraint).
+- **Spec-gaps**: **G-24** — the identity **field set** returned by reveal-identity isn't enumerated (legal_name, email, professional_body, registration_number, country?); pin it for this screen (EPIC-F §5).
+
+#### G4 — Verification review queue · `/admin/verification` · moderator
+
+- **Purpose**: review applicants who need a human decision.
+- **Content**: queue of `pending` (post-worker) + `needs_more_info`, ordered oldest-first with `needs_more_info` ahead of fresh `pending` (EPIC-A §6); **no** priority category (unlike moderation); each row: professional body, evidence outcomes, status, age.
+- **Data → API**: `GET /v1/admin/verification-queue?status=pending,needs_more_info&cursor=` (EPIC-A §4).
+- **Actions → API**: open → G5.
+
+#### G5 — Applicant detail + decide · `/admin/verification/:memberId` · moderator
+
+- **Purpose**: review one applicant's evidence and decide.
+- **Content**: submitted fields; `verification_evidence` rows (register_lookup + onfido_check outcomes, raw results); prior decisions; **prior rejection(s) for the same professional-registration identity** (the reapplication-history resolution, EPIC-A §6); decision controls — approve / reject (reason) / request-more-info (reason).
+- **Data → API**: `GET /v1/admin/verification-queue/:member_id` (EPIC-A §4) — a legitimate `IdentityService` read, **not** an `identity_access_log` event (EPIC-A §9, confirmed).
+- **Actions → API**: `POST /v1/admin/verification-queue/:member_id/decide { to_status, reason }` (EPIC-A §4). approve → applicant prompted to choose a handle; reject/needs_more_info → notification (EPIC-G).
+- **Mandated**: every decision writes an immutable `identity.verification_decisions` row.
+
+#### G6 — Reapplication-attempts review · `/admin/reapplications` · moderator
+
+- **Purpose**: awareness of **blocked** reapplications (an expelled member attempting to re-register) — not a decision queue (the registration was already auto-blocked).
+- **Content**: `identity.reapplication_attempts` rows (matched member, attempted details, timestamp), newest first — to judge whether a repeat/aggressive pattern warrants operational escalation (e.g. legal referral).
+- **Data → API**: `GET /v1/admin/reapplication-attempts` (EPIC-A §6).
+
+#### G7 — Config: categories · `/admin/config/categories` · administrator
+
+- **Purpose**: manage the content-type category list.
+- **Content**: categories (name, description, sort_order, retired?); create / edit / reorder / **retire** (not hard-delete — `retired_at`, EPIC-J §4).
+- **Data → API**: `POST /v1/admin/categories`, `PATCH …/:id`, reorder, retire (EPIC-J §6). Every mutation writes `config.admin_audit_log`.
+
+#### G8 — Config: tag vocabulary · `/admin/config/tags` · administrator
+
+- **Purpose**: manage the **single unified tag vocabulary** (incl. loading Andrew's forthcoming muscle list).
+- **Content**: tags with **facet** (region/muscle/structure/pathology), **parent grouping** (Upper/Lower limb), **synonyms**, internal `mesh_id`; **add** (with facet/grouping/synonyms), **merge** (fold duplicates → repoint `post_tags`, retire loser), **retire**.
+- **Data → API**: EPIC-J tag management (add/merge/retire); the search **synonym dictionary seeds from `community.tags.synonyms`** — so synonym maintenance is *per-tag here*, not a separate screen (a consistency win from the taxonomy resolution).
+- **Note**: all of this (incl. merge + synonyms) is in MVP per the EPIC-J scope decision.
+
+#### G9 — Config: handle blocklist · `/admin/config/blocklist` · administrator
+
+- **Purpose**: manage the handle-name blocklist.
+- **Content**: blocklist terms (categorised); add / remove.
+- **Data → API**: `config.handle_blocklist` (EPIC-J); EPIC-B's creation-time validation *reads* it (and feeds the G-12 availability check), this *writes* it. Audited.
+
+#### G10 — Config: platform settings · `/admin/config/settings` · administrator
+
+- **Purpose**: edit the tunable thresholds surfaced across the specs.
+- **Content**: key/value settings with descriptions + current values — badge percentile (EPIC-D), trending window/N (EPIC-C), `billing.grace_period_days`, `billing.default_trial_days` (EPIC-H), `verification.onfido_timeout_hours` (EPIC-A), and the refresh-token lifetime (G-11) if adopted; edit.
+- **Data → API**: `config.settings` (EPIC-J §3); edit value → `PUT` (writes `config.admin_audit_log`).
+
 ---
 
 ## 7. Consolidated spec-gaps from this pass
 
-The running list of concrete, actionable items the mapping has surfaced. G-1…G-8 came from the two exemplars; G-9…G-11 from Adrian's 2026-07-19 auth review; G-12…G-18 from member areas A–C; **G-19…G-23 from areas D–F**. Updated as more screens are specced.
+The running list of concrete, actionable items the mapping surfaced across the **complete** screen inventory. G-1…G-8 (exemplars); G-9…G-11 (auth review, 2026-07-19); G-12…G-18 (member areas A–C); G-19…G-23 (areas D–F); **G-24 (admin area G)**. The full set (**G-1…G-24**) now feeds the reconciliation pass into the epic specs.
 
 | # | Gap | Affects | Suggested action |
 |---|---|---|---|
@@ -627,6 +703,7 @@ The running list of concrete, actionable items the mapping has surfaced. G-1…G
 | G-21 | **Author-scoped content reads unenumerated** (D4, E2, F1) | EPIC-C | "My posts/answers" (published) and "my drafts" (incl. `draft`/`needs_correction`, author-private) reads aren't specified; the drafts read has a distinct visibility rule (G-8) |
 | G-22 | **Saved/bookmark store + endpoints missing** (E3, B2) | EPIC-C / EPIC-I | The Should-have saves mechanism (posts and articles) has no table/endpoints; decide MVP-Should-have vs. defer |
 | G-23 | **Profile editability undefined** (F1) | EPIC-B | Confirm whether *anything* on the member's own profile is editable (anonymity implies little/nothing beyond the settings screens) — pin the answer |
+| G-24 | **Reveal-identity response field set unenumerated** (G3) | EPIC-F §5 | Pin exactly which real-identity fields the audited reveal returns (legal_name, email, professional_body, registration_number, country?) |
 
 None are blockers; all are exactly the cheap-to-fix-now, expensive-to-discover-mid-build items this exercise exists to catch. They will be reconciled into the epic specs (the source of truth) as the inventory is fleshed out. **Two items need a decision, not just reconciliation:** G-9's build-timing (MVP vs. fast-follow), and whether to offer the optional biometric **app-lock** (§1.6 — recommendation: opt-in, off by default).
 
@@ -634,8 +711,8 @@ None are blockers; all are exactly the cheap-to-fix-now, expensive-to-discover-m
 
 ## 8. Next steps
 
-1. ~~**Calibrate**~~ — exemplar detail/altitude approved by Adrian 2026-07-19.
-2. **Fan out** the member screens at the same altitude — **all member areas A–F done** (§6.A–6.F). Remaining: the **admin area (G)** — moderator + administrator surfaces (desktop-first).
-3. Reconcile the accumulating **spec-gaps** (§7, now G-1…G-23) back into the epic specs — a dedicated pass once the inventory is complete.
-4. Resolve the **open decisions** (G-9 biometric build-timing; app-lock; G-13/G-15 policy calls; G-18/FD-1).
-5. Derive the **tracer-bullet slice backlog** from the completed inventory + flows (slice 1 = A1→A5, the onboarding spine).
+1. ~~**Calibrate**~~ — exemplar detail/altitude approved 2026-07-19.
+2. ~~**Fan out** the screens~~ — **complete**: all member areas A–F (§6.A–6.F) and the admin area G (§6.G) are specced. The screen inventory is fully mapped.
+3. **Reconcile the spec-gaps** (§7, **G-1…G-24**) back into the epic specs — the next substantive pass; each gap has a named target spec.
+4. **Resolve the open decisions** — G-9 biometric build-timing; the app-lock offer; G-13 (record anonymity acknowledgement?); G-15 (seed-period → paywall trigger); G-18 (FD-1 body set); G-20 (erasure flow — legal); G-22 (saves scope); G-23 (profile editability).
+5. **Derive the tracer-bullet slice backlog** from the completed inventory + flows (slice 1 = A1→A5, the onboarding spine).
