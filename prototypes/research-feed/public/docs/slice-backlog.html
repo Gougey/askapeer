@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tracer-Bullet Slice Backlog — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">Tracer-Bullet Slice Backlog</span>
+</div>
+<main>
+<h1 id="askapeer-tracer-bullet-slice-backlog">Askapeer — Tracer-Bullet
+Slice Backlog</h1>
+<p><strong>Status</strong>: Draft — for review. The last planning
+artifact before code. <strong>Date</strong>: 19 July 2026
+<strong>Author</strong>: Adrian Hall (Technical Lead), with Claude
+Code</p>
+<h2 id="purpose">Purpose</h2>
+<p>The specs are organised by <em>domain</em> (epics) and the app by
+<em>screens</em>; this document turns both into an <strong>ordered build
+sequence</strong> of thin, independently-grabbable <strong>vertical
+slices</strong>.</p>
+<p>A <strong>tracer-bullet slice</strong> goes all the way through the
+stack for one narrow capability — migration → service → API → minimal UI
+— and produces something <strong>observable end-to-end</strong>. You
+build thin and complete, then thicken, rather than building all of one
+layer before the next. Each slice below names what it <em>delivers</em>
+(the observable outcome), what it <em>touches</em> (specs), what it
+<em>depends on</em>, and key <em>notes</em> (mocks, decisions already
+applied).</p>
+<p><strong>How to read the tags:</strong></p>
+<ul>
+<li><strong>[critical path]</strong> — sequential spine; each blocks the
+next.</li>
+<li><strong>[parallel-able]</strong> — can start once its dependency
+lands, alongside other work.</li>
+<li><strong>[fast-follow]</strong> / <strong>[deferred]</strong> —
+post-launch, per resolved decisions.</li>
+<li><strong>[Must]/[Should]/[Could]</strong> — PRD §6.1 MoSCoW.</li>
+</ul>
+<p>The first six slices (S0–S5) are the <strong>walking skeleton of a
+member and the core thesis loop</strong> — get these working and the
+platform’s central bet is proven end-to-end.</p>
+<hr />
+<h2 id="s0-walking-skeleton-infrastructure-spine-critical-path">S0 —
+Walking skeleton / infrastructure spine [critical path]</h2>
+<ul>
+<li><strong>Delivers</strong>: an empty but fully wired system — a
+deployed Next.js web app that calls a deployed NestJS API that reads a
+Postgres database, over one trivial path (a <code>/health</code> +
+version rendered on a page). Proves the deploy pipeline, DB
+connectivity, and front↔︎back wiring.</li>
+<li><strong>Touches</strong>: architecture spec (stack, hosting, CI/CD)
+— this slice <strong>commits the approved stack</strong> (NestJS modular
+monolith, Next.js, Postgres/RDS, Redis, BullMQ, AWS
+<code>eu-west-2</code>).</li>
+<li><strong>Depends on</strong>: nothing.</li>
+<li><strong>Notes</strong>: migration framework + one migration; CI to
+staging on merge; the i18n message-catalog scaffold (G-10) and the
+module-per-epic layout established here so nothing is retrofitted. No
+auth, no domain yet.</li>
+</ul>
+<hr />
+<h2
+id="s1-passwordless-auth-register-pending-holding-page-critical-path-must">S1
+— Passwordless auth + register → pending holding page [critical path]
+[Must]</h2>
+<ul>
+<li><strong>Delivers</strong>: a person can register with professional
+details, receive a magic link, and land — signed in with a
+<strong>pending-scoped token</strong> — on the verification holding page
+showing <code>pending</code>.</li>
+<li><strong>Touches</strong>: EPIC-A (§2 <code>identity.members</code>,
+register, <code>POST /v1/auth/request-link</code>, magic-link exchange,
+<code>GET /v1/auth/verification-status</code>); architecture §5.2
+(passwordless, access + rotating refresh token, refresh-token lifetime
+tunables G-11). Screens A1, A2, A3, A5.</li>
+<li><strong>Depends on</strong>: S0.</li>
+<li><strong>Notes</strong>: the whole session mechanism lands here
+(magic link is the one-time bootstrap; persistent session). Duplicate
+registration → generic 409 (no leak). Anonymity notice shown at
+registration (mandated surface).</li>
+</ul>
+<hr />
+<h2
+id="s2-automated-verification-approved_verified-critical-path-must">S2 —
+Automated verification → <code>approved_verified</code> [critical path]
+[Must]</h2>
+<ul>
+<li><strong>Delivers</strong>: a registered applicant’s status moves
+<code>pending → approved_verified</code> via the verification worker;
+the holding page reflects it live (poll + the pre-handle status-change
+email).</li>
+<li><strong>Touches</strong>: EPIC-A (§3 state machine, §5 worker:
+register lookup + Onfido, <code>verification_evidence</code>,
+<code>verification_decisions</code> immutable audit,
+<code>POST /v1/auth/verification/resubmit</code> for
+<code>needs_more_info</code> G-1).</li>
+<li><strong>Depends on</strong>: S1.</li>
+<li><strong>Notes</strong>: build against a <strong>mocked
+<code>RegisterLookup</code> + <code>IdentityCheck</code> behind
+interfaces first</strong>, then wire real <strong>HCPC</strong> +
+<strong>Onfido</strong> (Onfido timeout is a config tunable, 48h
+default). Auto-approve is the only unattended decision; every other
+outcome routes to the manual review queue (built in S11-admin). FD-1
+determines which registers exist at launch (physio-first → HCPC).</li>
+</ul>
+<hr />
+<h2 id="s3-handle-creation-the-app-shell-critical-path-must">S3 — Handle
+creation → the app shell [critical path] [Must]</h2>
+<ul>
+<li><strong>Delivers</strong>: a verified member picks a pseudonymous
+handle and enters the authenticated <strong>app shell</strong> (bottom
+nav: Feed / Discussions / ➕ / Activity / Profile — empty screens), with
+a full handle-scoped session.</li>
+<li><strong>Touches</strong>: EPIC-B
+(<code>GET /v1/handles/availability</code> G-12,
+<code>POST /v1/handles</code>, <code>community.handles</code>,
+immutability); EPIC-A §7 handoff; the <strong>two-gate access
+middleware</strong> (§1.2) with the <strong>seed-period billing
+bypass</strong> (G-15, <code>billing.paywall_active</code> off);
+onboarding acknowledgement recorded
+(<code>anonymity_acknowledged_at</code> G-13) + interest pick (A7).
+Screens A6, A7, the shell.</li>
+<li><strong>Depends on</strong>: S2.</li>
+<li><strong>Notes</strong>: at this point a person can go from nothing →
+inside the app — the onboarding tracer bullet is complete. Interests
+(A7) can be a stub picker until the tag vocabulary lands in S4.</li>
+</ul>
+<hr />
+<h2 id="s4-post-a-question-list-thread-critical-path-must">S4 — Post a
+question → list + thread [critical path] [Must]</h2>
+<ul>
+<li><strong>Delivers</strong>: a member composes a question (category +
+tags), and sees it in the Discussions list and on its own thread
+page.</li>
+<li><strong>Touches</strong>: EPIC-C (§2
+<code>posts</code>/<code>comments</code>/<code>tags</code>/<code>categories</code>,
+<code>POST /v1/posts</code>, <code>GET /v1/posts</code>,
+<code>GET /v1/posts/:id</code> with the §13 thread/list DTOs,
+<code>GET /v1/categories</code>/<code>tags</code>); the content-type
+categories + the seed <strong>tag vocabulary</strong> (loaded via
+migration for now). Screens D1, D2, C1 (chronological), C4 (read).
+Search (EPIC-C §4) can attach here or in S7.</li>
+<li><strong>Depends on</strong>: S3.</li>
+<li><strong>Notes</strong>: first content slice. Tags are select-only
+from the seeded vocabulary (admin management is S13). Anonymity reminder
+in the composer (mandated).</li>
+</ul>
+<hr />
+<h2 id="s5-answer-kudos-ranking-critical-path-must-proves-the-thesis">S5
+— Answer + kudos + ranking [critical path] [Must] — <em>proves the
+thesis</em></h2>
+<ul>
+<li><strong>Delivers</strong>: members answer a question, award/retract
+kudos, and answers rank by kudos within the thread — the “ideas win on
+merit, not rank” loop working end-to-end.</li>
+<li><strong>Touches</strong>: EPIC-C (<code>POST /v1/comments</code>,
+reply composer X3); EPIC-D
+(<code>POST</code>/<code>DELETE /v1/kudos</code>,
+<code>kudos_total</code> write, in-thread ranking, self-kudos rejection,
+the top-contributor badge); the <code>viewer_context</code> DTO fields
+(has_kudosed etc., G-3).</li>
+<li><strong>Depends on</strong>: S4.</li>
+<li><strong>Notes</strong>: <strong>this is the key tracer
+bullet</strong> — the platform’s central bet. Kudos clawback on
+moderation removal wires up in S11.</li>
+</ul>
+<hr />
+<h2 id="s6-best-answer-marker-polls-parallel-able-could-in-mvp">S6 —
+Best-answer marker + polls [parallel-able] [Could, in MVP]</h2>
+<ul>
+<li><strong>Delivers</strong>: a question author marks a best answer
+(pinned above the ranked list); posts can carry a poll members vote
+on.</li>
+<li><strong>Touches</strong>: EPIC-C (<code>accepted_comment_id</code>
+G-5 + <code>PUT …/accepted-answer</code>;
+<code>community.polls</code>/<code>poll_votes</code> +
+<code>POST /v1/polls/:id/vote</code> G-6,
+<code>viewer_vote</code>).</li>
+<li><strong>Depends on</strong>: S5.</li>
+<li><strong>Notes</strong>: small; completes the question surface.</li>
+</ul>
+<hr />
+<h2
+id="s7-discovery-follows-personalised-feed-trending-search-parallel-able-should-mustsearch">S7
+— Discovery: follows, personalised feed, trending, search
+[parallel-able] [Should + Must(search)]</h2>
+<ul>
+<li><strong>Delivers</strong>: following a tag/handle shapes the
+Discussions home; an empty feed falls back to trending; full-text search
+returns posts.</li>
+<li><strong>Touches</strong>: EPIC-B (<code>community.follows</code>,
+<code>POST</code>/<code>DELETE /v1/follows</code>); EPIC-C (§8
+personalised feed <code>GET /v1/feed</code> + adaptive trending
+fallback; §4 search <code>GET /v1/search</code>, Postgres FTS +
+<code>pg_trgm</code> + synonym dictionary seeded from
+<code>tags.synonyms</code>). Screens C2, C3, C1 (personalised).</li>
+<li><strong>Depends on</strong>: S4 (posts to follow/search), S3
+(handles).</li>
+<li><strong>Notes</strong>: <strong>search is Must-have</strong>, the
+personalised feed is Should-have — separable in priority though they
+share the discovery surface. Follow buttons appear on threads/profiles
+(<code>follows_*</code> DTO fields).</li>
+</ul>
+<hr />
+<h2 id="s8-interests-research-news-feed-parallel-able-must">S8 —
+Interests → research / news feed [parallel-able] [Must]</h2>
+<ul>
+<li><strong>Delivers</strong>: the Feed tab shows research/news articles
+scored to the member’s clinical interests, with “recommended because…”
+explanations; article detail links out.</li>
+<li><strong>Touches</strong>: EPIC-I (<code>member_interests</code>,
+<code>GET</code>/<code>PUT /v1/me/interests</code> G-14; ingestion
+worker + scoring; <code>GET /v1/research-feed</code> + list DTO G-17;
+<code>GET /v1/research-feed/:articleId</code> G-16). Screens B1, B2,
+F5/A7 interests.</li>
+<li><strong>Depends on</strong>: S3 (handles/interests), the tag
+vocabulary (S4’s seed).</li>
+<li><strong>Notes</strong>: a distinct pillar — can proceed in parallel
+with the forum slices once S3 lands. The research-feed prototype
+(<code>prototypes/research-feed/</code>) is prior art to draw on. MeSH
+mapping is the internal matching mechanism. Splittable: 8a
+ingestion+scoring, 8b feed UI.</li>
+</ul>
+<hr />
+<h2
+id="s9-case-discussions-checklist-attestation-parallel-able-must-the-differentiator">S9
+— Case discussions (checklist + attestation) [parallel-able] [Must] —
+<em>the differentiator</em></h2>
+<ul>
+<li><strong>Delivers</strong>: a member creates a de-identified case
+discussion through the gated flow — draft → six-item checklist →
+attestation → publish — with structural age-band/relative-date fields
+and the disclaimer.</li>
+<li><strong>Touches</strong>: EPIC-E (<code>case_details</code>,
+<code>case_attestations</code> immutable,
+<code>POST /v1/case-discussions</code> draft, <code>PATCH</code>,
+<code>PUT …/checklist</code>, <code>POST …/attest</code>); EPIC-C
+<code>posts.status</code>
+<code>draft</code>/<code>needs_correction</code>; the author-private
+drafts read (<code>/v1/me/drafts</code> G-8/G-21). Screens D3, D4; C4
+case rendering.</li>
+<li><strong>Depends on</strong>: S4 (posts infrastructure).</li>
+<li><strong>Notes</strong>: highest-value/highest-risk surface — the “no
+PHI” policy in action. Text-only at MVP (images deferred).
+<code>needs_correction</code> re-attest path pairs with S11
+(<code>request_correction</code>).</li>
+</ul>
+<hr />
+<h2 id="s10-notifications-in-app-email-parallel-able-must">S10 —
+Notifications (in-app + email) [parallel-able] [Must]</h2>
+<ul>
+<li><strong>Delivers</strong>: members are notified in-app (Activity
+tab) and by email for replies, mentions, kudos, and verification/status
+changes; per-type preferences work.</li>
+<li><strong>Touches</strong>: EPIC-G
+(<code>community.notifications</code>/<code>notification_preferences</code>
+incl. <code>push_enabled</code>; the BullMQ workers reacting to domain
+events; SES email; the <strong>email-only
+<code>identity.member_emails</code> view</strong>; digest;
+<code>verification_status_change</code> email non-optional). Screens E1,
+F4.</li>
+<li><strong>Depends on</strong>: the events it reacts to — S2
+(verification), S5 (reply/kudos).</li>
+<li><strong>Notes</strong>: <strong>push ships inert</strong> (greyed
+toggle) per the resolved decision — no delivery at MVP. Weekly digest
+reads <code>community.follows</code> (needs S7).</li>
+</ul>
+<hr />
+<h2 id="s11-reporting-moderation-audited-identity-access-must">S11 —
+Reporting, moderation &amp; audited identity access [Must]</h2>
+<ul>
+<li><strong>Delivers</strong>: any member can report content/handles; a
+moderator triages a priority-ordered queue and takes actions
+(remove/warn/suspend/expel/request-correction/rename); the audited
+reveal-identity action works; the manual <strong>verification
+review</strong> queue is operable.</li>
+<li><strong>Touches</strong>: EPIC-F (<code>community.reports</code>
+incl. <code>handle</code> target + <code>anonymity_violation</code>
+priority; <code>moderation_actions</code> immutable incl. all six action
+types; <code>POST /v1/reports</code>;
+<code>/v1/admin/reports…/action</code>; <code>reveal-identity</code> →
+<code>identity_access_log</code>, field set G-24); EPIC-D kudos clawback
+on <code>remove_content</code>; EPIC-A manual review queue (G4/G5/G6).
+Screens X1, G1–G6. The <strong>moderator</strong> JWT claim.</li>
+<li><strong>Depends on</strong>: S4/S5 (content to moderate), S2
+(verification review branch).</li>
+<li><strong>Notes</strong>: where the two founding guarantees
+(anonymity, no-PHI) are enforced.
+<code>suspend</code>/<code>expel</code> wire to the handle/identity
+status + the session-revocation gate. Needed before opening to real
+users.</li>
+</ul>
+<hr />
+<h2 id="s12-subscription-billing-gate-lapsed-holding-must">S12 —
+Subscription, billing gate &amp; lapsed holding [Must]</h2>
+<ul>
+<li><strong>Delivers</strong>: a member subscribes (Stripe); a
+lapsed/cancelled subscription gates community access to a reactivation
+holding page; the provider billing portal manages payment/plan.</li>
+<li><strong>Touches</strong>: EPIC-H
+(<code>billing.subscriptions</code>/<code>invoices</code>/<code>webhook_events</code>;
+<code>StripeProvider</code> behind <code>PaymentProvider</code>;
+<code>subscribe</code>/<code>cancel</code>/<code>me</code>/<code>webhook</code>/<code>portal-session</code>
+G-19; the billing gate + billing-lapsed token + H2 holding; grace period
++ <code>paywall_active</code> flag G-15 with the seed grace-window).
+Screens A8, F6, H2.</li>
+<li><strong>Depends on</strong>: S3 (the gate + shell).</li>
+<li><strong>Notes</strong>: <strong>can land later than the community
+slices</strong> precisely because the seed period runs with the billing
+gate off — free access first, paywall flipped later (business-timed).
+FD-2 sets real pricing before wiring <code>StripeProvider</code> to live
+numbers.</li>
+</ul>
+<hr />
+<h2 id="s13-admin-configuration-surfaces-should-operationally">S13 —
+Admin configuration surfaces [Should-operationally]</h2>
+<ul>
+<li><strong>Delivers</strong>: an Administrator manages categories, the
+tag vocabulary (facet/grouping/synonyms/merge/retire — where Andrew’s
+muscle list loads), the handle blocklist, and tunable settings — instead
+of migration-seeding.</li>
+<li><strong>Touches</strong>: EPIC-J (<code>config</code> schema,
+<code>config.settings</code>/<code>handle_blocklist</code>/<code>admin_audit_log</code>;
+management endpoints; the <strong>administrator</strong> JWT claim,
+split from moderator). Screens G7–G10.</li>
+<li><strong>Depends on</strong>: S4 (categories/tags exist), S3
+(roles).</li>
+<li><strong>Notes</strong>: MVP seeds the vocabulary via migration (S4);
+this slice makes it editable without a deploy. All of EPIC-J is in MVP
+per the scope decision, but it can land after the forum works.</li>
+</ul>
+<hr />
+<h2 id="s14-passkeys-biometric-sign-in-fast-follow-phase-1.x">S14 —
+Passkeys / biometric sign-in [fast-follow] [Phase 1.x]</h2>
+<ul>
+<li><strong>Delivers</strong>: after first sign-in, a member enables a
+passkey and signs in with biometrics; optional app-lock.</li>
+<li><strong>Touches</strong>: architecture §5.2 (WebAuthn
+register/assert, <code>identity.webauthn_credentials</code>); screens
+A9, F8.</li>
+<li><strong>Depends on</strong>: S1 (auth).</li>
+<li><strong>Notes</strong>: <strong>fast-follow, not initial
+release</strong> (resolved) — magic-link + persistent session ship
+first. App-lock offered opt-in/off.</li>
+</ul>
+<hr />
+<h2 id="deferred-post-mvp">Deferred (post-MVP)</h2>
+<ul>
+<li><strong>Saved / bookmarked</strong> (G-22) — shape specced
+(<code>community.saves</code>, EPIC-I §10.2); deferred post-launch.</li>
+<li><strong>Native iOS/Android</strong> — Phase 2 (the API-first build
+makes them additive).</li>
+<li><strong>1:1 messaging, private groups, multi-language delivery, paid
+surveys, CE/CPD</strong> — PRD Won’t-have.</li>
+</ul>
+<hr />
+<h2 id="ordering-at-a-glance">Ordering at a glance</h2>
+<ul>
+<li><strong>Critical path (sequential spine):</strong> S0 → S1 → S2 → S3
+→ S4 → S5. Nothing else is truly testable until a member can register,
+verify, get a handle, post, and earn kudos.</li>
+<li><strong>After S3/S4/S5, these can run in parallel</strong> (team
+size permitting): S6 (question extras), S7 (discovery), S8 (research
+feed — most independent), S9 (case discussions), S10 (notifications),
+S11 (moderation).</li>
+<li><strong>Can land late:</strong> S12 (billing — seed period buys
+time), S13 (admin config — migration-seed first).</li>
+<li><strong>Fast-follow:</strong> S14 (passkeys).</li>
+</ul>
+<p><strong>Minimum launchable set</strong> (Must-haves): S0–S5, S7
+(search), S8, S9, S10, S11, S12. S6/S13 desirable; S14 fast-follow.</p>
+<h2 id="next-step">Next step</h2>
+<p>Each slice maps to <strong>one or a few GitHub issues</strong> (a
+slice may split into migration / API / UI tasks). The
+<code>/prd-to-issues</code> flow can turn this backlog into
+independently-grabbable issues on
+<code>github.com/Gougey/askapeer</code> when you’re ready to start
+building. Recommended first issue: <strong>S0</strong>, immediately
+followed by <strong>S1</strong>.</p>
+
+</main>
+</body>
+</html>
