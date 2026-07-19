@@ -173,29 +173,56 @@ inputs, not free date fields (EPIC-E §4).</li>
 (area G) are role-gated (two-claim split, EPIC-J §2), share the
 <code>/admin/*</code> shell, and are primarily desktop-web; they are
 inventoried here but specced later.</p>
-<h3 id="authentication-biometric-sign-in-added-2026-07-19">1.6
-Authentication &amp; biometric sign-in (added 2026-07-19)</h3>
+<h3 id="authentication-session-biometric-sign-in-added-2026-07-19">1.6
+Authentication, session &amp; biometric sign-in (added 2026-07-19)</h3>
+<p>The auth model is <strong>passwordless</strong> (architecture §5.2) —
+<strong>there is no password to create</strong>. Registration collects
+professional details; a <strong>magic link</strong> emailed to the
+member is the <em>one-time bootstrap</em> that establishes the session.
+It is important to separate three distinct layers, because they answer
+different questions:</p>
 <ul>
-<li><strong>The auth model is passwordless</strong> (architecture §5.2):
-registration collects professional details; a <strong>magic
-link</strong> emailed to the member establishes the session —
-<strong>there is no password to create</strong>. A short-lived access
-token + rotating refresh token maintain the session thereafter.</li>
-<li><strong>Biometric sign-in = a passkey</strong> (WebAuthn platform
+<li><strong>Session (stay signed in) — automatic, no re-auth per
+open.</strong> The magic link exchanges for a short-lived <strong>access
+token (~15 min)</strong> plus a <strong>rotating refresh token</strong>
+(HttpOnly secure cookie on web; platform secure storage on native). The
+client silently refreshes the access token in the background, so across
+closing and reopening the app <strong>the member stays signed
+in</strong> — no repeat magic link, no biometric needed for day-to-day
+use.</li>
+<li><strong>Re-authentication — only when the session actually
+ends.</strong> A member re-authenticates only when the refresh token is
+gone: it <strong>expired</strong> (inactivity / max-lifetime window —
+see gap <strong>G-11</strong>) or was <strong>revoked</strong>
+(sign-out, moderation <code>suspend</code>/<code>expel</code>, billing
+lapse via the revocable-refresh mechanism §7.2 / EPIC-H §4, or a
+security event). At that point they sign in again — via a <strong>fresh
+magic link</strong>, <em>or</em>, if enabled, an <strong>instant
+passkey</strong> (this is the passkey’s real value: it replaces the
+<em>repeat magic link</em>, not the persistent session).</li>
+<li><strong>App-lock — optional, a separate privacy feature (DECISION
+PENDING).</strong> A biometric gate on <em>every</em> app open, even
+while the session is valid, for shared-device privacy. This is
+independent of session validity. <strong>Recommendation: ship it as an
+opt-in setting, off by default</strong> — extra privacy for those who
+want it without forcing friction on everyone. Awaiting Adrian’s
+call.</li>
+</ul>
+<p><strong>Biometric mechanism = a passkey</strong> (WebAuthn platform
 authenticator: Face ID / Touch ID / Android biometric / Windows Hello).
 After the first magic-link sign-in, the member is offered <strong>Enable
-biometric sign-in</strong>, which triggers the OS <strong>permission
-prompt</strong> and registers a platform passkey; subsequent sign-ins
-use the biometric instead of re-requesting a magic link. Passkeys are
-phishing-resistant, first-party (no third party), and carry unchanged
-from the PWA to future native apps.</li>
-<li>Managed in <strong>Settings → Sign-in &amp; security</strong> (F8):
-enable/disable, list registered devices, revoke.</li>
+biometric sign-in</strong> (A9), which triggers the OS
+<strong>permission prompt</strong> and registers a platform passkey.
+Passkeys are phishing-resistant, first-party (no third party),
+per-device, and carry unchanged from the PWA to future native apps.
+Managed in <strong>Settings → Sign-in &amp; security</strong> (F8):
+enable/disable, list registered devices, revoke.</p>
+<ul>
 <li><strong>Build-timing is an open decision (MVP
-vs. fast-follow)</strong> — magic-link alone is sufficient to launch;
-biometrics are a strong mobile-UX addition. The mechanism is logged as
-spec-gap <strong>G-9</strong> (EPIC-A / architecture §5.2 additions:
-WebAuthn register/assert endpoints + an
+vs. fast-follow)</strong> — magic-link + persistent session are
+sufficient to launch; biometrics are a strong mobile-UX addition.
+Mechanism logged as spec-gap <strong>G-9</strong> (EPIC-A / architecture
+§5.2 additions: WebAuthn register/assert endpoints + an
 <code>identity.webauthn_credentials</code> table).</li>
 </ul>
 <h3
@@ -1179,14 +1206,26 @@ F8 management screens. <strong>Decide MVP vs. fast-follow</strong></td>
 <strong>not</strong> a DB table. Reflect in architecture §7.2 frontend
 note</td>
 </tr>
+<tr>
+<td>G-11</td>
+<td><strong>Refresh-token lifetime / inactivity policy
+unspecified</strong></td>
+<td>architecture §5.2</td>
+<td>The spec says “rotating refresh token” but not <em>how long</em> —
+this single parameter sets how often members re-authenticate. Pin an
+explicit value (e.g. sliding inactivity window + absolute max, with
+rotation + reuse-detection) and make it a <strong>tunable</strong> like
+the other thresholds (EPIC-J config)</td>
+</tr>
 </tbody>
 </table>
 <p>None are blockers; all are exactly the cheap-to-fix-now,
 expensive-to-discover-mid-build items this exercise exists to catch.
 They will be reconciled into the epic specs (the source of truth) as the
-inventory is fleshed out. <strong>G-9’s build-timing (MVP
-vs. fast-follow) is the one item needing a decision rather than just
-reconciliation.</strong></p>
+inventory is fleshed out. <strong>Two items need a decision, not just
+reconciliation:</strong> G-9’s build-timing (MVP vs. fast-follow), and
+whether to offer the optional biometric <strong>app-lock</strong> (§1.6
+— recommendation: opt-in, off by default).</p>
 <hr />
 <h2 id="next-steps">7. Next steps</h2>
 <ol type="1">
