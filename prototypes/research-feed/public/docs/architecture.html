@@ -379,13 +379,24 @@ Multi-AZ, <code>eu-west-2</code>/London) — a single instance with
 (Section 4), and <code>config</code> (added by EPIC-J, approved
 2026-07-17 — platform settings, handle blocklist, config audit log; see
 the amendment at the end of this document).</li>
-<li><strong>Redis</strong> (ElastiCache) — job queue plus hot-path
-caching (e.g. kudos leaderboards).</li>
-<li><strong>S3</strong> (Simple Storage Service) — attachments and
-verification documents in private buckets, accessed via presigned
-Uniform Resource Locators (URLs); EXIF metadata stripped by a worker
-before anything is persisted.</li>
 </ul>
+<blockquote>
+<p><strong>Build-phase note (2026-07-19)</strong>: this AWS
+<code>eu-west-2</code> stack is the <strong>production target</strong>.
+For the thesis-proving phase (slices S0–S5) the team <strong>builds and
+deploys on Fly.io</strong> (London) with test data and mocked
+verification — “prove-then-migrate” — and moves to this stack
+<strong>before onboarding real practitioners</strong> (real PII /
+UK-GDPR residency) and before scale. The API-first design makes the host
+swappable; the application stack (NestJS/Next.js/Postgres/Redis/BullMQ)
+is unchanged either way. See
+<code>docs/2026-07-19-tracer-bullet-slice-backlog.md</code>. -
+<strong>Redis</strong> (ElastiCache) — job queue plus hot-path caching
+(e.g. kudos leaderboards). - <strong>S3</strong> (Simple Storage
+Service) — attachments and verification documents in private buckets,
+accessed via presigned Uniform Resource Locators (URLs); EXIF metadata
+stripped by a worker before anything is persisted.</p>
+</blockquote>
 <hr />
 <h2 id="data-model-and-the-identitypseudonymity-boundary">4. Data model
 and the identity/pseudonymity boundary</h2>

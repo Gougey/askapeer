@@ -45,6 +45,35 @@ post-launch, per resolved decisions.</li>
 member and the core thesis loop</strong> — get these working and the
 platform’s central bet is proven end-to-end.</p>
 <hr />
+<h2 id="getting-started-infra-ui-approach-decided-2026-07-19">Getting
+started: infra &amp; UI approach (decided 2026-07-19)</h2>
+<p><strong>Infrastructure — prove-then-migrate.</strong> Build the early
+slices (S0–S5, the thesis) on <strong>Fly.io</strong> (London region —
+already in use for the docs site / prototype), with
+<strong>test/synthetic data and mocked verification</strong>, so the
+core bet is validated fast and cheaply. <strong>Migrate to the approved
+AWS <code>eu-west-2</code> stack before onboarding real
+practitioners</strong> (real PII + UK-GDPR data residency) and before
+scale. AWS remains the <strong>production target</strong> (architecture
+spec) — this is a build-phase choice, not a change to the production
+architecture; the API-first design makes the host swappable. Local
+development (Docker Compose: NestJS + Next.js + Postgres + Redis) comes
+before any deploy.</p>
+<p><strong>UI — functional now, style guide later.</strong> Do
+<strong>not</strong> build on the <code>mobile-lookfeel</code> prototype
+(a disposable taster). Build <strong>functional, minimally-styled,
+mobile-first</strong> screens straight from the screen &amp; functional
+spec, using a <strong>themeable component layer</strong> so the
+in-progress <strong>style guide</strong> drops in as a <em>theming
+pass</em>, not a rewrite (same logic as i18n string externalisation).
+The prototype is a reference for the bottom-nav <em>shape</em> only, not
+production code.</p>
+<p><strong>Accounts to start applying for now</strong>
+(business-verification lead times, even though their slices are later):
+<strong>Onfido</strong> (S2), <strong>Stripe</strong>/processor (S12;
+FD-2 working target is Stripe), an <strong>email sender</strong> (SES or
+e.g. Postmark, S10).</p>
+<hr />
 <h2 id="s0-walking-skeleton-infrastructure-spine-critical-path">S0 —
 Walking skeleton / infrastructure spine [critical path]</h2>
 <ul>
@@ -54,14 +83,17 @@ Postgres database, over one trivial path (a <code>/health</code> +
 version rendered on a page). Proves the deploy pipeline, DB
 connectivity, and front↔︎back wiring.</li>
 <li><strong>Touches</strong>: architecture spec (stack, hosting, CI/CD)
-— this slice <strong>commits the approved stack</strong> (NestJS modular
-monolith, Next.js, Postgres/RDS, Redis, BullMQ, AWS
-<code>eu-west-2</code>).</li>
+— this slice <strong>commits the application stack</strong> (NestJS
+modular monolith, Next.js, Postgres, Redis, BullMQ). <strong>Deploy
+target for the early phase is Fly.io</strong> (prove-then-migrate — see
+“Getting started” above); AWS <code>eu-west-2</code> remains the
+production target for the migration before real members.</li>
 <li><strong>Depends on</strong>: nothing.</li>
-<li><strong>Notes</strong>: migration framework + one migration; CI to
-staging on merge; the i18n message-catalog scaffold (G-10) and the
-module-per-epic layout established here so nothing is retrofitted. No
-auth, no domain yet.</li>
+<li><strong>Notes</strong>: local Docker Compose first; migration
+framework + one migration; CI to a Fly staging app on merge; the i18n
+message-catalog scaffold (G-10) and the module-per-epic layout
+established here so nothing is retrofitted; the themeable UI layer
+(style guide applied later). No auth, no domain yet.</li>
 </ul>
 <hr />
 <h2

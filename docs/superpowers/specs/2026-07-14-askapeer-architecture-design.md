@@ -136,6 +136,8 @@ Acronyms are expanded at first use in the body text below; this table is a stand
 - **API** — a single NestJS service, organised into modules mapping 1:1 to the PRD epics (see Section 10).
 - **Background workers** — the same codebase, deployed as a second Elastic Container Service (ECS) service, driven by a Redis-backed job queue (BullMQ). Handles anything that shouldn't block a request: professional-register lookups, identity-check polling, email sending, EXIF stripping, digest generation, research-feed ingestion.
 - **PostgreSQL** (Relational Database Service (RDS), Multi-AZ, `eu-west-2`/London) — a single instance with **five** schemas: `identity`, `community`, `billing`, `research` (Section 4), and `config` (added by EPIC-J, approved 2026-07-17 — platform settings, handle blocklist, config audit log; see the amendment at the end of this document).
+
+> **Build-phase note (2026-07-19)**: this AWS `eu-west-2` stack is the **production target**. For the thesis-proving phase (slices S0–S5) the team **builds and deploys on Fly.io** (London) with test data and mocked verification — "prove-then-migrate" — and moves to this stack **before onboarding real practitioners** (real PII / UK-GDPR residency) and before scale. The API-first design makes the host swappable; the application stack (NestJS/Next.js/Postgres/Redis/BullMQ) is unchanged either way. See `docs/2026-07-19-tracer-bullet-slice-backlog.md`.
 - **Redis** (ElastiCache) — job queue plus hot-path caching (e.g. kudos leaderboards).
 - **S3** (Simple Storage Service) — attachments and verification documents in private buckets, accessed via presigned Uniform Resource Locators (URLs); EXIF metadata stripped by a worker before anything is persisted.
 

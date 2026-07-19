@@ -21,12 +21,22 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
+## Getting started: infra & UI approach (decided 2026-07-19)
+
+**Infrastructure — prove-then-migrate.** Build the early slices (S0–S5, the thesis) on **Fly.io** (London region — already in use for the docs site / prototype), with **test/synthetic data and mocked verification**, so the core bet is validated fast and cheaply. **Migrate to the approved AWS `eu-west-2` stack before onboarding real practitioners** (real PII + UK-GDPR data residency) and before scale. AWS remains the **production target** (architecture spec) — this is a build-phase choice, not a change to the production architecture; the API-first design makes the host swappable. Local development (Docker Compose: NestJS + Next.js + Postgres + Redis) comes before any deploy.
+
+**UI — functional now, style guide later.** Do **not** build on the `mobile-lookfeel` prototype (a disposable taster). Build **functional, minimally-styled, mobile-first** screens straight from the screen & functional spec, using a **themeable component layer** so the in-progress **style guide** drops in as a *theming pass*, not a rewrite (same logic as i18n string externalisation). The prototype is a reference for the bottom-nav *shape* only, not production code.
+
+**Accounts to start applying for now** (business-verification lead times, even though their slices are later): **Onfido** (S2), **Stripe**/processor (S12; FD-2 working target is Stripe), an **email sender** (SES or e.g. Postmark, S10).
+
+---
+
 ## S0 — Walking skeleton / infrastructure spine  [critical path]
 
 - **Delivers**: an empty but fully wired system — a deployed Next.js web app that calls a deployed NestJS API that reads a Postgres database, over one trivial path (a `/health` + version rendered on a page). Proves the deploy pipeline, DB connectivity, and front↔back wiring.
-- **Touches**: architecture spec (stack, hosting, CI/CD) — this slice **commits the approved stack** (NestJS modular monolith, Next.js, Postgres/RDS, Redis, BullMQ, AWS `eu-west-2`).
+- **Touches**: architecture spec (stack, hosting, CI/CD) — this slice **commits the application stack** (NestJS modular monolith, Next.js, Postgres, Redis, BullMQ). **Deploy target for the early phase is Fly.io** (prove-then-migrate — see "Getting started" above); AWS `eu-west-2` remains the production target for the migration before real members.
 - **Depends on**: nothing.
-- **Notes**: migration framework + one migration; CI to staging on merge; the i18n message-catalog scaffold (G-10) and the module-per-epic layout established here so nothing is retrofitted. No auth, no domain yet.
+- **Notes**: local Docker Compose first; migration framework + one migration; CI to a Fly staging app on merge; the i18n message-catalog scaffold (G-10) and the module-per-epic layout established here so nothing is retrofitted; the themeable UI layer (style guide applied later). No auth, no domain yet.
 
 ---
 
