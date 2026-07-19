@@ -238,7 +238,15 @@ spec doesn’t duplicate that data, it specifies that the profile endpoint
 versioned under <code>/v1</code>, and — critically for this epic —
 <strong>no response shape from any of these endpoints ever includes
 <code>member_id</code></strong>, only <code>handle_id</code>.</p>
-<pre><code>POST /v1/handles
+<pre><code>GET /v1/handles/availability?name=            -- added 2026-07-19 (gap G-12)
+  auth: pending-scoped token
+  -&gt; { available: bool, reason?: taken | invalid_format | blocklisted }
+  -&gt; powers as-you-type feedback on the choose-handle screen (A6), so a member
+     learns a name is taken/invalid/blocked before submitting — runs the same
+     uniqueness + charset (3-30, alnum + _/-) + blocklist checks POST /v1/handles
+     applies, just non-mutating
+
+POST /v1/handles
   auth: pending-scoped token, only valid once (EPIC-A spec, Section 7) and only
         callable when the caller&#39;s verification_status = approved_verified
   body: { handle_name }
@@ -246,6 +254,7 @@ versioned under <code>/v1</code>, and — critically for this epic —
   -&gt; issues the full handle-scoped session JWT described in the architecture
      spec, Section 5.2, replacing the pending-scoped token
   -&gt; 409 if handle_name fails uniqueness/blocklist validation (Section 3)
+     (the availability check above is advisory; POST re-validates authoritatively)
 
 GET /v1/handles/:handle_id
   -&gt; public profile: { handle_name, kudos_total, member_since (year only),
@@ -277,6 +286,22 @@ the underlying data and rules the action relies on —
 <code>community.handle_name_history</code> (the audit trail) and the
 creation-time blocklist/uniqueness validation (Section 3) that EPIC-F’s
 <code>rename_handle</code> re-runs on the new name.</p>
+<p><strong>Profile editability — resolved 2026-07-19 (gap
+G-23)</strong>: the member’s own profile
+(<code>GET /v1/handles/me</code>) has <strong>no member-editable
+fields</strong>. The handle is immutable (Section 6); there is
+deliberately <strong>no</strong> editable real name, employer,
+specialty, location, avatar, or free-text bio — any such field is either
+an anonymity risk (a bio can encode identity, the same reasoning that
+ruled out the FD-5 contact link, §1/§13) or simply not part of the
+pseudonymous model. “Profile management,” from the member’s point of
+view, is therefore the <strong>settings screens</strong> (notification
+preferences EPIC-G, interests EPIC-I, subscription EPIC-H, sign-in &amp;
+security), <strong>not</strong> an editable profile.
+<code>PATCH /v1/handles/me</code> is intentionally not offered. (If a
+non-identifying element is ever wanted — e.g. a single
+professional-body-agnostic field — it would need its own anonymity
+review first.)</p>
 <hr />
 <h2 id="handle-immutability">6. Handle immutability</h2>
 <p><strong>Members cannot self-service rename their handle after

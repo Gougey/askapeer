@@ -69,7 +69,8 @@ config.settings                        -- key/value tunable platform settings
   key           text PK               -- e.g. 'badge.top_contributor_percentile',
                                           'feed.trending_min_results', 'feed.trending_window_steps',
                                           'billing.grace_period_days', 'billing.default_trial_days',
-                                          'verification.onfido_timeout_hours'
+                                          'verification.onfido_timeout_hours',
+                                          'auth.session_inactivity_days', 'auth.session_absolute_max_days'
   value         jsonb
   description   text                   -- human-readable, shown in the admin UI
   updated_by    uuid                   -- Administrator's member_id

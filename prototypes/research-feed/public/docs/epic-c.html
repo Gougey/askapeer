@@ -52,6 +52,8 @@ epics</a></li>
 notes specific to EPIC-C</a></li>
 <li><a href="#best-answer-marker-in-mvp">Test plan</a></li>
 <li><a href="#polls-in-mvp">Open questions</a></li>
+<li><a href="#consequence-of-deferring-images">Screen-spec
+reconciliation (2026-07-19)</a></li>
 </ol>
 <hr />
 <h2 id="scope">1. Scope</h2>
@@ -106,6 +108,9 @@ community.posts
                                                           -- used only by case discussions
                                                           -- (EPIC-E), see note below
   tsv           tsvector generated                       -- see Section 4
+  accepted_comment_id uuid FK -&gt; community.comments nullable  -- best-answer marker (§7),
+                                                          -- author-set via §5 endpoint
+                                                          -- (added 2026-07-19, gap G-5)
   created_at    timestamptz
   edited_at     timestamptz nullable
 
@@ -347,8 +352,15 @@ POST   /v1/posts/:post_id/comments      { body, parent_comment_id? }
 PATCH  /v1/comments/:comment_id
 DELETE /v1/comments/:comment_id
 
+PUT    /v1/posts/:post_id/accepted-answer  { comment_id | null }  -- author only; best-answer (§7, G-5)
+POST   /v1/polls/:poll_id/vote             { option_index }       -- one per handle (§7, G-6)
+
+GET    /v1/me/posts?cursor=             -- my published posts (author-scoped, G-21)
+GET    /v1/me/comments?cursor=          -- my answers (author-scoped, G-21)
+GET    /v1/me/drafts?cursor=            -- my draft + needs_correction, AUTHOR-PRIVATE (§13, G-8/G-21)
+
 GET    /v1/categories
-GET    /v1/tags?prefix=                 -- typeahead when composing a post</code></pre>
+GET    /v1/tags?prefix=                 -- typeahead when composing a post (selectable vocab only)</code></pre>
 <p>All write endpoints require a handle-scoped session token at
 <code>active</code> status (architecture spec, Section 5.2); a
 <code>suspended</code>/<code>expelled</code> handle’s token fails on
@@ -446,10 +458,12 @@ exist) — see that spec’s Section 4 and the note below.</td>
 </tbody>
 </table>
 <h3 id="best-answer-marker-in-mvp">Best answer marker (in MVP)</h3>
-<p>A nullable <code>community.posts.accepted_comment_id</code>, set by
-the post’s <strong>own author</strong> (not moderators, not
-kudos-driven). Displayed above the kudos-ranked answer list, not
-replacing it — the Must-have kudos ranking (EPIC-D) and this marker are
+<p>A nullable <code>community.posts.accepted_comment_id</code> (now in
+the Section 2 schema — added 2026-07-19), set by the post’s <strong>own
+author</strong> (not moderators, not kudos-driven) via
+<code>PUT /v1/posts/:post_id/accepted-answer { comment_id | null }</code>
+(Section 5). Displayed above the kudos-ranked answer list, not replacing
+it — the Must-have kudos ranking (EPIC-D) and this marker are
 complementary: kudos is the community’s signal, the accepted answer is
 the asker’s own “this solved it.”</p>
 <h3 id="polls-in-mvp">Polls (in MVP)</h3>
@@ -460,7 +474,13 @@ plus a votes table
 one vote per handle per poll via a unique constraint, the same
 one-per-handle pattern as kudos). No interaction with any other epic’s
 data; votes are handle-scoped like everything else in
-<code>community</code>.</p>
+<code>community</code>. <strong>Voting endpoint</strong> (added
+2026-07-19, gap G-6):
+<code>POST /v1/polls/:poll_id/vote { option_index }</code> (Section 5);
+the thread DTO (Section 13) includes each poll’s options, per-option
+counts, and the caller’s own <code>viewer_vote</code>. A poll is
+attached at post creation
+(<code>POST /v1/posts … { …, poll? }</code>).</p>
 <h3 id="consequence-of-deferring-images">Consequence of deferring
 images</h3>
 <p>EPIC-E’s de-identification checklist (its Section 4) includes two
@@ -637,6 +657,125 @@ restored when image support lands.</li>
 with recency tiebreak. The adaptive window avoids an empty fallback feed
 at low launch volume.</li>
 </ul>
+<hr />
+<h2 id="screen-spec-reconciliation-2026-07-19">13. Screen-spec
+reconciliation (2026-07-19)</h2>
+<p>The screen &amp; functional spec
+(<code>docs/2026-07-18-screen-functional-spec.md</code>) mapped this
+epic’s endpoints onto real screens and surfaced read-model and endpoint
+gaps. Reconciled here; the schema/endpoint additions are folded into
+Sections 2, 5, and 7 above. This section pins the <strong>response
+shapes</strong> the endpoints return — previously only the endpoints,
+not their payloads, were specified.</p>
+<h3 id="thread-dto-get-v1postspost_id-gaps-g-3-g-4-g-6">13.1 Thread DTO
+— <code>GET /v1/posts/:post_id</code> (gaps G-3, G-4, G-6)</h3>
+<ul>
+<li><strong>post</strong>: id, type, title, body (or, if
+<code>type = case_discussion</code>, the EPIC-E
+<code>case_details</code> block + disclaimer flag), category, tags[],
+status, created_at, edited_at, <code>accepted_comment_id</code>,
+<code>poll?</code> (options + per-option counts).</li>
+<li><strong>author block</strong> (on the post and each comment):
+<code>handle_name</code>, <strong><code>kudos_total</code></strong>,
+<strong>top-contributor badge</strong> — a <strong>read-time
+join</strong> from <code>community.handles</code> (EPIC-B) + EPIC-D.
+This epic owns the join for its own reads; the values are peer-visible
+reputation, not identity.</li>
+<li><strong><code>viewer_context</code></strong> (per caller):
+<code>is_author</code>, <code>has_kudosed</code> (post + each comment),
+<code>follows_author</code>, <code>follows_tag[]</code>,
+<code>viewer_vote</code> (poll). Bundled so the client renders every
+control state (kudos toggled, follow state, edit/mark-best affordances)
+in <strong>one round-trip</strong>, not N — a deliberate choice for
+mobile latency.</li>
+<li><strong>comments[]</strong>: id, author block, body,
+<code>kudos_count</code>, viewer <code>has_kudosed</code>,
+<code>parent_comment_id</code>, status, edited_at, is-accepted flag;
+ordered by EPIC-D kudos rank.</li>
+</ul>
+<h3 id="list-card-dto-get-v1posts-v1feed-v1search-v1me-gap-g-17">13.2
+List / card DTO — <code>GET /v1/posts</code>, <code>/v1/feed</code>,
+<code>/v1/search</code>, <code>/v1/me/*</code> (gap G-17)</h3>
+<p>Per card: post id, category, title, <strong>author block</strong>
+(handle + <code>kudos_total</code> + badge, same join as above), tags[],
+<code>answer_count</code>, post <code>kudos_count</code>, snippet,
+created_at, is-accepted flag. The list-surface analogue of the thread’s
+author-block join.</p>
+<h3 id="author-scoped-draft-reads-gaps-g-21-g-8">13.3 Author-scoped
+&amp; draft reads (gaps G-21, G-8)</h3>
+<ul>
+<li><code>GET /v1/me/posts</code>, <code>/v1/me/comments</code> — the
+caller’s own <strong>published</strong> content (Activity › My Q&amp;A,
+screen E2; profile history, F1).</li>
+<li><code>GET /v1/me/drafts</code> — the caller’s
+<strong><code>draft</code> + <code>needs_correction</code></strong>
+posts, <strong>author-private</strong>. This is the <em>only</em>
+surface that returns those statuses.</li>
+</ul>
+<h3 id="needs_correction-draft-visibility-gap-g-8">13.4
+<code>needs_correction</code> / <code>draft</code> visibility (gap
+G-8)</h3>
+<p>Made explicit at the read layer: a <code>draft</code> or
+<code>needs_correction</code> post is returned <strong>only to its
+author</strong>. <code>GET /v1/posts/:post_id</code> returns it only if
+the caller is the author (who sees the correction CTA — EPIC-E §8); to
+anyone else it is not visible (404). This enforces EPIC-E §8’s “whole
+thread hidden from public.”</p>
+<h3 id="anonymity-reminder-placement-gap-g-7">13.5 Anonymity-reminder
+placement (gap G-7)</h3>
+<p>The zero-tolerance anonymity reminder (a domain-mandated surface) is
+rendered in <strong>every posting UI</strong> — the compose-question
+composer, the compose-case composer (EPIC-E), and the reply composer.
+Pinned as a client build requirement so it isn’t left to chance.</p>
+<h3 id="gap-cross-reference">13.6 Gap cross-reference</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G-3 viewer_context</td>
+<td>§13.1 <code>viewer_context</code> block</td>
+</tr>
+<tr>
+<td>G-4 author reputation</td>
+<td>§13.1 author-block join</td>
+</tr>
+<tr>
+<td>G-5 best-answer</td>
+<td><code>accepted_comment_id</code> (§2) +
+<code>PUT …/accepted-answer</code> (§5)</td>
+</tr>
+<tr>
+<td>G-6 poll</td>
+<td>poll in thread DTO + <code>viewer_vote</code> (§13.1) +
+<code>POST …/vote</code> (§5, §7)</td>
+</tr>
+<tr>
+<td>G-7 anonymity reminder</td>
+<td>§13.5 composer placement</td>
+</tr>
+<tr>
+<td>G-8 needs_correction visibility</td>
+<td>§13.4 read-layer rule</td>
+</tr>
+<tr>
+<td>G-17 list DTO</td>
+<td>§13.2 list/card DTO</td>
+</tr>
+<tr>
+<td>G-21 author-scoped reads</td>
+<td><code>/v1/me/posts,comments,drafts</code> (§5, §13.3)</td>
+</tr>
+</tbody>
+</table>
 
 </main>
 </body>

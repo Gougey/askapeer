@@ -118,6 +118,14 @@ The "never visible" fields don't exist anywhere in the `community` schema in the
 Consistent with the architecture spec's Section 5.3 principles: versioned under `/v1`, and — critically for this epic — **no response shape from any of these endpoints ever includes `member_id`**, only `handle_id`.
 
 ```
+GET /v1/handles/availability?name=            -- added 2026-07-19 (gap G-12)
+  auth: pending-scoped token
+  -> { available: bool, reason?: taken | invalid_format | blocklisted }
+  -> powers as-you-type feedback on the choose-handle screen (A6), so a member
+     learns a name is taken/invalid/blocked before submitting — runs the same
+     uniqueness + charset (3-30, alnum + _/-) + blocklist checks POST /v1/handles
+     applies, just non-mutating
+
 POST /v1/handles
   auth: pending-scoped token, only valid once (EPIC-A spec, Section 7) and only
         callable when the caller's verification_status = approved_verified
@@ -126,6 +134,7 @@ POST /v1/handles
   -> issues the full handle-scoped session JWT described in the architecture
      spec, Section 5.2, replacing the pending-scoped token
   -> 409 if handle_name fails uniqueness/blocklist validation (Section 3)
+     (the availability check above is advisory; POST re-validates authoritatively)
 
 GET /v1/handles/:handle_id
   -> public profile: { handle_name, kudos_total, member_since (year only),
@@ -150,6 +159,8 @@ GET /v1/handles/me
 ```
 
 The moderator-forced rename was originally sketched here as a bespoke `POST /v1/admin/handles/:handle_id/rename` endpoint. **Resolved 2026-07-17 (open-questions §1.3):** a moderator-initiated rename is a moderation action in substance, so it lives in **EPIC-F's `rename_handle` action type**, not a separate EPIC-B endpoint. EPIC-B keeps ownership of the underlying data and rules the action relies on — `community.handle_name_history` (the audit trail) and the creation-time blocklist/uniqueness validation (Section 3) that EPIC-F's `rename_handle` re-runs on the new name.
+
+**Profile editability — resolved 2026-07-19 (gap G-23)**: the member's own profile (`GET /v1/handles/me`) has **no member-editable fields**. The handle is immutable (Section 6); there is deliberately **no** editable real name, employer, specialty, location, avatar, or free-text bio — any such field is either an anonymity risk (a bio can encode identity, the same reasoning that ruled out the FD-5 contact link, §1/§13) or simply not part of the pseudonymous model. "Profile management," from the member's point of view, is therefore the **settings screens** (notification preferences EPIC-G, interests EPIC-I, subscription EPIC-H, sign-in & security), **not** an editable profile. `PATCH /v1/handles/me` is intentionally not offered. (If a non-identifying element is ever wanted — e.g. a single professional-body-agnostic field — it would need its own anonymity review first.)
 
 ---
 

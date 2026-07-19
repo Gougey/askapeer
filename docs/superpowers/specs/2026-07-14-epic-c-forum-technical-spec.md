@@ -23,6 +23,7 @@ Source of truth: `docs/askapeer-prd-v0.1.md`, Section 6.1 (Must/Should/Could fea
 10. [Non-functional notes specific to EPIC-C](#10-non-functional-notes-specific-to-epic-c)
 11. [Test plan](#11-test-plan)
 12. [Open questions](#12-open-questions)
+13. [Screen-spec reconciliation (2026-07-19)](#13-screen-spec-reconciliation-2026-07-19)
 
 ---
 
@@ -67,6 +68,9 @@ community.posts
                                                           -- used only by case discussions
                                                           -- (EPIC-E), see note below
   tsv           tsvector generated                       -- see Section 4
+  accepted_comment_id uuid FK -> community.comments nullable  -- best-answer marker (§7),
+                                                          -- author-set via §5 endpoint
+                                                          -- (added 2026-07-19, gap G-5)
   created_at    timestamptz
   edited_at     timestamptz nullable
 
@@ -174,8 +178,15 @@ POST   /v1/posts/:post_id/comments      { body, parent_comment_id? }
 PATCH  /v1/comments/:comment_id
 DELETE /v1/comments/:comment_id
 
+PUT    /v1/posts/:post_id/accepted-answer  { comment_id | null }  -- author only; best-answer (§7, G-5)
+POST   /v1/polls/:poll_id/vote             { option_index }       -- one per handle (§7, G-6)
+
+GET    /v1/me/posts?cursor=             -- my published posts (author-scoped, G-21)
+GET    /v1/me/comments?cursor=          -- my answers (author-scoped, G-21)
+GET    /v1/me/drafts?cursor=            -- my draft + needs_correction, AUTHOR-PRIVATE (§13, G-8/G-21)
+
 GET    /v1/categories
-GET    /v1/tags?prefix=                 -- typeahead when composing a post
+GET    /v1/tags?prefix=                 -- typeahead when composing a post (selectable vocab only)
 ```
 
 All write endpoints require a handle-scoped session token at `active` status (architecture spec, Section 5.2); a `suspended`/`expelled` handle's token fails on refresh as already specified there, so this epic needs no bespoke status check beyond what already exists.
@@ -207,11 +218,11 @@ The PRD lists three Could-have (MVP stretch) items. Scope decided by Adrian, 202
 
 ### Best answer marker (in MVP)
 
-A nullable `community.posts.accepted_comment_id`, set by the post's **own author** (not moderators, not kudos-driven). Displayed above the kudos-ranked answer list, not replacing it — the Must-have kudos ranking (EPIC-D) and this marker are complementary: kudos is the community's signal, the accepted answer is the asker's own "this solved it."
+A nullable `community.posts.accepted_comment_id` (now in the Section 2 schema — added 2026-07-19), set by the post's **own author** (not moderators, not kudos-driven) via `PUT /v1/posts/:post_id/accepted-answer { comment_id | null }` (Section 5). Displayed above the kudos-ranked answer list, not replacing it — the Must-have kudos ranking (EPIC-D) and this marker are complementary: kudos is the community's signal, the accepted answer is the asker's own "this solved it."
 
 ### Polls (in MVP)
 
-A lightweight, self-contained addition — a `community.polls (post_id, question, options jsonb)` table plus a votes table (`community.poll_votes (poll_id, option_index, handle_id, created_at)`, one vote per handle per poll via a unique constraint, the same one-per-handle pattern as kudos). No interaction with any other epic's data; votes are handle-scoped like everything else in `community`.
+A lightweight, self-contained addition — a `community.polls (post_id, question, options jsonb)` table plus a votes table (`community.poll_votes (poll_id, option_index, handle_id, created_at)`, one vote per handle per poll via a unique constraint, the same one-per-handle pattern as kudos). No interaction with any other epic's data; votes are handle-scoped like everything else in `community`. **Voting endpoint** (added 2026-07-19, gap G-6): `POST /v1/polls/:poll_id/vote { option_index }` (Section 5); the thread DTO (Section 13) includes each poll's options, per-option counts, and the caller's own `viewer_vote`. A poll is attached at post creation (`POST /v1/posts … { …, poll? }`).
 
 ### Consequence of deferring images
 
@@ -294,3 +305,46 @@ No new schema is introduced — `community.follows` (EPIC-B) and `community.post
 - ~~**Could-have scope confirmation**~~ — **resolved 2026-07-17** (Section 7): best-answer marker and polls are **in MVP**; image attachments are **deferred** on privacy grounds. Follow-up below.
 - ~~**EPIC-E image-checklist reconciliation**~~ (from the image deferral, Section 7) — **resolved 2026-07-17**: EPIC-E's spec (its Section 4) now specifies a six-item MVP checklist (items 1–5, 8), with the two image items (6/7) restored when image support lands.
 - ~~**"Trending" definition**~~ — **resolved 2026-07-17** (Section 8): platform-wide, adaptive time window (start 24h, widen to 7d/30d/all-time until ≥ N results), ranked by kudos with recency tiebreak. The adaptive window avoids an empty fallback feed at low launch volume.
+
+---
+
+## 13. Screen-spec reconciliation (2026-07-19)
+
+The screen & functional spec (`docs/2026-07-18-screen-functional-spec.md`) mapped this epic's endpoints onto real screens and surfaced read-model and endpoint gaps. Reconciled here; the schema/endpoint additions are folded into Sections 2, 5, and 7 above. This section pins the **response shapes** the endpoints return — previously only the endpoints, not their payloads, were specified.
+
+### 13.1 Thread DTO — `GET /v1/posts/:post_id` (gaps G-3, G-4, G-6)
+
+- **post**: id, type, title, body (or, if `type = case_discussion`, the EPIC-E `case_details` block + disclaimer flag), category, tags[], status, created_at, edited_at, `accepted_comment_id`, `poll?` (options + per-option counts).
+- **author block** (on the post and each comment): `handle_name`, **`kudos_total`**, **top-contributor badge** — a **read-time join** from `community.handles` (EPIC-B) + EPIC-D. This epic owns the join for its own reads; the values are peer-visible reputation, not identity.
+- **`viewer_context`** (per caller): `is_author`, `has_kudosed` (post + each comment), `follows_author`, `follows_tag[]`, `viewer_vote` (poll). Bundled so the client renders every control state (kudos toggled, follow state, edit/mark-best affordances) in **one round-trip**, not N — a deliberate choice for mobile latency.
+- **comments[]**: id, author block, body, `kudos_count`, viewer `has_kudosed`, `parent_comment_id`, status, edited_at, is-accepted flag; ordered by EPIC-D kudos rank.
+
+### 13.2 List / card DTO — `GET /v1/posts`, `/v1/feed`, `/v1/search`, `/v1/me/*` (gap G-17)
+
+Per card: post id, category, title, **author block** (handle + `kudos_total` + badge, same join as above), tags[], `answer_count`, post `kudos_count`, snippet, created_at, is-accepted flag. The list-surface analogue of the thread's author-block join.
+
+### 13.3 Author-scoped & draft reads (gaps G-21, G-8)
+
+- `GET /v1/me/posts`, `/v1/me/comments` — the caller's own **published** content (Activity › My Q&A, screen E2; profile history, F1).
+- `GET /v1/me/drafts` — the caller's **`draft` + `needs_correction`** posts, **author-private**. This is the *only* surface that returns those statuses.
+
+### 13.4 `needs_correction` / `draft` visibility (gap G-8)
+
+Made explicit at the read layer: a `draft` or `needs_correction` post is returned **only to its author**. `GET /v1/posts/:post_id` returns it only if the caller is the author (who sees the correction CTA — EPIC-E §8); to anyone else it is not visible (404). This enforces EPIC-E §8's "whole thread hidden from public."
+
+### 13.5 Anonymity-reminder placement (gap G-7)
+
+The zero-tolerance anonymity reminder (a domain-mandated surface) is rendered in **every posting UI** — the compose-question composer, the compose-case composer (EPIC-E), and the reply composer. Pinned as a client build requirement so it isn't left to chance.
+
+### 13.6 Gap cross-reference
+
+| Gap | Resolution |
+|---|---|
+| G-3 viewer_context | §13.1 `viewer_context` block |
+| G-4 author reputation | §13.1 author-block join |
+| G-5 best-answer | `accepted_comment_id` (§2) + `PUT …/accepted-answer` (§5) |
+| G-6 poll | poll in thread DTO + `viewer_vote` (§13.1) + `POST …/vote` (§5, §7) |
+| G-7 anonymity reminder | §13.5 composer placement |
+| G-8 needs_correction visibility | §13.4 read-layer rule |
+| G-17 list DTO | §13.2 list/card DTO |
+| G-21 author-scoped reads | `/v1/me/posts,comments,drafts` (§5, §13.3) |

@@ -676,7 +676,12 @@ The admin surfaces map cleanly onto the well-specified EPIC-F / EPIC-A / EPIC-J 
 
 ## 7. Consolidated spec-gaps from this pass
 
-The running list of concrete, actionable items the mapping surfaced across the **complete** screen inventory. G-1…G-8 (exemplars); G-9…G-11 (auth review, 2026-07-19); G-12…G-18 (member areas A–C); G-19…G-23 (areas D–F); **G-24 (admin area G)**. The full set (**G-1…G-24**) now feeds the reconciliation pass into the epic specs.
+The running list of concrete, actionable items the mapping surfaced across the **complete** screen inventory. G-1…G-8 (exemplars); G-9…G-11 (auth review, 2026-07-19); G-12…G-18 (member areas A–C); G-19…G-23 (areas D–F); G-24 (admin area G).
+
+**Reconciliation status** (folding gaps back into the epic specs):
+
+- **Batch 1 done (2026-07-19)** — **G-3, G-4, G-5, G-6, G-7, G-8, G-17, G-21** → EPIC-C (new §13: thread/list DTOs, `accepted_comment_id` column, poll-vote + accepted-answer + author-scoped endpoints, visibility & anonymity-reminder rules); **G-9, G-10, G-11** → architecture §5.2/§2 (passkeys + `identity.webauthn_credentials`, refresh-token lifetime tunables, i18n) + EPIC-J config keys; **G-12, G-23** → EPIC-B (`GET /v1/handles/availability`, no editable profile).
+- **Remaining** (batch 2) — G-1, G-2 (EPIC-A verification resubmit/resume); G-13 (EPIC-A acknowledgement); G-14, G-16, G-22 (EPIC-I interests/article/saves); G-15, G-19 (EPIC-H seed-trigger/manage-subscription); G-20 (EPIC-A/legal erasure); G-24 (EPIC-F reveal fields); G-18 (FD-1 scope).
 
 | # | Gap | Affects | Suggested action |
 |---|---|---|---|

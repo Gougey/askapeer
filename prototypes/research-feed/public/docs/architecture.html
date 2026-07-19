@@ -353,7 +353,17 @@ given the team is building with AI assistance.</p>
 <li><strong>Web app</strong> — Next.js (React), the sole MVP client,
 communicating with the API entirely over HTTPS. Built API-first (no
 server-only logic baked into the web app) so a future native mobile
-client is architecturally just another API consumer, not a rewrite.</li>
+client is architecturally just another API consumer, not a rewrite.
+<strong>Internationalisation (added 2026-07-19, gap G-10)</strong>: all
+user-facing strings are externalised from day one into
+<strong>per-locale message catalogs</strong> (keyed message ids,
+resource files) via a standard i18n library — never hardcoded literals —
+with an <code>en-GB</code> catalog at MVP and locale-aware formatting
+(dates, <code>£</code>, age-bands). This is
+<em>translation-readiness</em>, not multi-language delivery (which stays
+Won’t-have per PRD §6.1); it is <strong>not</strong> a database
+“language table” (UI copy is versioned with the code). Retrofitting i18n
+later is expensive; adopting the discipline now is nearly free.</li>
 <li><strong>API</strong> — a single NestJS service, organised into
 modules mapping 1:1 to the PRD epics (see Section 10).</li>
 <li><strong>Background workers</strong> — the same codebase, deployed as
@@ -585,7 +595,35 @@ plus a rotating refresh token. The web app stores the refresh token in
 an HttpOnly secure cookie (mitigates cross-site scripting attacks); a
 future native mobile client would receive it in the response body to
 store in platform-native secure storage instead — the same endpoints
-serve both, so no backend change is needed when mobile ships.</p>
+serve both, so no backend change is needed when mobile ships. The
+refresh token rotates on each use (reuse-detection catches theft), so
+the magic link is a <em>one-time bootstrap</em> — members stay signed in
+across app opens via the refresh token, not by re-clicking a link.</p>
+<p><strong>Refresh-token lifetime (amended 2026-07-19, gap
+G-11)</strong>: the persistent session is bounded by a <strong>sliding
+inactivity window plus an absolute maximum</strong> — the single
+parameter that determines how often members re-authenticate. Both are
+<strong>tunable settings</strong> in EPIC-J config
+(<code>auth.session_inactivity_days</code>,
+<code>auth.session_absolute_max_days</code>) rather than hardcoded, so
+they can be adjusted from real usage without a deploy. Concrete defaults
+are a value to set before build (a decision, not a mechanism).</p>
+<p><strong>Passkeys — biometric sign-in (amended 2026-07-19, gap
+G-9)</strong>: an <em>additional</em> passwordless method alongside the
+magic link. After first sign-in a member may register a <strong>WebAuthn
+platform authenticator</strong> (Face ID / Touch ID / Android biometric
+/ Windows Hello); subsequent sign-ins (when the session has ended) use
+the passkey instead of a fresh magic link. Passkeys are
+phishing-resistant, first-party, per-device, and carry unchanged to
+native. Adds
+<code>identity.webauthn_credentials (member_id, credential_id, public_key, sign_count, transports, device_label, created_at, last_used_at)</code>
+and WebAuthn <strong>registration</strong> + <strong>assertion</strong>
+endpoints under <code>IdentityService</code>. An optional biometric
+<strong>app-lock</strong> (gate every app open even mid-session) is a
+separate client-side privacy feature. <strong>Build-timing (MVP
+vs. fast-follow) and the app-lock offer are open decisions</strong> —
+the magic-link + persistent session is sufficient to launch without
+them.</p>
 <p>Members who are not yet <code>approved_verified</code> receive a
 token scoped only to a holding-status endpoint — matching the PRD’s
 requirement that “all other statuses see a holding page only.”</p>

@@ -1898,9 +1898,25 @@ from this pass</h2>
 <p>The running list of concrete, actionable items the mapping surfaced
 across the <strong>complete</strong> screen inventory. G-1…G-8
 (exemplars); G-9…G-11 (auth review, 2026-07-19); G-12…G-18 (member areas
-A–C); G-19…G-23 (areas D–F); <strong>G-24 (admin area G)</strong>. The
-full set (<strong>G-1…G-24</strong>) now feeds the reconciliation pass
-into the epic specs.</p>
+A–C); G-19…G-23 (areas D–F); G-24 (admin area G).</p>
+<p><strong>Reconciliation status</strong> (folding gaps back into the
+epic specs):</p>
+<ul>
+<li><strong>Batch 1 done (2026-07-19)</strong> — <strong>G-3, G-4, G-5,
+G-6, G-7, G-8, G-17, G-21</strong> → EPIC-C (new §13: thread/list DTOs,
+<code>accepted_comment_id</code> column, poll-vote + accepted-answer +
+author-scoped endpoints, visibility &amp; anonymity-reminder rules);
+<strong>G-9, G-10, G-11</strong> → architecture §5.2/§2 (passkeys +
+<code>identity.webauthn_credentials</code>, refresh-token lifetime
+tunables, i18n) + EPIC-J config keys; <strong>G-12, G-23</strong> →
+EPIC-B (<code>GET /v1/handles/availability</code>, no editable
+profile).</li>
+<li><strong>Remaining</strong> (batch 2) — G-1, G-2 (EPIC-A verification
+resubmit/resume); G-13 (EPIC-A acknowledgement); G-14, G-16, G-22
+(EPIC-I interests/article/saves); G-15, G-19 (EPIC-H
+seed-trigger/manage-subscription); G-20 (EPIC-A/legal erasure); G-24
+(EPIC-F reveal fields); G-18 (FD-1 scope).</li>
+</ul>
 <table>
 <colgroup>
 <col style="width: 25%" />
