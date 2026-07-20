@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { SignOutButton } from '@/components/SignOutButton';
 import { API_ORIGIN } from '@/lib/api';
 import { requireSession } from '@/lib/onboarding';
 import { ResubmitButton } from './ResubmitButton';
@@ -61,9 +62,7 @@ export default async function StatusPage() {
         {key === 'rejected' && (
           <Link href="/register" className="underline">{t('registerAgain')}</Link>
         )}
-        <Link href="/auth/signout" className="underline" style={{ color: 'var(--color-muted)' }}>
-          {t('signOut')}
-        </Link>
+        <SignOutButton label={t('signOut')} />
       </div>
     </main>
   );

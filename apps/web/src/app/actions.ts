@@ -1,6 +1,24 @@
 'use server';
 
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { API_ORIGIN } from '@/lib/api';
+import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/session';
+
+/**
+ * Sign out. A POST-only server action, never a GET route: Next prefetches `<Link>`s that
+ * enter the viewport, so a GET sign-out endpoint gets *executed* just by rendering a page
+ * that links to it — which is exactly how it behaved, silently ending the session of
+ * anyone who opened their profile.
+ *
+ * The general rule this encodes: a GET must be safe to call without the member asking.
+ */
+export async function signOutAction(): Promise<void> {
+  const jar = await cookies();
+  jar.delete(ACCESS_COOKIE);
+  jar.delete(REFRESH_COOKIE);
+  redirect('/');
+}
 
 export type AuthState = {
   status: 'idle' | 'sent' | 'error';
