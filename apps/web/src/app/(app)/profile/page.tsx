@@ -1,0 +1,50 @@
+import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
+import { API_ORIGIN } from '@/lib/api';
+import { requireAppAccess } from '@/lib/onboarding';
+
+type Profile = {
+  handleId: string;
+  handleName: string;
+  kudosTotal: number;
+  memberSinceYear: number;
+  status: string;
+};
+
+/**
+ * F1 — my profile. Deliberately thin: there are no member-editable profile fields
+ * (EPIC-B §5, gap G-23), so this is the public profile plus a way out. Settings screens
+ * arrive with the epics that own them (notifications S10, interests S8, billing S12).
+ */
+export default async function ProfilePage() {
+  const { token } = await requireAppAccess();
+  const t = await getTranslations('shell.profileScreen');
+
+  const res = await fetch(`${API_ORIGIN}/v1/handles/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  const profile = (await res.json()) as Profile;
+
+  return (
+    <main className="flex min-h-dvh flex-col gap-6 px-6 py-12">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold">{profile.handleName}</h1>
+        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+          {t('memberSince', { year: profile.memberSinceYear })}
+        </p>
+      </div>
+
+      <div className="rounded-lg p-4" style={{ background: 'var(--color-surface)' }}>
+        <p className="text-2xl font-semibold">{profile.kudosTotal}</p>
+        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>{t('kudos')}</p>
+      </div>
+
+      <p className="text-sm" style={{ color: 'var(--color-muted)' }}>{t('identityNote')}</p>
+
+      <Link href="/auth/signout" className="text-sm underline" style={{ color: 'var(--color-muted)' }}>
+        {t('signOut')}
+      </Link>
+    </main>
+  );
+}

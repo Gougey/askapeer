@@ -54,6 +54,72 @@
     "registerAgain": "Register again",
     "signOut": "Sign out"
   },
+  "onboarding": {
+    "handle": {
+      "title": "Choose your handle",
+      "body": "This is the only name other members will ever see. Your real name, employer, specialty and grade are never shown.",
+      "label": "Handle",
+      "placeholder": "e.g. KneeGeek_99",
+      "rules": "3–30 characters. Letters, numbers, underscores and hyphens.",
+      "permanentWarning": "Your handle is permanent. You can't change it later — kudos and post history belong to it, so pick one you're happy to be known by.",
+      "checking": "Checking…",
+      "available": "{name} is available",
+      "submit": "Confirm handle",
+      "submitting": "Claiming…",
+      "unavailable": {
+        "taken": "That handle is already taken.",
+        "invalid_format": "3–30 characters, using letters, numbers, underscores or hyphens only.",
+        "blocklisted": "That handle isn't allowed. Names that could impersonate the platform or its staff are reserved."
+      },
+      "error": "Something went wrong. Please try again."
+    },
+    "setup": {
+      "title": "Before you start",
+      "ruleHeading": "The one rule",
+      "rule": "Askapeer works because nobody knows who anyone is. Every member here is a verified, registered practitioner — but no one can tell whether you're a consultant of thirty years or six months out of your degree. That is the point: ideas are judged on merit, not rank.",
+      "ruleConsequence": "Any attempt to identify yourself or another member — in a post, a reply, or by arranging it off the platform — results in immediate and permanent removal from Askapeer. There are no exceptions and no appeals.",
+      "acknowledge": "I understand, and I agree not to identify myself or any other member",
+      "continue": "Continue",
+      "submitting": "Saving…",
+      "error": "We couldn't save that. Please try again.",
+      "interests": {
+        "heading": "Your clinical interests",
+        "body": "You'll be able to pick the areas you want in your feed once the research feed arrives. Until then your feed shows everything."
+      }
+    }
+  },
+  "shell": {
+    "primaryNav": "Primary",
+    "feed": "Feed",
+    "discussions": "Discussions",
+    "create": "Create",
+    "activity": "Activity",
+    "profile": "Profile",
+    "comingSoon": {
+      "feed": {
+        "title": "Feed",
+        "body": "Research and news scored to your clinical interests will appear here."
+      },
+      "discussions": {
+        "title": "Discussions",
+        "body": "Questions and case discussions from other verified members will appear here."
+      },
+      "create": {
+        "title": "Create",
+        "body": "Posting a question or a case discussion opens up shortly."
+      },
+      "activity": {
+        "title": "Activity",
+        "body": "Replies to your posts, kudos you've received, and your notifications will appear here."
+      }
+    },
+    "profileScreen": {
+      "kudos": "Kudos",
+      "memberSince": "Member since {year}",
+      "identityNote": "This is everything other members can see about you.",
+      "signOut": "Sign out"
+    }
+  },
   "identityCheck": {
     "title": "Confirm your identity",
     "body": "We check your ID document against the name on your professional register. Your documents are never shown to other members.",

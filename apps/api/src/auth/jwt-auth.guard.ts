@@ -2,7 +2,12 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 
-export type AuthedMember = { memberId: string; scope: 'pending' | 'full' };
+export type AuthedMember = {
+  memberId: string;
+  scope: 'pending' | 'full';
+  /** Present only on a full (handle-scoped) session — see AuthService.issueSession. */
+  handleId?: string;
+};
 
 /** Verifies the Bearer access token and attaches the member to the request. */
 @Injectable()
@@ -14,8 +19,12 @@ export class JwtAuthGuard implements CanActivate {
     const header = req.headers.authorization;
     if (!header?.startsWith('Bearer ')) throw new UnauthorizedException('Missing bearer token.');
     try {
-      const payload = await this.jwt.verifyAsync<{ sub: string; scope: 'pending' | 'full' }>(header.slice(7));
-      req.member = { memberId: payload.sub, scope: payload.scope };
+      const payload = await this.jwt.verifyAsync<{
+        sub: string;
+        scope: 'pending' | 'full';
+        hdl?: string;
+      }>(header.slice(7));
+      req.member = { memberId: payload.sub, scope: payload.scope, handleId: payload.hdl };
       return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired token.');

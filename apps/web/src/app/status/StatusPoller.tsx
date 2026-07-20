@@ -25,12 +25,9 @@ export function StatusPoller({ current }: { current: string }) {
         if (!res.ok || cancelled) return;
         const { verificationStatus } = (await res.json()) as { verificationStatus: string };
         if (cancelled || verificationStatus === current) return;
-
-        if (verificationStatus === 'approved_verified') {
-          // Reissue the session so the token's scope catches up with the new status.
-          window.location.href = '/auth/session?next=/status';
-          return;
-        }
+        // The page itself decides where an approved member goes next (A6) — refreshing
+        // is enough. No token rotation needed here: a pending-scoped session is exactly
+        // what the handle step expects, and claiming a handle is what mints the full one.
         router.refresh();
       } catch {
         // A failed poll is not worth surfacing — the next tick retries.

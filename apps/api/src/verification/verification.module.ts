@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtConfigModule } from '../auth/jwt-config.module';
 import { IDENTITY_CHECK, SimulatedIdentityCheck } from './providers/identity-check';
 import { REGISTER_LOOKUP, SimulatedRegisterLookup } from './providers/register-lookup';
 import { StatusChangeNotifier } from './status-change.notifier';
@@ -20,14 +19,7 @@ import { VerificationWorker } from './verification.worker';
 @Module({
   imports: [
     VerificationQueueModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') ?? 'dev-insecure-secret-change-me',
-        signOptions: { issuer: 'askapeer' },
-      }),
-    }),
+    JwtConfigModule,
   ],
   controllers: [VerificationController],
   providers: [
