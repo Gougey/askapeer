@@ -28,3 +28,11 @@ primary_region = "lhr"
   # response so the auth flow is demoable before email delivery (S10). The AWS
   # production target will NOT set this.
   AUTH_DEV_MAGIC_LINK = "true"
+
+  # Staging (prove-phase) only: use the simulated register lookup + identity check,
+  # and expose the stand-in Onfido capture screen (S2). Without this the pipeline
+  # still runs but no identity check can ever complete, so applicants sit at
+  # `pending` until the 48h timeout drops them into `needs_more_info`.
+  # The AWS production target will NOT set this — with it unset the
+  # simulated-callback endpoint 404s as though it were never deployed.
+  VERIFICATION_SIMULATE = "true"

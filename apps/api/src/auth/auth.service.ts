@@ -3,7 +3,8 @@ import { ConflictException, Inject, Injectable, UnauthorizedException } from '@n
 import { JwtService } from '@nestjs/jwt';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { magicLinks, members, refreshTokens } from '../db/schema';
+import { magicLinks, members, reapplicationAttempts, refreshTokens } from '../db/schema';
+import { VerificationService } from '../verification/verification.service';
 import type { RegisterDto } from './auth.dto';
 
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000; // 15 minutes
@@ -29,9 +30,11 @@ export class AuthService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly jwt: JwtService,
+    private readonly verification: VerificationService,
   ) {}
 
   async register(dto: RegisterDto) {
+    const registrationCountry = dto.registrationCountry ?? 'UK';
     try {
       const [row] = await this.db
         .insert(members)
@@ -40,18 +43,57 @@ export class AuthService {
           email: dto.email,
           professionalBody: dto.professionalBody,
           registrationNumber: dto.registrationNumber,
-          registrationCountry: dto.registrationCountry ?? 'UK',
+          registrationCountry,
         })
         .returning({ id: members.id, verificationStatus: members.verificationStatus });
+      // Hand off to the automated checks (EPIC-A §5). Enqueue only — registration must
+      // not block on an external register or identity provider.
+      await this.verification.enqueueVerification(row.id);
       return { memberId: row.id, verificationStatus: row.verificationStatus };
     } catch (err: unknown) {
       // 23505 = unique_violation (email, or the registration partial-unique index).
       // Drizzle wraps the pg error, so the code can be on the error or its cause.
       // Deliberately generic — no leak of which field, or of prior expelled status (EPIC-A §2).
       if (isUniqueViolation(err)) {
+        await this.logIfExpelledReapplication(dto, registrationCountry);
         throw new ConflictException('An account with these details may already exist.');
       }
       throw err;
+    }
+  }
+
+  /**
+   * An expelled member trying again is blocked by the same constraint as any duplicate,
+   * but unlike an ordinary duplicate it is recorded for admin review (EPIC-A §2).
+   *
+   * The applicant-facing response above is byte-identical either way, on purpose:
+   * telling them we recognised them would hand a bad-faith actor confirmation that
+   * their identity was detected.
+   */
+  private async logIfExpelledReapplication(dto: RegisterDto, registrationCountry: string) {
+    try {
+      const [match] = await this.db
+        .select({ id: members.id, verificationStatus: members.verificationStatus })
+        .from(members)
+        .where(
+          and(
+            eq(members.professionalBody, dto.professionalBody),
+            eq(members.registrationNumber, dto.registrationNumber),
+            eq(members.registrationCountry, registrationCountry),
+          ),
+        );
+      if (match?.verificationStatus !== 'expelled') return;
+      await this.db.insert(reapplicationAttempts).values({
+        matchedMemberId: match.id,
+        attemptedLegalName: dto.legalName,
+        attemptedEmail: dto.email,
+        professionalBody: dto.professionalBody,
+        registrationNumber: dto.registrationNumber,
+        registrationCountry,
+      });
+    } catch {
+      // Never let audit logging change what the applicant sees — they get the same
+      // generic 409 regardless, which is the whole point of this branch.
     }
   }
 
@@ -106,11 +148,19 @@ export class AuthService {
 
   async getVerificationStatus(memberId: string) {
     const [member] = await this.db
-      .select({ verificationStatus: members.verificationStatus, statusUpdatedAt: members.statusUpdatedAt })
+      .select({
+        verificationStatus: members.verificationStatus,
+        statusUpdatedAt: members.statusUpdatedAt,
+        needsMoreInfoReason: members.needsMoreInfoReason,
+      })
       .from(members)
       .where(eq(members.id, memberId));
     if (!member) throw new UnauthorizedException();
-    return { verificationStatus: member.verificationStatus, statusUpdatedAt: member.statusUpdatedAt };
+    return {
+      verificationStatus: member.verificationStatus,
+      statusUpdatedAt: member.statusUpdatedAt,
+      needsMoreInfoReason: member.needsMoreInfoReason,
+    };
   }
 
   private async issueSession(memberId: string, verificationStatus: string): Promise<SessionTokens> {

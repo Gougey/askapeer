@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { DbModule } from './db/db.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
+import { VerificationModule } from './verification/verification.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuthModule } from './auth/auth.module';
     // Epic modules are added here as their slices land.
     HealthModule,
     AuthModule, // EPIC-A (S1)
+    VerificationModule, // EPIC-A (S2)
   ],
 })
 export class AppModule {}

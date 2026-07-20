@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Development Setup — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">Development Setup</span>
+</div>
+<main>
+<h1 id="development">Development</h1>
+<p>The Askapeer application: a TypeScript monorepo (npm workspaces) — a
+NestJS API and a Next.js web app, backed by Postgres + Redis. Features
+land as tracer-bullet slices (see
+<code>docs/2026-07-19-tracer-bullet-slice-backlog.md</code> and GitHub
+issues); <strong>S0–S2 are in</strong>.</p>
+<p><strong>Build approach:</strong> <em>prove-then-migrate</em> —
+develop locally + deploy to Fly.io (London) for the early slices;
+migrate to AWS <code>eu-west-2</code> before real practitioners. See the
+architecture spec
+(<code>docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md</code>).</p>
+<h2 id="layout">Layout</h2>
+<pre><code>apps/
+  api/   NestJS modular monolith (module-per-epic); Drizzle ORM + drizzle-kit; Postgres
+  web/   Next.js (App Router); Tailwind v4 (themeable tokens); next-intl (en-GB catalog)
+docker-compose.yml   Postgres 16 + Redis 7 for local dev
+.env / .env.example  shared config (DATABASE_URL, REDIS_URL, API_PORT, API_ORIGIN)</code></pre>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>Node.js ≥ 20 (developed on 24)</li>
+<li>Docker + Docker Compose</li>
+</ul>
+<h2 id="first-time-setup">First-time setup</h2>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> .env.example .env        <span class="co"># already present; adjust if needed</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install                 <span class="co"># installs all workspaces</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span>        <span class="co"># Postgres + Redis</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run db:migrate          <span class="co"># apply migrations (creates the config schema + app_meta)</span></span></code></pre></div>
+<h2 id="run">Run</h2>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run dev:api             <span class="co"># API  -&gt; http://localhost:4000  (health: /health)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run dev:web             <span class="co"># web  -&gt; http://localhost:3000</span></span></code></pre></div>
+<p>Open http://localhost:3000 — the home page shows live system health
+fetched from the API (a green tick per check confirms the stack is wired
+end-to-end).</p>
+<h2 id="database-drizzle">Database (Drizzle)</h2>
+<ul>
+<li>Schema lives in <code>apps/api/src/db/schema/</code> — one file per
+epic-module, aggregated in <code>index.ts</code>.</li>
+<li>After changing the schema: <code>npm run db:generate</code> (writes
+a new SQL migration to <code>apps/api/drizzle/</code>), then
+<code>npm run db:migrate</code>.</li>
+<li>Migrations are committed to the repo; <code>db:migrate</code>
+applies any not-yet-applied.</li>
+</ul>
+<h2 id="useful-scripts-from-the-repo-root">Useful scripts (from the repo
+root)</h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>npm run dev:api</code> / <code>dev:web</code></td>
+<td>run one app in watch mode</td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td>build all workspaces</td>
+</tr>
+<tr>
+<td><code>npm run typecheck</code></td>
+<td>typecheck all workspaces</td>
+</tr>
+<tr>
+<td><code>npm run db:generate</code> / <code>db:migrate</code></td>
+<td>generate / apply migrations</td>
+</tr>
+<tr>
+<td><code>npm run infra:up</code> / <code>infra:down</code></td>
+<td>start / stop Postgres + Redis</td>
+</tr>
+</tbody>
+</table>
+<h2 id="verification-s2-running-without-onfido">Verification (S2) —
+running without Onfido</h2>
+<p>EPIC-A’s pipeline needs two external providers we don’t have accounts
+for yet: a <strong>professional-register lookup</strong> (HCPC) and an
+<strong>identity-document check</strong> (Onfido). Both sit behind
+interfaces in <code>apps/api/src/verification/providers/</code>, with
+simulated implementations bound in <code>verification.module.ts</code>.
+Wiring the real services is a change to those two bindings — the worker,
+decision logic, state machine and web screens are already the production
+path.</p>
+<p>Set <code>VERIFICATION_SIMULATE=true</code> (in
+<code>.env.example</code>) to activate the simulators. With it unset,
+the simulated-callback endpoint returns <strong>404</strong>, exactly as
+if it were never deployed — so this must never be <code>true</code> in
+real production.</p>
+<p><strong>Register lookup</strong> is deterministic, driven by the
+registration number, so every branch of the EPIC-A §5 decision table is
+reachable on demand:</p>
+<table>
+<thead>
+<tr>
+<th>Registration number</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ends <code>8</code></td>
+<td><code>fail</code> — number not on the register → admin review</td>
+</tr>
+<tr>
+<td>ends <code>9</code></td>
+<td><code>needs_review</code> — register unavailable → admin review</td>
+</tr>
+<tr>
+<td>anything else</td>
+<td><code>pass</code> → proceeds to the identity check</td>
+</tr>
+</tbody>
+</table>
+<p>BASRAT and SST always return <code>needs_review</code> regardless of
+the number. That is <strong>not</strong> simulation — it is the real MVP
+rule (no public API exists for either body), and it survives the swap to
+the real provider.</p>
+<p><strong>Identity check</strong> is driven by a human. On a register
+<code>pass</code> the worker opens a check session and stops, exactly as
+it will when waiting on an Onfido webhook. The applicant lands on
+<code>/verify/identity</code> (screen A4), which renders a stand-in for
+the Onfido SDK offering the three outcomes in Onfido’s own
+vocabulary:</p>
+<ul>
+<li><strong>clear</strong> → auto-approve
+(<code>pending → approved_verified</code>) — the only unattended
+decision</li>
+<li><strong>consider</strong> / <strong>fail</strong> → routes to the
+admin review queue, staying <code>pending</code></li>
+<li><strong>leave the page</strong> → the delayed timeout job fires and
+the applicant surfaces as <code>needs_more_info</code>, rather than
+being stuck silently in <code>pending</code></li>
+</ul>
+<p>The timeout is <code>verification.onfido_timeout_hours</code> in
+<code>config.app_meta</code> (EPIC-J config), defaulting to 48h. To
+watch it fire without waiting two days:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">insert</span> <span class="kw">into</span> config.app_meta (<span class="kw">key</span>, <span class="fu">value</span>) <span class="kw">values</span> (<span class="st">&#39;verification.onfido_timeout_hours&#39;</span>, <span class="st">&#39;0.0011&#39;</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">on</span> conflict (<span class="kw">key</span>) do <span class="kw">update</span> <span class="kw">set</span> <span class="fu">value</span> <span class="op">=</span> excluded.<span class="fu">value</span>;   <span class="co">-- ~4 seconds</span></span></code></pre></div>
+<p>Delete that row to restore the default. From
+<code>needs_more_info</code> the applicant can restart the pipeline
+themselves via the holding page’s “Try again”
+(<code>POST /v1/auth/verification/resubmit</code>, gap G-1).</p>
+<p>The verification worker (BullMQ) currently runs
+<strong>in-process</strong> with the API. The architecture spec’s
+separate background-worker service is a deployment split at the AWS
+migrate step, not a code change.</p>
+<h2 id="conventions-established-at-s0">Conventions established at
+S0</h2>
+<ul>
+<li><strong>Module-per-epic</strong> in the API
+(<code>src/&lt;epic&gt;/…</code>), matching the technical specs.</li>
+<li><strong>i18n from day one</strong>: every user-facing string is a
+key in <code>apps/web/messages/en-GB.json</code> (never a hardcoded
+literal). Adding locales later is additive.</li>
+<li><strong>Themeable UI</strong>: colours are CSS variables
+(<code>apps/web/src/app/globals.css</code>); the style guide, when
+ready, overrides the tokens — a theming pass, not a rewrite.</li>
+</ul>
+
+</main>
+</body>
+</html>
