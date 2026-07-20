@@ -1,6 +1,6 @@
 # Development
 
-The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S2 are in**.
+The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S4 are in**.
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
@@ -104,6 +104,28 @@ restart the pipeline themselves via the holding page's "Try again"
 The verification worker (BullMQ) currently runs **in-process** with the API. The
 architecture spec's separate background-worker service is a deployment split at the
 AWS migrate step, not a code change.
+
+## Forum (S4) — the seeded vocabulary
+
+Categories and the clinical tag vocabulary are **seeded by migration** (`0004`), not
+managed in the app: EPIC-J's admin surfaces for editing them are S13. Both are read
+through `GET /v1/categories` and `GET /v1/tags`, and post creation validates against
+them — tags are **select-only** (FD-4), so an unknown or retired tag id is a 400 rather
+than an invitation to create one. Andrew's fuller muscle list extends the same table
+when it arrives; that is rows, not a migration.
+
+Two rules worth knowing before extending this epic:
+
+- `POST /v1/posts` hardcodes `type = 'question'` and **rejects** a `type` in the body.
+  Case discussions must travel EPIC-E's checklist-and-attestation route (S9), so this
+  endpoint can never become a way around that gate.
+- `draft` / `needs_correction` posts are returned **only to their author**, and `removed`
+  posts to nobody — as **404**, not 403, since "this exists but isn't for you" is itself
+  a disclosure (EPIC-C §13.4). Nothing in S4 creates those statuses; the rule lives at
+  the read layer so S9 and S11 inherit it rather than re-deriving it.
+
+Answering, kudos and the ranked ordering are S5 — the thread renders comments already,
+but nothing writes them yet.
 
 ## Deployed environments (Fly, prove phase)
 

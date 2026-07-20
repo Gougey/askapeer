@@ -7,6 +7,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { VerificationModule } from './verification/verification.module';
 import { HandlesModule } from './handles/handles.module';
+import { ForumModule } from './forum/forum.module';
 import { SettingsModule } from './settings/settings.module';
 
 @Module({
@@ -23,6 +24,7 @@ import { SettingsModule } from './settings/settings.module';
     AuthModule, // EPIC-A (S1)
     VerificationModule, // EPIC-A (S2)
     HandlesModule, // EPIC-B (S3)
+    ForumModule, // EPIC-C (S4)
     SettingsModule, // EPIC-J, read side only (S3)
   ],
 })
