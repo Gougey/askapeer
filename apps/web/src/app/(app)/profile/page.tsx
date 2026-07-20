@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { SignOutButton } from '@/components/SignOutButton';
 import { API_ORIGIN } from '@/lib/api';
 import { requireAppAccess } from '@/lib/onboarding';
 
@@ -42,9 +42,7 @@ export default async function ProfilePage() {
 
       <p className="text-sm" style={{ color: 'var(--color-muted)' }}>{t('identityNote')}</p>
 
-      <Link href="/auth/signout" className="text-sm underline" style={{ color: 'var(--color-muted)' }}>
-        {t('signOut')}
-      </Link>
+      <SignOutButton label={t('signOut')} />
     </main>
   );
 }
