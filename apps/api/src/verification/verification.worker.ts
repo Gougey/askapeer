@@ -1,7 +1,8 @@
 import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { Worker, type Job } from 'bullmq';
 import type { Redis } from 'ioredis';
-import { REDIS, VERIFICATION_QUEUE_NAME, type VerificationJob } from './verification.queue';
+import { REDIS } from '../redis/redis.module';
+import { VERIFICATION_QUEUE_NAME, type VerificationJob } from './verification.queue';
 import { VerificationService } from './verification.service';
 
 /**
