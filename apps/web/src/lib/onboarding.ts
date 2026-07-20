@@ -16,13 +16,41 @@ export type SessionState = {
   anonymityAcknowledged: boolean;
 };
 
-export async function fetchSessionState(token: string): Promise<SessionState | null> {
-  const res = await fetch(`${API_ORIGIN}/v1/auth/verification-status`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  });
-  if (!res.ok) return null;
-  return (await res.json()) as SessionState;
+/**
+ * A rejected session and an unreachable API are different problems and must not share a
+ * branch: only the first means "sign in again". Treating a 500 or a dropped connection
+ * as a lost session silently signs out a member whose session is perfectly valid — and
+ * on scale-to-zero staging, a cold start is enough to trigger it.
+ */
+export type SessionResult =
+  | { kind: 'ok'; state: SessionState }
+  | { kind: 'unauthenticated' }
+  | { kind: 'unavailable' };
+
+export async function fetchSessionState(token: string): Promise<SessionResult> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_ORIGIN}/v1/auth/verification-status`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+  } catch {
+    return { kind: 'unavailable' };
+  }
+  if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+  if (!res.ok) return { kind: 'unavailable' };
+  return { kind: 'ok', state: (await res.json()) as SessionState };
+}
+
+/**
+ * Shared by both guards. `unavailable` throws rather than redirecting: Next renders the
+ * error boundary, and a reload retries — which is recoverable, unlike being bounced to
+ * sign-in with a session you still hold.
+ */
+function unwrapSession(result: SessionResult): SessionState {
+  if (result.kind === 'unauthenticated') redirect('/');
+  if (result.kind === 'unavailable') throw new Error('Askapeer is temporarily unreachable.');
+  return result.state;
 }
 
 /**
@@ -59,8 +87,7 @@ export function nextOnboardingPath(state: SessionState, current: string): string
 export async function requireSession(current: string): Promise<{ token: string; state: SessionState }> {
   const token = await getAccessToken();
   if (!token) redirect('/');
-  const state = await fetchSessionState(token);
-  if (!state) redirect('/'); // session gone or expired → back to sign-in
+  const state = unwrapSession(await fetchSessionState(token));
   const next = nextOnboardingPath(state, current);
   if (next) redirect(next);
   return { token, state };
@@ -74,8 +101,7 @@ export async function requireSession(current: string): Promise<{ token: string; 
 export async function requireAppAccess(): Promise<{ token: string; state: SessionState }> {
   const token = await getAccessToken();
   if (!token) redirect('/');
-  const state = await fetchSessionState(token);
-  if (!state) redirect('/');
+  const state = unwrapSession(await fetchSessionState(token));
   if (state.verificationStatus !== 'approved_verified' || state.handleStatus !== 'active') {
     redirect('/status');
   }

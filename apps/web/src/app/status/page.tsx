@@ -1,9 +1,7 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { API_ORIGIN } from '@/lib/api';
-import { fetchSessionState, nextOnboardingPath } from '@/lib/onboarding';
-import { getAccessToken } from '@/lib/session';
+import { requireSession } from '@/lib/onboarding';
 import { ResubmitButton } from './ResubmitButton';
 import { StatusPoller } from './StatusPoller';
 
@@ -13,17 +11,10 @@ const KNOWN = ['pending', 'needs_more_info', 'approved_verified', 'rejected'];
 
 // A5 — the verification holding page. The only screen a non-approved session reaches.
 export default async function StatusPage() {
-  const token = await getAccessToken();
-  if (!token) redirect('/');
+  // Also moves them on if verification passed while they were sitting here — to the
+  // handle step (A6), or into the app if they've already been through onboarding.
+  const { token, state: status } = await requireSession('/status');
   const authed = { Authorization: `Bearer ${token}` };
-
-  const status = await fetchSessionState(token);
-  if (!status) redirect('/'); // session gone/expired → back to sign-in
-
-  // Verification passed while they were sitting here — move them on to the handle step
-  // (A6), or into the app if they've already been through onboarding.
-  const onward = nextOnboardingPath(status, '/status');
-  if (onward) redirect(onward);
 
   // Is there an identity check waiting on the applicant? If so the holding page's job
   // is to send them back to it, not to tell them to sit tight.
