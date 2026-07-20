@@ -1,9 +1,8 @@
 import { Global, Inject, Module, type OnModuleDestroy } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
-import IORedis, { type Redis } from 'ioredis';
+import type { Redis } from 'ioredis';
+import { REDIS } from '../redis/redis.module';
 
-export const REDIS = Symbol('REDIS');
 export const VERIFICATION_QUEUE = Symbol('VERIFICATION_QUEUE');
 
 export const VERIFICATION_QUEUE_NAME = 'verification';
@@ -15,26 +14,18 @@ export type TimeoutJob = { name: 'identity-check-timeout'; data: { sessionId: st
 export type VerificationJob = VerifyJob | TimeoutJob;
 
 /**
- * Redis + the verification queue. BullMQ rather than an in-process timer because the
- * 48-hour identity-check timeout (§8) has to survive a deploy — a delayed job does,
- * a `setTimeout` does not.
+ * The verification queue. BullMQ rather than an in-process timer because the 48-hour
+ * identity-check timeout (§8) has to survive a deploy — a delayed job does, a
+ * `setTimeout` does not.
  *
- * For the prove phase the worker runs inside the API process (see VerificationWorker);
- * the architecture spec's separate background-worker service is a deployment change at
- * the migrate step, not a code change.
+ * The connection itself comes from the shared RedisModule. For the prove phase the
+ * worker runs inside the API process (see VerificationWorker); the architecture spec's
+ * separate background-worker service is a deployment change at the migrate step, not a
+ * code change.
  */
 @Global()
 @Module({
-  imports: [ConfigModule],
   providers: [
-    {
-      provide: REDIS,
-      inject: [ConfigService],
-      useFactory: (config: ConfigService): Redis =>
-        new IORedis(config.get<string>('REDIS_URL') ?? 'redis://localhost:6379', {
-          maxRetriesPerRequest: null, // required by BullMQ's blocking reads
-        }),
-    },
     {
       provide: VERIFICATION_QUEUE,
       inject: [REDIS],
@@ -50,16 +41,12 @@ export type VerificationJob = VerifyJob | TimeoutJob;
         }),
     },
   ],
-  exports: [REDIS, VERIFICATION_QUEUE],
+  exports: [VERIFICATION_QUEUE],
 })
 export class VerificationQueueModule implements OnModuleDestroy {
-  constructor(
-    @Inject(VERIFICATION_QUEUE) private readonly queue: Queue,
-    @Inject(REDIS) private readonly redis: Redis,
-  ) {}
+  constructor(@Inject(VERIFICATION_QUEUE) private readonly queue: Queue) {}
 
   async onModuleDestroy(): Promise<void> {
     await this.queue.close();
-    this.redis.disconnect();
   }
 }

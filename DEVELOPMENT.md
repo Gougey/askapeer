@@ -105,6 +105,33 @@ The verification worker (BullMQ) currently runs **in-process** with the API. The
 architecture spec's separate background-worker service is a deployment split at the
 AWS migrate step, not a code change.
 
+## Deployed environments (Fly, prove phase)
+
+Both apps deploy to Fly (London) on merge to `main` via `.github/workflows/deploy.yml`.
+The API's `[deploy] release_command` runs migrations before the new release goes live.
+
+**Every environment needs Postgres *and* Redis.** Redis is a hard dependency, not an
+optimisation: registration enqueues the verification job (EPIC-A §5) and blocks on it,
+so with Redis absent `POST /v1/auth/register` hangs indefinitely. Current staging wiring:
+
+| Variable | Where | Notes |
+|---|---|---|
+| `DATABASE_URL` | Fly secret | `askapeer-db` |
+| `REDIS_URL` | Fly secret | `askapeer-redis` (Upstash, lhr) — secret, not `fly.toml [env]`, as the URL embeds a password |
+| `AUTH_DEV_MAGIC_LINK` | `apps/api/fly.toml [env]` | staging only |
+| `VERIFICATION_SIMULATE` | `apps/api/fly.toml [env]` | staging only |
+
+The Redis instance is created with **eviction disabled**. BullMQ requires a `noeviction`
+policy — under memory pressure an evicting Redis would silently drop queue keys and lose
+verification jobs, where a refused write fails loudly instead.
+
+`GET /health` (unprefixed) probes both dependencies and returns **503** if either is
+down, so a missing one is visible rather than silent:
+
+```json
+{"status":"ok","db":{"reachable":true,"migrationsApplied":true},"redis":{"reachable":true}}
+```
+
 ## Conventions established at S0
 
 - **Module-per-epic** in the API (`src/<epic>/…`), matching the technical specs.

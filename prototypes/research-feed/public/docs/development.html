@@ -163,6 +163,64 @@ themselves via the holding page’s “Try again”
 <strong>in-process</strong> with the API. The architecture spec’s
 separate background-worker service is a deployment split at the AWS
 migrate step, not a code change.</p>
+<h2 id="deployed-environments-fly-prove-phase">Deployed environments
+(Fly, prove phase)</h2>
+<p>Both apps deploy to Fly (London) on merge to <code>main</code> via
+<code>.github/workflows/deploy.yml</code>. The API’s
+<code>[deploy] release_command</code> runs migrations before the new
+release goes live.</p>
+<p><strong>Every environment needs Postgres <em>and</em> Redis.</strong>
+Redis is a hard dependency, not an optimisation: registration enqueues
+the verification job (EPIC-A §5) and blocks on it, so with Redis absent
+<code>POST /v1/auth/register</code> hangs indefinitely. Current staging
+wiring:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Where</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td>Fly secret</td>
+<td><code>askapeer-db</code></td>
+</tr>
+<tr>
+<td><code>REDIS_URL</code></td>
+<td>Fly secret</td>
+<td><code>askapeer-redis</code> (Upstash, lhr) — secret, not
+<code>fly.toml [env]</code>, as the URL embeds a password</td>
+</tr>
+<tr>
+<td><code>AUTH_DEV_MAGIC_LINK</code></td>
+<td><code>apps/api/fly.toml [env]</code></td>
+<td>staging only</td>
+</tr>
+<tr>
+<td><code>VERIFICATION_SIMULATE</code></td>
+<td><code>apps/api/fly.toml [env]</code></td>
+<td>staging only</td>
+</tr>
+</tbody>
+</table>
+<p>The Redis instance is created with <strong>eviction
+disabled</strong>. BullMQ requires a <code>noeviction</code> policy —
+under memory pressure an evicting Redis would silently drop queue keys
+and lose verification jobs, where a refused write fails loudly
+instead.</p>
+<p><code>GET /health</code> (unprefixed) probes both dependencies and
+returns <strong>503</strong> if either is down, so a missing one is
+visible rather than silent:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
 <h2 id="conventions-established-at-s0">Conventions established at
 S0</h2>
 <ul>

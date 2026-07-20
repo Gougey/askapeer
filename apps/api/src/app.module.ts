@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DbModule } from './db/db.module';
+import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { VerificationModule } from './verification/verification.module';
@@ -14,6 +15,7 @@ import { VerificationModule } from './verification/verification.module';
       envFilePath: [resolve(process.cwd(), '../../.env'), '.env'],
     }),
     DbModule,
+    RedisModule,
     // Epic modules are added here as their slices land.
     HealthModule,
     AuthModule, // EPIC-A (S1)
