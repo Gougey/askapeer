@@ -15,6 +15,13 @@
       "when": 1784496071420,
       "tag": "0001_bored_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784542803669,
+      "tag": "0002_violet_onslaught",
+      "breakpoints": true
     }
   ]
 }

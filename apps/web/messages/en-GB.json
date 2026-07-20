@@ -28,9 +28,17 @@
       "title": "We're verifying your registration",
       "body": "This usually takes a short while. We'll email you the moment it's done — you can close this page."
     },
+    "awaitingCapture": {
+      "title": "One step left",
+      "body": "We need to check your ID to confirm you're the person on the register. It takes a minute."
+    },
     "needs_more_info": {
       "title": "We need a little more information",
-      "body": "Please check your email for what we need to complete your verification."
+      "body": "Your verification couldn't be completed. You can pick up where you left off."
+    },
+    "approved_verified": {
+      "title": "You're verified",
+      "body": "Welcome to Askapeer. Next you'll choose the pseudonymous handle you'll be known by."
     },
     "rejected": {
       "title": "We couldn't verify your registration",
@@ -40,7 +48,30 @@
       "title": "Your account status has changed",
       "body": "Please check your email for details."
     },
+    "continueCheck": "Continue your ID check",
+    "resubmit": "Try again",
+    "resubmitting": "Restarting…",
     "registerAgain": "Register again",
     "signOut": "Sign out"
+  },
+  "identityCheck": {
+    "title": "Confirm your identity",
+    "body": "We check your ID document against the name on your professional register. Your documents are never shown to other members.",
+    "providerUnavailable": "Identity checks are temporarily unavailable. We'll email you when you can continue.",
+    "backToStatus": "Back to your status",
+    "noSession": {
+      "title": "Nothing to do here",
+      "body": "There's no identity check waiting on you right now."
+    },
+    "simulated": {
+      "banner": "Simulated — no ID provider connected",
+      "prompt": "Stands in for the Onfido capture step. Choose the result the provider should return:",
+      "outcome": {
+        "clear": "Clear — verification passes",
+        "consider": "Consider — sent for manual review",
+        "fail": "Fail — sent for manual review"
+      },
+      "abandonHint": "To simulate an abandoned check, just leave this page — the applicant is surfaced for review once the check times out."
+    }
   }
 }
