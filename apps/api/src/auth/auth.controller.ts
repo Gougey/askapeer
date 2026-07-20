@@ -41,10 +41,23 @@ export class AuthController {
     return this.auth.refresh(dto.refreshToken);
   }
 
-  // The only route a pending (non-verified) session can reach — powers the holding page.
+  // Reachable with a pending session — powers the holding page, and tells the web app
+  // which onboarding step (A6 handle / A7 setup) the member still owes.
   @Get('verification-status')
   @UseGuards(JwtAuthGuard)
   status(@Req() req: Request & { member: AuthedMember }) {
     return this.auth.getVerificationStatus(req.member.memberId);
+  }
+
+  /**
+   * Onboarding step A7 (gap G-13) — records that the member has read and accepted the
+   * zero-tolerance anonymity rule. Kept on the auth controller because it writes to
+   * `identity.members`, which is EPIC-A's table, not EPIC-B's.
+   */
+  @Post('anonymity-acknowledgement')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  acknowledgeAnonymity(@Req() req: Request & { member: AuthedMember }) {
+    return this.auth.acknowledgeAnonymity(req.member.memberId);
   }
 }

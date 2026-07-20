@@ -2,15 +2,10 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { API_ORIGIN } from '@/lib/api';
+import { fetchSessionState, nextOnboardingPath } from '@/lib/onboarding';
 import { getAccessToken } from '@/lib/session';
 import { ResubmitButton } from './ResubmitButton';
 import { StatusPoller } from './StatusPoller';
-
-type Status = {
-  verificationStatus: string;
-  statusUpdatedAt: string;
-  needsMoreInfoReason: string | null;
-};
 
 type Capture = { session: { captureToken: string } | null };
 
@@ -22,12 +17,13 @@ export default async function StatusPage() {
   if (!token) redirect('/');
   const authed = { Authorization: `Bearer ${token}` };
 
-  const res = await fetch(`${API_ORIGIN}/v1/auth/verification-status`, {
-    headers: authed,
-    cache: 'no-store',
-  });
-  if (res.status === 401) redirect('/'); // session gone/expired → back to sign-in
-  const status = (await res.json()) as Status;
+  const status = await fetchSessionState(token);
+  if (!status) redirect('/'); // session gone/expired → back to sign-in
+
+  // Verification passed while they were sitting here — move them on to the handle step
+  // (A6), or into the app if they've already been through onboarding.
+  const onward = nextOnboardingPath(status, '/status');
+  if (onward) redirect(onward);
 
   // Is there an identity check waiting on the applicant? If so the holding page's job
   // is to send them back to it, not to tell them to sit tight.

@@ -22,6 +22,13 @@
       "when": 1784542803669,
       "tag": "0002_violet_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784552496185,
+      "tag": "0003_steep_jubilee",
+      "breakpoints": true
     }
   ]
 }

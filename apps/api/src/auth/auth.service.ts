@@ -3,7 +3,8 @@ import { ConflictException, Inject, Injectable, UnauthorizedException } from '@n
 import { JwtService } from '@nestjs/jwt';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { magicLinks, members, reapplicationAttempts, refreshTokens } from '../db/schema';
+import { isUniqueViolation } from '../db/pg-errors';
+import { handles, magicLinks, members, reapplicationAttempts, refreshTokens } from '../db/schema';
 import { VerificationService } from '../verification/verification.service';
 import type { RegisterDto } from './auth.dto';
 
@@ -12,16 +13,6 @@ const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (sliding; G-11 makes
 
 const hashToken = (raw: string): string => createHash('sha256').update(raw).digest('hex');
 const randomToken = (): string => randomBytes(32).toString('base64url');
-
-/** Postgres unique_violation (23505), unwrapping Drizzle's error wrapper. */
-function isUniqueViolation(err: unknown): boolean {
-  let e: unknown = err;
-  for (let i = 0; i < 5 && e; i++) {
-    if ((e as { code?: string }).code === '23505') return true;
-    e = (e as { cause?: unknown }).cause;
-  }
-  return false;
-}
 
 export type SessionTokens = { accessToken: string; refreshToken: string };
 
@@ -152,21 +143,84 @@ export class AuthService {
         verificationStatus: members.verificationStatus,
         statusUpdatedAt: members.statusUpdatedAt,
         needsMoreInfoReason: members.needsMoreInfoReason,
+        anonymityAcknowledgedAt: members.anonymityAcknowledgedAt,
       })
       .from(members)
       .where(eq(members.id, memberId));
     if (!member) throw new UnauthorizedException();
+    const [handle] = await this.db
+      .select({ status: handles.status })
+      .from(handles)
+      .where(eq(handles.memberId, memberId));
     return {
       verificationStatus: member.verificationStatus,
       statusUpdatedAt: member.statusUpdatedAt,
       needsMoreInfoReason: member.needsMoreInfoReason,
+      // The three onboarding facts the web app routes on: has a handle been chosen (A6),
+      // has the anonymity rule been acknowledged (A7), and is the handle in good standing.
+      // No handle *name* here — this endpoint is reachable with a pending token.
+      hasHandle: handle !== undefined,
+      handleStatus: handle?.status ?? null,
+      anonymityAcknowledged: member.anonymityAcknowledgedAt !== null,
     };
   }
 
+  /**
+   * Records the member's acknowledgement of the zero-tolerance anonymity rule at
+   * onboarding (screen A7, gap G-13). Timestamped against the verified identity, the
+   * same way the case-discussion attestation is (EPIC-E) — this is a compliance record,
+   * not a UI preference. Idempotent: the first acknowledgement is the one that counts.
+   */
+  async acknowledgeAnonymity(memberId: string): Promise<{ acknowledgedAt: Date }> {
+    const [row] = await this.db
+      .update(members)
+      .set({ anonymityAcknowledgedAt: new Date() })
+      .where(and(eq(members.id, memberId), isNull(members.anonymityAcknowledgedAt)))
+      .returning({ acknowledgedAt: members.anonymityAcknowledgedAt });
+    if (row?.acknowledgedAt) return { acknowledgedAt: row.acknowledgedAt };
+    const [existing] = await this.db
+      .select({ acknowledgedAt: members.anonymityAcknowledgedAt })
+      .from(members)
+      .where(eq(members.id, memberId));
+    if (!existing?.acknowledgedAt) throw new UnauthorizedException();
+    return { acknowledgedAt: existing.acknowledgedAt };
+  }
+
+  /**
+   * Re-issue a session after something that changes its scope — currently only handle
+   * creation (EPIC-B §5), which is what promotes a pending token to a full one.
+   */
+  async issueSessionForMember(memberId: string): Promise<SessionTokens> {
+    const [member] = await this.db
+      .select({ verificationStatus: members.verificationStatus })
+      .from(members)
+      .where(eq(members.id, memberId));
+    if (!member) throw new UnauthorizedException();
+    return this.issueSession(memberId, member.verificationStatus);
+  }
+
   private async issueSession(memberId: string, verificationStatus: string): Promise<SessionTokens> {
-    // Pending-scoped until approved_verified (holding page only, architecture §5.2).
-    const scope = verificationStatus === 'approved_verified' ? 'full' : 'pending';
-    const accessToken = await this.jwt.signAsync({ sub: memberId, scope, typ: 'access' }, { expiresIn: '15m' });
+    // A full session needs BOTH gates on the identity side: verification passed, AND a
+    // handle that exists and isn't suspended/expelled (EPIC-A §7, screen spec §1.2).
+    // Everything else is pending-scoped and reaches a holding page only — including an
+    // approved member who hasn't picked a handle yet, who is routed to A6.
+    const [handle] = await this.db
+      .select({ id: handles.id, status: handles.status })
+      .from(handles)
+      .where(eq(handles.memberId, memberId));
+    const fullSession =
+      verificationStatus === 'approved_verified' && handle !== undefined && handle.status === 'active';
+    const accessToken = await this.jwt.signAsync(
+      {
+        sub: memberId,
+        scope: fullSession ? 'full' : 'pending',
+        // The handle id rides on the token so community-schema reads never need to look
+        // up a member_id to find out who is calling (EPIC-B §5).
+        ...(fullSession ? { hdl: handle.id } : {}),
+        typ: 'access',
+      },
+      { expiresIn: '15m' },
+    );
     const raw = randomToken();
     await this.db.insert(refreshTokens).values({
       memberId,
