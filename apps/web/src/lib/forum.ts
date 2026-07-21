@@ -19,6 +19,7 @@ export type PostCard = {
   tags: TagRef[];
   author: AuthorBlock;
   answerCount: number;
+  kudosCount: number;
   createdAt: string;
   editedAt: string | null;
 };
@@ -29,6 +30,8 @@ export type ThreadComment = {
   body: string;
   parentCommentId: string | null;
   kudosCount: number;
+  hasKudosed: boolean;
+  isMine: boolean;
   createdAt: string;
   editedAt: string | null;
 };
@@ -36,7 +39,7 @@ export type ThreadComment = {
 export type Thread = {
   post: Omit<PostCard, 'snippet'> & { body: string; status: string };
   comments: ThreadComment[];
-  viewerContext: { isAuthor: boolean };
+  viewerContext: { isAuthor: boolean; hasKudosedPost: boolean };
 };
 
 export type Category = { id: string; name: string; description: string | null };

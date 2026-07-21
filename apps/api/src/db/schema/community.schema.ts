@@ -226,3 +226,39 @@ export const comments = community.table(
     index('comments_tsv_idx').using('gin', t.tsv),
   ],
 );
+
+export const kudosTargetType = community.enum('kudos_target_type', ['post', 'comment']);
+
+/**
+ * A single kudos from one handle to one post or comment (EPIC-D §2, architecture §4.2).
+ * Kudos is the platform's one merit signal — the mechanism behind "ideas win, not rank"
+ * — so the model is deliberately spare: one row per (handle, target), no weighting.
+ *
+ * `target_id` is polymorphic (a post or a comment id, per `target_type`), so it carries
+ * no foreign key — the two-table reference a single column can't express is validated in
+ * the service instead. Kudos rows are never cascade-deleted: content is soft-removed
+ * (status = removed), and the one place rows are hard-deleted is the moderation clawback
+ * (EPIC-F, S11), which does it explicitly so it can decrement `kudos_total` in the same
+ * transaction.
+ *
+ * The unique index is also the concurrency guard: two simultaneous awards of the same
+ * target by the same handle can't both insert, so the paired `kudos_total` increment
+ * stays a blind `+ 1` rather than a read-then-write that could race (EPIC-D §8).
+ */
+export const kudos = community.table(
+  'kudos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetType: kudosTargetType('target_type').notNull(),
+    targetId: uuid('target_id').notNull(),
+    givenByHandleId: uuid('given_by_handle_id')
+      .notNull()
+      .references(() => handles.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('kudos_one_per_handle_unique').on(t.targetType, t.targetId, t.givenByHandleId),
+    // Counting a target's kudos, and the clawback's "delete all kudos for this target".
+    index('kudos_target_idx').on(t.targetType, t.targetId),
+  ],
+);

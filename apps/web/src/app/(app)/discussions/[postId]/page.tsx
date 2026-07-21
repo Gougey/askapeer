@@ -1,12 +1,16 @@
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { fetchThread } from '@/lib/forum';
+import { fetchThread, type ThreadComment } from '@/lib/forum';
 import { requireAccessToken } from '@/lib/session';
 import { AuthorLine, TagList } from '@/components/PostCard';
+import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
+import { DeleteCommentButton } from './DeleteCommentButton';
+import { KudosButton } from './KudosButton';
 
 /**
- * A question thread (screen C4), read-only in S4 — answering, kudos and the ranked
- * ordering are S5, which is where the thread becomes the thesis rather than a page.
+ * A question thread (screen C4). Answers are kudos-ranked (EPIC-D §4); replies sit
+ * chronologically beneath their answer. Kudos and answering are the S5 loop — "ideas
+ * win on merit, not rank" — working end to end.
  */
 export default async function ThreadPage({ params }: { params: Promise<{ postId: string }> }) {
   const { postId } = await params;
@@ -17,7 +21,16 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
   if (!thread) notFound();
 
   const [t, format] = await Promise.all([getTranslations('discussions'), getFormatter()]);
-  const { post } = thread;
+  const { post, viewerContext } = thread;
+
+  // The ranked list is flat; group replies under their parent for indentation.
+  const answers = thread.comments.filter((c) => c.parentCommentId === null);
+  const repliesByParent = new Map<string, ThreadComment[]>();
+  for (const c of thread.comments) {
+    if (c.parentCommentId) {
+      repliesByParent.set(c.parentCommentId, [...(repliesByParent.get(c.parentCommentId) ?? []), c]);
+    }
+  }
 
   return (
     <main className="flex flex-col gap-4 px-4 py-6">
@@ -27,37 +40,116 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
         </span>
         <h1 className="text-xl font-semibold">{post.title}</h1>
         <AuthorLine author={post.author} />
-        {/* Member-authored prose: rendered as text, with newlines preserved. No HTML or
+        {/* Member-authored prose: rendered as text, newlines preserved. No HTML or
             markdown is interpreted, so a post can't inject markup into anyone's page. */}
         <p className="whitespace-pre-wrap text-sm">{post.body}</p>
         <TagList tags={post.tags} />
-        <span className="text-xs" style={{ color: 'var(--color-muted)' }}>
-          {format.relativeTime(new Date(post.createdAt))}
-          {post.editedAt && ` · ${t('edited')}`}
-        </span>
+        <div className="flex items-center gap-3">
+          {viewerContext.isAuthor ? (
+            <StaticKudos label={t('kudos', { count: post.kudosCount })} />
+          ) : (
+            <KudosButton
+              target="post"
+              targetId={post.id}
+              initialCount={post.kudosCount}
+              initialHasKudosed={viewerContext.hasKudosedPost}
+            />
+          )}
+          <span className="text-xs" style={{ color: 'var(--color-muted)' }}>
+            {format.relativeTime(new Date(post.createdAt))}
+            {post.editedAt && ` · ${t('edited')}`}
+          </span>
+        </div>
       </article>
 
-      <section className="flex flex-col gap-3 border-t pt-4" style={{ borderColor: 'var(--color-muted)' }}>
+      <section
+        className="flex flex-col gap-4 border-t pt-4"
+        style={{ borderColor: 'var(--color-muted)' }}
+      >
         <h2 className="text-sm font-medium">{t('answers', { count: post.answerCount })}</h2>
-        {thread.comments.length === 0 ? (
+
+        {answers.length === 0 ? (
           <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
             {t('noAnswers')}
           </p>
         ) : (
           <ul className="flex flex-col gap-3">
-            {thread.comments.map((comment) => (
-              <li
-                key={comment.id}
-                className="rounded-xl border p-3"
-                style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
-              >
-                <AuthorLine author={comment.author} />
-                <p className="mt-2 whitespace-pre-wrap text-sm">{comment.body}</p>
+            {answers.map((answer) => (
+              <li key={answer.id}>
+                <Answer postId={post.id} comment={answer} />
+                {(repliesByParent.get(answer.id) ?? []).length > 0 && (
+                  <ul
+                    className="mt-2 flex flex-col gap-2 border-l pl-3"
+                    style={{ borderColor: 'var(--color-muted)' }}
+                  >
+                    {(repliesByParent.get(answer.id) ?? []).map((reply) => (
+                      <li key={reply.id}>
+                        <Answer postId={post.id} comment={reply} isReply />
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
         )}
+
+        <div className="rounded-xl border p-3" style={{ borderColor: 'var(--color-muted)' }}>
+          <h3 className="mb-2 text-sm font-medium">{t('yourAnswer')}</h3>
+          <AnswerComposer postId={post.id} />
+        </div>
       </section>
     </main>
+  );
+}
+
+/** A single answer or reply row: author + badge, body, kudos, and own-content actions. */
+async function Answer({
+  postId,
+  comment,
+  isReply = false,
+}: {
+  postId: string;
+  comment: ThreadComment;
+  isReply?: boolean;
+}) {
+  const t = await getTranslations('discussions');
+  return (
+    <div
+      className="rounded-xl border p-3"
+      style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
+    >
+      <AuthorLine author={comment.author} />
+      <p className="mt-2 whitespace-pre-wrap text-sm">{comment.body}</p>
+      <div className="mt-2 flex items-center gap-3">
+        {comment.isMine ? (
+          <StaticKudos label={t('kudos', { count: comment.kudosCount })} />
+        ) : (
+          <KudosButton
+            target="comment"
+            targetId={comment.id}
+            initialCount={comment.kudosCount}
+            initialHasKudosed={comment.hasKudosed}
+          />
+        )}
+        {/* Replies are chronological conversation, so they don't sprout further nesting
+            controls in S5 — only top-level answers can be replied to. */}
+        {!isReply && <ReplyAffordance postId={postId} parentCommentId={comment.id} />}
+        {comment.isMine && <DeleteCommentButton postId={postId} commentId={comment.id} />}
+      </div>
+    </div>
+  );
+}
+
+/** Own content shows the count but no toggle — a handle can't kudos itself. */
+function StaticKudos({ label }: { label: string }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs"
+      style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+    >
+      <span aria-hidden>👏</span>
+      <span>{label}</span>
+    </span>
   );
 }

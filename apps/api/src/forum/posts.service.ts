@@ -1,7 +1,8 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { categories, comments, handles, postTags, posts, tags } from '../db/schema';
+import { categories, comments, handles, kudos, postTags, posts, tags } from '../db/schema';
+import { BadgeService } from './badge.service';
 import type { CreatePostDto, ListPostsDto } from './forum.dto';
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -17,8 +18,8 @@ export type AuthorBlock = {
   handleId: string;
   handleName: string;
   kudosTotal: number;
-  /** EPIC-D §6 computes this from the Redis kudos ranking (S5); shape is fixed now so
-   *  the client doesn't change when it starts returning true. */
+  /** Top ~1% of active handles by kudos, above a floor (EPIC-D §6) — merit the community
+   *  awarded, never rank or seniority. Computed from the Redis leaderboard at read time. */
   isTopContributor: boolean;
 };
 
@@ -34,6 +35,7 @@ export type PostCard = {
   tags: TagRef[];
   author: AuthorBlock;
   answerCount: number;
+  kudosCount: number;
   createdAt: string;
   editedAt: string | null;
 };
@@ -45,8 +47,12 @@ export type ThreadComment = {
   author: AuthorBlock;
   body: string;
   parentCommentId: string | null;
-  /** EPIC-D (S5) — no comment kudos column exists yet, so this is 0 for every row. */
   kudosCount: number;
+  /** Whether the calling handle has awarded kudos to this comment (EPIC-C §13.1, G-3). */
+  hasKudosed: boolean;
+  /** The caller authored this comment — drives the self-delete affordance and the fact
+   *  that a handle can't kudos its own contribution, without a second round-trip. */
+  isMine: boolean;
   createdAt: string;
   editedAt: string | null;
 };
@@ -56,12 +62,18 @@ export type ThreadComment = {
 export type Thread = {
   post: Omit<PostCard, 'snippet'> & { body: string; status: string };
   comments: ThreadComment[];
-  viewerContext: { isAuthor: boolean };
+  viewerContext: { isAuthor: boolean; hasKudosedPost: boolean };
 };
+
+/** A comment row plus its kudos figures, before ranking flattens it into the thread. */
+type RankableComment = ThreadComment & { createdAtMs: number };
 
 @Injectable()
 export class PostsService {
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly badge: BadgeService,
+  ) {}
 
   /**
    * Compose a question (screens D1/D2). Case discussions are *not* creatable here — they
@@ -134,16 +146,17 @@ export class PostsService {
         handleName: handles.handleName,
         kudosTotal: handles.kudosTotal,
         answerCount: answerCountSql,
+        kudosCount: postKudosCountSql,
       })
       .from(posts)
       .innerJoin(handles, eq(posts.handleId, handles.id))
       .innerJoin(categories, eq(posts.categoryId, categories.id))
-      // A tag filter needs the join table; the semi-join keeps one row per post even
-      // though a post can match on several tags.
       .where(
         and(
           eq(posts.status, 'published'),
           query.category ? eq(posts.categoryId, query.category) : undefined,
+          // A tag filter needs the join table; the semi-join keeps one row per post even
+          // though a post can match on several tags.
           query.tag
             ? sql`exists (select 1 from ${postTags} where ${postTags.postId} = ${posts.id} and ${postTags.tagId} = ${query.tag})`
             : undefined,
@@ -160,7 +173,10 @@ export class PostsService {
       .limit(limit + 1);
 
     const page = rows.slice(0, limit);
-    const tagsByPost = await this.tagsFor(page.map((r) => r.id));
+    const [tagsByPost, badged] = await Promise.all([
+      this.tagsFor(page.map((r) => r.id)),
+      this.badge.qualifying(page.map((r) => r.handleId)),
+    ]);
     const last = page.at(-1);
 
     return {
@@ -171,8 +187,9 @@ export class PostsService {
         snippet: snippet(row.body),
         category: { id: row.categoryId, name: row.categoryName },
         tags: tagsByPost.get(row.id) ?? [],
-        author: authorBlock(row),
+        author: authorBlock(row, badged),
         answerCount: Number(row.answerCount),
+        kudosCount: Number(row.kudosCount),
         createdAt: row.createdAt.toISOString(),
         editedAt: row.editedAt?.toISOString() ?? null,
       })),
@@ -185,8 +202,8 @@ export class PostsService {
    *
    * `draft` and `needs_correction` posts are returned **only to their author** (EPIC-C
    * §13.4, gap G-8) — to anyone else they 404 rather than 403, since "this exists but
-   * you can't see it" is itself a disclosure. Nothing in S4 creates those statuses, but
-   * the rule lives at the read layer so EPIC-E (S9) inherits it rather than re-deriving it.
+   * you can't see it" is itself a disclosure. Nothing in S4/S5 creates those statuses,
+   * but the rule lives at the read layer so EPIC-E (S9) inherits it.
    */
   async getThread(postId: string, viewerHandleId: string): Promise<Thread> {
     const [row] = await this.db
@@ -204,6 +221,7 @@ export class PostsService {
         handleName: handles.handleName,
         kudosTotal: handles.kudosTotal,
         answerCount: answerCountSql,
+        kudosCount: postKudosCountSql,
       })
       .from(posts)
       .innerJoin(handles, eq(posts.handleId, handles.id))
@@ -217,9 +235,16 @@ export class PostsService {
       throw new NotFoundException('No such post.');
     }
 
-    const [tagsByPost, answers] = await Promise.all([
+    const [tagsByPost, ranked, hasKudosedPost] = await Promise.all([
       this.tagsFor([row.id]),
-      this.commentsFor(row.id),
+      this.rankedComments(row.id, viewerHandleId),
+      this.viewerKudosedPost(row.id, viewerHandleId),
+    ]);
+
+    // One badge lookup covers the post author and every commenter shown.
+    const badged = await this.badge.qualifying([
+      row.handleId,
+      ...ranked.map((c) => c.author.handleId),
     ]);
 
     return {
@@ -231,13 +256,17 @@ export class PostsService {
         status: row.status,
         category: { id: row.categoryId, name: row.categoryName },
         tags: tagsByPost.get(row.id) ?? [],
-        author: authorBlock(row),
+        author: authorBlock(row, badged),
         answerCount: Number(row.answerCount),
+        kudosCount: Number(row.kudosCount),
         createdAt: row.createdAt.toISOString(),
         editedAt: row.editedAt?.toISOString() ?? null,
       },
-      comments: answers,
-      viewerContext: { isAuthor },
+      comments: ranked.map((c) => ({
+        ...c,
+        author: { ...c.author, isTopContributor: badged.has(c.author.handleId) },
+      })),
+      viewerContext: { isAuthor, hasKudosedPost },
     };
   }
 
@@ -265,11 +294,13 @@ export class PostsService {
   }
 
   /**
-   * Answers on a thread. Empty until S5 opens the write path — the read exists now so
-   * `answer_count` and the thread body come from one consistent place, and S5 only has
-   * to change the ordering to EPIC-D's kudos rank.
+   * The thread's answers, ranked (EPIC-D §4): top-level answers by kudos descending with
+   * an earliest-first tiebreak, and each answer's nested replies chronologically beneath
+   * it. Kudos ranks *answers*, not conversation — ranking replies would fragment a
+   * genuine back-and-forth. Returned as a flat, display-ordered list; `parentCommentId`
+   * lets the client indent.
    */
-  private async commentsFor(postId: string): Promise<ThreadComment[]> {
+  private async rankedComments(postId: string, viewerHandleId: string): Promise<ThreadComment[]> {
     const rows = await this.db
       .select({
         id: comments.id,
@@ -283,37 +314,140 @@ export class PostsService {
       })
       .from(comments)
       .innerJoin(handles, eq(comments.handleId, handles.id))
-      .where(and(eq(comments.postId, postId), eq(comments.status, 'published')))
-      .orderBy(asc(comments.createdAt));
+      .where(and(eq(comments.postId, postId), eq(comments.status, 'published')));
 
-    return rows.map((row) => ({
+    if (rows.length === 0) return [];
+
+    const counts = await this.commentKudos(
+      rows.map((r) => r.id),
+      viewerHandleId,
+    );
+
+    const enriched: RankableComment[] = rows.map((row) => ({
       id: row.id,
-      author: authorBlock(row),
+      author: authorBlock(row, EMPTY_BADGE_SET), // badge filled in by the caller
       body: row.body,
       parentCommentId: row.parentCommentId,
-      kudosCount: 0,
+      kudosCount: counts.get(row.id)?.count ?? 0,
+      hasKudosed: counts.get(row.id)?.hasKudosed ?? false,
+      isMine: row.handleId === viewerHandleId,
       createdAt: row.createdAt.toISOString(),
       editedAt: row.editedAt?.toISOString() ?? null,
+      createdAtMs: row.createdAt.getTime(),
     }));
+
+    return rankAndFlatten(enriched);
+  }
+
+  /** Per-comment kudos count and whether the viewer awarded it, in two indexed reads. */
+  private async commentKudos(
+    commentIds: string[],
+    viewerHandleId: string,
+  ): Promise<Map<string, { count: number; hasKudosed: boolean }>> {
+    const result = new Map<string, { count: number; hasKudosed: boolean }>();
+    if (commentIds.length === 0) return result;
+
+    const [counts, mine] = await Promise.all([
+      this.db
+        .select({ targetId: kudos.targetId, count: sql<number>`count(*)::int` })
+        .from(kudos)
+        .where(and(eq(kudos.targetType, 'comment'), inArray(kudos.targetId, commentIds)))
+        .groupBy(kudos.targetId),
+      this.db
+        .select({ targetId: kudos.targetId })
+        .from(kudos)
+        .where(
+          and(
+            eq(kudos.targetType, 'comment'),
+            inArray(kudos.targetId, commentIds),
+            eq(kudos.givenByHandleId, viewerHandleId),
+          ),
+        ),
+    ]);
+
+    const mineSet = new Set(mine.map((r) => r.targetId));
+    for (const id of commentIds) {
+      result.set(id, { count: 0, hasKudosed: mineSet.has(id) });
+    }
+    for (const row of counts) {
+      result.set(row.targetId, {
+        count: Number(row.count),
+        hasKudosed: mineSet.has(row.targetId),
+      });
+    }
+    return result;
+  }
+
+  private async viewerKudosedPost(postId: string, viewerHandleId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: kudos.id })
+      .from(kudos)
+      .where(
+        and(
+          eq(kudos.targetType, 'post'),
+          eq(kudos.targetId, postId),
+          eq(kudos.givenByHandleId, viewerHandleId),
+        ),
+      );
+    return row !== undefined;
   }
 }
 
-/** Published answers only — a removed answer shouldn't inflate the count on a card. */
+const EMPTY_BADGE_SET: ReadonlySet<string> = new Set();
+
+/**
+ * Top-level answers only (published). Nested replies are conversation, not answers, so
+ * they don't inflate the count — the same distinction the kudos ranking draws (§4).
+ */
 const answerCountSql = sql<number>`(
   select count(*) from ${comments}
-  where ${comments.postId} = ${posts.id} and ${comments.status} = 'published'
+  where ${comments.postId} = ${posts.id}
+    and ${comments.status} = 'published'
+    and ${comments.parentCommentId} is null
 )`;
 
-function authorBlock(row: {
-  handleId: string;
-  handleName: string;
-  kudosTotal: number;
-}): AuthorBlock {
+const postKudosCountSql = sql<number>`(
+  select count(*) from ${kudos}
+  where ${kudos.targetType} = 'post' and ${kudos.targetId} = ${posts.id}
+)`;
+
+/**
+ * Ranks top-level answers by kudos (desc), earliest-first on ties, and slots each answer's
+ * reply sub-tree chronologically beneath it. Depth-first so a reply always follows its
+ * parent; the flat result is what the thread DTO returns.
+ */
+function rankAndFlatten(all: RankableComment[]): ThreadComment[] {
+  const childrenOf = new Map<string | null, RankableComment[]>();
+  for (const c of all) {
+    const key = c.parentCommentId;
+    childrenOf.set(key, [...(childrenOf.get(key) ?? []), c]);
+  }
+
+  const byKudosThenAge = (a: RankableComment, b: RankableComment) =>
+    b.kudosCount - a.kudosCount || a.createdAtMs - b.createdAtMs;
+  const byAge = (a: RankableComment, b: RankableComment) => a.createdAtMs - b.createdAtMs;
+
+  const out: ThreadComment[] = [];
+  const emit = (node: RankableComment) => {
+    const { createdAtMs, ...comment } = node;
+    out.push(comment);
+    // Replies are conversation, not ranked answers — always chronological.
+    for (const child of (childrenOf.get(node.id) ?? []).sort(byAge)) emit(child);
+  };
+
+  for (const root of (childrenOf.get(null) ?? []).sort(byKudosThenAge)) emit(root);
+  return out;
+}
+
+function authorBlock(
+  row: { handleId: string; handleName: string; kudosTotal: number },
+  badged: ReadonlySet<string>,
+): AuthorBlock {
   return {
     handleId: row.handleId,
     handleName: row.handleName,
     kudosTotal: row.kudosTotal,
-    isTopContributor: false,
+    isTopContributor: badged.has(row.handleId),
   };
 }
 
