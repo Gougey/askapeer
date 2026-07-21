@@ -1,5 +1,17 @@
 import { sql } from 'drizzle-orm';
-import { date, integer, pgSchema, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  type AnyPgColumn,
+  customType,
+  date,
+  index,
+  integer,
+  pgSchema,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { members } from './identity.schema';
 
 /**
@@ -67,3 +79,150 @@ export const handleNameHistory = community.table('handle_name_history', {
   changedBy: text('changed_by').notNull(), // 'system' (first creation) or an admin's member_id
   changedAt: timestamp('changed_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Postgres `tsvector`. Not a Drizzle built-in, so declared here — the search design
+ * (EPIC-C §4) keeps full-text search inside Postgres rather than shipping forum content,
+ * including de-identified case discussions, to a third-party search service.
+ */
+const tsvector = customType<{ data: string; driverData: string }>({
+  dataType: () => 'tsvector',
+});
+
+/**
+ * Content-type categories (EPIC-C §3) — "Clinical Case", "Research", "Career"… NOT body
+ * areas, which are tags. A small admin-managed set; every post has exactly one.
+ *
+ * `retired_at` hides a category from the composer without rewriting the posts that
+ * already use it (EPIC-J).
+ */
+export const categories = community.table('categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  retiredAt: timestamp('retired_at', { withTimezone: true }),
+});
+
+export const tagFacet = community.enum('tag_facet', ['region', 'muscle', 'structure', 'pathology']);
+
+/**
+ * The single unified clinical vocabulary (EPIC-C §3, resolved with Andrew 2026-07-17).
+ *
+ * One list, not one per surface: a case post legitimately needs *tendinopathy* alongside
+ * *knee*, and the news feed (EPIC-I) draws its interests from the same rows. The `facet`
+ * is organising metadata for grouping the composer — not a wall between surfaces.
+ *
+ * Admin-managed, never member-created: a hybrid taxonomy whose tag half were freely
+ * extensible would collapse into pure tagging, which FD-4 rejects for MVP.
+ */
+export const tags = community.table(
+  'tags',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull().unique(),
+    facet: tagFacet('facet').notNull(),
+    // Region grouping (Upper limb / Lower limb). Self-referencing, hence the lazy callback.
+    parentId: uuid('parent_id').references((): AnyPgColumn => tags.id),
+    // Seeds the search synonym dictionary (EPIC-C §4) as well as matching on input.
+    synonyms: text('synonyms').array().notNull().default(sql`'{}'::text[]`),
+    // INTERNAL ONLY — MeSH mapping for research-feed/literature interop (EPIC-I).
+    // Never member-facing; deliberately not in any DTO.
+    meshId: text('mesh_id'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    retiredAt: timestamp('retired_at', { withTimezone: true }),
+  },
+  (t) => [index('tags_facet_idx').on(t.facet, t.sortOrder)],
+);
+
+export const postType = community.enum('post_type', ['question', 'case_discussion']);
+
+/**
+ * `draft` and `needs_correction` are case-discussion-only states (EPIC-E). An ordinary
+ * question publishes immediately and only ever uses `published`/`removed`.
+ */
+export const postStatus = community.enum('post_status', [
+  'published',
+  'removed',
+  'draft',
+  'needs_correction',
+]);
+
+export const posts = community.table(
+  'posts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    handleId: uuid('handle_id')
+      .notNull()
+      .references(() => handles.id),
+    categoryId: uuid('category_id')
+      .notNull()
+      .references(() => categories.id),
+    type: postType('type').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    status: postStatus('status').notNull().default('published'),
+    // Weighted per EPIC-C §4: a title hit outranks a passing mention in the body. Tags
+    // and comments join the query at search time (S7) rather than being denormalised
+    // into this column, which would need reindexing every time a tag was renamed.
+    // Column names are bare rather than Drizzle references — a generated expression
+    // can't refer to the table object it is being defined on.
+    tsv: tsvector('tsv').generatedAlwaysAs(
+      sql`setweight(to_tsvector('english', coalesce(title, '')), 'A') || setweight(to_tsvector('english', coalesce(body, '')), 'B')`,
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    editedAt: timestamp('edited_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('posts_tsv_idx').using('gin', t.tsv),
+    // The list surface's default ordering, newest first, and its cursor.
+    index('posts_created_idx').on(t.createdAt, t.id),
+    index('posts_category_idx').on(t.categoryId, t.createdAt),
+    index('posts_handle_idx').on(t.handleId, t.createdAt),
+  ],
+);
+
+export const postTags = community.table(
+  'post_tags',
+  {
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    tagId: uuid('tag_id')
+      .notNull()
+      .references(() => tags.id),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.tagId] }), index('post_tags_tag_idx').on(t.tagId)],
+);
+
+export const commentStatus = community.enum('comment_status', ['published', 'removed']);
+
+/**
+ * Answers and replies. The write path arrives with S5 (EPIC-D's kudos ranking is what
+ * makes answers meaningful); the table lands here so `answer_count` on the list and
+ * thread DTOs is a real count from the start rather than a hardcoded zero.
+ */
+export const comments = community.table(
+  'comments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    handleId: uuid('handle_id')
+      .notNull()
+      .references(() => handles.id),
+    parentCommentId: uuid('parent_comment_id').references((): AnyPgColumn => comments.id),
+    body: text('body').notNull(),
+    status: commentStatus('status').notNull().default('published'),
+    tsv: tsvector('tsv').generatedAlwaysAs(
+      sql`setweight(to_tsvector('english', coalesce(body, '')), 'D')`,
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    editedAt: timestamp('edited_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('comments_post_idx').on(t.postId, t.createdAt),
+    index('comments_tsv_idx').using('gin', t.tsv),
+  ],
+);

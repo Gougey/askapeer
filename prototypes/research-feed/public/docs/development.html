@@ -17,7 +17,7 @@
 NestJS API and a Next.js web app, backed by Postgres + Redis. Features
 land as tracer-bullet slices (see
 <code>docs/2026-07-19-tracer-bullet-slice-backlog.md</code> and GitHub
-issues); <strong>S0–S2 are in</strong>.</p>
+issues); <strong>S0–S4 are in</strong>.</p>
 <p><strong>Build approach:</strong> <em>prove-then-migrate</em> —
 develop locally + deploy to Fly.io (London) for the early slices;
 migrate to AWS <code>eu-west-2</code> before real practitioners. See the
@@ -163,6 +163,31 @@ themselves via the holding page’s “Try again”
 <strong>in-process</strong> with the API. The architecture spec’s
 separate background-worker service is a deployment split at the AWS
 migrate step, not a code change.</p>
+<h2 id="forum-s4-the-seeded-vocabulary">Forum (S4) — the seeded
+vocabulary</h2>
+<p>Categories and the clinical tag vocabulary are <strong>seeded by
+migration</strong> (<code>0004</code>), not managed in the app: EPIC-J’s
+admin surfaces for editing them are S13. Both are read through
+<code>GET /v1/categories</code> and <code>GET /v1/tags</code>, and post
+creation validates against them — tags are <strong>select-only</strong>
+(FD-4), so an unknown or retired tag id is a 400 rather than an
+invitation to create one. Andrew’s fuller muscle list extends the same
+table when it arrives; that is rows, not a migration.</p>
+<p>Two rules worth knowing before extending this epic:</p>
+<ul>
+<li><code>POST /v1/posts</code> hardcodes <code>type = 'question'</code>
+and <strong>rejects</strong> a <code>type</code> in the body. Case
+discussions must travel EPIC-E’s checklist-and-attestation route (S9),
+so this endpoint can never become a way around that gate.</li>
+<li><code>draft</code> / <code>needs_correction</code> posts are
+returned <strong>only to their author</strong>, and <code>removed</code>
+posts to nobody — as <strong>404</strong>, not 403, since “this exists
+but isn’t for you” is itself a disclosure (EPIC-C §13.4). Nothing in S4
+creates those statuses; the rule lives at the read layer so S9 and S11
+inherit it rather than re-deriving it.</li>
+</ul>
+<p>Answering, kudos and the ranked ordering are S5 — the thread renders
+comments already, but nothing writes them yet.</p>
 <h2 id="deployed-environments-fly-prove-phase">Deployed environments
 (Fly, prove phase)</h2>
 <p>Both apps deploy to Fly (London) on merge to <code>main</code> via

@@ -100,14 +100,6 @@
         "title": "Feed",
         "body": "Research and news scored to your clinical interests will appear here."
       },
-      "discussions": {
-        "title": "Discussions",
-        "body": "Questions and case discussions from other verified members will appear here."
-      },
-      "create": {
-        "title": "Create",
-        "body": "Posting a question or a case discussion opens up shortly."
-      },
       "activity": {
         "title": "Activity",
         "body": "Replies to your posts, kudos you've received, and your notifications will appear here."
@@ -139,5 +131,43 @@
       },
       "abandonHint": "To simulate an abandoned check, just leave this page — the applicant is surfaced for review once the check times out."
     }
+  },
+  "compose": {
+    "heading": "Ask a question",
+    "anonymity": {
+      "heading": "Before you post — stay anonymous",
+      "body": "Never name yourself, a colleague, an employer or a patient. Identifying yourself or another member means permanent removal from Askapeer, with no exceptions."
+    },
+    "category": "Category",
+    "categoryPlaceholder": "Choose a category",
+    "title": "Question",
+    "titlePlaceholder": "e.g. Return-to-run criteria after hamstring strain?",
+    "body": "Details",
+    "bodyPlaceholder": "Give enough context for a peer to answer well — presentation, what you have tried, what you are weighing up. No patient-identifying details.",
+    "tags": "Tags",
+    "tagsHint": "Choose up to {max} — they are how other members find your question.",
+    "facet": {
+      "region": "Body region",
+      "muscle": "Muscle",
+      "structure": "Structure",
+      "pathology": "Pathology"
+    },
+    "publish": "Post question",
+    "publishing": "Posting…",
+    "error": {
+      "missing_fields": "Add a category, a question and some detail before posting.",
+      "rejected": "We couldn't accept that post. Check your category and tags and try again.",
+      "unavailable": "Something went wrong. Please try again."
+    }
+  },
+  "discussions": {
+    "heading": "Discussions",
+    "empty": "No questions yet. Be the first to ask one.",
+    "emptyCta": "Ask a question",
+    "kudos": "{count, plural, one {# kudos} other {# kudos}}",
+    "topContributor": "Top contributor",
+    "answers": "{count, plural, =0 {No answers} one {# answer} other {# answers}}",
+    "noAnswers": "No answers yet.",
+    "edited": "edited"
   }
 }
