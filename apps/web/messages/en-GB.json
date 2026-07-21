@@ -171,6 +171,8 @@
     "edited": "edited",
     "kudosAction": "Toggle kudos",
     "yourAnswer": "Your answer",
+    "answerPosted": "Your answer was posted.",
+    "addAnother": "Add another answer",
     "answerPlaceholder": "Share what you would do, and why. No patient-identifying details.",
     "replyPlaceholder": "Add a reply…",
     "anonymityReminder": "Remember: never identify yourself, a colleague or a patient.",
