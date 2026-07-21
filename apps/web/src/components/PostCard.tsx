@@ -63,8 +63,11 @@ export async function PostCard({ post }: { post: PostCardDto }) {
         <TagList tags={post.tags} />
         <span className="flex items-center justify-between">
           <AuthorLine author={post.author} />
-          <span className="text-xs" style={{ color: 'var(--color-muted)' }}>
-            {t('answers', { count: post.answerCount })}
+          <span className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-muted)' }}>
+            <span aria-hidden>👏</span>
+            <span>{post.kudosCount}</span>
+            <span>·</span>
+            <span>{t('answers', { count: post.answerCount })}</span>
           </span>
         </span>
       </Link>

@@ -41,4 +41,12 @@ export class SettingsService {
     if (raw === 'false') return false;
     return fallback;
   }
+
+  /** Falls back to `fallback` when the key is absent or isn't a finite number. */
+  async getNumber(key: string, fallback: number): Promise<number> {
+    const raw = (await this.get(key))?.trim();
+    if (raw === undefined || raw === '') return fallback;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
 }

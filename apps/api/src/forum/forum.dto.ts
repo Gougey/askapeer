@@ -14,6 +14,8 @@ import {
 
 export const TITLE_MAX_LENGTH = 200;
 export const BODY_MAX_LENGTH = 20_000;
+/** An answer is prose, not an essay; generous enough for a worked reply. */
+export const COMMENT_MAX_LENGTH = 10_000;
 /** Enough to describe a presentation from several angles; few enough to stay a signal. */
 export const MAX_TAGS_PER_POST = 5;
 
@@ -41,6 +43,18 @@ export class CreatePostDto {
   @ArrayUnique()
   @ArrayMaxSize(MAX_TAGS_PER_POST)
   tagIds?: string[];
+}
+
+export class CreateCommentDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(COMMENT_MAX_LENGTH)
+  body!: string;
+
+  /** Present → a nested reply; absent → a top-level answer (the kudos-ranked kind). */
+  @IsOptional()
+  @IsUUID()
+  parentCommentId?: string;
 }
 
 /**
