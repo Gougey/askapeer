@@ -21,8 +21,11 @@ function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: st
 
 /**
  * Compose an answer, or a reply when `parentCommentId` is set (X3). Carries the
- * domain-mandated anonymity reminder in every posting surface (EPIC-C §13.5, G-7) — here
- * as a one-line note so it's present without dominating a quick reply.
+ * domain-mandated anonymity reminder in every posting surface (EPIC-C §13.5, G-7).
+ *
+ * On success a reply hands control back to its parent via `onDone` (which closes it);
+ * the persistent top-level composer instead collapses to a confirmation, so posting
+ * feels finished rather than re-prompting with an empty box.
  */
 export function AnswerComposer({
   postId,
@@ -36,17 +39,38 @@ export function AnswerComposer({
   const t = useTranslations('discussions');
   const isReply = parentCommentId !== null;
   const formRef = useRef<HTMLFormElement>(null);
+  const [posted, setPosted] = useState(false);
   const [state, formAction] = useActionState<AnswerState, FormData>(
     async (prev, formData) => {
       const result = await createAnswerAction(postId, parentCommentId, prev, formData);
       if (result.status === 'idle') {
         formRef.current?.reset();
         onDone?.();
+        setPosted(true);
       }
       return result;
     },
     { status: 'idle' },
   );
+
+  // Top-level composer, just posted: confirm and stand down rather than sit open.
+  if (posted && !isReply) {
+    return (
+      <div className="flex flex-col items-start gap-2">
+        <p className="text-sm" style={{ color: 'var(--color-ok)' }}>
+          ✓ {t('answerPosted')}
+        </p>
+        <button
+          type="button"
+          onClick={() => setPosted(false)}
+          className="text-sm underline"
+          style={{ color: 'var(--color-accent)' }}
+        >
+          {t('addAnother')}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-2">
