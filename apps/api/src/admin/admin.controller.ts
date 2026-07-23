@@ -17,9 +17,10 @@ import { VerificationDecisionDto } from './admin.dto';
 import { AdminService } from './admin.service';
 
 /**
- * Read-only admin observability (S11a). Every route sits behind JwtAuthGuard + AdminGuard,
- * so it's reachable only by an allowlisted admin. The write actions (clearing the review
- * queue, moderation) are the next slice; this one is deliberately look-but-don't-touch.
+ * Admin surface (S11a). Every route sits behind JwtAuthGuard + AdminGuard, so it's
+ * reachable only by an allowlisted admin. The GET routes are read-only observability;
+ * the one write action here is the manual verification decision (approve / reject /
+ * request more info). Broader moderation (clearing content, identity access) is a later slice.
  */
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
