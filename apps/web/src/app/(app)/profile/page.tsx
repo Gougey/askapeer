@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { SignOutButton } from '@/components/SignOutButton';
 import { API_ORIGIN } from '@/lib/api';
@@ -17,7 +18,7 @@ type Profile = {
  * arrive with the epics that own them (notifications S10, interests S8, billing S12).
  */
 export default async function ProfilePage() {
-  const { token } = await requireAppAccess();
+  const { token, state } = await requireAppAccess();
   const t = await getTranslations('shell.profileScreen');
 
   const res = await fetch(`${API_ORIGIN}/v1/handles/me`, {
@@ -41,6 +42,16 @@ export default async function ProfilePage() {
       </div>
 
       <p className="text-sm" style={{ color: 'var(--color-muted)' }}>{t('identityNote')}</p>
+
+      {state.isAdmin && (
+        <Link
+          href="/admin"
+          className="rounded-lg border px-3 py-2 text-center text-sm font-medium"
+          style={{ borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}
+        >
+          {t('adminConsole')}
+        </Link>
+      )}
 
       <SignOutButton label={t('signOut')} />
     </main>

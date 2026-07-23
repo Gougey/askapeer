@@ -109,7 +109,8 @@
       "kudos": "Kudos",
       "memberSince": "Member since {year}",
       "identityNote": "This is everything other members can see about you.",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "adminConsole": "Admin console"
     }
   },
   "identityCheck": {

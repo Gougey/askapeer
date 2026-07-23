@@ -5,6 +5,7 @@ import { and, eq, gt, isNull } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { isUniqueViolation } from '../db/pg-errors';
 import { handles, magicLinks, members, reapplicationAttempts, refreshTokens } from '../db/schema';
+import { AdminAccessService } from '../admin/admin-access.service';
 import { VerificationService } from '../verification/verification.service';
 import type { RegisterDto } from './auth.dto';
 
@@ -22,6 +23,7 @@ export class AuthService {
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly jwt: JwtService,
     private readonly verification: VerificationService,
+    private readonly adminAccess: AdminAccessService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -140,6 +142,7 @@ export class AuthService {
   async getVerificationStatus(memberId: string) {
     const [member] = await this.db
       .select({
+        email: members.email,
         verificationStatus: members.verificationStatus,
         statusUpdatedAt: members.statusUpdatedAt,
         needsMoreInfoReason: members.needsMoreInfoReason,
@@ -162,6 +165,9 @@ export class AuthService {
       hasHandle: handle !== undefined,
       handleStatus: handle?.status ?? null,
       anonymityAcknowledged: member.anonymityAcknowledgedAt !== null,
+      // Lets the web show the admin console entry and gate /admin from the session read
+      // it already makes, rather than a second round-trip (S11a).
+      isAdmin: this.adminAccess.isAdminEmail(member.email),
     };
   }
 

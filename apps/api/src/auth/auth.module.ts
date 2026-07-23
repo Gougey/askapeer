@@ -4,11 +4,13 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { JwtConfigModule } from './jwt-config.module';
 import { VerificationModule } from '../verification/verification.module';
+import { AdminAccessModule } from '../admin/admin-access.module';
 
 @Module({
   imports: [
     VerificationModule, // registration hands off to the verification pipeline (S2)
     JwtConfigModule,
+    AdminAccessModule, // the session read reports whether the member is an admin
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtAuthGuard],
