@@ -381,13 +381,20 @@ POST /v1/admin/verification-queue/:member_id/decide
 spec (Section 3), driven by BullMQ. One job per registration, two
 sequential steps:</p>
 <p><strong>Step A — register lookup.</strong> Query the professional
-body’s public register by <code>registration_number</code>, fuzzy-match
-<code>legal_name</code> against the register’s returned name. Write
+body’s public register by <code>registration_number</code>; write
 <code>identity.verification_evidence</code> with
-<code>evidence_type = register_lookup</code>. A fuzzy-match rather than
-exact-match is necessary because registers store legal names with
+<code>evidence_type = register_lookup</code>, <strong>retaining the
+register’s returned name</strong> — it is the reference for the identity
+binding in the decision logic below. A fuzzy-match rather than
+exact-match is used throughout because registers store legal names with
 formatting variance (middle names, punctuation) that shouldn’t cause a
-false fail.</p>
+false fail. <strong>Important (D-V1, companion design note §2):</strong>
+matching the applicant’s <em>self-declared</em> <code>legal_name</code>
+at this step is only an early sanity signal, <strong>not</strong> the
+security binding — a self-declared name is attacker-controlled (an
+impostor simply types the registrant’s name), so the match that actually
+protects the platform is against the <strong>Onfido-verified</strong>
+name in Step B, not this one.</p>
 <p><strong>Register availability (researched 2026-07-17):</strong> HCPC
 and GMC both publish queryable registers. <strong>BASRAT</strong> and
 <strong>SST</strong> both publish a <em>public register-check web
@@ -410,51 +417,80 @@ the person named on the register — Step A alone only proves the
 registration number is real. Onfido is async; the job waits on a webhook
 rather than polling, per the architecture spec’s
 worker-handles-anything-that-shouldn’t-block-a-request principle. Result
-written as <code>evidence_type = onfido_check</code>.</p>
+written as <code>evidence_type = onfido_check</code>, <strong>including
+the verified legal name extracted from the genuine document</strong> —
+this verified name (not the self-declared one) is what the decision
+logic matches against the register’s returned name.</p>
 <p><strong>Decision logic</strong> (executed once both results are in,
-or on evidence of definitive failure from either):</p>
+or on evidence of definitive failure from either). Per
+<strong>D-V1</strong> (companion design note, §2), automated approval is
+gated on <strong>three</strong> conditions, not two: a valid
+registration, a clean identity check, <strong>and a match between the
+Onfido-verified name and the register-returned name</strong> (the
+<em>binding</em>). The register lookup validates the
+<em>credential</em>; the identity check plus the name-match is what
+proves the applicant <em>is</em> that registrant. The threat this
+defends against is not a forged ID but a <strong>real ID presented with
+someone else’s real registration number</strong> — for which Onfido
+returns <code>clear</code>, so only the name-match catches it.</p>
 <table>
 <colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
 </colgroup>
 <thead>
 <tr>
 <th>Register lookup</th>
 <th>Onfido check</th>
+<th>Verified-name ↔︎ register-name</th>
 <th>Outcome</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>pass</td>
+<td>Registered</td>
 <td>clear</td>
+<td><strong>match</strong></td>
 <td>auto-approve → <code>approved_verified</code></td>
 </tr>
 <tr>
-<td>fail</td>
+<td>Registered</td>
+<td>clear</td>
+<td>mismatch / ambiguous</td>
+<td>→ admin review queue, stays <code>pending</code></td>
+</tr>
+<tr>
+<td>Registered</td>
+<td>needs_review / fail</td>
 <td>(any)</td>
+<td>→ admin review queue, stays <code>pending</code></td>
+</tr>
+<tr>
+<td>not on register (fail)</td>
+<td>(any)</td>
+<td>—</td>
 <td>→ admin review queue, stays <code>pending</code></td>
 </tr>
 <tr>
 <td>needs_review / register unavailable</td>
 <td>(any)</td>
-<td>→ admin review queue, stays <code>pending</code></td>
-</tr>
-<tr>
-<td>pass</td>
-<td>needs_review / fail</td>
+<td>—</td>
 <td>→ admin review queue, stays <code>pending</code></td>
 </tr>
 </tbody>
 </table>
-<p>Auto-approval is the only decision this worker makes unattended;
-every other outcome is a queue entry, not an auto-reject — a false
-auto-reject would permanently and wrongly block a real practitioner,
-whereas a false queue entry only costs admin time. This is a deliberate
-asymmetry: the automated path is only trusted to say “yes, cleanly,”
-never “no.”</p>
+<p>The name-match is <strong>tiered</strong>: a high-confidence match
+auto-approves; anything ambiguous (maiden/married names, middle names,
+titles, diacritics) is a <strong>review branch, not a fail</strong> —
+the reviewer’s core task is precisely to compare the verified ID name
+against the register entry (Section 6). Auto-approval is the only
+decision this worker makes unattended; every other outcome is a queue
+entry, not an auto-reject — a false auto-reject would permanently and
+wrongly block a real practitioner, whereas a false queue entry only
+costs admin time. This is a deliberate asymmetry: the automated path is
+only trusted to say “yes, cleanly,” never “no.”</p>
 <hr />
 <h2 id="admin-review-queue">6. Admin review queue</h2>
 <p>A view over <code>identity.members</code> where

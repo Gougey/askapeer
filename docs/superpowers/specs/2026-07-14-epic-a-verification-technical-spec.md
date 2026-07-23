@@ -231,22 +231,23 @@ POST /v1/admin/verification-queue/:member_id/decide
 
 Runs on the background-worker ECS service defined in the architecture spec (Section 3), driven by BullMQ. One job per registration, two sequential steps:
 
-**Step A — register lookup.** Query the professional body's public register by `registration_number`, fuzzy-match `legal_name` against the register's returned name. Write `identity.verification_evidence` with `evidence_type = register_lookup`. A fuzzy-match rather than exact-match is necessary because registers store legal names with formatting variance (middle names, punctuation) that shouldn't cause a false fail.
+**Step A — register lookup.** Query the professional body's public register by `registration_number`; write `identity.verification_evidence` with `evidence_type = register_lookup`, **retaining the register's returned name** — it is the reference for the identity binding in the decision logic below. A fuzzy-match rather than exact-match is used throughout because registers store legal names with formatting variance (middle names, punctuation) that shouldn't cause a false fail. **Important (D-V1, companion design note §2):** matching the applicant's *self-declared* `legal_name` at this step is only an early sanity signal, **not** the security binding — a self-declared name is attacker-controlled (an impostor simply types the registrant's name), so the match that actually protects the platform is against the **Onfido-verified** name in Step B, not this one.
 
 **Register availability (researched 2026-07-17):** HCPC and GMC both publish queryable registers. **BASRAT** and **SST** both publish a *public register-check web page* ([BASRaT Register Check](https://www.basrat.org/registercheck); [SST Check the Register](https://thesst.org/check-the-register/)) — searchable by name/number, showing registration status — **but no documented public API was found**. So for MVP, **BASRAT/SST applicants route straight to manual review** (Section 8), not automated Step A; the follow-up is a direct enquiry to each body about API or data-sharing access (registrar@basrat.org, admin@thesst.org). Note the **FD-1 interplay**: if the MVP launches physio-first (the PRD's own recommendation), HCPC is the primary register and BASRAT/SST — sport rehabilitators/therapists, a different professional group — may not be needed at launch at all.
 
-**Step B — identity document check.** Submit an Onfido check binding the applicant's uploaded document + selfie to the claimed identity. This step is what proves the *person registering* is the person named on the register — Step A alone only proves the registration number is real. Onfido is async; the job waits on a webhook rather than polling, per the architecture spec's worker-handles-anything-that-shouldn't-block-a-request principle. Result written as `evidence_type = onfido_check`.
+**Step B — identity document check.** Submit an Onfido check binding the applicant's uploaded document + selfie to the claimed identity. This step is what proves the *person registering* is the person named on the register — Step A alone only proves the registration number is real. Onfido is async; the job waits on a webhook rather than polling, per the architecture spec's worker-handles-anything-that-shouldn't-block-a-request principle. Result written as `evidence_type = onfido_check`, **including the verified legal name extracted from the genuine document** — this verified name (not the self-declared one) is what the decision logic matches against the register's returned name.
 
-**Decision logic** (executed once both results are in, or on evidence of definitive failure from either):
+**Decision logic** (executed once both results are in, or on evidence of definitive failure from either). Per **D-V1** (companion design note, §2), automated approval is gated on **three** conditions, not two: a valid registration, a clean identity check, **and a match between the Onfido-verified name and the register-returned name** (the *binding*). The register lookup validates the *credential*; the identity check plus the name-match is what proves the applicant *is* that registrant. The threat this defends against is not a forged ID but a **real ID presented with someone else's real registration number** — for which Onfido returns `clear`, so only the name-match catches it.
 
-| Register lookup | Onfido check | Outcome |
-|---|---|---|
-| pass | clear | auto-approve → `approved_verified` |
-| fail | (any) | → admin review queue, stays `pending` |
-| needs_review / register unavailable | (any) | → admin review queue, stays `pending` |
-| pass | needs_review / fail | → admin review queue, stays `pending` |
+| Register lookup | Onfido check | Verified-name ↔ register-name | Outcome |
+|---|---|---|---|
+| Registered | clear | **match** | auto-approve → `approved_verified` |
+| Registered | clear | mismatch / ambiguous | → admin review queue, stays `pending` |
+| Registered | needs_review / fail | (any) | → admin review queue, stays `pending` |
+| not on register (fail) | (any) | — | → admin review queue, stays `pending` |
+| needs_review / register unavailable | (any) | — | → admin review queue, stays `pending` |
 
-Auto-approval is the only decision this worker makes unattended; every other outcome is a queue entry, not an auto-reject — a false auto-reject would permanently and wrongly block a real practitioner, whereas a false queue entry only costs admin time. This is a deliberate asymmetry: the automated path is only trusted to say "yes, cleanly," never "no."
+The name-match is **tiered**: a high-confidence match auto-approves; anything ambiguous (maiden/married names, middle names, titles, diacritics) is a **review branch, not a fail** — the reviewer's core task is precisely to compare the verified ID name against the register entry (Section 6). Auto-approval is the only decision this worker makes unattended; every other outcome is a queue entry, not an auto-reject — a false auto-reject would permanently and wrongly block a real practitioner, whereas a false queue entry only costs admin time. This is a deliberate asymmetry: the automated path is only trusted to say "yes, cleanly," never "no."
 
 ---
 

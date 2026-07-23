@@ -48,13 +48,17 @@ the admin queue, and the immutable audit. This document is the
 <strong>design rationale and security model</strong> behind two of
 EPIC-A’s steps (register lookup, identity check), plus the
 external-provider guidance EPIC-A deliberately keeps out of scope.</p>
-<p>The one substantive change it asks EPIC-A to absorb: <strong>make the
-name-match binding an explicit, enforced step in the §5 decision
+<p>The one substantive change it asks EPIC-A to absorb — <strong>make
+the name-match binding an explicit, enforced step in the §5 decision
 table</strong> (auto-approval must require <em>registered</em>
 <strong>and</strong> <em>identity clear</em> <strong>and</strong>
-<em>name matches the register</em>). Until that is folded in, this note
-is the authority on the binding rule; EPIC-A stays the authority on
-mechanics. It is a companion and an enhancement, not a rewrite.</p>
+<em>the Onfido-verified name matches the register</em>) — has now been
+<strong>folded into EPIC-A §5</strong> (2026-07-23, decision D-V1).
+Notably, that corrected the binding to run against the
+<strong>Onfido-verified</strong> name rather than the applicant’s
+<em>self-declared</em> legal name (which is attacker-controlled). This
+note remains the design rationale; EPIC-A §5 is the implementation
+authority. It is a companion and an enhancement, not a rewrite.</p>
 <hr />
 <h2
 id="the-core-problem-a-registration-number-is-a-claim-not-a-secret">1.
@@ -716,10 +720,11 @@ building S2-real or signing an IDV contract.</p>
 <td><strong>D-V1</strong></td>
 <td>Make the <strong>name-match binding</strong> an explicit, enforced
 gate in EPIC-A §5 — auto-approve requires <em>Registered</em>
-<strong>and</strong> <em>IDV clear</em> <strong>and</strong> <em>name
-match</em>; a “clear” IDV with a name mismatch is a review branch.</td>
+<strong>and</strong> <em>IDV clear</em> <strong>and</strong>
+<em>Onfido-verified name matches the register</em>; a “clear” IDV with a
+name mismatch is a review branch.</td>
 <td><strong>Adopt</strong></td>
-<td>Proposed</td>
+<td><strong>Adopted — folded into EPIC-A §5 (2026-07-23)</strong></td>
 </tr>
 <tr>
 <td><strong>D-V2</strong></td>
