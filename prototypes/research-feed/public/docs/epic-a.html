@@ -30,6 +30,18 @@ authentication).</p>
 <p>Source of truth for product requirements:
 <code>docs/askapeer-prd-v0.1.md</code>, Section 8 (Verification &amp;
 Trust Model).</p>
+<p><strong>Companion design note</strong>:
+<code>docs/2026-07-23-identity-verification-design.md</code> — the
+threat model behind verification (a registration number is a public
+<em>claim</em>, not a secret), the empirical HCPC register findings, the
+<strong>name-match binding</strong> that §5 must enforce (auto-approval
+requires <em>registered</em> <strong>and</strong> <em>identity
+clear</em> <strong>and</strong> <em>the verified ID name matches the
+register</em>), the explicit user flow and result paths, and the
+identity-verification provider recommendation. Read it alongside §5
+(verification worker) and §6 (admin review); where the binding rule is
+concerned, that note is the design authority and this spec is the
+implementation authority.</p>
 <p>EPIC-A is the foundation epic: no other epic can be built or tested
 end-to-end until a member can register and reach
 <code>approved_verified</code> status, since every community-facing
