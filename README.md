@@ -6,12 +6,17 @@ A verified-only, pseudonymous professional network for sports medicine practitio
 
 ## Status
 
-Pre-sign-off. The [PRD](docs/askapeer-prd-v0.1.md) is in stakeholder review, with 8 open decisions (FD-1 through FD-8, see PRD §15). No production build exists yet — this repo currently holds the PRD and two early, disposable prototypes built to validate feel and technical concept ahead of any committed build.
+Pre-sign-off on scope; the production build is underway. The [PRD](docs/askapeer-prd-v0.1.md) is in stakeholder review, with 8 open decisions (FD-1 through FD-8, see PRD §15).
+
+The application is being built in `apps/` as thin, tracer-bullet vertical slices — a NestJS API and a Next.js web app (Postgres + Redis). It deploys to Fly.io (London) in a *prove-then-migrate* phase, ahead of an AWS `eu-west-2` production target. Live so far: **S0–S5** (register → verify → pick a handle → post a question → answer → kudos and ranking) plus a **read-only admin console** (members, verification journeys, review queue, immutable audit) with **verification actions** (approve / reject / request more info). See [DEVELOPMENT.md](DEVELOPMENT.md) for how to run it and where things stand. The two prototypes below remain as disposable references and are not the production build.
 
 ## What's in this repo
 
 | Path | What it is |
 |---|---|
+| `apps/api/` | **Production API** — NestJS modular monolith (module-per-epic), Drizzle ORM, Postgres + Redis/BullMQ. |
+| `apps/web/` | **Production web app** — Next.js (App Router), Tailwind, next-intl (en-GB). |
+| `DEVELOPMENT.md` | How to run the monorepo locally, the deployed environments, and slice-by-slice notes. |
 | `docs/askapeer-prd-v0.1.md` | The PRD — single source of truth for scope, personas, verification/pseudonymity model, monetisation, roadmap, and open decisions. |
 | `docs/archive/` | Earlier working documents, superseded by the PRD. |
 | `docs/AHP_Research_Feed_Design_Conversation.md` | Design discussion behind the research-feed prototype below. |

@@ -17,7 +17,8 @@
 NestJS API and a Next.js web app, backed by Postgres + Redis. Features
 land as tracer-bullet slices (see
 <code>docs/2026-07-19-tracer-bullet-slice-backlog.md</code> and GitHub
-issues); <strong>S0–S4 are in</strong>.</p>
+issues); <strong>S0–S5 are in, plus a read-only admin console (S11a)
+with verification actions</strong>.</p>
 <p><strong>Build approach:</strong> <em>prove-then-migrate</em> —
 develop locally + deploy to Fly.io (London) for the early slices;
 migrate to AWS <code>eu-west-2</code> before real practitioners. See the
@@ -186,8 +187,41 @@ but isn’t for you” is itself a disclosure (EPIC-C §13.4). Nothing in S4
 creates those statuses; the rule lives at the read layer so S9 and S11
 inherit it rather than re-deriving it.</li>
 </ul>
-<p>Answering, kudos and the ranked ordering are S5 — the thread renders
-comments already, but nothing writes them yet.</p>
+<p>Answering, kudos and the ranked ordering are <strong>S5</strong> (now
+in): a thread renders its answers, members award kudos, and answers sort
+by that score.</p>
+<h2 id="admin-console-s11a">Admin console (S11a)</h2>
+<p>An allowlisted <strong>admin</strong> role gets a console at
+<code>/admin</code> (web) backed by <code>GET/POST /v1/admin/*</code>
+(API). Every route sits behind <code>JwtAuthGuard</code> +
+<code>AdminGuard</code>, so the surface is reachable only by an
+allowlisted admin — see <code>admin.guard.ts</code> and the allowlist in
+<code>apps/web/src/lib/admin.ts</code>.</p>
+<p>Two slices landed here:</p>
+<ul>
+<li><strong>Read-only observability</strong> (<code>GET</code>): members
+(filterable by verification status), a single member’s verification
+journey, the manual <strong>review queue</strong>, and the immutable
+<strong>verification audit log</strong>.</li>
+<li><strong>Verification actions</strong>
+(<code>POST /v1/admin/members/:id/verification-decision</code>): an
+admin clears a <code>pending</code>/<code>needs_more_info</code>
+application with <strong>approve</strong> / <strong>reject</strong> /
+<strong>request_more_info</strong>. This is EPIC-A §6 — the
+<em>manual</em> exit the automated pipeline never takes (§5’s asymmetry
+means the worker only ever auto-<em>approves</em>; a reject is always a
+human’s call).</li>
+</ul>
+<p>The decision runs through the same
+<code>verification.transition()</code> as a system decision, so it
+writes the same immutable <code>verification_decisions</code> row and
+fires the same status-change email — the only difference is
+<code>decided_by</code> carries the <strong>admin’s</strong> member id,
+not <code>'system'</code>. That structural rule (§3: no status change
+without a decision row) is enforced in one transaction, not by
+convention. The web action then revalidates <code>/admin</code>,
+<code>/admin/review</code> and the member page so the new status and
+audit entry appear without a refresh.</p>
 <h2 id="deployed-environments-fly-prove-phase">Deployed environments
 (Fly, prove phase)</h2>
 <p>Both apps deploy to Fly (London) on merge to <code>main</code> via
