@@ -15,7 +15,7 @@ While validating the HCPC register mechanism (see §3) we surfaced a consequence
 
 EPIC-A remains the **implementation source of truth**: the state machine, the `identity` schema, the API endpoints, the admin queue, and the immutable audit. This document is the **design rationale and security model** behind two of EPIC-A's steps (register lookup, identity check), plus the external-provider guidance EPIC-A deliberately keeps out of scope.
 
-The one substantive change it asks EPIC-A to absorb: **make the name-match binding an explicit, enforced step in the §5 decision table** (auto-approval must require *registered* **and** *identity clear* **and** *name matches the register*). Until that is folded in, this note is the authority on the binding rule; EPIC-A stays the authority on mechanics. It is a companion and an enhancement, not a rewrite.
+The one substantive change it asks EPIC-A to absorb — **make the name-match binding an explicit, enforced step in the §5 decision table** (auto-approval must require *registered* **and** *identity clear* **and** *the Onfido-verified name matches the register*) — has now been **folded into EPIC-A §5** (2026-07-23, decision D-V1). Notably, that corrected the binding to run against the **Onfido-verified** name rather than the applicant's *self-declared* legal name (which is attacker-controlled). This note remains the design rationale; EPIC-A §5 is the implementation authority. It is a companion and an enhancement, not a rewrite.
 
 ---
 
@@ -267,7 +267,7 @@ Concrete items this note raises, for the team to ratify before building S2-real 
 
 | ID | Decision | Recommendation | Status |
 |---|---|---|---|
-| **D-V1** | Make the **name-match binding** an explicit, enforced gate in EPIC-A §5 — auto-approve requires *Registered* **and** *IDV clear* **and** *name match*; a "clear" IDV with a name mismatch is a review branch. | **Adopt** | Proposed |
+| **D-V1** | Make the **name-match binding** an explicit, enforced gate in EPIC-A §5 — auto-approve requires *Registered* **and** *IDV clear* **and** *Onfido-verified name matches the register*; a "clear" IDV with a name mismatch is a review branch. | **Adopt** | **Adopted — folded into EPIC-A §5 (2026-07-23)** |
 | **D-V2** | **IDV provider** — evaluate the §7 shortlist, weighting liveness/anti-spoofing; keep it behind `IdentityCheck` as a reversible choice. | Evaluate shortlist | Open |
 | **D-V3** | **Register-lookup mechanism** — approach HCPC for an official route/bulk data; interim = per-applicant GET behind `RegisterLookup`, assist + human fallback. | Approach HCPC; interim scrape as assist | Open (needs HCPC contact + DPIA) |
 | **D-V4** | **Name-match tolerance policy** — define what auto-passes vs. routes to review (exact vs. fuzzy; maiden/married, titles, diacritics). | Define before S2-real | Open |
