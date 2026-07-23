@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Identity Verification — Design & Threat Model — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">Identity Verification — Design & Threat Model</span>
+</div>
+<main>
+<h1
+id="identity-verification-design-threat-model-provider-choice">Identity
+Verification — Design, Threat Model &amp; Provider Choice</h1>
+<p><strong>Status</strong>: Working design note — companion to EPIC-A,
+feeds its §5 (verification worker) and §6 (admin review). For
+stakeholder review. <strong>Date</strong>: 23 July 2026
+<strong>Author</strong>: Adrian Hall (Technical Lead), with Claude Code
+<strong>Companion to</strong>:
+<code>docs/superpowers/specs/2026-07-14-epic-a-verification-technical-spec.md</code>
+(“EPIC-A”)</p>
+<h2 id="why-this-document-exists">Why this document exists</h2>
+<p>Verification is the load-bearing wall of the whole product.
+Askapeer’s single promise is that <em>every member is a qualified,
+registered professional</em> — and, because the network is pseudonymous,
+that promise is the <strong>only</strong> thing standing between a
+trusted peer forum and an anonymous message board where anyone can
+impersonate a clinician.</p>
+<p>While validating the HCPC register mechanism (see §3) we surfaced a
+consequence sharp enough to deserve its own document: <strong>a
+professional’s registration number is trivially discoverable, so the
+register lookup proves almost nothing on its own.</strong> The control
+that actually protects the platform is the identity check and,
+specifically, the <em>binding</em> between the verified person and the
+claimed registration. This note lays out that threat model, what we
+learned about the register, the corrected verification design, the
+explicit user flow and result paths, and a provider recommendation — in
+enough detail to build S2-real and choose an identity-verification
+vendor against.</p>
+<h3 id="relationship-to-epic-a-enhances-does-not-replace">Relationship
+to EPIC-A (enhances, does not replace)</h3>
+<p>EPIC-A remains the <strong>implementation source of truth</strong>:
+the state machine, the <code>identity</code> schema, the API endpoints,
+the admin queue, and the immutable audit. This document is the
+<strong>design rationale and security model</strong> behind two of
+EPIC-A’s steps (register lookup, identity check), plus the
+external-provider guidance EPIC-A deliberately keeps out of scope.</p>
+<p>The one substantive change it asks EPIC-A to absorb: <strong>make the
+name-match binding an explicit, enforced step in the §5 decision
+table</strong> (auto-approval must require <em>registered</em>
+<strong>and</strong> <em>identity clear</em> <strong>and</strong>
+<em>name matches the register</em>). Until that is folded in, this note
+is the authority on the binding rule; EPIC-A stays the authority on
+mechanics. It is a companion and an enhancement, not a rewrite.</p>
+<hr />
+<h2
+id="the-core-problem-a-registration-number-is-a-claim-not-a-secret">1.
+The core problem: a registration number is a claim, not a secret</h2>
+<p>A UK professional register is <strong>public, searchable, and
+enumerable by design</strong> — its entire purpose is to let anyone
+confirm a practitioner’s status. We confirmed this the hard way:
+querying a <em>guessed</em> registration number returned a real,
+currently-registered professional’s full name and details (see §3). An
+attacker does not need to target anyone — they can harvest valid
+<em>name + number</em> pairs at will.</p>
+<p>So the register lookup answers exactly one question:</p>
+<blockquote>
+<p><strong>“Is PH78516 a real, currently-registered physiotherapist
+named Renshaw?”</strong> — Yes.</p>
+</blockquote>
+<p>It says <strong>nothing</strong> about whether the person typing that
+number <em>is</em> that Renshaw. The register lookup is a
+<strong>credential-validity check, not an identity check.</strong> It is
+necessary but nowhere near sufficient.</p>
+<h3 id="the-attack-to-design-against">The attack to design against</h3>
+<p>The naive failure mode people imagine is “a forged ID.” That is
+<strong>not</strong> the primary threat. The primary threat is:</p>
+<blockquote>
+<p><strong>A real person, with their own genuine government ID,
+registering under someone else’s real registration number.</strong></p>
+</blockquote>
+<p>Every off-the-shelf identity-verification (IDV) product will happily
+verify that this person genuinely is who their ID says — say, <em>John
+Smith</em> — while John Smith holds a registration number belonging to
+<em>Andrew Renshaw</em>. The IDV vendor returns “clear.” The
+impersonation still succeeds. Only one check defeats it:
+<strong>comparing the verified ID name against the name the register
+returns for that number.</strong></p>
+<h3 id="why-pseudonymity-raises-the-stakes">Why pseudonymity raises the
+stakes</h3>
+<ul>
+<li>The impersonator operates behind a <strong>handle with no
+reputational tie to their real self</strong>, giving clinical opinions
+to peers who trust the verified badge.</li>
+<li>If moderation ever pierces pseudonymity for a genuine safety or
+legal reason, the identity that surfaces is the <strong>innocent
+registrant’s</strong> — a serious harm to an uninvolved professional,
+and a serious liability for Askapeer.</li>
+<li>A bad actor could deliberately register under another’s number
+precisely to <strong>deflect accountability</strong>.</li>
+</ul>
+<p>This is why the identity check, and the binding, are the
+security-critical part of the platform — not a compliance checkbox.</p>
+<hr />
+<h2 id="the-two-checks-and-the-binding-between-them">2. The two checks
+and the binding between them</h2>
+<p>Verification is two independent checks joined by one comparison. The
+comparison is the part that is easy to under-build and the part that
+matters most.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>What it proves</th>
+<th>What it does <strong>not</strong> prove</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Check 1 — Register lookup</strong> (HCPC etc.)</td>
+<td>The registration number belongs to a real, currently-registered
+professional, and yields <strong>their name</strong>.</td>
+<td>That the applicant is that person.</td>
+</tr>
+<tr>
+<td><strong>Check 2 — Identity verification</strong> (IDV vendor)</td>
+<td>The applicant holds a <strong>genuine government ID</strong> and is
+<strong>physically present</strong> and matches its photo
+(liveness/biometric), yielding their <strong>verified legal
+name</strong>.</td>
+<td>That the applicant’s ID name has anything to do with the claimed
+registration number.</td>
+</tr>
+<tr>
+<td><strong>The binding — name match</strong></td>
+<td><strong>Verified ID name ⇕ register name.</strong> This is what
+stops “my real ID + your real number.”</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-corrected-auto-approval-rule">The corrected auto-approval
+rule</h3>
+<p>The unattended, automatic approval — the <em>only</em> decision the
+system ever makes without a human — must require <strong>all
+three</strong> of:</p>
+<blockquote>
+<p><strong>Registered</strong> (credential valid) <strong>AND</strong>
+<strong>IDV = clear</strong> (genuine, present person)
+<strong>AND</strong> <strong>name match</strong> (the person is the
+registrant).</p>
+</blockquote>
+<p>Anything short of all three routes to <strong>manual admin
+review</strong>. And — as in EPIC-A today — <strong>the automated path
+never auto-rejects</strong>; a “no” is always a human’s call. The
+asymmetry is deliberate: a false auto-approve admits an impostor; a
+false auto-reject shuts out a real professional. Only the former is
+catastrophic, so only <em>approve</em> is ever automatic.</p>
+<h3 id="name-matching-is-fuzzy-so-it-is-tiered">Name-matching is fuzzy —
+so it is tiered</h3>
+<p>Real-world names do not compare cleanly: maiden vs. married names,
+middle names, titles, the register showing “surname, first name” while
+the ID carries the full legal name, transliteration, hyphenation,
+diacritics. Exact-match alone <strong>false-rejects</strong> legitimate
+people; loose-match <strong>false-accepts</strong> impostors. The
+resolution is a <strong>tier</strong>, which the existing state machine
+already supports:</p>
+<ul>
+<li><strong>High-confidence exact match</strong> → eligible for
+auto-approval.</li>
+<li><strong>Anything ambiguous</strong> → admin review, where a human
+compares the verified ID name to the register entry and decides.</li>
+</ul>
+<p>This makes the reviewer’s core job explicit and small: <em>does the
+verified ID name match the register?</em></p>
+<hr />
+<h2
+id="what-we-learned-about-the-hcpc-register-empirical-23-july-2026">3.
+What we learned about the HCPC register (empirical, 23 July 2026)</h2>
+<p>HCPC publishes <strong>no API</strong>, but its public “Check the
+Register” search is a clean, server-rendered <strong>GET</strong> —
+about as consumable as a non-API source gets. (Physiotherapists are
+HCPC-registered, so under a physio-first launch — FD-1 — HCPC is the
+primary register.)</p>
+<h3 id="the-endpoint">The endpoint</h3>
+<pre><code>GET https://www.hcpc-uk.org/check-the-register/professional-registration-detail/
+        ?query={REGISTRATION_NUMBER}&amp;profession={CODE}</code></pre>
+<ul>
+<li>No authentication, <strong>no anti-forgery token, no session cookie,
+no CAPTCHA / bot wall</strong>; works with any User-Agent; <strong>no
+JavaScript/headless browser needed</strong> (the data is in the initial
+HTML).</li>
+<li><code>profession</code> is the registration-number
+<strong>prefix</strong> and <strong>must match it</strong> — a valid PH
+number queried as <code>OT</code> returns nothing. The prefix identifies
+the HCPC profession:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Profession</th>
+<th></th>
+<th>Code</th>
+<th>Profession</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AS</code></td>
+<td>Arts therapist</td>
+<td></td>
+<td><code>ODP</code></td>
+<td>Operating department practitioner</td>
+</tr>
+<tr>
+<td><code>BS</code></td>
+<td>Biomedical scientist</td>
+<td></td>
+<td><code>OR</code></td>
+<td>Orthoptist</td>
+</tr>
+<tr>
+<td><code>CH</code></td>
+<td>Chiropodist / podiatrist</td>
+<td></td>
+<td><code>PA</code></td>
+<td>Paramedic</td>
+</tr>
+<tr>
+<td><code>CS</code></td>
+<td>Clinical scientist</td>
+<td></td>
+<td><code>PH</code></td>
+<td><strong>Physiotherapist</strong></td>
+</tr>
+<tr>
+<td><code>DT</code></td>
+<td>Dietitian</td>
+<td></td>
+<td><code>PYL</code></td>
+<td>Practitioner psychologist</td>
+</tr>
+<tr>
+<td><code>HAD</code></td>
+<td>Hearing aid dispenser</td>
+<td></td>
+<td><code>PO</code></td>
+<td>Prosthetist / orthotist</td>
+</tr>
+<tr>
+<td><code>OT</code></td>
+<td>Occupational therapist</td>
+<td></td>
+<td><code>RA</code></td>
+<td>Radiographer</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td><code>SL</code></td>
+<td>Speech &amp; language therapist</td>
+</tr>
+</tbody>
+</table>
+<p>The register search form’s own validation regex is the
+<strong>authoritative</strong> list of currently valid prefixes —
+validate applicant input against it <em>before</em> hitting the
+site.</p>
+<h3 id="the-result-shapes">The result shapes</h3>
+<p><strong>Every response is HTTP 200 — even “not found.”</strong>
+Outcome must be read from the <strong>body</strong>, never the status
+code.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Case</th>
+<th>How to detect</th>
+<th>Data returned</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Match</strong></td>
+<td>Has a <code>Name</code> / <code>Status</code> block</td>
+<td><code>Name</code>, <code>Registration number</code>,
+<strong><code>Status</code></strong>, <code>Period</code> (validity
+dates, e.g. <code>01/05/2026 to 30/04/2028</code>), sometimes
+<code>Location</code>, and a
+<strong><code>Data valid on: &lt;timestamp&gt;</code></strong> line</td>
+</tr>
+<tr>
+<td><strong>Not found</strong> (wrong number)</td>
+<td>Body contains <code>No results returned for {query}</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Profession mismatch</strong></td>
+<td>Same <code>No results returned for {query}</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong><code>Data valid on</code> timestamp</strong> is ideal
+audit evidence to store on the immutable
+<code>verification_decisions</code> row (alongside a captured
+screenshot), proving <em>what</em> was checked and <em>when</em>.</p>
+<p><strong>Only the <code>Registered</code> status was observed
+live.</strong> Other statuses exist (struck off, suspended, lapsed,
+voluntary removal, entries with conditions) but were not captured.
+<strong>Treat <code>Registered</code> as the sole auto-pass; route
+everything else to manual review.</strong> The negative shapes should be
+catalogued from real examples before they are relied on.</p>
+<h3 id="robots.txt">robots.txt</h3>
+<p><code>robots.txt</code> <strong>disallows</strong>
+<code>/check-the-register/register-results/</code> (the multi-result
+<strong>surname/list</strong> page) but <strong>not</strong> the
+<code>professional-registration-detail/</code> path above. This is
+convenient: the verification use case — an applicant supplying their own
+exact number — lands on the <strong>allowed</strong> path; only
+surname/list browsing is disallowed. Design around exact-number lookup
+and respect this.</p>
+<h3 id="scrapeability-verdict">Scrapeability verdict</h3>
+<p><strong>Technically a green light.</strong> A lightweight
+GET-and-parse, parsing by stable text-label anchors, is entirely viable
+and far simpler than a headless-browser scrape. The gating questions are
+<strong>compliance and relationship</strong> (§6), not feasibility.</p>
+<h3 id="this-generalises-beyond-hcpc">This generalises beyond HCPC</h3>
+<p>Under FD-1 (“all registered UK practitioners” vs. physio-first), each
+regulator has its own mechanism and must be assessed separately —
+e.g. the <strong>GMC</strong> publishes a downloadable List of
+Registered Medical Practitioners (a bulk file beats scraping), while
+<strong>BASRAT</strong> and <strong>SST</strong> have register-check web
+pages but no API (manual-review fallback, per EPIC-A). <strong>The
+design in this note — credential-validity check + identity binding +
+uniqueness tripwire — is regulator-agnostic; only the lookup
+implementation behind the <code>RegisterLookup</code> interface
+changes.</strong></p>
+<hr />
+<h2 id="defense-in-depth">4. Defense-in-depth</h2>
+<p>The binding (§2) is the primary control. These reinforce it — because
+no IDV product is infallible.</p>
+<ul>
+<li><strong>One number = one account (uniqueness).</strong> EPIC-A’s
+unique index on registration number means a stolen number can be claimed
+<strong>once</strong>. When the <strong>legitimate owner</strong> later
+tries to register, they <strong>collide</strong> — which is itself a
+fraud tripwire. Recommendation: the collision should <strong>flag
+internally for review</strong> (“an already-claimed number was
+re-attempted”) even while the applicant sees a generic,
+no-information-leak message. Either party in a collision is
+security-interesting.</li>
+<li><strong>Liveness / anti-spoofing quality is now the top IDV
+selection criterion</strong> — because the ID check is <em>the</em>
+boundary, resistance to deepfakes and injection attacks matters more
+than breadth of features (see §7).</li>
+<li><strong>You generally cannot warn the true owner.</strong> The
+uncomfortable limitation: Askapeer has no contact channel to the real
+registrant (the impostor supplied the email), so out-of-band “did you
+just register?” confirmation is not available unless a regulator offers
+a registrant-notification route (unlikely). <strong>Uniqueness is the
+main backstop.</strong></li>
+<li><strong>Periodic re-validation</strong> of register status (a
+registration can lapse or be revoked <em>after</em> joining) — Phase 2
+per EPIC-A, but the same lookup.</li>
+</ul>
+<h3 id="the-one-residual-that-verification-cannot-close">The one
+residual that verification cannot close</h3>
+<p>A <strong>genuine, correctly-verified professional who later hands
+their account to someone else</strong> defeats every gate above. This is
+a <strong>post-verification, behavioural/policy</strong> problem, not a
+verification-gate problem. No IDV vendor solves account-sharing. Name
+it, accept it, and rely on moderation, behavioural signals, and the
+zero-tolerance conduct rules — not on the verification pipeline.</p>
+<hr />
+<h2 id="the-user-flow">5. The user flow</h2>
+<p>The applicant’s journey and the system’s decisions, end to end.</p>
+<pre><code> ┌─────────────────────────────────────────────────────────────────────┐
+ │ 1. REGISTER                                                          │
+ │    Applicant enters: legal name, email, profession, registration     │
+ │    number; acknowledges the anonymity rules.                         │
+ │    → account created as `pending`; pending-scoped session (magic     │
+ │      link); applicant lands on the holding page.                     │
+ └───────────────┬─────────────────────────────────────────────────────┘
+                 ▼
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │ 2. REGISTER LOOKUP  (automatic; §3 HCPC GET)                         │
+ │    • Registered  → capture the register NAME; go to step 3.          │
+ │    • Not found / profession mismatch (could be a typo) → REVIEW.     │
+ │    • Status ≠ Registered (struck off / suspended / lapsed) → REVIEW. │
+ │    • Register unavailable / parse failure → REVIEW (or retry).       │
+ └───────────────┬─────────────────────────────────────────────────────┘
+                 ▼  (Registered only)
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │ 3. IDENTITY VERIFICATION  (applicant completes document + selfie)    │
+ │    • clear  AND  ID name MATCHES register name  → APPROVED (auto).   │
+ │    • clear  BUT  name mismatch/ambiguous        → REVIEW.            │
+ │    • consider / fail                            → REVIEW.            │
+ │    • abandoned / timeout (48h, configurable)    → needs_more_info.   │
+ └───────────────┬─────────────────────────────────────────────────────┘
+                 ▼  (anything not auto-approved)
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │ 4. ADMIN REVIEW  (human; EPIC-A §6)                                  │
+ │    Reviewer sees the register result (name, status, evidence         │
+ │    timestamp) and the IDV result (verified name, document, liveness),│
+ │    makes the NAME-MATCH judgement, and decides:                      │
+ │    approve → APPROVED   |   reject → REJECTED   |   request_more_info │
+ └───────────────┬─────────────────────────────────────────────────────┘
+                 ▼  (approved)
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │ 5. HANDOFF → EPIC-B: choose a pseudonymous handle → app access.      │
+ └─────────────────────────────────────────────────────────────────────┘</code></pre>
+<p>The <strong>only</strong> unattended approval is the all-three-green
+path through steps 2 and 3. Every other route passes through a human,
+and nothing is ever auto-rejected.</p>
+<hr />
+<h2 id="result-paths-the-explicit-decision-table">6. Result paths (the
+explicit decision table)</h2>
+<p>Every combination of the two checks and the binding, and where each
+one lands. <code>pending (→review)</code> means the applicant stays
+<code>pending</code> and waits on the admin queue; the member always
+sees only the holding page until <code>approved_verified</code>.</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr>
+<th>Register result</th>
+<th>IDV result</th>
+<th>Name match</th>
+<th>Resulting state</th>
+<th>Decided by</th>
+<th>Member experience</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registered</td>
+<td>clear</td>
+<td><strong>exact</strong></td>
+<td><strong><code>approved_verified</code></strong></td>
+<td><strong>system (auto)</strong></td>
+<td>“Verified — choose your handle”</td>
+</tr>
+<tr>
+<td>Registered</td>
+<td>clear</td>
+<td>ambiguous / mismatch</td>
+<td><code>pending</code> (→review)</td>
+<td>human</td>
+<td>Holding page</td>
+</tr>
+<tr>
+<td>Registered</td>
+<td>consider / fail</td>
+<td>—</td>
+<td><code>pending</code> (→review)</td>
+<td>human</td>
+<td>Holding page</td>
+</tr>
+<tr>
+<td>Registered</td>
+<td>abandoned / timeout</td>
+<td>—</td>
+<td><code>needs_more_info</code></td>
+<td>system (timeout)</td>
+<td>“Resume / try again”</td>
+</tr>
+<tr>
+<td>Not found / profession mismatch</td>
+<td>—</td>
+<td>—</td>
+<td><code>pending</code> (→review)</td>
+<td>human</td>
+<td>Holding page (may be a typo)</td>
+</tr>
+<tr>
+<td>Status ≠ Registered (struck off, etc.)</td>
+<td>—</td>
+<td>—</td>
+<td><code>pending</code> (→review)</td>
+<td>human → likely <code>rejected</code></td>
+<td>Holding page</td>
+</tr>
+<tr>
+<td>Register unavailable / parse failure</td>
+<td>—</td>
+<td>—</td>
+<td><code>pending</code> (→review or retry)</td>
+<td>system / human</td>
+<td>Holding page</td>
+</tr>
+<tr>
+<td>— (admin acts)</td>
+<td>—</td>
+<td>—</td>
+<td><code>approved_verified</code></td>
+<td>human — approve</td>
+<td>“Verified — choose your handle”</td>
+</tr>
+<tr>
+<td>— (admin acts)</td>
+<td>—</td>
+<td>—</td>
+<td><code>rejected</code></td>
+<td>human — reject</td>
+<td>“We could not verify you”</td>
+</tr>
+<tr>
+<td>— (admin acts)</td>
+<td>—</td>
+<td>—</td>
+<td><code>needs_more_info</code></td>
+<td>human — request info</td>
+<td>“We need X to continue”</td>
+</tr>
+</tbody>
+</table>
+<p>This maps directly onto EPIC-A’s existing states
+(<code>pending</code>, <code>approved_verified</code>,
+<code>rejected</code>, <code>needs_more_info</code>, and later
+<code>suspended</code>/<code>expelled</code>) and its manual-review
+actions (<code>approve</code> / <code>reject</code> /
+<code>request_more_info</code>, shipped in S11a). The
+<strong>new</strong> requirement this table imposes on EPIC-A §5 is the
+<strong>name-match column</strong>: auto-approval is gated on it, and a
+“clear” IDV result with a name mismatch is an explicit review branch
+rather than an approval.</p>
+<hr />
+<h2 id="identity-verification-provider-recommendation">7.
+Identity-verification provider recommendation</h2>
+<p>Because the identity check is <em>the</em> trust boundary (§1–§2),
+the vendor decision is reframed: <strong>liveness / anti-spoofing
+quality and a structured, extractable verified name are the top
+criteria</strong> — not breadth of features. The register lookup is
+<strong>separate</strong> and stays ours; no IDV vendor checks
+professional-body registers.</p>
+<h3 id="selection-criteria-in-priority-order">Selection criteria (in
+priority order)</h3>
+<ol type="1">
+<li><strong>Biometric liveness &amp; anti-spoofing</strong> — resistance
+to deepfakes and injection attacks. This is where impersonation is
+actually defeated.</li>
+<li><strong>Structured verified-name output</strong> — so the register
+cross-match (§2) can be done programmatically.</li>
+<li><strong>UK / EU data residency + GDPR</strong> — fits the “no data
+sold, trust-first” posture and eases the DPIA; an EU/UK processor beats
+a US one needing SCCs/DPF.</li>
+<li><strong>Self-serve, pay-per-check, no annual minimum</strong> — seed
+volume is tiny; avoid enterprise contracts.</li>
+<li><strong>DX / time-to-integrate</strong> — the check sits behind the
+<code>IdentityCheck</code> interface, so the choice is
+<strong>reversible</strong>; optimise for a fast start now, revisit at
+the AWS/scale step.</li>
+</ol>
+<h3 id="the-landscape-uk-relevant">The landscape (UK-relevant)</h3>
+<blockquote>
+<p><strong>Note:</strong> Onfido was acquired by
+<strong>Entrust</strong> (2024) and is now sold within their platform —
+<strong>re-quote it</strong> rather than assuming its old self-serve
+pricing.</p>
+</blockquote>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Vendor</th>
+<th>Why consider it</th>
+<th>Watch-outs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Stripe Identity</strong></td>
+<td>If Stripe wins FD-2, one vendor for <strong>billing + IDV</strong> —
+single DPA, one dashboard, strong DX. Big operational win for a small
+team.</td>
+<td>Less configurable; fewer document types/regions than specialists.
+Fine for a UK-only MVP.</td>
+</tr>
+<tr>
+<td><strong>Persona</strong></td>
+<td>Very developer-friendly, flexible flow builder, self-serve,
+pay-as-you-go.</td>
+<td>US-based → GDPR via SCCs; check data-residency options.</td>
+</tr>
+<tr>
+<td><strong>Veriff</strong></td>
+<td>EU (Estonia), strong European coverage, good document + biometric
+and fraud detection.</td>
+<td>Confirm no annual minimum.</td>
+</tr>
+<tr>
+<td><strong>Yoti</strong></td>
+<td><strong>UK-based, privacy-by-design / data-minimisation
+ethos</strong> — strong brand fit with the trust proposition.</td>
+<td>Smaller than the giants; check throughput/SLA.</td>
+</tr>
+<tr>
+<td><strong>iProov</strong></td>
+<td><strong>UK; best-in-class biometric liveness — used by the NHS,
+GOV.UK, Home Office.</strong> Purpose-built for exactly the
+impersonation threat.</td>
+<td>Biometric only — <strong>pair</strong> with a document-IDV vendor,
+not a full IDV alone.</td>
+</tr>
+<tr>
+<td><strong>Sumsub / Signicat</strong></td>
+<td>Orchestration hubs — route to multiple IDV providers behind one
+integration; Signicat also does European eIDs.</td>
+<td>More than a UK-only MVP needs, but future-proof.</td>
+</tr>
+<tr>
+<td><strong>Jumio</strong></td>
+<td>Established enterprise IDV, strong compliance.</td>
+<td>Enterprise sales motion; likely slower/pricier — probably overkill
+for seed.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="recommendation">Recommendation</h3>
+<ul>
+<li><strong>Shortlist to evaluate:</strong> <strong>Stripe
+Identity</strong> (if Stripe is the processor — single-vendor simplicity
+is hard to beat), <strong>Persona</strong>, and <strong>Veriff</strong>,
+with <strong>Yoti / iProov</strong> as the UK/trust-fit wildcards.</li>
+<li><strong>Weight liveness heavily</strong> given the threat model — do
+not economise on the biometric.</li>
+<li><strong>Treat the choice as reversible</strong> (it sits behind
+<code>IdentityCheck</code>); pick the fastest, lowest-commitment path to
+a working seed and revisit before real scale.</li>
+<li>If the strongest liveness (iProov-grade) is wanted but the leading
+document-IDV vendor’s is only adequate, a <strong>document-IDV vendor +
+iProov pairing</strong> is a legitimate architecture — both behind the
+same interface.</li>
+</ul>
+<hr />
+<h2 id="compliance-legal-checklist">8. Compliance &amp; legal
+checklist</h2>
+<p>Technical ease (§3) does not settle any of these — this is now the
+gating work, and it should go through the standing DPIA / legal-counsel
+review already on the backlog.</p>
+<ul>
+<li><strong>Approach the regulator first.</strong> Ask
+<strong>HCPC</strong> for an official verification/employer-checking
+route or a <strong>data-sharing agreement / bulk extract</strong> —
+better than scraping, and on-brand for a trust platform. (The GMC’s
+downloadable register is the model.)</li>
+<li><strong>UK database right</strong> — do <strong>not</strong> cache
+or systematically extract the register. <strong>Store only the
+decision</strong>: what was checked, when, the result, and an evidence
+reference (the <code>Data valid on</code> timestamp + a screenshot) on
+the immutable <code>verification_decisions</code> row.</li>
+<li><strong>Read the register’s terms of use</strong> for the
+checking/extraction stance.</li>
+<li><strong>GDPR</strong> — you become a controller the moment you store
+registrant data; storing only the <em>outcome</em> keeps that footprint
+minimal and defensible.</li>
+<li><strong>Operationalise as an assist, not an oracle.</strong> Run the
+lookup <strong>per applicant, low rate, cache-nothing</strong>, behind
+the <code>RegisterLookup</code> interface, <strong>as an assist to human
+review</strong>. EPIC-A’s “register unavailable →
+<code>needs_review</code> → admin review” branch already absorbs scrape
+failures safely, so a broken or blocked lookup <strong>degrades to
+manual review, never to a wrong decision.</strong></li>
+<li><strong>Add a canary</strong> — a known-good number (e.g. Andrew
+Renshaw’s <code>PH78516</code>, which should always read
+<code>Registered</code>) probed on a schedule, so a silent format change
+(site redesign) is caught and the flow falls back to manual review.</li>
+</ul>
+<hr />
+<h2 id="decisions-to-confirm">9. Decisions to confirm</h2>
+<p>Concrete items this note raises, for the team to ratify before
+building S2-real or signing an IDV contract.</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>Decision</th>
+<th>Recommendation</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>D-V1</strong></td>
+<td>Make the <strong>name-match binding</strong> an explicit, enforced
+gate in EPIC-A §5 — auto-approve requires <em>Registered</em>
+<strong>and</strong> <em>IDV clear</em> <strong>and</strong> <em>name
+match</em>; a “clear” IDV with a name mismatch is a review branch.</td>
+<td><strong>Adopt</strong></td>
+<td>Proposed</td>
+</tr>
+<tr>
+<td><strong>D-V2</strong></td>
+<td><strong>IDV provider</strong> — evaluate the §7 shortlist, weighting
+liveness/anti-spoofing; keep it behind <code>IdentityCheck</code> as a
+reversible choice.</td>
+<td>Evaluate shortlist</td>
+<td>Open</td>
+</tr>
+<tr>
+<td><strong>D-V3</strong></td>
+<td><strong>Register-lookup mechanism</strong> — approach HCPC for an
+official route/bulk data; interim = per-applicant GET behind
+<code>RegisterLookup</code>, assist + human fallback.</td>
+<td>Approach HCPC; interim scrape as assist</td>
+<td>Open (needs HCPC contact + DPIA)</td>
+</tr>
+<tr>
+<td><strong>D-V4</strong></td>
+<td><strong>Name-match tolerance policy</strong> — define what
+auto-passes vs. routes to review (exact vs. fuzzy; maiden/married,
+titles, diacritics).</td>
+<td>Define before S2-real</td>
+<td>Open</td>
+</tr>
+<tr>
+<td><strong>D-V5</strong></td>
+<td><strong>Collision handling</strong> — an attempt to register an
+already-claimed number flags internally for review (generic message to
+the user).</td>
+<td><strong>Adopt</strong></td>
+<td>Proposed</td>
+</tr>
+<tr>
+<td><strong>FD-1 tie-in</strong></td>
+<td><strong>Professional scope</strong> — physio-first (HCPC only)
+vs. all registers. The design generalises; each register’s lookup is
+assessed separately.</td>
+<td>(Tracks FD-1)</td>
+<td>Open</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="in-one-paragraph">10. In one paragraph</h2>
+<p>The failure mode to design against is <strong>not</strong> “a forged
+ID” — it is <strong>“a real ID plus someone else’s real registration
+number,”</strong> because registration numbers are public and
+enumerable. The register lookup validates the <em>credential</em>; the
+identity check plus an <strong>enforced match between the verified ID
+name and the register name</strong> binds that credential to the
+<em>person</em>; and the one-number-one-account <strong>uniqueness
+constraint</strong> is the tripwire that catches a stolen number when
+its rightful owner shows up. Auto-approval requires all three greens;
+everything else is decided by a human; nothing is ever auto-rejected.
+That is the whole security model, and the name-match is the piece that
+must not be skipped.</p>
+
+</main>
+</body>
+</html>
