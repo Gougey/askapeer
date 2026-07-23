@@ -14,6 +14,8 @@ export type SessionState = {
   hasHandle: boolean;
   handleStatus: 'active' | 'suspended' | 'expelled' | null;
   anonymityAcknowledged: boolean;
+  /** Allowlisted admin — drives the admin-console entry and its gate (S11a). */
+  isAdmin: boolean;
 };
 
 /**
