@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { fetchMember, type MemberDetail, requireAdmin } from '@/lib/admin';
 import { StageBadge } from '../../ui';
+import { VerificationActions } from './VerificationActions';
 
 /**
  * One member's verification journey — register lookup → identity check → decision →
@@ -50,6 +51,8 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </p>
       )}
 
+      <VerificationActions memberId={member.id} status={member.verificationStatus} />
+
       <Timeline title="Automated checks (evidence)">
         {member.evidence.length === 0 ? (
           <Empty>No checks recorded yet.</Empty>
@@ -82,7 +85,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         ) : (
           member.decisions.map((d) => (
             <Row key={d.id} when={d.createdAt}>
-              {d.fromStatus} → <span className="font-medium">{d.toStatus}</span> · by {d.decidedBy}
+              {d.fromStatus} → <span className="font-medium">{d.toStatus}</span> · by {d.decidedByLabel}
               {d.reason && <span style={{ color: 'var(--color-muted)' }}> · {d.reason}</span>}
             </Row>
           ))

@@ -1,4 +1,11 @@
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { and, desc, eq } from 'drizzle-orm';
 import type { Queue } from 'bullmq';
 import { DRIZZLE, type Database } from '../db/db.module';
@@ -233,6 +240,54 @@ export class VerificationService {
       captureToken: session.providerRef,
       expiresAt: session.expiresAt,
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Manual admin review (EPIC-A §6, gaps G-4/G-5/G-6)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * A human reviewer's decision on an in-flight application — the exit the automated
+   * pipeline deliberately never takes (§5's asymmetry: the machine only ever says "yes",
+   * so a reject is always a human's call). Runs through `transition`, so it writes the
+   * same immutable `verification_decisions` row and fires the same status-change email —
+   * the only difference from a system decision is `decided_by` carries the admin's id.
+   *
+   * Reviewable only from `pending`/`needs_more_info`; a member already approved, rejected,
+   * suspended or expelled is out of the queue and must go through the action that owns
+   * that state (EPIC-F for suspend/expel), not a re-review here.
+   */
+  async recordAdminDecision(
+    memberId: string,
+    action: 'approve' | 'reject' | 'request_more_info',
+    adminMemberId: string,
+    reason: string | null,
+  ): Promise<{ verificationStatus: string }> {
+    const member = await this.findMember(memberId);
+    if (member.verificationStatus !== 'pending' && member.verificationStatus !== 'needs_more_info') {
+      throw new ConflictException(
+        `Only a pending or needs-more-info member can be reviewed (this one is ${member.verificationStatus}).`,
+      );
+    }
+
+    const trimmed = reason?.trim() || null;
+    if (action === 'request_more_info' && !trimmed) {
+      throw new BadRequestException('A reason is required when requesting more information.');
+    }
+
+    const toStatus =
+      action === 'approve'
+        ? 'approved_verified'
+        : action === 'reject'
+          ? 'rejected'
+          : 'needs_more_info';
+    if (toStatus === member.verificationStatus) {
+      // e.g. requesting more info from a member already in needs_more_info.
+      throw new BadRequestException(`Member is already ${member.verificationStatus}.`);
+    }
+
+    await this.transition(memberId, toStatus, adminMemberId, trimmed);
+    return { verificationStatus: toStatus };
   }
 
   // ---------------------------------------------------------------------------
