@@ -36,3 +36,8 @@ primary_region = "lhr"
   # The AWS production target will NOT set this — with it unset the
   # simulated-callback endpoint 404s as though it were never deployed.
   VERIFICATION_SIMULATE = "true"
+
+  # Admin console (S11a): the email allowlist that can reach /admin (read-only
+  # members / verification / audit). Interim gate until the moderator/administrator
+  # JWT claims land (S11/S13). Comma-separate to add more admins.
+  ADMIN_EMAILS = "ade@halls1.com"
