@@ -43,6 +43,7 @@ export type DecisionEntry = {
   fromStatus: string;
   toStatus: string;
   decidedBy: string;
+  decidedByLabel: string;
   reason: string | null;
   createdAt: string;
 };

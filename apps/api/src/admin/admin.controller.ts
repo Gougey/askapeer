@@ -1,6 +1,19 @@
-import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import type { Request } from 'express';
+import { JwtAuthGuard, type AuthedMember } from '../auth/jwt-auth.guard';
+import { VerificationService } from '../verification/verification.service';
 import { AdminGuard } from './admin.guard';
+import { VerificationDecisionDto } from './admin.dto';
 import { AdminService } from './admin.service';
 
 /**
@@ -11,7 +24,10 @@ import { AdminService } from './admin.service';
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminController {
-  constructor(private readonly admin: AdminService) {}
+  constructor(
+    private readonly admin: AdminService,
+    private readonly verification: VerificationService,
+  ) {}
 
   @Get('members')
   members(@Query('status') status?: string) {
@@ -31,5 +47,18 @@ export class AdminController {
   @Get('audit/verification')
   audit() {
     return this.admin.auditLog();
+  }
+
+  /**
+   * A manual verification decision (EPIC-A §6). The admin's own member id is the
+   * `decided_by` on the immutable decision row — the reviewer, not "system".
+   */
+  @Post('members/:id/verification-decision')
+  decide(
+    @Req() req: Request & { member: AuthedMember },
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: VerificationDecisionDto,
+  ) {
+    return this.verification.recordAdminDecision(id, dto.action, req.member.memberId, dto.reason ?? null);
   }
 }

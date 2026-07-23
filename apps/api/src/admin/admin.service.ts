@@ -56,6 +56,8 @@ export type DecisionEntry = {
   fromStatus: string;
   toStatus: string;
   decidedBy: string;
+  /** Human-readable: "System (automated)" or the reviewing admin's name. */
+  decidedByLabel: string;
   reason: string | null;
   createdAt: string;
 };
@@ -133,7 +135,10 @@ export class AdminService {
     ]);
 
     const stage = computeStage(row.verificationStatus, evidence, checks);
-    const handled = await this.handlesFor([id]);
+    const [handled, deciders] = await Promise.all([
+      this.handlesFor([id]),
+      this.deciderLabels(decisions.map((d) => d.decidedBy)),
+    ]);
     return {
       ...toSummary(row, stage, handled.has(id)),
       needsMoreInfoReason: row.needsMoreInfoReason,
@@ -146,7 +151,7 @@ export class AdminService {
         rawResult: e.rawResult,
         createdAt: e.createdAt.toISOString(),
       })),
-      decisions: decisions.map(toDecision),
+      decisions: decisions.map((d) => toDecision(d, deciders)),
       identityChecks: checks.map((c) => ({
         id: c.id,
         provider: c.provider,
@@ -207,15 +212,28 @@ export class AdminService {
       .innerJoin(members, eq(verificationDecisions.memberId, members.id))
       .orderBy(desc(verificationDecisions.createdAt))
       .limit(limit);
+    const deciders = await this.deciderLabels(rows.map((r) => r.decidedBy));
     return rows.map((r) => ({
       id: r.id,
       fromStatus: r.fromStatus,
       toStatus: r.toStatus,
       decidedBy: r.decidedBy,
+      decidedByLabel: labelOf(r.decidedBy, deciders),
       reason: r.reason,
       createdAt: r.createdAt.toISOString(),
       member: { id: r.memberId, legalName: r.legalName, email: r.email },
     }));
+  }
+
+  /** Resolve `decided_by` member ids to names so the audit doesn't show raw UUIDs. */
+  private async deciderLabels(decidedBy: string[]): Promise<Map<string, string>> {
+    const ids = [...new Set(decidedBy.filter((d) => d !== 'system'))];
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: members.id, legalName: members.legalName })
+      .from(members)
+      .where(inArray(members.id, ids));
+    return new Map(rows.map((r) => [r.id, r.legalName]));
   }
 
   /** Compute the pipeline stage for a set of members in two batched reads (no N+1). */
@@ -301,22 +319,31 @@ function toSummary(row: MemberRow, stage: Stage, hasHandle: boolean): MemberSumm
   };
 }
 
-function toDecision(d: {
-  id: string;
-  fromStatus: string;
-  toStatus: string;
-  decidedBy: string;
-  reason: string | null;
-  createdAt: Date;
-}): DecisionEntry {
+function toDecision(
+  d: {
+    id: string;
+    fromStatus: string;
+    toStatus: string;
+    decidedBy: string;
+    reason: string | null;
+    createdAt: Date;
+  },
+  deciders: Map<string, string>,
+): DecisionEntry {
   return {
     id: d.id,
     fromStatus: d.fromStatus,
     toStatus: d.toStatus,
     decidedBy: d.decidedBy,
+    decidedByLabel: labelOf(d.decidedBy, deciders),
     reason: d.reason,
     createdAt: d.createdAt.toISOString(),
   };
+}
+
+function labelOf(decidedBy: string, deciders: Map<string, string>): string {
+  if (decidedBy === 'system') return 'System (automated)';
+  return deciders.get(decidedBy) ?? decidedBy;
 }
 
 function computeStage(
