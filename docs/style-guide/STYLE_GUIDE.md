@@ -1,6 +1,6 @@
 # AskaPeer — Style Guide & Design System
 
-**Version 0.1 · Status: Draft for review**
+**Version 0.2 · Status: Draft for review**
 
 The single source of truth for how AskaPeer looks, feels and reads. This guide
 codifies the aesthetic already validated in the mobile look-and-feel prototype
@@ -67,10 +67,18 @@ Everything below serves these three rules.
 
 Calm, precise, trustworthy, and quietly confident — the aesthetic of a
 well-made professional instrument, not a consumer social app. Our reference
-points are the systematic restraint of tools like Stripe and Linear, the
-interaction correctness of Apple's Human Interface Guidelines, and the sober
-clarity of good clinical software. **Trust is the product**, and the interface's
-job is to look like it can be trusted with a difficult case at 11pm.
+points, in four registers:
+
+- **Editorial authority** — the sober, institutional confidence of the WHO
+  (who.int): generous headings, hairline structure, considered whitespace.
+- **Premium restraint** — the timeless serif-led typography of a brand like
+  Rolex, which reads expensive precisely because it is quiet.
+- **Systematic rigour** — the token discipline of tools like Stripe and Linear.
+- **Interaction correctness & clinical clarity** — Apple's Human Interface
+  Guidelines and the soberness of good clinical software.
+
+**Trust is the product**, and the interface's job is to look like it can be
+trusted with a difficult case at 11pm.
 
 ---
 
@@ -204,10 +212,12 @@ exactly as noted in `apps/web/src/app/globals.css`.
 | `--color-bg` / `--color-surface` / `--color-fg` / `--color-muted` | as above | Canvas & text. |
 
 > **Migration note.** The production app currently ships placeholder tokens
-> (a generic sky `#0ea5e9` accent). Adopting this guide means setting
-> `--color-accent: #001f52` and adding `--color-kudos`, `--color-verify`,
-> `--color-spark`, `--color-danger` and the neutral scale in `globals.css`. No
-> component markup needs to change. See §12 for a drop-in token block.
+> (a generic sky `#0ea5e9` accent) and the system font stack. Adopting this
+> guide means: (1) set `--color-accent: #001f52` and add `--color-kudos`,
+> `--color-verify`, `--color-spark`, `--color-danger` and the neutral scale in
+> `globals.css`; (2) load **Fraunces** + **Inter** via `next/font` and set
+> `--font-display` / `--font-sans`; (3) apply `--font-display` to heading
+> elements. No component *markup* needs to change. See §12 for a drop-in block.
 
 ### 2.5 Colour usage rules
 
@@ -224,56 +234,93 @@ exactly as noted in `apps/web/src/app/globals.css`.
 
 ## 3. Typography
 
-### 3.1 Typeface
+### 3.1 Typefaces
 
-AskaPeer uses the **native system font stack**. It renders instantly, respects
-the user's OS, looks correct on every platform, and — importantly for a calm,
-clinical product — carries no personality of its own to fight the content.
+AskaPeer pairs a **serif for headings** with a **sans for everything else** — a
+deliberately editorial pairing that gives the product two registers at once:
+the *authority* of an institution (think WHO) and the *timeless, premium*
+restraint of a considered brand (think Rolex), without ever adding a hierarchy
+signal.
+
+| Role | Typeface | Where |
+|---|---|---|
+| **Display / headings** | **Fraunces** | Screen titles, thread question (H1), card & section headings, large stat numbers |
+| **Text / UI / data** | **Inter** | Body copy, labels, buttons, chips, meta, stats, form fields — everything that isn't a heading |
 
 ```css
---font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-             Helvetica, Arial, sans-serif;
+--font-display: 'Fraunces', Georgia, 'Times New Roman', serif;   /* headings only */
+--font-sans:    'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI",
+                Roboto, Helvetica, Arial, sans-serif;             /* everything else */
 ```
 
-There is no display or brand typeface. If a future marketing site needs one,
-that is a separate decision and must not leak into the app.
+**Fraunces** is an "old-style" serif with optical warmth — it carries gravitas
+at heading sizes and a subtle character (especially in *italic*, used sparingly
+for emphasis) that reads premium, not decorative. **Inter** is a neutral,
+highly-legible UI sans that keeps the interface crisp and clinical.
+
+- **Hosting:** self-host both via `next/font` (Next.js) — do **not** hot-link
+  Google Fonts in production (privacy + performance). Ship only the weights in
+  §3.3 and the `latin` subset for en-GB.
+- **Fallbacks matter:** the stacks above degrade gracefully (Georgia for the
+  serif, system sans for Inter) so a slow font load never breaks layout.
+- **Serif is for headings only.** Never set body, labels, buttons, or data in
+  the serif; never set a screen title in the sans. This split *is* the system.
 
 ### 3.2 Type scale
 
-Sizes are tuned for mobile reading. `letter-spacing` tightens as size grows;
-line-height loosens as size shrinks.
+Sizes are tuned for mobile reading. Headings are **Fraunces** (serif); the
+eyebrow, label, body, caption tiers are **Inter** (sans). `letter-spacing`
+tightens as serif size grows; the uppercase eyebrow/label tiers are tracked open.
 
-| Token | Size / line-height | Weight | Tracking | Use |
-|---|---|---|---|---|
-| `--text-display` | 21px / 1.2 | 800 | −0.02em | Screen titles ("Your feed"), profile handle |
-| `--text-title` | 19px / 1.28 | 800 | −0.02em | Thread question (H1) |
-| `--text-heading` | 16px / 1.3 | 700 | −0.01em | Card titles, sheet titles |
-| `--text-body` | 14px / 1.45 | 400 | 0 | Answer bodies, primary reading text |
-| `--text-body-sm` | 13.5px / 1.45 | 400 | 0 | Snippets, secondary reading |
-| `--text-label` | 12px / 1.3 | 700 | +0.03em, uppercase | Field labels, section labels |
-| `--text-caption` | 12px / 1.3 | 600 | 0 | Meta, stats, handles |
-| `--text-micro` | 11px / 1.2 | 700 | +0.04em, uppercase | Case-field labels, eyebrow tags |
+| Token | Family | Size / line-height | Weight | Tracking | Use |
+|---|---|---|---|---|---|
+| `--text-display` | Fraunces | 26px / 1.12 | 600 | −0.01em | Screen titles ("Discussions") |
+| `--text-title` | Fraunces | 22px / 1.24 | 600 | −0.005em | Thread question (H1) |
+| `--text-heading` | Fraunces | 17px / 1.3 | 600 | 0 | Card titles, sheet titles |
+| `--text-stat` | Fraunces | 20–24px / 1.1 | 600 | 0 | Large stat numbers, kudos totals |
+| `--text-eyebrow` | Inter | 11.5px / 1.2 | 700 | +0.16em, uppercase | Eyebrow labels above titles |
+| `--text-body` | Inter | 14.5px / 1.5 | 400 | 0 | Answer bodies, primary reading text |
+| `--text-body-sm` | Inter | 13.5px / 1.5 | 400 | 0 | Snippets, secondary reading |
+| `--text-label` | Inter | 12px / 1.3 | 700 | +0.06em, uppercase | Field labels, section labels |
+| `--text-caption` | Inter | 12px / 1.3 | 600 | 0 | Meta, stats, handles |
 
 ### 3.3 Weight scale
 
-| Weight | Use |
-|---|---|
-| 400 Regular | Body copy |
-| 500 Medium | Handles, emphasised inline text |
-| 600 Semibold | Meta, chips, captions, secondary buttons |
-| 700 Bold | Card & section headings, labels |
-| 800 Extrabold | Screen titles, thread H1, numbers in stats, kudos totals |
+Ship only these weights (keeps the font payload small).
 
-### 3.4 Typographic rules
+| Family | Weights | Use |
+|---|---|---|
+| **Fraunces** | 600 Semibold, 700 Bold | Headings; 600 is the default heading weight, 700 for the largest display / hero |
+| **Inter** | 400 Regular, 500 Medium, 600 Semibold, 700 Bold, 800 Extrabold | 400 body · 500 handles/emphasis · 600 meta/chips/buttons · 700 labels & eyebrows · 800 rare emphasis |
+
+Fraunces *italic* (600) is permitted **sparingly** for a single emphasised word
+in a hero or headline (e.g. *"Ideas win on **merit**, not rank."*). Never
+italicise body copy.
+
+### 3.4 Editorial polish (the WHO/Rolex register)
+
+A small set of moves lift the layout from "app" to "considered institution".
+Use them consistently:
+
+- **Eyebrow + title + keyline.** A section or screen leads with an *eyebrow*
+  (uppercase, tracked, Inter) above a *serif title*, followed by a short **accent
+  keyline** (a ~44px, 2px bar). Use the keyline **once per screen/section**, not
+  on every card — restraint is the point.
+- **Confident scale.** Give headings room; pair them with generous whitespace
+  rather than dense stacking.
+- **Hairline rhythm.** Separate major sections with a single hairline
+  (`--color-border`) rather than boxes where possible.
+
+### 3.5 Typographic rules
 
 - **British English throughout** (en-GB): "specialise", "colour", "-ise"
   endings. The codebase locale is `en-GB` — do not introduce American spellings.
-- **Sentence case** for everything except the wordmark and micro-labels
+- **Sentence case** for everything except the wordmark and eyebrow/micro-labels
   (which are `UPPERCASE` with tracking). No Title Case headings.
 - **One H1 per screen** — the thread question. Cards use `h3`; never skip
   heading levels (accessibility, §9).
-- **Numerals are content.** Kudos counts, stats, and read-times are set in the
-  extrabold weight because they carry meaning; align and never truncate them.
+- **Numerals are content.** Kudos counts and large stats are set in Fraunces so
+  they read as considered figures; align and never truncate them.
 - Body copy target measure: **60–75 characters**. On the 430px mobile frame the
   16px side padding delivers this naturally; preserve it on wider viewports by
   constraining content to `--container-max` (see §4).
@@ -844,8 +891,9 @@ of changing the values, not the markup — matching the intent already stated in
   --color-bad:           var(--color-danger);
 
   /* ---- Typography ---- */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-               Helvetica, Arial, sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif; /* headings only */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif;                     /* everything else */
 
   /* ---- Radius ---- */
   --radius-sm:        12px;
@@ -926,8 +974,9 @@ of changing the values, not the markup — matching the intent already stated in
   professional bodies (FD-1) may influence body-area taxonomy chips.
 - **Native platforms** (iOS/Android): confirm whether these tokens map to native
   (they should — system font + semantic tokens translate cleanly).
-- **Marketing brand**: decide whether a display typeface is ever introduced for
-  the marketing site (it must not enter the app).
+- **Type licensing**: Fraunces and Inter are both open-source (SIL Open Font
+  License) — confirm self-hosting via `next/font` and that the shipped subset is
+  `latin` only, for en-GB.
 - **Icon set**: choose and vendor a single line-icon library to replace the
   current emoji placeholders.
 
@@ -935,6 +984,7 @@ of changing the values, not the markup — matching the intent already stated in
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 2026-07-25 | **Editorial typography pass.** Introduced a **Fraunces** (serif display) + **Inter** (sans text/UI) pairing for a WHO/Rolex register; added the eyebrow → serif title → accent-keyline pattern (§3.4) and a confident type scale. Updated §3, §12 tokens, and the live showcase. Palette, components and safety patterns unchanged — a theming pass, not a redesign. |
 | 0.1 | 2026-07-25 | Initial style guide & design system: foundations, colour, type, spacing, elevation, iconography, motion, component library, accessibility, voice & tone, anonymity/safety UX, and token reference. Codifies the mobile look-and-feel prototype. |
 
 ---
