@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
 /*
-  Themeable token layer. The style guide (later) overrides these CSS variables;
-  components reference the tokens, so applying the design system is a theming pass,
-  not a rewrite. Light + dark are both defined.
+  AskaPeer design tokens — see docs/style-guide/STYLE_GUIDE.md.
+  Components reference these semantic variables, so applying the design system is a
+  theming pass, not a rewrite. Light + dark are both defined.
 */
+
+/* ---- Self-hosted brand fonts (latin subset) ---- */
+@font-face { font-family:'Fraunces'; src:url('/fonts/fraunces-600.woff2') format('woff2'); font-weight:600; font-style:normal; font-display:swap; }
+@font-face { font-family:'Inter'; src:url('/fonts/inter-400.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family:'Inter'; src:url('/fonts/inter-500.woff2') format('woff2'); font-weight:500; font-style:normal; font-display:swap; }
+@font-face { font-family:'Inter'; src:url('/fonts/inter-600.woff2') format('woff2'); font-weight:600; font-style:normal; font-display:swap; }
+@font-face { font-family:'Inter'; src:url('/fonts/inter-700.woff2') format('woff2'); font-weight:700; font-style:normal; font-display:swap; }
+
 @theme {
-  --color-bg: #f8fafc;
+  /* Brand */
+  --color-navy: #001f52;
+  --color-navy-dark: #001640;
+  --color-navy-tint: #e6ebf2;
+  --color-navy-tint-2: #f2f5f9;
+  --color-spark: #ed1b24;
+  --color-spark-dark: #c00f18;
+  --color-kudos: #d98a1f;
+  --color-kudos-text: #8a5a12;
+  --color-kudos-tint: #fbf0dc;
+  --color-verify: #2e8b6f;
+  --color-verify-text: #256f59;
+  --color-verify-tint: #e4f2eb;
+  --color-danger: #c0492f;
+
+  /* Neutrals (light) */
+  --color-bg: #eef1f4;
   --color-surface: #ffffff;
-  --color-fg: #0f172a;
-  --color-muted: #64748b;
-  --color-accent: #0ea5e9;
-  --color-ok: #16a34a;
-  --color-bad: #dc2626;
+  --color-fg: #14212b;
+  --color-muted: #64757f;
+  --color-faint: #93a1a9;
+  --color-border: #e5ebee;
+  --color-border-strong: #d7e0e4;
+
+  /* Semantic aliases (what components reference) */
+  --color-accent: var(--color-navy);
+  --color-ok: var(--color-verify);
+  --color-bad: var(--color-danger);
+
+  /* Typography */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+/*
+  Dark theme. NB: this is a plain `:root` override inside the media query — NOT a second
+  `@theme` block. Tailwind v4 hoists every `@theme` into one unconditional `:root`, so a
+  nested `@theme` would make dark apply in *both* schemes. A normal media-gated `:root`
+  override is the correct v4 pattern for prefers-color-scheme.
+*/
 @media (prefers-color-scheme: dark) {
-  @theme {
+  :root {
     --color-bg: #0b1220;
     --color-surface: #111a2b;
     --color-fg: #e2e8f0;
     --color-muted: #94a3b8;
+    --color-faint: #5f7183;
+    --color-border: #1e2c40;
+    --color-border-strong: #2a3a52;
+    --color-navy-tint: #16233b;
+    --color-navy-tint-2: #141f33;
+    --color-verify-tint: #14332a;
+    --color-kudos-tint: #2e2413;
+
+    --color-accent: #6f9bff;
+    --color-kudos: #e2a53f;
+    --color-kudos-text: #e2a53f;
+    --color-verify: #4bbf98;
+    --color-verify-text: #4bbf98;
+    --color-spark: #ff5a5f;
   }
 }
 
@@ -28,4 +81,21 @@ html,
 body {
   background: var(--color-bg);
   color: var(--color-fg);
+  font-family: var(--font-sans);
+}
+
+/* Headings carry the serif — the editorial register (see style guide §3). */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* A short accent keyline; add className="keyline" under a screen title. */
+.keyline {
+  display: block;
+  height: 2px;
+  width: 44px;
+  border-radius: 2px;
+  background: var(--color-accent);
 }
