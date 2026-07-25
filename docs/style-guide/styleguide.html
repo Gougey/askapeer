@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AskaPeer — Design System</title>
+<style>
+  /* ============================================================
+     AskaPeer design tokens — see docs/style-guide/STYLE_GUIDE.md §12
+     Both themes are defined here so the in-page toggle works.
+     ============================================================ */
+  :root, [data-theme="light"] {
+    --color-navy:#001f52; --color-navy-dark:#001640; --color-navy-tint:#e6ebf2; --color-navy-tint-2:#f2f5f9;
+    --color-spark:#ed1b24; --color-spark-dark:#c00f18; --color-spark-tint:#fdecec;
+    --color-kudos:#d98a1f; --color-kudos-text:#8a5a12; --color-kudos-tint:#fbf0dc;
+    --color-verify:#2e8b6f; --color-verify-text:#256f59; --color-verify-tint:#e4f2eb;
+    --color-danger:#c0492f;
+    --color-bg:#eef1f4; --color-surface:#ffffff; --color-fg:#14212b; --color-muted:#64757f;
+    --color-faint:#93a1a9; --color-border:#e5ebee; --color-border-strong:#d7e0e4;
+    --color-accent:var(--color-navy); --color-ok:var(--color-verify); --color-bad:var(--color-danger);
+    --shadow-card:0 1px 2px rgba(20,33,43,.06), 0 4px 16px rgba(20,33,43,.05);
+    --shadow-fab:0 6px 16px rgba(237,27,36,.4);
+  }
+  [data-theme="dark"] {
+    --color-bg:#0b1220; --color-surface:#111a2b; --color-fg:#e2e8f0; --color-muted:#94a3b8;
+    --color-faint:#5f7183; --color-border:#1e2c40; --color-border-strong:#2a3a52;
+    --color-accent:#6f9bff; --color-kudos:#e2a53f; --color-kudos-text:#e2a53f;
+    --color-verify:#4bbf98; --color-verify-text:#4bbf98; --color-spark:#ff5a5f;
+    --color-navy-tint:#16233b; --color-navy-tint-2:#141f33; --color-verify-tint:#14332a;
+    --color-kudos-tint:#2e2413; --color-spark-tint:#331416;
+    --shadow-card:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+  }
+
+  :root{
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --radius-sm:12px; --radius-md:14px; --radius:16px; --radius-lg:20px; --radius-pill:999px;
+    --radius-avatar:9px; --radius-avatar-lg:20px;
+  }
+
+  * { box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:var(--font-sans); background:var(--color-bg); color:var(--color-fg);
+    line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---- Page chrome ---- */
+  .topbar{
+    position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between;
+    gap:16px; padding:14px 24px; background:var(--color-surface); border-bottom:1px solid var(--color-border);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-.02em; font-size:19px; }
+  .brand .mark{ width:30px; height:30px; border-radius:9px; background:var(--color-navy);
+    display:grid; place-items:center; color:#fff; font-weight:800; }
+  .brand b{ color:var(--color-spark); font-weight:800; }
+  .brand .sub{ font-weight:600; font-size:12px; color:var(--color-muted); letter-spacing:0; margin-left:4px; }
+  .toggle{
+    border:1px solid var(--color-border-strong); background:var(--color-surface); color:var(--color-fg);
+    font:inherit; font-weight:600; font-size:13px; padding:8px 14px; border-radius:999px; cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .toggle:hover{ background:var(--color-navy-tint); }
+
+  .wrap{ max-width:1040px; margin:0 auto; padding:32px 24px 80px; }
+  .lede{ max-width:70ch; color:var(--color-muted); font-size:15px; }
+  .lede strong{ color:var(--color-fg); }
+
+  section{ margin-top:48px; }
+  h2.sec{ font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--color-muted);
+    font-weight:800; margin:0 0 4px; }
+  h3.title{ font-size:24px; font-weight:800; letter-spacing:-.02em; margin:0 0 16px; }
+  h4{ font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-faint);
+    font-weight:700; margin:24px 0 10px; }
+  .note{ font-size:12.5px; color:var(--color-faint); margin-top:8px; }
+
+  .grid{ display:grid; gap:12px; }
+  .cols-2{ grid-template-columns:repeat(2,1fr); }
+  .cols-3{ grid-template-columns:repeat(3,1fr); }
+  .cols-4{ grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
+  @media(max-width:640px){ .cols-2,.cols-3{ grid-template-columns:1fr; } }
+
+  /* ---- Swatches ---- */
+  .swatch{ border:1px solid var(--color-border); border-radius:var(--radius); overflow:hidden; background:var(--color-surface); }
+  .swatch .chip{ height:72px; display:flex; align-items:flex-end; justify-content:space-between; padding:8px 10px; }
+  .swatch .meta{ padding:9px 11px; }
+  .swatch .nm{ font-size:12.5px; font-weight:700; }
+  .swatch .hex{ font-size:11.5px; color:var(--color-muted); font-family:ui-monospace,Menlo,monospace; }
+  .swatch .ratio{ font-size:11px; font-weight:700; padding:2px 7px; border-radius:999px; }
+  .pass{ background:var(--color-verify-tint); color:var(--color-verify-text); }
+  .fail{ background:var(--color-spark-tint); color:var(--color-spark-dark); }
+  .large{ background:var(--color-navy-tint); color:var(--color-navy-dark); }
+
+  /* ---- Generic card ---- */
+  .card{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius);
+    padding:16px; box-shadow:var(--shadow-card); }
+  .panel{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius);
+    padding:20px; }
+
+  .tagrow{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:9px; }
+  .tag{ font-size:11px; font-weight:700; padding:3px 9px; border-radius:6px; background:var(--color-navy-tint); color:var(--color-navy-dark); }
+  .tag.topic{ background:var(--color-border); color:var(--color-muted); }
+  .tag.muted{ background:transparent; color:var(--color-faint); }
+
+  /* ---- Buttons ---- */
+  .btn{ font:inherit; font-weight:700; font-size:14px; border-radius:var(--radius-pill); padding:10px 18px;
+    border:1px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+  .btn-primary{ background:var(--color-navy); color:#fff; }
+  .btn-primary:hover{ background:var(--color-navy-dark); }
+  .btn-secondary{ background:var(--color-surface); color:var(--color-fg); border-color:var(--color-border-strong); }
+  .btn-secondary:hover{ background:var(--color-navy-tint); }
+  .btn-danger{ background:transparent; color:var(--color-danger); border-color:var(--color-border-strong); }
+  .btn-ghost{ background:transparent; color:var(--color-muted); }
+  .btn[disabled]{ background:#c3ccd1; color:#fff; cursor:not-allowed; border-color:transparent; }
+  [data-theme="dark"] .btn[disabled]{ background:#2a3a52; color:#5f7183; }
+  .btn:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+  /* ---- Chips ---- */
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; }
+  .fchip{ border:1px solid var(--color-border-strong); background:var(--color-surface); color:var(--color-muted);
+    font-size:13px; font-weight:600; padding:7px 14px; border-radius:999px; cursor:pointer; }
+  .fchip.active{ background:var(--color-navy); border-color:var(--color-navy); color:#fff; }
+  [data-theme="dark"] .fchip.active{ background:var(--color-accent); border-color:var(--color-accent); color:#04122e; }
+
+  /* ---- Monogram tiles ---- */
+  .ava{ border-radius:var(--radius-avatar); display:grid; place-items:center; color:#fff; font-weight:700; flex:0 0 auto; }
+  .ava.sm{ width:26px; height:26px; font-size:12px; border-radius:8px; }
+  .ava.md{ width:30px; height:30px; font-size:13px; }
+  .ava.lg{ width:72px; height:72px; font-size:30px; border-radius:var(--radius-avatar-lg); }
+
+  /* ---- Kudos ---- */
+  .kudos-btn{ display:inline-flex; align-items:center; gap:6px; border:1px solid var(--color-border-strong);
+    background:var(--color-surface); color:var(--color-muted); font-weight:700; font-size:12.5px;
+    padding:6px 11px; border-radius:999px; cursor:pointer; }
+  .kudos-btn svg{ width:15px; height:15px; }
+  .kudos-btn.given{ background:var(--color-kudos-tint); border-color:#e6cf9c; color:var(--color-kudos-text); }
+  [data-theme="dark"] .kudos-btn.given{ border-color:#5a4a24; color:var(--color-kudos); }
+  .kudos-star{ color:var(--color-kudos); }
+  .stat{ display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:var(--color-muted); font-weight:600; }
+  .stat svg{ width:15px; height:15px; }
+  .stat.k{ color:var(--color-kudos-text); }
+  [data-theme="dark"] .stat.k{ color:var(--color-kudos); }
+
+  /* ---- Badges ---- */
+  .badge{ display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:800;
+    text-transform:uppercase; letter-spacing:.03em; padding:3px 8px; border-radius:6px; }
+  .badge.best{ color:var(--color-verify-text); background:var(--color-verify-tint); }
+  [data-theme="dark"] .badge.best{ color:var(--color-verify); }
+  .badge svg{ width:12px; height:12px; }
+  .answered{ display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:700; color:var(--color-verify-text); }
+  [data-theme="dark"] .answered{ color:var(--color-verify); }
+  .answered svg{ width:14px; height:14px; }
+
+  .who{ display:flex; align-items:center; gap:8px; }
+  .handle{ font-size:12.5px; font-weight:700; color:var(--color-fg); }
+  .foot{ display:flex; align-items:center; justify-content:space-between; margin-top:12px; }
+  .stats{ display:flex; gap:14px; }
+
+  /* discussion card bits */
+  .card h3.q{ margin:0 0 6px; font-size:15.5px; font-weight:700; line-height:1.32; letter-spacing:-.01em; }
+  .snip{ margin:0; font-size:13px; color:var(--color-muted); }
+  .article h3{ margin:0 0 6px; font-size:16px; font-weight:700; line-height:1.3; }
+  .meta{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--color-faint); margin-top:10px; flex-wrap:wrap; }
+  .meta .src{ font-weight:600; color:var(--color-muted); }
+
+  /* answer */
+  .answer{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:13px 14px; }
+  .answer.top{ background:var(--color-verify-tint); border-color:transparent; box-shadow:0 0 0 1px var(--color-verify) inset; }
+  [data-theme="dark"] .answer.top{ background:var(--color-verify-tint); }
+  .answer .ahead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .answer .body{ font-size:14px; }
+
+  /* segmented */
+  .segmented{ display:inline-flex; background:var(--color-border); border-radius:11px; padding:3px; }
+  [data-theme="dark"] .segmented{ background:#1a2740; }
+  .segmented button{ border:none; background:transparent; padding:8px 16px; font:inherit; font-size:13px; font-weight:700;
+    color:var(--color-muted); border-radius:8px; cursor:pointer; }
+  .segmented button.active{ background:var(--color-surface); color:var(--color-navy); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  [data-theme="dark"] .segmented button.active{ color:var(--color-accent); }
+
+  /* inputs */
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12px; font-weight:700; color:var(--color-muted); margin-bottom:6px;
+    text-transform:uppercase; letter-spacing:.03em; }
+  .field input, .field textarea, .field select{
+    width:100%; border:1px solid var(--color-border-strong); border-radius:var(--radius-sm); padding:12px 13px;
+    font:inherit; font-size:15px; outline:none; background:var(--color-bg); color:var(--color-fg); }
+  .field input:focus{ border-color:var(--color-accent); background:var(--color-surface); }
+  .field .hint{ font-size:11.5px; color:var(--color-faint); margin-top:5px; }
+
+  /* checklist / attestation */
+  .checklist{ background:var(--color-navy-tint-2); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:6px 14px; }
+  .chead{ display:flex; align-items:center; gap:7px; padding:10px 0 6px; font-size:13px; font-weight:800; color:var(--color-navy-dark); }
+  [data-theme="dark"] .chead{ color:var(--color-accent); }
+  .chead svg{ width:17px; height:17px; }
+  .checkitem{ display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid var(--color-border); font-size:12.5px; }
+  .checkitem input{ margin-top:1px; width:18px; height:18px; accent-color:var(--color-accent); flex:0 0 auto; }
+  .attest{ display:flex; gap:10px; align-items:flex-start; padding:12px; border:1px solid #e6cf9c; background:var(--color-kudos-tint);
+    border-radius:var(--radius-sm); margin-top:12px; font-size:12px; font-style:italic; color:var(--color-kudos-text); }
+  [data-theme="dark"] .attest{ border-color:#5a4a24; color:var(--color-kudos); }
+  .attest input{ margin-top:1px; width:18px; height:18px; accent-color:var(--color-kudos); flex:0 0 auto; }
+
+  /* reassurance / notif */
+  .anon-card{ padding:14px; background:var(--color-navy-tint-2); border:1px solid var(--color-border); border-radius:var(--radius);
+    display:flex; gap:11px; align-items:flex-start; }
+  .anon-card svg{ width:26px; height:26px; color:var(--color-accent); flex:0 0 auto; }
+  .anon-card .at{ font-size:13px; font-weight:700; color:var(--color-navy-dark); }
+  [data-theme="dark"] .anon-card .at{ color:var(--color-fg); }
+  .anon-card .ad{ font-size:12.5px; color:var(--color-muted); margin-top:3px; }
+
+  .notif{ display:flex; gap:12px; align-items:flex-start; padding:13px 14px; border:1px solid var(--color-border);
+    border-radius:var(--radius-md); background:var(--color-surface); }
+  .notif.unread{ background:var(--color-navy-tint-2); }
+  .nicon{ width:34px; height:34px; border-radius:50%; display:grid; place-items:center; flex:0 0 auto; }
+  .nicon.k{ background:var(--color-kudos-tint); color:var(--color-kudos); }
+  .nicon.r{ background:var(--color-navy-tint); color:var(--color-accent); }
+  .nicon svg{ width:18px; height:18px; }
+  .ntext{ font-size:13.5px; }
+  .ntime{ font-size:11.5px; color:var(--color-faint); margin-top:3px; }
+
+  /* kudos hero + stats */
+  .kudos-hero{ display:inline-flex; align-items:center; gap:7px; background:var(--color-kudos-tint);
+    border:1px solid #ecd6a6; color:var(--color-kudos-text); font-weight:800; font-size:15px; padding:8px 16px; border-radius:999px; }
+  [data-theme="dark"] .kudos-hero{ border-color:#5a4a24; color:var(--color-kudos); }
+  .kudos-hero svg{ width:18px; height:18px; color:var(--color-kudos); }
+  .pstats{ display:flex; border:1px solid var(--color-border); border-radius:var(--radius); overflow:hidden; }
+  .pstat{ flex:1; text-align:center; padding:14px 6px; }
+  .pstat+.pstat{ border-left:1px solid var(--color-border); }
+  .pstat .num{ font-size:20px; font-weight:800; }
+  .pstat .lbl{ font-size:11px; color:var(--color-muted); font-weight:600; margin-top:2px; }
+
+  /* type scale */
+  .type-row{ display:flex; align-items:baseline; gap:16px; padding:12px 0; border-bottom:1px solid var(--color-border); }
+  .type-row .lab{ width:130px; flex:0 0 auto; font-size:11.5px; color:var(--color-faint); font-family:ui-monospace,monospace; }
+  .t-display{ font-size:21px; font-weight:800; letter-spacing:-.02em; }
+  .t-title{ font-size:19px; font-weight:800; letter-spacing:-.02em; }
+  .t-heading{ font-size:16px; font-weight:700; }
+  .t-body{ font-size:14px; }
+  .t-label{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--color-muted); }
+  .t-caption{ font-size:12px; font-weight:600; color:var(--color-muted); }
+
+  /* spacing + radius demos */
+  .sp{ background:var(--color-accent); height:16px; border-radius:3px; }
+  .radbox{ background:var(--color-navy-tint); border:1px solid var(--color-border-strong); height:64px; display:grid; place-items:center;
+    font-size:11.5px; color:var(--color-muted); font-family:ui-monospace,monospace; }
+  .elev{ background:var(--color-surface); height:72px; border-radius:var(--radius); display:grid; place-items:center;
+    font-size:11.5px; color:var(--color-muted); font-family:ui-monospace,monospace; border:1px solid var(--color-border); }
+
+  /* nav demo */
+  .navdemo{ max-width:430px; border:1px solid var(--color-border); border-radius:var(--radius); overflow:hidden; background:var(--color-surface); }
+  .tabbar{ display:flex; align-items:stretch; height:62px; border-top:1px solid var(--color-border); }
+  .tab{ flex:1; border:none; background:transparent; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    color:var(--color-faint); cursor:pointer; font:inherit; }
+  .tab svg{ width:24px; height:24px; }
+  .tab .lbl{ font-size:10px; font-weight:600; }
+  .tab.active{ color:var(--color-navy); }
+  [data-theme="dark"] .tab.active{ color:var(--color-accent); }
+  .fab{ width:52px; height:52px; border-radius:18px; margin-top:-4px;
+    background:linear-gradient(135deg,var(--color-spark),var(--color-spark-dark)); color:#fff;
+    display:grid; place-items:center; box-shadow:var(--shadow-fab); border:none; cursor:pointer; }
+  .fab svg{ width:26px; height:26px; }
+
+  .toast{ display:inline-flex; background:#14212b; color:#fff; font-size:13px; font-weight:600; padding:11px 18px; border-radius:999px; }
+
+  .rule-callout{ border-left:3px solid var(--color-accent); padding:2px 0 2px 14px; margin:10px 0; color:var(--color-muted); font-size:13.5px; }
+  .footer{ margin-top:64px; padding-top:24px; border-top:1px solid var(--color-border); font-size:12.5px; color:var(--color-faint); }
+  a.doclink{ color:var(--color-accent); font-weight:600; text-decoration:none; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <span class="mark">A</span>
+      <span>Ask<b>a</b>Peer <span class="sub">Design System · v0.1</span></span>
+    </div>
+    <button class="toggle" id="themeToggle" aria-label="Toggle colour theme">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+      <span id="themeLabel">Dark</span>
+    </button>
+  </div>
+
+  <div class="wrap">
+    <p class="lede">The living companion to <a class="doclink" href="./STYLE_GUIDE.md">STYLE_GUIDE.md</a>.
+    Everything here is rendered from the real design tokens. AskaPeer is <strong>the no-ego sports medicine
+    network</strong>: verified, pseudonymous, merit over rank. Three rules override all else —
+    <strong>never introduce a hierarchy signal</strong>, <strong>show anonymity</strong>, and
+    <strong>make patient safety a component, not a policy page</strong>. Toggle the theme, top-right.</p>
+
+    <!-- ============ COLOUR ============ -->
+    <section>
+      <h2 class="sec">01 — Foundations</h2>
+      <h3 class="title">Colour</h3>
+      <p class="lede">A restrained palette on a large neutral canvas. Kudos gold is the product's one status
+      colour and is never used for anything else. Spark red is rationed to the Ask action and the wordmark.</p>
+
+      <h4>Brand</h4>
+      <div class="grid cols-4" id="brandSwatches"></div>
+
+      <h4>Neutrals</h4>
+      <div class="grid cols-4" id="neutralSwatches"></div>
+
+      <h4>Accessibility — text contrast on surface <span class="note" style="text-transform:none;letter-spacing:0">(WCAG 2.2 AA · normal text needs ≥ 4.5:1)</span></h4>
+      <div class="grid cols-3" id="contrastCards"></div>
+      <p class="note">Raw kudos gold fails as text — use <code>--color-kudos-text</code> for words, and keep the
+      gold for the filled star + count (a graphical pairing). <code>--color-faint</code> is decoration / large text only.</p>
+    </section>
+
+    <!-- ============ TYPE ============ -->
+    <section>
+      <h3 class="title">Typography</h3>
+      <p class="lede">The native system font stack — instant, familiar, no personality to fight the content.
+      British English throughout; sentence case except the wordmark and micro-labels.</p>
+      <div class="panel">
+        <div class="type-row"><span class="lab">display · 21/800</span><span class="t-display">Your feed</span></div>
+        <div class="type-row"><span class="lab">title · 19/800</span><span class="t-title">Persistent ankle instability despite full ROM?</span></div>
+        <div class="type-row"><span class="lab">heading · 16/700</span><span class="t-heading">Nordic vs Askling, revisited</span></div>
+        <div class="type-row"><span class="lab">body · 14/400</span><span class="t-body">Full ROM at 3 weeks with a negative Ottawa — I'd hold off imaging.</span></div>
+        <div class="type-row"><span class="lab">label · 12/700 ↑</span><span class="t-label">Body area</span></div>
+        <div class="type-row" style="border:none"><span class="lab">caption · 12/600</span><span class="t-caption">RestedRunner · Member since 2025</span></div>
+      </div>
+    </section>
+
+    <!-- ============ SPACING / RADIUS / ELEVATION ============ -->
+    <section>
+      <h3 class="title">Spacing, radius & elevation</h3>
+      <p class="lede">A 4px base unit; 16px is the workhorse (screen margins and card padding). Radii run from
+      12px inputs to the 999px pill; monogram tiles are rounded squares, never circles.</p>
+
+      <h4>Spacing scale (4px base)</h4>
+      <div class="panel" id="spacingDemo"></div>
+
+      <h4>Radius</h4>
+      <div class="grid cols-4">
+        <div class="radbox" style="border-radius:12px">12 · input</div>
+        <div class="radbox" style="border-radius:14px">14 · answer</div>
+        <div class="radbox" style="border-radius:16px">16 · card</div>
+        <div class="radbox" style="border-radius:20px">20 · sheet</div>
+        <div class="radbox" style="border-radius:999px">999 · pill</div>
+        <div class="radbox" style="border-radius:9px">9 · tile</div>
+      </div>
+
+      <h4>Elevation</h4>
+      <div class="grid cols-3">
+        <div class="elev" style="box-shadow:var(--shadow-card)">shadow-card</div>
+        <div class="elev" style="box-shadow:var(--shadow-fab)">shadow-fab</div>
+        <div class="elev">flat (border only)</div>
+      </div>
+    </section>
+
+    <!-- ============ COMPONENTS ============ -->
+    <section>
+      <h2 class="sec">02 — Components</h2>
+      <h3 class="title">Buttons</h3>
+      <div class="row">
+        <button class="btn btn-primary">Confirm handle</button>
+        <button class="btn btn-secondary">Cancel</button>
+        <button class="btn btn-danger">Sign out</button>
+        <button class="btn btn-ghost">Skip</button>
+        <button class="btn btn-primary" disabled>Post</button>
+      </div>
+      <p class="rule-callout">One primary per view. The app-wide primary is the Ask FAB; a sheet may have its own local primary (Post).</p>
+    </section>
+
+    <section>
+      <h3 class="title">Chips & tags</h3>
+      <h4>Filter chips (single-select row)</h4>
+      <div class="chips">
+        <button class="fchip active">All</button>
+        <button class="fchip">Shoulder</button>
+        <button class="fchip">Knee</button>
+        <button class="fchip">Hamstring</button>
+        <button class="fchip">Concussion</button>
+      </div>
+      <h4>Tags</h4>
+      <div class="tagrow">
+        <span class="tag">Knee</span>
+        <span class="tag topic">Research</span>
+        <span class="tag muted">Case discussion</span>
+        <span class="tag muted">Unanswered</span>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="title">Identity — monogram tiles</h3>
+      <p class="lede">Rounded squares, deterministic desaturated colour, white initials. Never a circle (that reads
+      as a photo slot), never a photo. The colour carries no meaning.</p>
+      <div class="row">
+        <span class="ava sm" style="background:#7a6cae">RR</span>
+        <span class="ava md" style="background:#3f8f76">CP</span>
+        <span class="ava md" style="background:#b5762f">PO</span>
+        <span class="ava md" style="background:#5c6f9e">NN</span>
+        <span class="ava lg" style="background:#4b7f96">RR</span>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="title">Kudos — the one status signal</h3>
+      <div class="row">
+        <button class="kudos-btn given" onclick="tk(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg><span class="kn">27</span></button>
+        <button class="kudos-btn" onclick="tk(this)"><svg class="kudos-star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg><span class="kn">14</span></button>
+        <span class="stat k"><svg class="kudos-star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>142</span>
+        <span class="kudos-hero"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>512 kudos · top 8%</span>
+      </div>
+      <p class="note">Default → given toggles the gold tint. As <em>text</em>, kudos uses the AA-safe darker gold; the star stays bright gold.</p>
+    </section>
+
+    <section>
+      <h3 class="title">Status & safety badges</h3>
+      <div class="row">
+        <span class="badge best"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>Best answer</span>
+        <span class="answered"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>Answered</span>
+        <span class="answered"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>De-identified &amp; attested</span>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="title">Cards</h3>
+      <div class="grid cols-2">
+        <article class="card article">
+          <div class="tagrow"><span class="tag">Knee</span><span class="tag topic">Research</span></div>
+          <h3>Blood-flow restriction after ACL reconstruction: what the 2025 RCTs actually show</h3>
+          <p class="snip">Three new trials complicate the early-loading consensus. A pragmatic read of who benefits.</p>
+          <div class="meta"><span class="src">Evidence digest</span><span>·</span><span>6 min read</span><span>·</span><span class="stat k"><svg class="kudos-star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>142</span></div>
+        </article>
+        <article class="card">
+          <div class="tagrow"><span class="tag">Ankle &amp; Foot</span><span class="tag muted">Case discussion</span></div>
+          <h3 class="q">Recreational runner, 3 weeks post lateral ankle sprain — persistent instability despite full ROM. Push proprioception or image?</h3>
+          <p class="snip">Full weight-bearing, ROM restored, but subjective giving-way on uneven ground…</p>
+          <div class="foot">
+            <div class="who"><span class="ava sm" style="background:#7a6cae">RR</span><span class="handle">RestedRunner</span></div>
+            <div class="stats">
+              <span class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>12</span>
+              <span class="stat k"><svg class="kudos-star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>34</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <h4>Answer — with best-answer treatment</h4>
+      <div class="grid" style="gap:10px">
+        <div class="answer top">
+          <div class="ahead">
+            <div class="who"><span class="ava sm" style="background:#3f8f76">TT</span><span class="handle">TibiaTraveller</span></div>
+            <span class="badge best"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>Best answer</span>
+          </div>
+          <div class="body">Full ROM at 3 weeks with negative Ottawa — I'd hold off imaging and treat the giving-way as a neuromuscular control deficit, not a structural one. Progress proprioceptive loading under fatigue; re-assess at 2 weeks.</div>
+          <button class="kudos-btn given" onclick="tk(this)" style="margin-top:10px"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg><span class="kn">27</span></button>
+        </div>
+        <div class="answer">
+          <div class="ahead"><div class="who"><span class="ava sm" style="background:#8a5cae">SS</span><span class="handle">SilentScapula</span></div></div>
+          <div class="body">Agree on delaying imaging. One addition: check peroneal reaction time specifically, not just static balance.</div>
+          <button class="kudos-btn" onclick="tk(this)" style="margin-top:10px"><svg class="kudos-star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg><span class="kn">14</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="title">Segmented control & forms</h3>
+      <div class="segmented" style="margin-bottom:16px">
+        <button class="active">Quick question</button>
+        <button>Case discussion</button>
+      </div>
+      <div class="panel" style="max-width:430px">
+        <div class="field">
+          <label for="ba">Body area</label>
+          <select id="ba"><option>Ankle &amp; Foot</option><option>Knee</option><option>Shoulder</option></select>
+        </div>
+        <div class="field">
+          <label for="q">Your question</label>
+          <input id="q" type="text" placeholder="Summarise it in one line…" />
+          <div class="hint">Posted under your handle only. No name, employer, or specialty is ever shown.</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="title">Patient-safety gate — de-identification & attestation</h3>
+      <p class="lede">A first-class safety component. The Post button stays disabled until every checklist item
+      <em>and</em> the attestation are ticked. This gate is mandatory and unbypassable.</p>
+      <div class="panel" style="max-width:520px">
+        <div class="checklist">
+          <div class="chead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>De-identification checklist</div>
+          <label class="checkitem"><input type="checkbox" class="ck" onchange="gate()"><span>No patient names, initials, or aliases</span></label>
+          <label class="checkitem"><input type="checkbox" class="ck" onchange="gate()"><span>No address, postcode, or identifying location</span></label>
+          <label class="checkitem"><input type="checkbox" class="ck" onchange="gate()"><span>Age given as a band (e.g. 30–39), not a date of birth</span></label>
+          <label class="checkitem"><input type="checkbox" class="ck" onchange="gate()"><span>Timelines relative, not exact dates</span></label>
+          <label class="checkitem"><input type="checkbox" class="ck" onchange="gate()"><span>No club, team, or facility that could identify the patient</span></label>
+          <label class="checkitem"><input type="checkbox" class="ck" onchange="gate()"><span>No images showing faces, tattoos, scars, or identifying features</span></label>
+        </div>
+        <label class="attest"><input type="checkbox" id="att" onchange="gate()"><span>I confirm this case is de-identified per AskaPeer's patient-privacy policy, and understand a breach may result in removal and referral to my regulator.</span></label>
+        <div class="row" style="margin-top:14px; justify-content:flex-end">
+          <button class="btn btn-primary" id="postBtn" disabled>Post case discussion</button>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="title">Notifications, reassurance & profile</h3>
+      <div class="grid cols-2">
+        <div class="grid" style="gap:10px">
+          <div class="notif unread">
+            <div class="nicon k"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z"/></svg></div>
+            <div><div class="ntext"><b>SilentScapula</b> and 4 others gave kudos to your answer on <b>anterior knee pain</b></div><div class="ntime">18 minutes ago</div></div>
+          </div>
+          <div class="notif">
+            <div class="nicon r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+            <div><div class="ntext"><b>TibiaTraveller</b> responded to your case <b>persistent ankle instability</b></div><div class="ntime">1 hour ago</div></div>
+          </div>
+        </div>
+        <div class="grid" style="gap:12px">
+          <div class="anon-card">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+            <div><div class="at">You are anonymous to your peers</div><div class="ad">Members only ever see <b>RestedRunner</b> and your kudos. Your real name, profession and employer are never shown.</div></div>
+          </div>
+          <div class="pstats">
+            <div class="pstat"><div class="num">14</div><div class="lbl">Questions</div></div>
+            <div class="pstat"><div class="num">83</div><div class="lbl">Responses</div></div>
+            <div class="pstat"><div class="num">6</div><div class="lbl">Best answers</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="title">Bottom navigation + Ask FAB</h3>
+      <p class="lede">Five fixed destinations; Ask is centred because it's the primary action. The FAB is the one
+      place spark red appears in the UI.</p>
+      <div class="navdemo">
+        <div class="tabbar">
+          <button class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span class="lbl">Feed</span></button>
+          <button class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 21l1.9-4.5A8.4 8.4 0 0 1 3 11.5a8.5 8.5 0 0 1 9-8.4 8.5 8.5 0 0 1 9 8.4z"/></svg><span class="lbl">Discussions</span></button>
+          <button class="tab" aria-label="Ask a peer"><span class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></button>
+          <button class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="lbl">Activity</span></button>
+          <button class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="lbl">Profile</span></button>
+        </div>
+      </div>
+      <div style="margin-top:16px"><span class="toast">Question posted to Discussions</span></div>
+    </section>
+
+    <div class="footer">
+      AskaPeer — The No Ego Sports Medicine Network · Design System v0.1 ·
+      Canonical spec: <a class="doclink" href="./STYLE_GUIDE.md">STYLE_GUIDE.md</a>.
+      If the product and this page disagree, fix one of them.
+    </div>
+  </div>
+
+<script>
+  /* ---- Theme toggle ---- */
+  const root = document.documentElement, tlabel = document.getElementById('themeLabel');
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    tlabel.textContent = next === 'dark' ? 'Light' : 'Dark';
+  });
+
+  /* ---- Kudos toggle ---- */
+  function tk(btn){
+    const n = btn.querySelector('.kn'); let v = parseInt(n.textContent,10);
+    const star = btn.querySelector('svg');
+    if(btn.classList.contains('given')){ btn.classList.remove('given'); n.textContent = v-1; star.classList.add('kudos-star'); }
+    else { btn.classList.add('given'); n.textContent = v+1; star.classList.remove('kudos-star'); }
+  }
+
+  /* ---- Safety gate ---- */
+  function gate(){
+    const all = [...document.querySelectorAll('.ck')].every(c=>c.checked);
+    const att = document.getElementById('att').checked;
+    document.getElementById('postBtn').disabled = !(all && att);
+  }
+
+  /* ---- Swatch + contrast rendering ---- */
+  function hexToRgb(h){ h=h.replace('#',''); return [0,2,4].map(i=>parseInt(h.substr(i,2),16)); }
+  function lum(rgb){ const a=rgb.map(v=>{v/=255; return v<=.03928? v/12.92 : Math.pow((v+.055)/1.055,2.4);}); return .2126*a[0]+.7152*a[1]+.0722*a[2]; }
+  function ratio(f,b){ const L1=lum(hexToRgb(f)),L2=lum(hexToRgb(b)); const hi=Math.max(L1,L2),lo=Math.min(L1,L2); return (hi+.05)/(lo+.05); }
+
+  const brand = [
+    ['Navy · brand','#001f52','#fff'], ['Navy dark','#001640','#fff'], ['Navy tint','#e6ebf2','#001640'],
+    ['Spark · Ask','#ed1b24','#fff'], ['Spark dark','#c00f18','#fff'], ['Spark tint','#fdecec','#c00f18'],
+    ['Kudos · status','#d98a1f','#3a2708'], ['Kudos tint','#fbf0dc','#8a5a12'],
+    ['Verify · trust','#2e8b6f','#fff'], ['Verify tint','#e4f2eb','#256f59'], ['Danger','#c0492f','#fff'],
+    ['Kudos text','#8a5a12','#fff'],
+  ];
+  const neutral = [
+    ['Background','#eef1f4','#14212b'], ['Surface','#ffffff','#14212b'], ['Text','#14212b','#fff'],
+    ['Muted','#64757f','#fff'], ['Faint','#93a1a9','#14212b'], ['Border','#e5ebee','#64757f'],
+    ['Border strong','#d7e0e4','#64757f'], ['Accent (dark)','#6f9bff','#04122e'],
+  ];
+  function swatch(nm,hex,fg){
+    return `<div class="swatch"><div class="chip" style="background:${hex};color:${fg}">
+      <span style="font-size:11px;font-weight:700">Aa</span></div>
+      <div class="meta"><div class="nm">${nm}</div><div class="hex">${hex}</div></div></div>`;
+  }
+  document.getElementById('brandSwatches').innerHTML = brand.map(s=>swatch(...s)).join('');
+  document.getElementById('neutralSwatches').innerHTML = neutral.map(s=>swatch(...s)).join('');
+
+  const textColours = [
+    ['Text','#14212b'], ['Muted','#64757f'], ['Faint','#93a1a9'],
+    ['Kudos text','#8a5a12'], ['Kudos (raw)','#d98a1f'], ['Verify text','#256f59'],
+    ['Verify (raw)','#2e8b6f'], ['Navy','#001f52'], ['Spark','#ed1b24'],
+  ];
+  document.getElementById('contrastCards').innerHTML = textColours.map(([nm,hex])=>{
+    const r = ratio(hex,'#ffffff'); const rr = r.toFixed(2)+':1';
+    const cls = r>=4.5 ? 'pass' : (r>=3 ? 'large' : 'fail');
+    const verdict = r>=4.5 ? 'AA text' : (r>=3 ? 'AA large only' : 'fails');
+    return `<div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span style="color:${hex};font-weight:700;font-size:15px">${nm}</span>
+      <span class="ratio ${cls}">${rr} · ${verdict}</span></div>`;
+  }).join('');
+
+  /* ---- Spacing demo ---- */
+  document.getElementById('spacingDemo').innerHTML = [4,8,12,16,20,24,32].map(px=>
+    `<div style="display:flex;align-items:center;gap:12px;margin:6px 0">
+      <span style="width:64px;font-size:11.5px;color:var(--color-faint);font-family:ui-monospace,monospace">${px}px</span>
+      <span class="sp" style="width:${px*3}px"></span></div>`).join('');
+</script>
+</body>
+</html>
