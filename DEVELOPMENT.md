@@ -1,6 +1,6 @@
 # Development
 
-The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus a read-only admin console (S11a) with verification actions, and member reporting (S11b — report content or a handle)**.
+The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), and the moderation queue (S11c — remove content with kudos clawback / warn / dismiss)**.
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
