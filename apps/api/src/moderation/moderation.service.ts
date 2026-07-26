@@ -1,13 +1,27 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { comments, handles, kudos, moderationActions, posts, reports } from '../db/schema';
+import {
+  comments,
+  handleBlocklist,
+  handleNameHistory,
+  handles,
+  kudos,
+  moderationActions,
+  posts,
+  refreshTokens,
+  reports,
+} from '../db/schema';
+import { isUniqueViolation } from '../db/pg-errors';
 import { BadgeService } from '../forum/badge.service';
+import { findBlocklistMatch, isValidFormat } from '../handles/handle-name';
+import { VerificationService } from '../verification/verification.service';
 import type { ModerationActionDto } from './moderation.dto';
 
 type ReportRow = typeof reports.$inferSelect;
@@ -45,6 +59,7 @@ export class ModerationService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly badge: BadgeService,
+    private readonly verification: VerificationService,
   ) {}
 
   /**
@@ -83,35 +98,183 @@ export class ModerationService {
     if (!report) throw new NotFoundException('No such report.');
     if (report.status !== 'open') throw new BadRequestException('This report is already resolved.');
 
-    if (dto.action === 'dismiss') {
-      await this.db.update(reports).set({ status: 'dismissed' }).where(eq(reports.id, reportId));
-      return { ok: true };
-    }
-
-    if (dto.action === 'remove_content') {
-      if (report.targetType === 'handle') {
-        throw new BadRequestException('remove_content applies to a post or comment, not a handle.');
+    switch (dto.action) {
+      case 'dismiss':
+        await this.db.update(reports).set({ status: 'dismissed' }).where(eq(reports.id, reportId));
+        return { ok: true };
+      case 'remove_content': {
+        if (report.targetType === 'handle') {
+          throw new BadRequestException('remove_content applies to a post or comment, not a handle.');
+        }
+        const clawed = await this.removeContent(report, moderatorId, dto.reason);
+        // Leaderboard mirrors the authoritative total, outside the DB transaction (EPIC-D §6).
+        if (clawed) await this.badge.setScore(clawed.handleId, clawed.total);
+        return { ok: true };
       }
-      const clawed = await this.removeContent(report, moderatorId, dto.reason);
-      // Leaderboard mirrors the authoritative total, outside the DB transaction (EPIC-D §6).
-      if (clawed) await this.badge.setScore(clawed.handleId, clawed.total);
-      return { ok: true };
+      case 'warn':
+        return this.warn(report, moderatorId, dto.reason);
+      case 'suspend':
+        return this.suspend(report, moderatorId, dto.reason);
+      case 'expel':
+        return this.expel(report, moderatorId, dto.reason);
+      case 'rename_handle':
+        return this.renameHandle(report, moderatorId, dto.reason, dto.newHandleName);
     }
+  }
 
-    // warn — a logged formal warning against the handle, content untouched.
-    const targetHandleId = await this.targetHandleFor(report);
-    if (!targetHandleId) throw new NotFoundException(`No such ${report.targetType}.`);
+  /** A logged formal warning against the offending handle; content and status untouched. */
+  private async warn(report: ReportRow, moderatorId: string, reason?: string): Promise<{ ok: true }> {
+    const owner = await this.handleAndOwner(report);
+    if (!owner) throw new NotFoundException(`No such ${report.targetType}.`);
     await this.db.transaction(async (tx) => {
       await tx.insert(moderationActions).values({
-        reportId,
-        targetHandleId,
+        reportId: report.id,
+        targetHandleId: owner.handleId,
         actionType: 'warn',
         moderatorId,
-        reason: dto.reason?.trim() || null,
+        reason: reason?.trim() || null,
       });
-      await tx.update(reports).set({ status: 'actioned' }).where(eq(reports.id, reportId));
+      await tx.update(reports).set({ status: 'actioned' }).where(eq(reports.id, report.id));
     });
     return { ok: true };
+  }
+
+  /**
+   * Suspend the offending handle (EPIC-F §3/§7). Sets `handles.status = suspended` only —
+   * deliberately *not* the identity-side `verification_status`, which tracks a lapsed
+   * registration, a different event resolved a different way (§7, resolved 2026-07-17).
+   * Suspension is reversible and doesn't release the credential, so there's no
+   * re-registration loophole to close. The member's refresh tokens are revoked so their
+   * session can't outlive the current access token; on re-auth the handle-scope check
+   * (AuthService.issueSession) sees `suspended` and routes them to the holding page.
+   */
+  private async suspend(report: ReportRow, moderatorId: string, reason?: string): Promise<{ ok: true }> {
+    const owner = await this.handleAndOwner(report);
+    if (!owner) throw new NotFoundException(`No such ${report.targetType}.`);
+    await this.db.transaction(async (tx) => {
+      await tx.update(handles).set({ status: 'suspended' }).where(eq(handles.id, owner.handleId));
+      await tx.insert(moderationActions).values({
+        reportId: report.id,
+        targetHandleId: owner.handleId,
+        actionType: 'suspend',
+        moderatorId,
+        reason: reason?.trim() || null,
+      });
+      await tx.update(reports).set({ status: 'actioned' }).where(eq(reports.id, report.id));
+      await tx.delete(refreshTokens).where(eq(refreshTokens.memberId, owner.memberId));
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Expel the offending handle — permanent (EPIC-F §3/§7). Flips `handles.status =
+   * expelled` **and** the identity-side `verification_status = expelled` in **one**
+   * transaction, so the re-registration loophole is never left open by a crash between the
+   * two writes: EPIC-A's uniqueness constraint blocks any non-`rejected` status from
+   * re-registering, and a blocked attempt is logged to `reapplication_attempts` at
+   * registration time. Refresh tokens are revoked; the status email fires after commit.
+   */
+  private async expel(report: ReportRow, moderatorId: string, reason?: string): Promise<{ ok: true }> {
+    const owner = await this.handleAndOwner(report);
+    if (!owner) throw new NotFoundException(`No such ${report.targetType}.`);
+    const trimmed = reason?.trim() || null;
+    await this.db.transaction(async (tx) => {
+      await tx.update(handles).set({ status: 'expelled' }).where(eq(handles.id, owner.handleId));
+      // Same transaction as the handle flip — the whole point of §7. Still routed through
+      // the single writer of verification_status (VerificationService.applyTransition).
+      await this.verification.applyTransition(tx, owner.memberId, 'expelled', moderatorId, trimmed);
+      await tx.insert(moderationActions).values({
+        reportId: report.id,
+        targetHandleId: owner.handleId,
+        actionType: 'expel',
+        moderatorId,
+        reason: trimmed,
+      });
+      await tx.update(reports).set({ status: 'actioned' }).where(eq(reports.id, report.id));
+      await tx.delete(refreshTokens).where(eq(refreshTokens.memberId, owner.memberId));
+    });
+    await this.verification.notifyStatusChanged(owner.memberId, 'expelled', trimmed);
+    return { ok: true };
+  }
+
+  /**
+   * Force-rename the offending handle (EPIC-F §3, resolves EPIC-B §13) — when the name
+   * itself is identifying or impersonating. The old name is recorded in
+   * `handle_name_history`, which both keeps the handle's post history coherent and blocks
+   * anyone re-adopting it. The new name is held to the same rules as a member-chosen one.
+   */
+  private async renameHandle(
+    report: ReportRow,
+    moderatorId: string,
+    reason: string | undefined,
+    newName: string | undefined,
+  ): Promise<{ ok: true }> {
+    if (!newName?.trim()) throw new BadRequestException('A new handle name is required.');
+    const trimmedName = newName.trim();
+    const owner = await this.handleAndOwner(report);
+    if (!owner) throw new NotFoundException(`No such ${report.targetType}.`);
+    await this.assertNameAvailable(trimmedName);
+
+    try {
+      await this.db.transaction(async (tx) => {
+        const [current] = await tx
+          .select({ name: handles.handleName })
+          .from(handles)
+          .where(eq(handles.id, owner.handleId));
+        await tx.update(handles).set({ handleName: trimmedName }).where(eq(handles.id, owner.handleId));
+        await tx.insert(handleNameHistory).values({
+          handleId: owner.handleId,
+          previousName: current.name,
+          changedBy: moderatorId,
+        });
+        await tx.insert(moderationActions).values({
+          reportId: report.id,
+          targetHandleId: owner.handleId,
+          actionType: 'rename_handle',
+          moderatorId,
+          reason: reason?.trim() || null,
+        });
+        await tx.update(reports).set({ status: 'actioned' }).where(eq(reports.id, report.id));
+      });
+    } catch (err) {
+      // The case-insensitive unique index is the final arbiter against a racing claim.
+      if (isUniqueViolation(err)) throw new ConflictException('That handle name is not available.');
+      throw err;
+    }
+    return { ok: true };
+  }
+
+  /** Same availability rules as handle creation (EPIC-B §3) — format, blocklist, ever-used. */
+  private async assertNameAvailable(name: string): Promise<void> {
+    if (!isValidFormat(name)) {
+      throw new BadRequestException('Handle must be 3–30 characters: letters, numbers, _ or -.');
+    }
+    const terms = await this.db
+      .select({ term: handleBlocklist.term, matchMode: handleBlocklist.matchMode })
+      .from(handleBlocklist);
+    if (findBlocklistMatch(name, terms)) {
+      throw new BadRequestException('That handle name is not allowed.');
+    }
+    const [live] = await this.db
+      .select({ id: handles.id })
+      .from(handles)
+      .where(sql`lower(${handles.handleName}) = lower(${name})`);
+    const [historic] = await this.db
+      .select({ id: handleNameHistory.id })
+      .from(handleNameHistory)
+      .where(sql`lower(${handleNameHistory.previousName}) = lower(${name})`);
+    if (live || historic) throw new ConflictException('That handle name is not available.');
+  }
+
+  /** The handle an action lands on, with its owning member id (for status + session revocation). */
+  private async handleAndOwner(report: ReportRow): Promise<{ handleId: string; memberId: string } | null> {
+    const handleId = await this.targetHandleFor(report);
+    if (!handleId) return null;
+    const [row] = await this.db
+      .select({ memberId: handles.memberId })
+      .from(handles)
+      .where(eq(handles.id, handleId));
+    return row ? { handleId, memberId: row.memberId } : null;
   }
 
   /**

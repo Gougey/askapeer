@@ -5,6 +5,7 @@ import { JwtConfigModule } from '../auth/jwt-config.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BadgeService } from '../forum/badge.service';
 import { SettingsModule } from '../settings/settings.module';
+import { VerificationModule } from '../verification/verification.module';
 import { ModerationController } from './moderation.controller';
 import { ModerationService } from './moderation.service';
 
@@ -19,6 +20,7 @@ import { ModerationService } from './moderation.service';
     JwtConfigModule, // JwtAuthGuard verifies the token
     AdminAccessModule, // the allowlist behind AdminGuard
     SettingsModule, // BadgeService's threshold settings
+    VerificationModule, // expel routes the identity-status flip through the single writer
   ],
   controllers: [ModerationController],
   providers: [ModerationService, BadgeService, JwtAuthGuard, AdminGuard],
