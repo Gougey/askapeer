@@ -16,9 +16,9 @@ export function StageBadge({ stage }: { stage: Stage }) {
 
 const STAGE_META: Record<Stage, { label: string; color: string }> = {
   processing: { label: 'Processing', color: 'var(--color-muted)' },
-  awaiting_id_capture: { label: 'Awaiting ID capture', color: '#0ea5e9' },
-  awaiting_manual_review: { label: 'Needs review', color: '#d97706' },
-  needs_more_info: { label: 'Needs more info', color: '#d97706' },
+  awaiting_id_capture: { label: 'Awaiting ID capture', color: 'var(--color-accent)' },
+  awaiting_manual_review: { label: 'Needs review', color: 'var(--color-warn)' },
+  needs_more_info: { label: 'Needs more info', color: 'var(--color-warn)' },
   approved: { label: 'Approved', color: 'var(--color-ok)' },
   rejected: { label: 'Rejected', color: 'var(--color-bad)' },
   suspended: { label: 'Suspended', color: 'var(--color-bad)' },

@@ -53,14 +53,27 @@ export function KudosButton({
       disabled={pending}
       aria-pressed={kudosed}
       aria-label={t('kudosAction')}
-      className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs disabled:opacity-60"
+      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold disabled:opacity-60"
       style={{
-        borderColor: kudosed ? 'var(--color-accent)' : 'var(--color-muted)',
-        color: kudosed ? 'var(--color-accent)' : 'var(--color-fg)',
-        background: kudosed ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'transparent',
+        // Kudos gold is the product's one status colour (style guide §2.1) — so the
+        // kudos control reads gold in both states: outline star before you act, filled
+        // star + gold tint once you have. Never navy; that would introduce a second signal.
+        borderColor: kudosed ? 'var(--color-kudos)' : 'var(--color-border-strong)',
+        color: kudosed ? 'var(--color-kudos-text)' : 'var(--color-muted)',
+        background: kudosed ? 'var(--color-kudos-tint)' : 'transparent',
       }}
     >
-      <span aria-hidden>👏</span>
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        className="size-[15px]"
+        style={{ color: 'var(--color-kudos)' }}
+        fill={kudosed ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeWidth={kudosed ? 0 : 1.6}
+      >
+        <path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z" />
+      </svg>
       <span>{t('kudos', { count })}</span>
     </button>
   );

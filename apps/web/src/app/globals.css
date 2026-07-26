@@ -43,6 +43,15 @@
   --color-ok: var(--color-verify);
   --color-bad: var(--color-danger);
 
+  /*
+    Functional "needs a human" / attention colour. Like --color-danger, this is a
+    *functional* token, not a brand one — deliberately NOT kudos gold, which the style
+    guide reserves as the product's single member-facing status colour (§2.1). Used only
+    by the admin/moderation console for pending-review states. Value is darkened for
+    AA-safe text on the console's tinted badges.
+  */
+  --color-warn: #9a5f0a;
+
   /* Typography */
   --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -74,6 +83,7 @@
     --color-verify: #4bbf98;
     --color-verify-text: #4bbf98;
     --color-spark: #ff5a5f;
+    --color-warn: #e0a33a;
   }
 }
 
