@@ -165,6 +165,7 @@ kudos gold — is never drowned out**.
 | Verify (text) | `--color-verify-text` | `#256f59` | AA-safe verify text on light. |
 | Verify tint | `--color-verify-tint` | `#e4f2eb` | Best-answer card wash, verified panels. |
 | **Danger / destructive** | `--color-danger` | `#c0492f` | Destructive actions (sign out, delete) and the unread nav dot only. |
+| **Warn / attention** | `--color-warn` | `#9a5f0a` | **Functional, admin-only.** "Needs a human" states in the moderation console (pending review, needs-more-info). Never member-facing. |
 
 > **Why two reds?** Spark red (`#ed1b24`, bright) is a *brand* colour reserved
 > for the single primary affordance (Ask) and the wordmark. Danger
@@ -172,6 +173,15 @@ kudos gold — is never drowned out**.
 > intentionally different hues so "brand" and "danger" never read as the same
 > thing. Do not use spark red for delete/error, and do not use danger for the
 > Ask button.
+
+> **Warn is not kudos gold.** `--color-warn` is a muted amber-brown used *only*
+> by the admin/moderation console to flag review states that need a human — the
+> same functional-vs-brand split as danger-vs-spark. It is deliberately darker
+> and browner than kudos gold (`#d98a1f`) and, critically, **never appears in
+> the member-facing product**, so kudos remains the single status colour members
+> ever see (§2.1). The light value is darkened to `#9a5f0a` to stay AA as text on
+> the console's 15%-tint badges. Never use `--color-warn` for kudos, and never
+> use kudos gold for a warning.
 
 ### 2.2 Neutrals
 
@@ -197,6 +207,7 @@ blue while navy remains the identity colour in wordmarks and large fills.
 | Kudos (dark) | `--color-kudos` (dark) | `#e2a53f` |
 | Verify (dark) | `--color-verify` (dark) | `#4bbf98` |
 | Spark (dark) | `--color-spark` (dark) | `#ff5a5f` |
+| Warn (dark) | `--color-warn` (dark) | `#e0a33a` |
 
 ### 2.4 Semantic mapping (what the code references)
 
@@ -875,6 +886,7 @@ of changing the values, not the markup — matching the intent already stated in
   --color-verify-text:   #256f59;
   --color-verify-tint:   #e4f2eb;
   --color-danger:        #c0492f;
+  --color-warn:          #9a5f0a;  /* functional, admin console only — NOT kudos gold */
 
   /* ---- Neutrals (light) ---- */
   --color-bg:            #eef1f4;
@@ -942,6 +954,7 @@ of changing the values, not the markup — matching the intent already stated in
     --color-verify:        #4bbf98;
     --color-verify-text:   #4bbf98;
     --color-spark:         #ff5a5f;
+    --color-warn:          #e0a33a;
   }
 }
 ```
