@@ -145,10 +145,23 @@ async function Answer({
 function StaticKudos({ label }: { label: string }) {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs"
-      style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold"
+      style={{ borderColor: 'var(--color-border-strong)', color: 'var(--color-muted)' }}
     >
-      <span aria-hidden>👏</span>
+      {/* Kudos gold is the one status colour (style guide §2.1); the static own-content
+          count matches the un-kudosed KudosButton so a thread reads uniformly — just
+          without the toggle, since a handle can't kudos itself. */}
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        className="size-[15px]"
+        style={{ color: 'var(--color-kudos)' }}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.6}
+      >
+        <path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z" />
+      </svg>
       <span>{label}</span>
     </span>
   );
