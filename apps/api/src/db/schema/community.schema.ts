@@ -323,3 +323,51 @@ export const reports = community.table(
     index('reports_target_idx').on(t.targetType, t.targetId),
   ],
 );
+
+/**
+ * The full moderation action vocabulary (EPIC-F §3). All six values live here from the
+ * start even though S11c only wields `remove_content` and `warn` — the enum is the shape
+ * of the audit trail, and later slices (S11d suspend/expel/rename, S11f request_correction)
+ * add only behaviour, not schema.
+ */
+export const moderationActionType = community.enum('moderation_action_type', [
+  'remove_content',
+  'warn',
+  'suspend',
+  'expel',
+  'request_correction',
+  'rename_handle',
+]);
+
+/**
+ * The immutable moderation trail (EPIC-F §3, architecture §4.4). Every action — of any
+ * type — writes exactly one row here, which is the record a member was actioned. Like the
+ * other audit tables it becomes INSERT-only at the database-role level at the AWS migrate
+ * step; the prove phase runs under one role.
+ *
+ * `report_id` is nullable: an action usually resolves a report, but a moderator may also
+ * act proactively with no report attached (EPIC-F §2). `moderator_id` is the acting
+ * admin's identity-side member id — the one place a `community` row references a real
+ * member deliberately, since "who moderated" is not pseudonymous.
+ */
+export const moderationActions = community.table(
+  'moderation_actions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    reportId: uuid('report_id').references(() => reports.id),
+    targetHandleId: uuid('target_handle_id')
+      .notNull()
+      .references(() => handles.id),
+    actionType: moderationActionType('action_type').notNull(),
+    moderatorId: uuid('moderator_id')
+      .notNull()
+      .references(() => members.id),
+    reason: text('reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // A handle's moderation history, newest first — the "has this handle been actioned
+    // before?" read a reviewer needs, and what a warn/suspend escalation looks at.
+    index('moderation_actions_target_idx').on(t.targetHandleId, t.createdAt),
+  ],
+);

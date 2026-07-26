@@ -50,6 +50,13 @@
       "when": 1785086535960,
       "tag": "0006_large_excalibur",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785095321712,
+      "tag": "0007_greedy_galactus",
+      "breakpoints": true
     }
   ]
 }

@@ -29,6 +29,7 @@ const TABS = [
   { href: '/admin', label: 'Overview' },
   { href: '/admin/members', label: 'Members' },
   { href: '/admin/review', label: 'Review queue' },
+  { href: '/admin/reports', label: 'Reports' },
   { href: '/admin/audit', label: 'Audit log' },
 ];
 

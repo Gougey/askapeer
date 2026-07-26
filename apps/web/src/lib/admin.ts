@@ -69,6 +69,31 @@ export type AuditEntry = DecisionEntry & {
   member: { id: string; legalName: string; email: string };
 };
 
+export type ReportTargetType = 'post' | 'comment' | 'handle';
+
+/**
+ * A report as the moderation queue shows it (S11c). All pseudonymous — handle names are
+ * public; the queue never surfaces real identity (that's the audited reveal, S11e).
+ */
+export type ReportQueueItem = {
+  id: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  category: string;
+  priority: boolean;
+  status: string;
+  comment: string | null;
+  createdAt: string;
+  reporterHandle: string | null;
+  target: {
+    handleId: string | null;
+    handleName: string | null;
+    snippet: string;
+    contentStatus: string | null;
+    exists: boolean;
+  };
+};
+
 /**
  * Gate for the admin console. Confirms the caller is an allowlisted admin from the
  * session read the shell already makes, and bounces everyone else to the app — a
@@ -105,3 +130,9 @@ export const fetchReviewQueue = (token: string) =>
 
 export const fetchAuditLog = (token: string) =>
   adminGet<AuditEntry[]>('audit/verification', token);
+
+export const fetchReports = (token: string, status = 'open') =>
+  adminGet<ReportQueueItem[]>(`reports?status=${encodeURIComponent(status)}`, token);
+
+export const fetchReport = (token: string, id: string) =>
+  adminGet<ReportQueueItem>(`reports/${id}`, token);
