@@ -16,6 +16,7 @@ See `README.md` for what currently exists in this repo (the PRD plus two early, 
 
 - `docs/askapeer-prd-v0.1.md` — **Source of truth.** Full PRD v0.1 (June 2026): problem statement, personas, MVP scope (MoSCoW), verification model, pseudonymity framework, case discussion policy, monetisation, phased roadmap, KPIs, risks, and 8 open stakeholder decisions (FD-1 through FD-8). The MVP scope, monetisation, and FD tables below are condensed from this document for quick reference — if they ever diverge, the PRD wins.
 - `docs/archive/` — Earlier working documents retained for context: original requirements spec, Sermo feature inventory, and Andrew Renshaw's founding concept document. Not authoritative — superseded by the PRD.
+- `docs/style-guide/STYLE_GUIDE.md` — **Design system.** Canonical spec for the web app's look: colour tokens, typography (Fraunces + Inter), spacing, components, accessibility (WCAG 2.2 AA), voice, and the anonymity/safety UX patterns. `docs/style-guide/styleguide.html` is the live showcase. See the Design system section below for the load-bearing rules.
 - `docs/AHP_Research_Feed_Design_Conversation.md` — design discussion behind the research-feed prototype in `prototypes/research-feed/`.
 - `README.md` — human-facing repo overview: what's here, how to run the prototypes. This file (`CLAUDE.md`) covers domain constraints and condensed PRD reference for AI-assisted development instead of repeating that overview.
 
@@ -37,6 +38,17 @@ See `README.md` for what currently exists in this repo (the PRD plus two early, 
 **Audit logs are immutable** for: verification decisions, moderation actions, and all moderator access to real identity.
 
 **No PHI**: the platform must never store or encourage submission of identifiable patient data. Legal basis: UK GDPR, Data Protection Act 2018, common law duty of confidentiality.
+
+## Design system
+
+The web app (`apps/web`) is themed by the AskaPeer design system. `docs/style-guide/STYLE_GUIDE.md` is the canonical source — consult it before building or restyling any screen. Applying it is a **theming pass**, not a rewrite: `src/app/globals.css` defines the tokens once (imported by the root layout, so every page inherits them), and components reference semantic CSS variables. Load-bearing rules for any new page or component:
+
+- **Reference semantic tokens; never hardcode colours.** Use `var(--color-fg)`, `var(--color-accent)`, `var(--color-ok)`, `var(--color-bad)`, `var(--color-surface)`, etc. Do **not** put raw hex in components (pure white/black on a coloured fill is the only exception) and do **not** use default Tailwind palette classes (`bg-slate-100`, `text-sky-500`, …) — they ignore the theme and don't adapt to dark mode. `src/app/globals.css` is the *only* place raw colour values belong.
+- **Kudos gold (`--color-kudos`) is the product's one status colour** and is sacred — never use it for anything that isn't kudos, and never signal kudos with anything else (no clap emoji, no navy). Kudos is rendered as the gold star.
+- **Spark red (`--color-spark`) is reserved** for the single Ask affordance and the wordmark. Destructive/error uses `--color-danger`, never spark.
+- **`--color-warn` is functional and admin-only** (moderation "needs a human" states) — never member-facing, never confused with kudos gold.
+- **Serif (`--font-display`, Fraunces) is for headings only**; body/UI is Inter. Meet WCAG 2.2 AA contrast (the guide's §9 notes which values are text-safe).
+- **The design-token guard enforces the colour rules.** `npm run lint:tokens -w apps/web` (also run in CI via `.github/workflows/checks.yml`) fails on raw hex or default-palette classes. Keep it green; for a genuine, reviewed exception add a `design-token-allow` comment on the line rather than weakening the rule.
 
 ## MVP scope
 

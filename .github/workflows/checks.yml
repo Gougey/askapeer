@@ -1,0 +1,28 @@
+name: Checks
+
+# PR-time gate (the deploy workflow only runs post-merge). Keeps the web app on-system
+# and type-clean before anything reaches main. No secrets required.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web — design tokens + typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Design-token guard
+        run: npm run lint:tokens -w apps/web
+      - name: Typecheck
+        run: npm run typecheck -w apps/web
