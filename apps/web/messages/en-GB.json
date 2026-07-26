@@ -187,5 +187,27 @@
       "empty": "Write an answer before posting.",
       "unavailable": "Something went wrong. Please try again."
     }
+  },
+  "report": {
+    "report": "Report",
+    "reportHandle": "Report this handle",
+    "heading": "What's the problem?",
+    "categories": {
+      "identifiable_patient_information": "Identifiable patient information",
+      "anonymity_violation": "Revealing an identity (self, colleague, or patient)",
+      "harassment": "Harassment or abuse",
+      "spam": "Spam",
+      "other": "Something else"
+    },
+    "commentPlaceholder": "Add any context (optional). Never include identifying details.",
+    "anonymityReminder": "Remember: never identify yourself, a colleague or a patient.",
+    "submit": "Submit report",
+    "submitting": "Submitting…",
+    "cancel": "Cancel",
+    "submitted": "Report received. Thank you.",
+    "error": {
+      "missing": "Choose a reason before submitting.",
+      "unavailable": "Something went wrong. Please try again."
+    }
   }
 }

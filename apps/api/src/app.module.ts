@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { VerificationModule } from './verification/verification.module';
 import { HandlesModule } from './handles/handles.module';
 import { ForumModule } from './forum/forum.module';
+import { ReportsModule } from './reports/reports.module';
 import { AdminModule } from './admin/admin.module';
 import { SettingsModule } from './settings/settings.module';
 
@@ -26,6 +27,7 @@ import { SettingsModule } from './settings/settings.module';
     VerificationModule, // EPIC-A (S2)
     HandlesModule, // EPIC-B (S3)
     ForumModule, // EPIC-C + EPIC-D (S4, S5)
+    ReportsModule, // EPIC-F reporting (S11b)
     AdminModule, // EPIC-A/F read-only admin console (S11a)
     SettingsModule, // EPIC-J, read side only (S3)
   ],

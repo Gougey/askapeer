@@ -6,6 +6,7 @@ import { AuthorLine, TagList } from '@/components/PostCard';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
 import { DeleteCommentButton } from './DeleteCommentButton';
 import { KudosButton } from './KudosButton';
+import { ReportButton } from './ReportButton';
 
 /**
  * A question thread (screen C4). Answers are kudos-ranked (EPIC-D §4); replies sit
@@ -60,6 +61,15 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
             {post.editedAt && ` · ${t('edited')}`}
           </span>
         </div>
+        {/* Reporting the question and — for the anonymity/off-platform case that may not
+            attach to any one post — its author's handle (EPIC-F §2, screen X1). Not shown
+            on your own content. */}
+        {!viewerContext.isAuthor && (
+          <div className="flex flex-wrap items-center gap-3">
+            <ReportButton target="post" targetId={post.id} />
+            <ReportButton target="handle" targetId={post.author.handleId} />
+          </div>
+        )}
       </article>
 
       <section
@@ -136,6 +146,7 @@ async function Answer({
             controls in S5 — only top-level answers can be replied to. */}
         {!isReply && <ReplyAffordance postId={postId} parentCommentId={comment.id} />}
         {comment.isMine && <DeleteCommentButton postId={postId} commentId={comment.id} />}
+        {!comment.isMine && <ReportButton target="comment" targetId={comment.id} />}
       </div>
     </div>
   );
