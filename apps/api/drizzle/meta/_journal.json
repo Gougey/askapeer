@@ -57,6 +57,13 @@
       "when": 1785095321712,
       "tag": "0007_greedy_galactus",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785098257580,
+      "tag": "0008_zippy_darkhawk",
+      "breakpoints": true
     }
   ]
 }
