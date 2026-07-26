@@ -43,6 +43,13 @@
       "when": 1784644673540,
       "tag": "0005_petite_fabian_cortez",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785086535960,
+      "tag": "0006_large_excalibur",
+      "breakpoints": true
     }
   ]
 }

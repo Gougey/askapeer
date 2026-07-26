@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
+  boolean,
   customType,
   date,
   index,
@@ -260,5 +261,65 @@ export const kudos = community.table(
     uniqueIndex('kudos_one_per_handle_unique').on(t.targetType, t.targetId, t.givenByHandleId),
     // Counting a target's kudos, and the clawback's "delete all kudos for this target".
     index('kudos_target_idx').on(t.targetType, t.targetId),
+  ],
+);
+
+/**
+ * What a report points at (EPIC-F §2). `handle` is deliberately a target alongside
+ * `post`/`comment`: the zero-tolerance/anonymity rule anticipates reports about a pattern
+ * of behaviour or an off-platform incident that has no single post to attach to — only a
+ * handle. `target_id` is polymorphic (no FK, like `kudos`), validated in the service.
+ */
+export const reportTargetType = community.enum('report_target_type', ['post', 'comment', 'handle']);
+
+/**
+ * Report categories (EPIC-F §4). The two priority categories are the platform's two
+ * founding guarantees — patient privacy and anonymity — and are settled; the three
+ * non-priority categories are a working set flagged for Andrew's domain review.
+ */
+export const reportCategory = community.enum('report_category', [
+  'identifiable_patient_information',
+  'anonymity_violation',
+  'harassment',
+  'spam',
+  'other',
+]);
+
+export const reportStatus = community.enum('report_status', ['open', 'actioned', 'dismissed']);
+
+/**
+ * A member's report of content or a handle (EPIC-F §2). Filed here (S11b); triaged and
+ * actioned by the moderation queue (S11c). The queue operates entirely on `handle_id`s —
+ * a report never carries real identity; that only surfaces via the separately-audited
+ * reveal action (S11e).
+ */
+export const reports = community.table(
+  'reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    reporterHandleId: uuid('reporter_handle_id')
+      .notNull()
+      .references(() => handles.id),
+    targetType: reportTargetType('target_type').notNull(),
+    targetId: uuid('target_id').notNull(),
+    category: reportCategory('category').notNull(),
+    // The reporter's optional free-text context.
+    comment: text('comment'),
+    // Generated, not application-set: the priority tier is a pure function of the category
+    // (EPIC-F §4), so deriving it in the column keeps the queue ordering honest even if a
+    // future write path forgets to set it. Bare column name — a generated expression can't
+    // reference the table object it's defined on (same as `posts.tsv`).
+    priority: boolean('priority').generatedAlwaysAs(
+      sql`category in ('identifiable_patient_information', 'anonymity_violation')`,
+    ),
+    status: reportStatus('status').notNull().default('open'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // The moderation queue's ordering (S11c, EPIC-F §4): open reports, priority tier
+    // first, then oldest-first within each tier.
+    index('reports_queue_idx').on(t.status, t.priority, t.createdAt),
+    // "Open reports about this target" — used when actioning a report resolves the others.
+    index('reports_target_idx').on(t.targetType, t.targetId),
   ],
 );
