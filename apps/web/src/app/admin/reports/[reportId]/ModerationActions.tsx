@@ -20,6 +20,24 @@ const ALL_ACTIONS: ActionDef[] = [
     hint: 'Logs a formal warning against the handle. Content is left in place.',
   },
   {
+    key: 'rename_handle',
+    label: 'Rename handle',
+    color: 'var(--color-warn)',
+    hint: 'Force a new handle name when the name itself identifies or impersonates. The old name is retired and can never be reused.',
+  },
+  {
+    key: 'suspend',
+    label: 'Suspend',
+    color: 'var(--color-bad)',
+    hint: 'Suspends the handle — the member is routed to the holding page. Reversible; does not touch their registration status.',
+  },
+  {
+    key: 'expel',
+    label: 'Expel',
+    color: 'var(--color-bad)',
+    hint: 'Permanent. Expels the handle and the member; blocks re-registration with the same credentials. Cannot be undone.',
+  },
+  {
     key: 'dismiss',
     label: 'Dismiss',
     color: 'var(--color-muted)',
@@ -45,6 +63,7 @@ export function ModerationActions({
 }) {
   const [chosen, setChosen] = useState<ModerationAction | null>(null);
   const [reason, setReason] = useState('');
+  const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -62,17 +81,23 @@ export function ModerationActions({
   function choose(key: ModerationAction) {
     setChosen(key);
     setReason('');
+    setNewName('');
     setError(null);
   }
 
   function submit() {
     if (!action) return;
+    if (action.key === 'rename_handle' && !newName.trim()) {
+      setError('Enter the new handle name.');
+      return;
+    }
     setError(null);
     startTransition(async () => {
-      const result = await moderationActionAction(reportId, action.key, reason);
+      const result = await moderationActionAction(reportId, action.key, reason, newName);
       if (result.ok) {
         setChosen(null);
         setReason('');
+        setNewName('');
       } else {
         setError(result.message);
       }
@@ -107,6 +132,20 @@ export function ModerationActions({
           <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
             {action.hint}
           </p>
+          {action.key === 'rename_handle' && (
+            <label className="flex flex-col gap-1 text-sm">
+              <span style={{ color: 'var(--color-muted)' }}>New handle name (3–30 chars: letters, numbers, _ or -)</span>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                minLength={3}
+                maxLength={30}
+                className="rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
+              />
+            </label>
+          )}
           <label className="flex flex-col gap-1 text-sm">
             <span style={{ color: 'var(--color-muted)' }}>Reason (optional, recorded on the action)</span>
             <textarea

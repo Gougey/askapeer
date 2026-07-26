@@ -5,18 +5,26 @@ import { redirect } from 'next/navigation';
 import { API_ORIGIN } from '@/lib/api';
 import { getAccessToken } from '@/lib/session';
 
-export type ModerationAction = 'remove_content' | 'warn' | 'dismiss';
+export type ModerationAction =
+  | 'remove_content'
+  | 'warn'
+  | 'dismiss'
+  | 'suspend'
+  | 'expel'
+  | 'rename_handle';
 export type ModerationResult = { ok: true } | { ok: false; message: string };
 
 /**
  * Take a moderation decision on a report (EPIC-F §3/§6). The API attributes it to the
  * calling moderator, writes the immutable action row, and resolves the report; here we
  * revalidate the surfaces it changes so the queue and the report reflect it immediately.
+ * `newHandleName` is only sent (and required) for `rename_handle`.
  */
 export async function moderationActionAction(
   reportId: string,
   action: ModerationAction,
   reason: string,
+  newHandleName?: string,
 ): Promise<ModerationResult> {
   const token = await getAccessToken();
   if (!token) redirect('/');
@@ -24,7 +32,11 @@ export async function moderationActionAction(
   const res = await fetch(`${API_ORIGIN}/v1/admin/reports/${reportId}/action`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ action, reason: reason.trim() || undefined }),
+    body: JSON.stringify({
+      action,
+      reason: reason.trim() || undefined,
+      newHandleName: action === 'rename_handle' ? newHandleName?.trim() || undefined : undefined,
+    }),
     cache: 'no-store',
   });
 

@@ -30,6 +30,9 @@ const TIMEOUT_CONFIG_KEY = 'verification.onfido_timeout_hours';
 const DEFAULT_TIMEOUT_HOURS = 48;
 
 type Member = typeof members.$inferSelect;
+type VerificationStatus = typeof members.$inferInsert.verificationStatus & string;
+/** The transaction handle Drizzle hands a `db.transaction` callback — shared so another module can pass its own tx in. */
+export type DbTx = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 @Injectable()
 export class VerificationService {
@@ -302,38 +305,51 @@ export class VerificationService {
    */
   async transition(
     memberId: string,
-    toStatus: typeof members.$inferInsert.verificationStatus & string,
+    toStatus: VerificationStatus,
     decidedBy: string,
     reason: string | null,
   ): Promise<void> {
-    await this.db.transaction(async (tx) => {
-      const [member] = await tx.select().from(members).where(eq(members.id, memberId));
-      if (!member) throw new NotFoundException('Member not found.');
-      const fromStatus = member.verificationStatus;
-      if (fromStatus === toStatus) return;
-
-      await tx
-        .update(members)
-        .set({
-          verificationStatus: toStatus,
-          statusUpdatedAt: new Date(),
-          // Only meaningful while in needs_more_info; cleared on the way out.
-          needsMoreInfoReason: toStatus === 'needs_more_info' ? reason : null,
-        })
-        .where(eq(members.id, memberId));
-
-      await tx.insert(verificationDecisions).values({
-        memberId,
-        fromStatus,
-        toStatus,
-        decidedBy,
-        reason,
-      });
-
-      this.log.log(`${memberId}: ${fromStatus} -> ${toStatus} (by ${decidedBy})`);
-    });
-
+    await this.db.transaction((tx) => this.applyTransition(tx, memberId, toStatus, decidedBy, reason));
     // Outside the transaction: a notification failure must not roll back a decision.
+    await this.notifier.statusChanged(memberId, toStatus, reason);
+  }
+
+  /**
+   * The status write + audit-row insert, scoped to a caller-supplied transaction. Split
+   * out so a *different* epic's write can be atomic with it — EPIC-F's `expel` (S11d)
+   * flips `community.handles.status` and this `verification_status` in one transaction, so
+   * the re-registration loophole can never be left open by a crash between two writes
+   * (EPIC-F §7). Still the single writer of `verification_status`; the caller owns the tx
+   * and must fire `notifyStatusChanged` after it commits.
+   */
+  async applyTransition(
+    tx: DbTx,
+    memberId: string,
+    toStatus: VerificationStatus,
+    decidedBy: string,
+    reason: string | null,
+  ): Promise<void> {
+    const [member] = await tx.select().from(members).where(eq(members.id, memberId));
+    if (!member) throw new NotFoundException('Member not found.');
+    const fromStatus = member.verificationStatus;
+    if (fromStatus === toStatus) return;
+
+    await tx
+      .update(members)
+      .set({
+        verificationStatus: toStatus,
+        statusUpdatedAt: new Date(),
+        // Only meaningful while in needs_more_info; cleared on the way out.
+        needsMoreInfoReason: toStatus === 'needs_more_info' ? reason : null,
+      })
+      .where(eq(members.id, memberId));
+
+    await tx.insert(verificationDecisions).values({ memberId, fromStatus, toStatus, decidedBy, reason });
+    this.log.log(`${memberId}: ${fromStatus} -> ${toStatus} (by ${decidedBy})`);
+  }
+
+  /** Fire the status-change notification for a transition applied via {@link applyTransition}. */
+  async notifyStatusChanged(memberId: string, toStatus: string, reason: string | null): Promise<void> {
     await this.notifier.statusChanged(memberId, toStatus, reason);
   }
 
