@@ -174,3 +174,37 @@ export const reapplicationAttempts = identity.table('reapplication_attempts', {
   registrationCountry: text('registration_country').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const identityAccessReason = identity.enum('identity_access_reason', [
+  'reported_violation',
+  'legal_request',
+  'safety_escalation',
+]);
+
+/**
+ * Every moderator access to a member's real identity (EPIC-F §5, architecture §4.1). The
+ * pseudonymity guarantee is that linking a handle to a real person is a distinct, logged
+ * act — never implicit in reading a report — so this row is written *before* the identity
+ * is ever returned. INSERT-only grant in production.
+ *
+ * `handle_id` is the community handle the reveal was triggered from, stored as a bare uuid
+ * with no cross-schema FK: `identity` must not depend on `community` (that would make the
+ * schema import circular), and the `member_id` FK is the one that carries the meaning.
+ */
+export const identityAccessLog = identity.table(
+  'identity_access_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    memberId: uuid('member_id')
+      .notNull()
+      .references(() => members.id, { onDelete: 'cascade' }),
+    handleId: uuid('handle_id').notNull(),
+    accessedBy: uuid('accessed_by')
+      .notNull()
+      .references(() => members.id),
+    reasonCode: identityAccessReason('reason_code').notNull(),
+    reasonNote: text('reason_note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('identity_access_log_member_idx').on(t.memberId, t.createdAt)],
+);

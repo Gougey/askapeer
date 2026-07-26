@@ -3,7 +3,42 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { API_ORIGIN } from '@/lib/api';
+import type { RevealedIdentity } from '@/lib/admin';
 import { getAccessToken } from '@/lib/session';
+
+export type RevealReasonCode = 'reported_violation' | 'legal_request' | 'safety_escalation';
+export type RevealResult =
+  | { ok: true; identity: RevealedIdentity }
+  | { ok: false; message: string };
+
+/**
+ * The audited reveal-identity action (EPIC-F §5, screen G3). Crosses the pseudonymity
+ * boundary — the API logs every call (moderator, reason, timestamp) *before* returning
+ * the identity, so this server action carries no special trust; it just relays the
+ * reason and renders the result.
+ */
+export async function revealIdentityAction(
+  handleId: string,
+  reasonCode: RevealReasonCode,
+  reasonNote: string,
+): Promise<RevealResult> {
+  const token = await getAccessToken();
+  if (!token) redirect('/');
+
+  const res = await fetch(`${API_ORIGIN}/v1/admin/handles/${handleId}/reveal-identity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ reasonCode, reasonNote: reasonNote.trim() }),
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string | string[] };
+    const message = Array.isArray(body.message) ? body.message.join(' ') : body.message;
+    return { ok: false, message: message ?? 'The identity could not be revealed.' };
+  }
+  return { ok: true, identity: (await res.json()) as RevealedIdentity };
+}
 
 export type ModerationAction =
   | 'remove_content'

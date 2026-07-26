@@ -131,6 +131,15 @@ export const fetchReviewQueue = (token: string) =>
 export const fetchAuditLog = (token: string) =>
   adminGet<AuditEntry[]>('audit/verification', token);
 
+/** The G-24 field set returned by the audited reveal (EPIC-F §5) — nothing beyond it. */
+export type RevealedIdentity = {
+  legalName: string;
+  email: string;
+  professionalBody: string;
+  registrationNumber: string;
+  registrationCountry: string;
+};
+
 export const fetchReports = (token: string, status = 'open') =>
   adminGet<ReportQueueItem[]>(`reports?status=${encodeURIComponent(status)}`, token);
 

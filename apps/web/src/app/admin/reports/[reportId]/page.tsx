@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { fetchReport, type ReportQueueItem, requireAdmin } from '@/lib/admin';
 import { CATEGORY_LABELS, TARGET_LABELS } from '../labels';
 import { ModerationActions } from './ModerationActions';
+import { RevealIdentity } from './RevealIdentity';
 
 /**
  * One report, in full, with the moderation decision panel (screen G2, EPIC-F §6). Shows
@@ -80,6 +81,12 @@ export default async function ReportDetailPage({
       )}
 
       <ModerationActions reportId={report.id} targetType={report.targetType} status={report.status} />
+
+      {/* The audited exception (screen G3): the one place a handle is linked to a real
+          person, and only via this explicit, separately-logged action (EPIC-F §5). */}
+      {report.target.handleId && report.target.handleName && (
+        <RevealIdentity handleId={report.target.handleId} handleName={report.target.handleName} />
+      )}
 
       <Link href="/admin/reports" className="text-sm underline" style={{ color: 'var(--color-muted)' }}>
         ← Back to queue
