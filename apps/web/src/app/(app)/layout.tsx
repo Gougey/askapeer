@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { BottomNav } from '@/components/BottomNav';
+import { AppBar } from '@/components/Brand';
 import { requireAppAccess } from '@/lib/onboarding';
 
 /**
@@ -13,6 +14,7 @@ export default async function AppShellLayout({ children }: { children: ReactNode
 
   return (
     <div className="mx-auto max-w-lg pb-20">
+      <AppBar />
       {children}
       <BottomNav />
     </div>

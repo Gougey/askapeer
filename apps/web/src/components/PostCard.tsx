@@ -64,8 +64,15 @@ export async function PostCard({ post }: { post: PostCardDto }) {
         <span className="flex items-center justify-between">
           <AuthorLine author={post.author} />
           <span className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-muted)' }}>
-            <span aria-hidden>👏</span>
-            <span>{post.kudosCount}</span>
+            <span
+              className="flex items-center gap-1 font-semibold"
+              style={{ color: 'var(--color-kudos-text)' }}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="size-[15px]" style={{ color: 'var(--color-kudos)' }}>
+                <path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z" />
+              </svg>
+              {post.kudosCount}
+            </span>
             <span>·</span>
             <span>{t('answers', { count: post.answerCount })}</span>
           </span>

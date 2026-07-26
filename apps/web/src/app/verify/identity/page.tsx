@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { API_ORIGIN } from '@/lib/api';
 import { getAccessToken } from '@/lib/session';
+import { BrandLockup } from '@/components/Brand';
 import { SimulatedCapture } from './SimulatedCapture';
 
 type CaptureResponse = {
@@ -36,6 +37,7 @@ export default async function IdentityCheckPage() {
   if (!session) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6 py-12 text-center">
+        <BrandLockup className="mx-auto h-14 w-auto" />
         <h1 className="text-2xl font-semibold">{t('noSession.title')}</h1>
         <p style={{ color: 'var(--color-muted)' }}>{t('noSession.body')}</p>
         <Link href="/status" className="underline text-sm">{t('backToStatus')}</Link>
@@ -45,6 +47,7 @@ export default async function IdentityCheckPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6 py-12">
+      <BrandLockup className="mx-auto h-14 w-auto" />
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>{t('body')}</p>

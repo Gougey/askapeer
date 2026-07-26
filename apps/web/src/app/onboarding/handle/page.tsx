@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { requireSession } from '@/lib/onboarding';
+import { BrandLockup } from '@/components/Brand';
 import { ChooseHandleForm } from './ChooseHandleForm';
 
 // A6 — choose handle. The first post-verification step (EPIC-B §3).
@@ -9,6 +10,7 @@ export default async function ChooseHandlePage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6 py-12">
+      <BrandLockup className="mx-auto h-14 w-auto" />
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <p style={{ color: 'var(--color-muted)' }}>{t('body')}</p>

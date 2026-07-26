@@ -135,6 +135,6 @@ function Empty({ children }: { children: React.ReactNode }) {
 }
 
 function Outcome({ outcome }: { outcome: string }) {
-  const color = outcome === 'pass' ? 'var(--color-ok)' : outcome === 'fail' ? 'var(--color-bad)' : '#d97706';
+  const color = outcome === 'pass' ? 'var(--color-ok)' : outcome === 'fail' ? 'var(--color-bad)' : 'var(--color-warn)';
   return <span style={{ color, fontWeight: 500 }}>{outcome}</span>;
 }

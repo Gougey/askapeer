@@ -7,7 +7,7 @@ const REVIEWABLE = ['pending', 'needs_more_info'];
 
 const ACTIONS: { key: ReviewAction; label: string; color: string; needsReason: 'required' | 'optional' }[] = [
   { key: 'approve', label: 'Approve', color: 'var(--color-ok)', needsReason: 'optional' },
-  { key: 'request_more_info', label: 'Request more info', color: '#d97706', needsReason: 'required' },
+  { key: 'request_more_info', label: 'Request more info', color: 'var(--color-warn)', needsReason: 'required' },
   { key: 'reject', label: 'Reject', color: 'var(--color-bad)', needsReason: 'optional' },
 ];
 

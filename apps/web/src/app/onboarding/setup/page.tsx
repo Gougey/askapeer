@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { requireSession } from '@/lib/onboarding';
+import { BrandLockup } from '@/components/Brand';
 import { AcknowledgeForm } from './AcknowledgeForm';
 
 // A7 — onboarding setup: the anonymity acknowledgement (mandated surface, screen spec
@@ -10,6 +11,7 @@ export default async function OnboardingSetupPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6 py-12">
+      <BrandLockup className="mx-auto h-14 w-auto" />
       <h1 className="text-2xl font-semibold">{t('title')}</h1>
 
       <section className="space-y-3 rounded-lg p-4" style={{ background: 'var(--color-surface)' }}>
