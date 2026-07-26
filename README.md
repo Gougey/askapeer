@@ -15,9 +15,10 @@ The application is being built in `apps/` as thin, tracer-bullet vertical slices
 | Path | What it is |
 |---|---|
 | `apps/api/` | **Production API** — NestJS modular monolith (module-per-epic), Drizzle ORM, Postgres + Redis/BullMQ. |
-| `apps/web/` | **Production web app** — Next.js (App Router), Tailwind, next-intl (en-GB). |
+| `apps/web/` | **Production web app** — Next.js (App Router), Tailwind, next-intl (en-GB), branded with the AskaPeer design system. |
 | `DEVELOPMENT.md` | How to run the monorepo locally, the deployed environments, and slice-by-slice notes. |
 | `docs/askapeer-prd-v0.1.md` | The PRD — single source of truth for scope, personas, verification/pseudonymity model, monetisation, roadmap, and open decisions. |
+| `docs/style-guide/` | **The AskaPeer design system** — `STYLE_GUIDE.md` (canonical spec: colour, typography, components, accessibility, voice) and `styleguide.html` (a live, themeable showcase). Applied to `apps/web`. |
 | `docs/archive/` | Earlier working documents, superseded by the PRD. |
 | `docs/AHP_Research_Feed_Design_Conversation.md` | Design discussion behind the research-feed prototype below. |
 | `prototypes/mobile-lookfeel/` | **Mobile look-and-feel prototype** — static HTML, mock content only, no live data. No backend, auth, verification, or payment. |
