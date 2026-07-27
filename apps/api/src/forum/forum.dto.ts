@@ -39,7 +39,12 @@ export class CreatePostDto {
   body!: string;
 
   @IsOptional()
-  @IsUUID('4', { each: true })
+  // Any UUID version, deliberately not v4: the clinical taxonomy is seeded with
+  // deterministic **uuid5** ids derived from each node's position in the tree, so a v4
+  // constraint here rejects every real tag. The id's version is a seeding detail and
+  // never something a post should be validated against — existence is, and the service
+  // checks that against the vocabulary.
+  @IsUUID('all', { each: true })
   @ArrayUnique()
   @ArrayMaxSize(MAX_TAGS_PER_POST)
   tagIds?: string[];

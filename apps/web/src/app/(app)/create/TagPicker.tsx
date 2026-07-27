@@ -197,7 +197,9 @@ function SelectedChip({ tag, onRemove, label }: { tag: Tag; onRemove: () => void
       type="button"
       onClick={onRemove}
       aria-label={label}
-      className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
+      // max-w-full + wrapping so a long clinical name lengthens the chip downwards
+      // rather than pushing the row sideways.
+      className="flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-left text-xs break-words"
       style={{ borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}
     >
       <span>{tag.name}</span>
@@ -245,8 +247,18 @@ function TagSheet({
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  /*
+   * Focus the sheet itself, NOT the search box. Autofocusing the input raised the
+   * on-screen keyboard the moment the sheet opened, which shrank the visual viewport,
+   * pushed the page up and hid most of the browse list behind the keyboard — before the
+   * member had said they wanted to type at all. Browse is the default view, so the sheet
+   * opens quiet; tapping the field is what asks for the keyboard.
+   *
+   * Focus still has to move *into* the dialog, or the focus trap and every screen reader
+   * would be left outside it on the button that opened it.
+   */
   useEffect(() => {
-    searchRef.current?.focus();
+    sheetRef.current?.focus();
   }, []);
 
   // The page behind a sheet must not scroll with it, or dismissing lands somewhere else.
@@ -369,7 +381,8 @@ function TagSheet({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="flex h-[86dvh] w-full max-w-lg flex-col rounded-t-2xl border-t transition-transform duration-200 motion-reduce:transition-none"
+          tabIndex={-1}
+          className="flex h-[86dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border-t outline-none transition-transform duration-200 motion-reduce:transition-none"
           style={{
             background: 'var(--color-surface)',
             borderColor: 'var(--color-border)',
@@ -448,8 +461,12 @@ function TagSheet({
           </div>
 
           <div
-            className="flex-1 overflow-y-auto overscroll-contain border-t px-4 pt-2 pb-6"
-            style={{ borderColor: 'var(--color-border)' }}
+            className="flex-1 overflow-x-hidden overflow-y-auto overscroll-contain border-t px-4 pt-2"
+            style={{
+              borderColor: 'var(--color-border)',
+              // Clear of the home indicator on a gesture-nav phone, never less than 1.5rem.
+              paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
+            }}
           >
             {searching ? (
               <SearchResults
@@ -463,7 +480,7 @@ function TagSheet({
               />
             ) : (
               <>
-                <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                <p className="text-xs break-words" style={{ color: 'var(--color-muted)' }}>
                   {path.length === 0
                     ? t('tagPicker.browseHint')
                     : t('tagPicker.browsing', {
@@ -487,7 +504,7 @@ function TagSheet({
                             type="button"
                             onClick={() => tapBrowse(tag, depth)}
                             aria-pressed={picked}
-                            className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
+                            className="flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-left text-xs break-words"
                             style={{
                               borderColor: picked ? 'var(--color-accent)' : 'var(--color-muted)',
                               color: picked ? 'var(--color-accent)' : 'var(--color-muted)',
@@ -557,10 +574,18 @@ function SearchResults({
               disabled={added}
               className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left"
             >
-              <span className="flex flex-col">
-                <span className="text-sm font-medium">{tag.name}</span>
+              {/*
+                min-w-0 is load-bearing: a flex child defaults to min-width:auto, so a deep
+                breadcrumb ("Upper Limb › … › Nerve (wrist)") refuses to shrink and widens
+                the whole sheet past the viewport instead of wrapping.
+              */}
+              <span className="flex min-w-0 flex-col">
+                <span className="text-sm font-medium break-words">{tag.name}</span>
                 {trail && (
-                  <span className="text-[11px]" style={{ color: 'var(--color-faint)' }}>
+                  <span
+                    className="text-[11px] break-words"
+                    style={{ color: 'var(--color-faint)' }}
+                  >
                     {trail}
                   </span>
                 )}
