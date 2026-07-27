@@ -121,9 +121,14 @@ export const tags = community.table(
   'tags',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    name: text('name').notNull().unique(),
+    // NOT globally unique — the clinical taxonomy repeats names across branches ("Nerve",
+    // "Bone", even leaves like "Rheumatoid arthritis" listed under several regions). A tag's
+    // identity is its name *within its parent*; uniqueness is sibling-scoped below, and the
+    // disambiguating context (region) is shown in the UI, never baked into the name.
+    name: text('name').notNull(),
     facet: tagFacet('facet').notNull(),
-    // Region grouping (Upper limb / Lower limb). Self-referencing, hence the lazy callback.
+    // The parent node (region → axis → sub-group → leaf). Self-referencing, hence the lazy
+    // callback. A null parent is a top-level region.
     parentId: uuid('parent_id').references((): AnyPgColumn => tags.id),
     // Seeds the search synonym dictionary (EPIC-C §4) as well as matching on input.
     synonyms: text('synonyms').array().notNull().default(sql`'{}'::text[]`),
@@ -133,7 +138,17 @@ export const tags = community.table(
     sortOrder: integer('sort_order').notNull().default(0),
     retiredAt: timestamp('retired_at', { withTimezone: true }),
   },
-  (t) => [index('tags_facet_idx').on(t.facet, t.sortOrder)],
+  (t) => [
+    index('tags_facet_idx').on(t.facet, t.sortOrder),
+    // Sibling-scoped uniqueness: no two children of the same parent may share a name
+    // (case-insensitive), but the same name may recur under different parents.
+    uniqueIndex('tags_parent_name_unique').on(t.parentId, sql`lower(${t.name})`),
+    // Top-level regions have a null parent, and Postgres treats NULLs as distinct in a
+    // unique index — so this partial index keeps region names themselves unique.
+    uniqueIndex('tags_root_name_unique')
+      .on(sql`lower(${t.name})`)
+      .where(sql`${t.parentId} is null`),
+  ],
 );
 
 export const postType = community.enum('post_type', ['question', 'case_discussion']);

@@ -20,3 +20,6 @@ dist/
 out/
 *.tsbuildinfo
 coverage/
+
+# Microsoft Office temp/lock files
+~$*
