@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import type { Category, Tag } from '@/lib/forum';
@@ -40,6 +40,22 @@ export function ComposeQuestionForm({
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const categoryRef = useRef<HTMLSelectElement>(null);
+
+  /*
+   * React resets the form once an action settles. A controlled <input> survives that,
+   * because React writes the value through to the DOM attribute the reset restores from —
+   * a controlled <select> does not, since no <option> carries `selected`, so it snaps back
+   * to the first option (our empty placeholder). The member then sees a failed post *and*
+   * their category silently cleared, which reads as a second, phantom mistake.
+   *
+   * So re-assert the selection after the reset. Only the select needs this.
+   */
+  useEffect(() => {
+    if (categoryRef.current && categoryRef.current.value !== categoryId) {
+      categoryRef.current.value = categoryId;
+    }
+  }, [state, categoryId]);
 
   const complete = categoryId !== '' && title.trim() !== '' && body.trim() !== '';
 
@@ -63,6 +79,7 @@ export function ComposeQuestionForm({
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium">{t('category')}</span>
         <select
+          ref={categoryRef}
           name="categoryId"
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
