@@ -1429,7 +1429,12 @@ anonymity reminder</strong> (mandated §1.4); post.</li>
 side of EPIC-J-managed vocabulary).</li>
 <li><strong>Actions → API</strong>: Post →
 <code>POST /v1/posts { category_id, type: "question", title, body, tag_ids[], poll? }</code>
-(EPIC-C) → C4.</li>
+(EPIC-C) → <strong>C1</strong>. <em>(Changed 2026-07-27 from C4: landing
+on your own new thread puts an empty answer box under it, which reads as
+the post being reopened and prompting you to reply to yourself. C1 is
+newest-first, so the question is at the top on arrival — confirmation by
+arrival rather than by being parked inside what you just
+wrote.)</em></li>
 <li><strong>States</strong>: editing; validation (category required,
 title/body required); submitting.</li>
 <li><strong>Spec-gaps</strong>: <strong>G-6</strong> (poll payload on

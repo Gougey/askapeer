@@ -478,7 +478,7 @@ The first flow: unauthenticated → verified → handle → in-app. No bottom-na
 - **Purpose**: create a `type = question` post (publishes immediately — EPIC-C, no draft state for questions).
 - **Content**: **category** picker (content-type: Clinical Case / Research / Career / Equipment / General); **tags** — *selected from the curated vocabulary*, facet-grouped, multi-select (members cannot create new tags — EPIC-C §3); **title**; **body**; **optional poll** (attach question + options); the **zero-tolerance anonymity reminder** (mandated §1.4); post.
 - **Data → source**: categories + selectable tags (read side of EPIC-J-managed vocabulary).
-- **Actions → API**: Post → `POST /v1/posts { category_id, type: "question", title, body, tag_ids[], poll? }` (EPIC-C) → C4.
+- **Actions → API**: Post → `POST /v1/posts { category_id, type: "question", title, body, tag_ids[], poll? }` (EPIC-C) → **C1**. *(Changed 2026-07-27 from C4: landing on your own new thread puts an empty answer box under it, which reads as the post being reopened and prompting you to reply to yourself. C1 is newest-first, so the question is at the top on arrival — confirmation by arrival rather than by being parked inside what you just wrote.)*
 - **States**: editing; validation (category required, title/body required); submitting.
 - **Spec-gaps**: **G-6** (poll payload on create); **note** — confirm tag application is *select-only* from the vocabulary (no free-text tag creation), consistent with admin-managed tags.
 
