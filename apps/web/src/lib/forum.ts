@@ -44,11 +44,19 @@ export type Thread = {
 
 export type Category = { id: string; name: string; description: string | null };
 
+/**
+ * One node of the clinical taxonomy (region → axis → sub-group → leaf). The API returns
+ * the tree flat and the composer's picker rebuilds it, so every node carries what it
+ * needs to be placed (`parentId`), labelled unambiguously (`region` — names are only
+ * unique among siblings) and drilled into (`hasChildren`).
+ */
 export type Tag = {
   id: string;
   name: string;
   facet: 'region' | 'muscle' | 'structure' | 'pathology';
-  parentName: string | null;
+  parentId: string | null;
+  region: string;
+  hasChildren: boolean;
 };
 
 /**

@@ -170,13 +170,45 @@ migrate step, not a code change.</p>
 <h2 id="forum-s4-the-seeded-vocabulary">Forum (S4) — the seeded
 vocabulary</h2>
 <p>Categories and the clinical tag vocabulary are <strong>seeded by
-migration</strong> (<code>0004</code>), not managed in the app: EPIC-J’s
-admin surfaces for editing them are S13. Both are read through
-<code>GET /v1/categories</code> and <code>GET /v1/tags</code>, and post
-creation validates against them — tags are <strong>select-only</strong>
-(FD-4), so an unknown or retired tag id is a 400 rather than an
-invitation to create one. Andrew’s fuller muscle list extends the same
-table when it arrives; that is rows, not a migration.</p>
+migration</strong> (<code>0004</code>, with the full taxonomy replacing
+the placeholder in <code>0009</code>/<code>0010</code>), not managed in
+the app: EPIC-J’s admin surfaces for editing them are S13. Both are read
+through <code>GET /v1/categories</code> and <code>GET /v1/tags</code>,
+and post creation validates against them — tags are
+<strong>select-only</strong> (FD-4), so an unknown or retired tag id is
+a 400 rather than an invitation to create one.</p>
+<p><code>GET /v1/tags</code> returns Andrew’s v2.0 taxonomy —
+<strong>588 nodes, four levels deep</strong> (region → axis → sub-group
+→ leaf) — flat, one row per node, walked with a recursive CTE in
+<code>vocabulary.service.ts</code>. Each row carries
+<code>parentId</code> (the composer rebuilds the tree),
+<code>region</code> (the root it descends from) and
+<code>hasChildren</code>. Two consequences worth knowing:</p>
+<ul>
+<li><strong><code>region</code> is not decoration.</strong> Tag names
+are only <em>sibling-scoped</em> unique, so 41 names recur across
+branches (“Rheumatoid arthritis” sits under several regions).
+<code>region</code> is what tells two identically-named chips apart, in
+the picker and on a post.</li>
+<li><strong>Retiring is inherited.</strong> The recursion only descends
+through non-retired parents, so retiring a sub-group hides its whole
+subtree from the composer — while posts already carrying those tags are
+left exactly as they are.</li>
+</ul>
+<p>The composer’s picker (<code>create/TagPicker.tsx</code>) is a
+<strong>collapsed block plus a bottom sheet</strong>: the compose page
+shows only the chosen chips and an “Add tags” button, and the sheet
+holds search and browse. Inline was built first and rejected — it pushed
+“Post question” far below the fold. <strong>Any node is
+taggable</strong>, not just leaves; tapping a node in browse both
+selects it and drills into it, and selection <strong>keeps the most
+specific</strong> tag (adding a descendant drops an ancestor already
+chosen). Broadening is the read side’s job: a filter on an ancestor
+expands to its subtree at query time, so storing both ends of the same
+branch would be noise. All 588 nodes ship to the client in one payload
+(~110 KB) and search runs locally, which is what makes typing feel
+instant; EPIC-C §5’s <code>?prefix=</code> typeahead only earns its keep
+if the taxonomy outgrows that.</p>
 <p>Two rules worth knowing before extending this epic:</p>
 <ul>
 <li><code>POST /v1/posts</code> hardcodes <code>type = 'question'</code>

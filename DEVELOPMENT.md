@@ -107,12 +107,35 @@ AWS migrate step, not a code change.
 
 ## Forum (S4) — the seeded vocabulary
 
-Categories and the clinical tag vocabulary are **seeded by migration** (`0004`), not
-managed in the app: EPIC-J's admin surfaces for editing them are S13. Both are read
-through `GET /v1/categories` and `GET /v1/tags`, and post creation validates against
-them — tags are **select-only** (FD-4), so an unknown or retired tag id is a 400 rather
-than an invitation to create one. Andrew's fuller muscle list extends the same table
-when it arrives; that is rows, not a migration.
+Categories and the clinical tag vocabulary are **seeded by migration** (`0004`, with the
+full taxonomy replacing the placeholder in `0009`/`0010`), not managed in the app:
+EPIC-J's admin surfaces for editing them are S13. Both are read through
+`GET /v1/categories` and `GET /v1/tags`, and post creation validates against them — tags
+are **select-only** (FD-4), so an unknown or retired tag id is a 400 rather than an
+invitation to create one.
+
+`GET /v1/tags` returns Andrew's v2.0 taxonomy — **588 nodes, four levels deep**
+(region → axis → sub-group → leaf) — flat, one row per node, walked with a recursive CTE
+in `vocabulary.service.ts`. Each row carries `parentId` (the composer rebuilds the tree),
+`region` (the root it descends from) and `hasChildren`. Two consequences worth knowing:
+
+- **`region` is not decoration.** Tag names are only *sibling-scoped* unique, so 41 names
+  recur across branches ("Rheumatoid arthritis" sits under several regions). `region` is
+  what tells two identically-named chips apart, in the picker and on a post.
+- **Retiring is inherited.** The recursion only descends through non-retired parents, so
+  retiring a sub-group hides its whole subtree from the composer — while posts already
+  carrying those tags are left exactly as they are.
+
+The composer's picker (`create/TagPicker.tsx`) is a **collapsed block plus a bottom
+sheet**: the compose page shows only the chosen chips and an "Add tags" button, and the
+sheet holds search and browse. Inline was built first and rejected — it pushed "Post
+question" far below the fold. **Any node is taggable**, not just leaves; tapping a node
+in browse both selects it and drills into it, and selection **keeps the most specific**
+tag (adding a descendant drops an ancestor already chosen). Broadening is the read side's
+job: a filter on an ancestor expands to its subtree at query time, so storing both ends
+of the same branch would be noise. All 588 nodes ship to the client in one payload
+(~110 KB) and search runs locally, which is what makes typing feel instant; EPIC-C §5's
+`?prefix=` typeahead only earns its keep if the taxonomy outgrows that.
 
 Two rules worth knowing before extending this epic:
 
