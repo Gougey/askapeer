@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { API_ORIGIN } from '@/lib/api';
 import { getAccessToken } from '@/lib/session';
@@ -46,8 +47,18 @@ export async function createPostAction(
     return { status: 'error', reason: res.status === 400 ? 'rejected' : 'unavailable' };
   }
 
-  const thread = (await res.json()) as { post: { id: string } };
-  // Straight to the thread rather than the list: the member's own question at the top of
-  // a list is weak confirmation, whereas the thread is the thing they just made.
-  redirect(`/discussions/${thread.post.id}`);
+  /*
+   * Back to the list (C1), not the new thread (C4).
+   *
+   * Landing on your own freshly-posted question put an empty answer box directly beneath
+   * it, which reads as the post having been *reopened* and you being prompted to reply to
+   * yourself — the opposite of "that's published, done". The list is newest-first, so the
+   * question is sitting at the top when it loads: confirmation by arrival rather than by
+   * being parked inside the thing you just wrote.
+   *
+   * Revalidated first: the whole point is that the question is *there* on arrival, so a
+   * cached list without it would be worse than the thread we came from.
+   */
+  revalidatePath('/discussions');
+  redirect('/discussions');
 }
