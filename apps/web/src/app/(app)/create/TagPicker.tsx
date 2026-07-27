@@ -455,7 +455,16 @@ function TagSheet({
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('tagPicker.searchPlaceholder')}
               aria-label={t('tagPicker.searchLabel')}
-              className="w-full rounded-lg border px-3 py-2 text-sm"
+              /*
+               * text-base (16px) is deliberate — do not shrink it to match the sheet's
+               * other small type. iOS Safari auto-zooms the page when a focused input
+               * is under 16px, and zooming resizes the visual viewport, so this
+               * fixed-position sheet visibly changed width the moment the box was
+               * tapped. The composer's own fields inherit 16px for the same reason.
+               * The fix is the font size, never a maximum-scale viewport lock, which
+               * would take pinch-zoom away from everyone.
+               */
+              className="w-full rounded-lg border px-3 py-2 text-base"
               style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
             />
           </div>
