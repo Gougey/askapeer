@@ -147,11 +147,29 @@
     "bodyPlaceholder": "Give enough context for a peer to answer well — presentation, what you have tried, what you are weighing up. No patient-identifying details.",
     "tags": "Tags",
     "tagsHint": "Choose up to {max} — they are how other members find your question.",
-    "facet": {
-      "region": "Body region",
-      "muscle": "Muscle",
-      "structure": "Structure",
-      "pathology": "Pathology"
+    "tagPicker": {
+      "add": "Add tags",
+      "addMore": "Add more",
+      "edit": "Tags full — edit",
+      "title": "Add tags",
+      "done": "Done",
+      "capReached": "{max} is the limit — remove one to swap",
+      "remove": "Remove {name}",
+      "noneSelected": "Nothing selected yet.",
+      "searchPlaceholder": "Search tags — e.g. carpal, tendinopathy…",
+      "searchLabel": "Search tags",
+      "noMatches": "No matches. Try a shorter term, or browse by region.",
+      "addResult": "+ add",
+      "added": "added",
+      "browseHint": "Tap a region to drill in. Any level can be a tag.",
+      "browsing": "Browsing: {trail}",
+      "level": {
+        "region": "Region",
+        "axis": "Muscles or conditions",
+        "subGroup": "Sub-group",
+        "specific": "Specific",
+        "more": "More"
+      }
     },
     "publish": "Post question",
     "publishing": "Posting…",

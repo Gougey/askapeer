@@ -1,16 +1,15 @@
 'use client';
 
-import { useActionState, useMemo, useState } from 'react';
+import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import type { Category, Tag } from '@/lib/forum';
 import { createPostAction, type ComposeState } from './actions';
+import { TagPicker } from './TagPicker';
 
 /** Matches the API's ArrayMaxSize — the limit is explained here, enforced there. */
 const MAX_TAGS = 5;
 const TITLE_MAX = 200;
-
-const FACET_ORDER = ['region', 'muscle', 'structure', 'pathology'] as const;
 
 function PublishButton({ disabled }: { disabled: boolean }) {
   const t = useTranslations('compose');
@@ -41,30 +40,6 @@ export function ComposeQuestionForm({
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-
-  /**
-   * Grouped for scanning, not filtering: regions sit under their limb, everything else
-   * under its facet. The vocabulary is select-only (FD-4), so this is the whole list.
-   */
-  const groups = useMemo(() => {
-    const byGroup = new Map<string, Tag[]>();
-    for (const tag of tags) {
-      const key = tag.facet === 'region' ? (tag.parentName ?? t('facet.region')) : t(`facet.${tag.facet}`);
-      byGroup.set(key, [...(byGroup.get(key) ?? []), tag]);
-    }
-    return [...byGroup.entries()].sort(([a], [b]) => indexOfFacet(a, t) - indexOfFacet(b, t));
-  }, [tags, t]);
-
-  function toggleTag(id: string) {
-    setSelectedTags((current) =>
-      current.includes(id)
-        ? current.filter((tagId) => tagId !== id)
-        : current.length >= MAX_TAGS
-          ? current
-          : [...current, id],
-    );
-  }
 
   const complete = categoryId !== '' && title.trim() !== '' && body.trim() !== '';
 
@@ -129,44 +104,7 @@ export function ComposeQuestionForm({
         />
       </label>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium">{t('tags')}</legend>
-        <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
-          {t('tagsHint', { max: MAX_TAGS })}
-        </p>
-        {groups.map(([group, groupTags]) => (
-          <div key={group} className="flex flex-col gap-1">
-            <span className="text-xs font-medium" style={{ color: 'var(--color-muted)' }}>
-              {group}
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {groupTags.map((tag) => {
-                const checked = selectedTags.includes(tag.id);
-                return (
-                  <label
-                    key={tag.id}
-                    className="cursor-pointer rounded-full border px-2.5 py-1 text-xs"
-                    style={{
-                      borderColor: checked ? 'var(--color-accent)' : 'var(--color-muted)',
-                      color: checked ? 'var(--color-accent)' : 'var(--color-fg)',
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      name="tagIds"
-                      value={tag.id}
-                      checked={checked}
-                      onChange={() => toggleTag(tag.id)}
-                      className="sr-only"
-                    />
-                    {tag.name}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </fieldset>
+      <TagPicker tags={tags} max={MAX_TAGS} />
 
       {state.status === 'error' && (
         <p className="text-sm" style={{ color: 'var(--color-bad)' }} role="alert">
@@ -177,11 +115,4 @@ export function ComposeQuestionForm({
       <PublishButton disabled={!complete} />
     </form>
   );
-}
-
-/** Keeps the facet groups in clinical order (regions first) rather than insertion order. */
-function indexOfFacet(label: string, t: (key: string) => string): number {
-  const index = FACET_ORDER.findIndex((facet) => t(`facet.${facet}`) === label);
-  // Limb groupings ("Upper limb") aren't facet labels — they belong with the regions.
-  return index === -1 ? 0 : index;
 }
