@@ -3,10 +3,15 @@
  * Design-token guard.
  *
  * The AskaPeer design system (docs/style-guide/STYLE_GUIDE.md) is applied as a *theming
- * pass*: components reference semantic CSS variables (var(--color-*)), and the token layer
- * in src/app/globals.css is the single place raw colour values are allowed to live. This
- * check fails the build when a component (re)introduces an off-system colour, which is how
- * the pre-brand admin colours and the odd clap-vs-star slipped in before the guard existed.
+ * pass*: components reference semantic CSS variables (var(--color-*)), and raw colour
+ * values live in exactly one place — packages/design-tokens, which *generates* the token
+ * layer in src/app/globals.css. This check fails the build when a component (re)introduces
+ * an off-system colour, which is how the pre-brand admin colours and the odd clap-vs-star
+ * slipped in before the guard existed.
+ *
+ * Scope is apps/web/src deliberately: packages/design-tokens is the sanctioned home for
+ * literal values, so it is not scanned. `npm run tokens:check` is what keeps *that* file
+ * and globals.css from drifting apart.
  *
  * It flags, in every .ts/.tsx file under src/:
  *   1. Raw hex colours (e.g. #0ea5e9, bg-[#d97706]) — use a semantic token instead.

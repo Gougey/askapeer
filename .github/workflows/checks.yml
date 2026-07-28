@@ -24,5 +24,9 @@ jobs:
       - run: npm ci
       - name: Design-token guard
         run: npm run lint:tokens -w apps/web
+      # The CSS token layer is generated from packages/design-tokens. Fails if globals.css
+      # was hand-edited instead, which is the one way the two could silently diverge.
+      - name: Design tokens up to date
+        run: npm run tokens:check
       - name: Typecheck
         run: npm run typecheck -w apps/web

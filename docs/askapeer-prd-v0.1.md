@@ -267,7 +267,7 @@ Sports medicine practitioners are frequently mobile between venues, pitchside, a
 
 **Recommended approach**: Launch the web application as the proof-of-concept vehicle. A responsive web app provides a usable mobile experience while the product is validated. Invest in native iOS and Android following successful early traction.
 
-> **See FD-3** for stakeholder confirmation of this sequencing, including the counter-argument that a web-only experience may suppress early adoption among mobile-first practitioners.
+> **See FD-3** for stakeholder confirmation of this sequencing, including the counter-argument that a web-only experience may suppress early adoption among mobile-first practitioners — and, as of 2026-07-28, a detailed recommendation covering the three-phase rollout, an installable web app (PWA) as the test of that counter-argument, and why a native client (if built) should be one React Native codebase rather than separate Swift and Kotlin applications.
 
 ### 7.3 Hosting and technology
 
@@ -587,6 +587,26 @@ Andrew Renshaw's input is particularly important here.
 **Recommendation**: web first — building three platforms simultaneously multiplies cost and time with no validated demand yet.
 
 **Counter-argument**: if the target use case is heavily mobile (pitchside, between venues), a web-only experience may suppress early adoption. Should be tested with Andrew's network.
+
+#### Detailed recommendation (2026-07-28) — for stakeholder sign-off
+
+*This expands the recommendation above into something actionable against the agreed rollout. It does **not** close FD-3; the decision remains with the founding team.*
+
+**Rollout, as agreed**: (1) the three stakeholders; (2) a selected group of Andrew's peers; (3) public launch.
+
+**a. Do not build separate Swift and Kotlin applications.** Three native codebases means three release trains and three implementations of every moderation rule, verification gate and pseudonymity guarantee. Those are not cosmetic concerns — divergence there is a compliance exposure under §11, not merely an inconsistency. Native-per-platform suits teams with a squad per platform; it would overwhelm this one. **If native happens, it should be React Native (via Expo)** — one codebase for both stores, in TypeScript, sharing types, API client and validation with what already exists.
+
+**b. Keep the web application in Next.js.** It is built, deployed and carrying the moderation stack. A universal Expo/React Native Web codebase is more viable here than usual — almost the entire app sits behind a login gate, so SEO weighs little — but adopting it now would mean rewriting working, safety-critical code to pre-empt duplication that has not yet been paid for.
+
+**c. Phase 2 should be an installable web app (PWA), and should be treated as the FD-3 experiment.** Adding a manifest, icons and a service worker gives Andrew's peers home-screen installation, an app icon, standalone display and (iOS 16.4+) push, against the real product with real verification — no second codebase, no Apple Developer account, no device registration. This is the cheapest available test of the counter-argument above, and phase 2 is the only point where genuine clinicians use the product before the stakes rise.
+
+**What phase 2 must measure**, so the decision is evidence-led: how many invitees install to the home screen rather than staying in the browser; whether "it isn't a real app" surfaces unprompted as an objection; and whether the mobile use case (pitchside, between venues) actually materialises or the traffic is desk-based after all.
+
+**d. Decide at the end of phase 2, not before.** If phase 2 shows the installed web app is accepted, FD-3 resolves to web-first with far better evidence than is available today, and native can wait for traction as §7.2 recommends. If it shows a native client is a genuine adoption barrier, build the Expo app for phase 3 and distribute test builds through TestFlight and EAS internal distribution. *(Note: Expo Go is a sandbox runtime for prototypes, not a distribution channel — it cannot carry custom native code, so it could never run the identity-verification SDK that gates the product.)*
+
+**e. Groundwork already taken, which commits us to nothing.** Design tokens have been extracted to `packages/design-tokens` as a platform-neutral source that generates the web CSS layer. CSS does not transfer to React Native — it has no cascade and no custom properties — so this preserves the *decisions* (which colour means kudos, what the neutral ramp is) independently of the CSS expressing them. It is cheap insurance ahead of a detailed visual pass, and is useful whether or not a native client is ever built.
+
+**One expectation to set**: some visual work will be redone whichever path is chosen, because iOS and Android have their own navigation idioms, safe areas and system type. A native app that is pixel-identical to the web app tends to feel non-native. The aim is not to avoid redoing cosmetics — it is to avoid re-deciding.
 
 ---
 

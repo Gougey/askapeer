@@ -215,6 +215,13 @@ Components must reference **semantic** tokens, never raw palette values. This is
 what makes applying the design system a *theming pass* rather than a rewrite —
 exactly as noted in `apps/web/src/app/globals.css`.
 
+> **Where the values live.** This guide is the canonical spec for the *reasoning*;
+> the *values* live in `packages/design-tokens`, which generates the CSS token
+> layer in `apps/web/src/app/globals.css` (`npm run tokens:build`; CI fails if the
+> two diverge). Edit the package, never the generated region. The values are kept
+> platform-neutral so a non-CSS client can consume the same tokens rather than a
+> hand-copied duplicate of them — see that package's README for the rationale.
+
 | Semantic token | Maps to (light) | Meaning |
 |---|---|---|
 | `--color-accent` | `--color-navy` | The primary interactive colour. |

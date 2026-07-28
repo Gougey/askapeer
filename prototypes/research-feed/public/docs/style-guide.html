@@ -1,0 +1,1875 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Design System & Style Guide — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">Design System & Style Guide</span>
+</div>
+<main>
+<h1 id="askapeer-style-guide-design-system">AskaPeer — Style Guide &amp;
+Design System</h1>
+<p><strong>Version 0.2 · Status: Draft for review</strong></p>
+<p>The single source of truth for how AskaPeer looks, feels and reads.
+This guide codifies the aesthetic already validated in the mobile
+look-and-feel prototype and makes it enforceable across the production
+web app (and, later, native iOS and Android).</p>
+<blockquote>
+<p><strong>How to use this document.</strong> Sections 1–3 are the
+<em>foundations</em> — read them first; every other decision descends
+from them. Sections 4–7 are the <em>systems</em> (spacing, elevation,
+iconography, motion). Section 8 is the <em>component catalogue</em>.
+Sections 9–11 are the <em>disciplines</em> that make AskaPeer different
+from a generic app: accessibility, voice, and the anonymity/safety UX
+that is the product’s whole reason for existing. Section 12 is the
+machine-readable <em>token reference</em> the code consumes.</p>
+<p>A live, rendered companion to this document lives at <a
+href="./styleguide.html"><code>styleguide.html</code></a> — open it in a
+browser to see the palette, type scale and components in both light and
+dark themes.</p>
+</blockquote>
+<hr />
+<h2 id="contents">Contents</h2>
+<ol start="0" type="1">
+<li><a href="#first-principles">First principles</a></li>
+<li><a href="#the-character-we-are-aiming-for">Brand foundations</a></li>
+<li><a href="#brand-foundations">Colour</a></li>
+<li><a href="#mission-philosophy">Typography</a></li>
+<li><a href="#the-name-wordmark">Spacing &amp; layout</a></li>
+<li><a href="#what-we-never-show">Elevation, radius &amp;
+borders</a></li>
+<li><a href="#design-principles-applied">Iconography &amp; imagery</a></li>
+<li><a href="#colour">Motion</a></li>
+<li><a href="#brand-palette">Component library</a></li>
+<li><a href="#neutrals">Accessibility</a></li>
+<li><a href="#dark-theme-accents">Voice &amp; tone</a></li>
+<li><a href="#semantic-mapping-what-the-code-references">Anonymity &amp; safety
+UX</a></li>
+<li><a href="#colour-usage-rules">Design tokens
+reference</a></li>
+<li><a href="#typography">Governance &amp;
+changelog</a></li>
+</ol>
+<hr />
+<h2 id="first-principles">0. First principles</h2>
+<p>AskaPeer is <em>“the no-ego sports medicine network”</em> — a
+verified-only, pseudonymous professional network where <strong>ideas win
+on merit, not rank</strong>. That single sentence is a design
+constraint, not just marketing. It produces three rules that override
+any other guidance in this document when they conflict:</p>
+<ol type="1">
+<li><p><strong>Never introduce a hierarchy signal.</strong> No photos,
+no job titles, no grades, no employers, no specialties, no “verified
+expert” tiers, no follower counts. The <em>only</em> status signal in
+the entire product is <strong>kudos</strong>. If a proposed design
+implies who is senior, it is wrong — regardless of how good it
+looks.</p></li>
+<li><p><strong>Show anonymity, don’t just claim it.</strong> The
+interface should make a member <em>feel</em> unidentifiable: monogram
+tiles instead of avatars, handles instead of names, quiet confirmation
+(“You are anonymous to your peers”) rather than legal
+boilerplate.</p></li>
+<li><p><strong>Patient safety is a component, not a policy
+page.</strong> De-identification and attestation are enforced <em>in the
+UI</em> — a case cannot be posted until the checklist and attestation
+are complete. Safety is designed, not documented.</p></li>
+</ol>
+<p>Everything below serves these three rules.</p>
+<h3 id="the-character-we-are-aiming-for">The character we are aiming
+for</h3>
+<p>Calm, precise, trustworthy, and quietly confident — the aesthetic of
+a well-made professional instrument, not a consumer social app. Our
+reference points, in four registers:</p>
+<ul>
+<li><strong>Editorial authority</strong> — the sober, institutional
+confidence of the WHO (who.int): generous headings, hairline structure,
+considered whitespace.</li>
+<li><strong>Premium restraint</strong> — the timeless serif-led
+typography of a brand like Rolex, which reads expensive precisely
+because it is quiet.</li>
+<li><strong>Systematic rigour</strong> — the token discipline of tools
+like Stripe and Linear.</li>
+<li><strong>Interaction correctness &amp; clinical clarity</strong> —
+Apple’s Human Interface Guidelines and the soberness of good clinical
+software.</li>
+</ul>
+<p><strong>Trust is the product</strong>, and the interface’s job is to
+look like it can be trusted with a difficult case at 11pm.</p>
+<hr />
+<h2 id="brand-foundations">1. Brand foundations</h2>
+<h3 id="mission-philosophy">1.1 Mission &amp; philosophy</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Product</strong></td>
+<td>AskaPeer</td>
+</tr>
+<tr>
+<td><strong>Tagline</strong></td>
+<td>The No Ego Sports Medicine Network</td>
+</tr>
+<tr>
+<td><strong>One-line</strong></td>
+<td>A verified-only, pseudonymous professional network for
+sports-medicine practitioners.</td>
+</tr>
+<tr>
+<td><strong>Vision</strong></td>
+<td><em>The quality of your thinking, not the prestige of your job
+title, determines your standing.</em></td>
+</tr>
+<tr>
+<td><strong>Primary audience</strong></td>
+<td>UK registered practitioners; HCPC-registered physiotherapists are
+the primary segment.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-name-wordmark">1.2 The name &amp; wordmark</h3>
+<p>The product is written <strong>AskaPeer</strong> — one word,
+camel-case, with the medial <strong>a</strong> carrying the brand. In
+the wordmark the <strong>a</strong> is set in the spark red
+(<code>--color-spark</code>) against the navy of the rest of the word;
+this is the one sanctioned place the two brand colours touch.</p>
+<ul>
+<li>Correct: <code>Ask</code> + red <code>a</code> + <code>Peer</code> →
+<em>AskaPeer</em></li>
+<li>The full-lockup logo pairs the mark with the wordmark; a standalone
+mark is used in the compact app bar.</li>
+<li><strong>Never</strong> write it “Ask a Peer”, “ASKAPEER”, “Askapeer”
+(except in prose where sentence case is unavoidable, e.g. legal copy —
+the codebase uses “Askapeer” in body text, which is acceptable; the
+<em>wordmark</em> is always <strong>AskaPeer</strong>).</li>
+<li>Do not recolour, outline, add a drop shadow to, rotate, or stretch
+the wordmark. Do not substitute the medial-a colour for anything but
+spark red.</li>
+</ul>
+<h3 id="what-we-never-show">1.3 What we never show</h3>
+<p>This is the shortest and most important brand asset we have. On any
+surface that represents a member, the following are
+<strong>prohibited</strong>:</p>
+<ul>
+<li>❌ Photographs of people (members, patients, or stock)</li>
+<li>❌ Real names</li>
+<li>❌ Job title, grade, or seniority (“Consultant”, “Band 7”,
+“Senior”)</li>
+<li>❌ Employer, club, team, hospital, or clinic</li>
+<li>❌ Specialty or profession label</li>
+<li>❌ Location beyond nothing (no city, no region)</li>
+<li>❌ Any ranked badge other than kudos-derived standing</li>
+</ul>
+<p>The only things a member ever sees about another member are: their
+<strong>handle</strong>, their <strong>monogram tile</strong>, their
+<strong>kudos</strong>, their <strong>join year</strong>, and — where
+earned — a <strong>kudos-derived contributor band</strong> (e.g. “top
+8%”) and per-post signals (<strong>Best answer</strong>,
+<strong>Answered</strong>).</p>
+<h3 id="design-principles-applied">1.4 Design principles (applied)</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Principle</th>
+<th>In practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Merit over rank</strong></td>
+<td>Kudos is the only status colour and the only ranked signal. Sort by
+kudos, never by seniority.</td>
+</tr>
+<tr>
+<td><strong>Anonymity, shown</strong></td>
+<td>Monogram tiles, never photos. Handles, never names. Reassurance copy
+at the point of doubt.</td>
+</tr>
+<tr>
+<td><strong>Safety by design</strong></td>
+<td>De-identification checklist + attestation gate the Post button.
+Green “de-identified &amp; attested” confirmation on the record.</td>
+</tr>
+<tr>
+<td><strong>Mobile-first</strong></td>
+<td>Thumb-reachable primary action, bottom tab bar, one-hand ergonomics,
+safe-area aware.</td>
+</tr>
+<tr>
+<td><strong>Calm &amp; clinical</strong></td>
+<td>Quiet neutrals, disciplined accent use, generous whitespace, no
+gamified noise.</td>
+</tr>
+<tr>
+<td><strong>Plain &amp; humane</strong></td>
+<td>Short sentences, British English, no jargon, one rule stated once
+and firmly.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="colour">2. Colour</h2>
+<p>Colour in AskaPeer is deliberately restrained. A large neutral canvas
+carries the content; accents are rationed so that the <strong>one accent
+that signals status — kudos gold — is never drowned out</strong>.</p>
+<h3 id="brand-palette">2.1 Brand palette</h3>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Token</th>
+<th>Light</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Primary / brand</strong></td>
+<td><code>--color-navy</code></td>
+<td><code>#001f52</code></td>
+<td>The brand colour. Primary buttons, active nav, links, focus rings,
+chips.</td>
+</tr>
+<tr>
+<td>Primary (dark)</td>
+<td><code>--color-navy-dark</code></td>
+<td><code>#001640</code></td>
+<td>Hover/pressed for primary; wordmark.</td>
+</tr>
+<tr>
+<td>Primary tint</td>
+<td><code>--color-navy-tint</code></td>
+<td><code>#e6ebf2</code></td>
+<td>Selected/hover backgrounds, badges.</td>
+</tr>
+<tr>
+<td>Primary tint 2</td>
+<td><code>--color-navy-tint-2</code></td>
+<td><code>#f2f5f9</code></td>
+<td>Subtle informational panels.</td>
+</tr>
+<tr>
+<td><strong>Spark / accent</strong></td>
+<td><code>--color-spark</code></td>
+<td><code>#ed1b24</code></td>
+<td><strong>Reserved.</strong> The Ask action and the wordmark
+<strong>a</strong> only.</td>
+</tr>
+<tr>
+<td>Spark (dark)</td>
+<td><code>--color-spark-dark</code></td>
+<td><code>#c00f18</code></td>
+<td>The lower stop of the Ask FAB gradient; text-on-white spark.</td>
+</tr>
+<tr>
+<td>Spark tint</td>
+<td><code>--color-spark-tint</code></td>
+<td><code>#fdecec</code></td>
+<td>Rare — spark-adjacent backgrounds.</td>
+</tr>
+<tr>
+<td><strong>Kudos / status</strong></td>
+<td><code>--color-kudos</code></td>
+<td><code>#d98a1f</code></td>
+<td><strong>The only status colour.</strong> Kudos counts, the star,
+contributor bands.</td>
+</tr>
+<tr>
+<td>Kudos (text)</td>
+<td><code>--color-kudos-text</code></td>
+<td><code>#8a5a12</code></td>
+<td>AA-safe kudos text on light (see §9).</td>
+</tr>
+<tr>
+<td>Kudos tint</td>
+<td><code>--color-kudos-tint</code></td>
+<td><code>#fbf0dc</code></td>
+<td>Kudos pills, hero chip, attestation panel.</td>
+</tr>
+<tr>
+<td><strong>Verify / trust</strong></td>
+<td><code>--color-verify</code></td>
+<td><code>#2e8b6f</code></td>
+<td>Best answer, “Answered”, verified member, de-identified
+confirmation.</td>
+</tr>
+<tr>
+<td>Verify (text)</td>
+<td><code>--color-verify-text</code></td>
+<td><code>#256f59</code></td>
+<td>AA-safe verify text on light.</td>
+</tr>
+<tr>
+<td>Verify tint</td>
+<td><code>--color-verify-tint</code></td>
+<td><code>#e4f2eb</code></td>
+<td>Best-answer card wash, verified panels.</td>
+</tr>
+<tr>
+<td><strong>Danger / destructive</strong></td>
+<td><code>--color-danger</code></td>
+<td><code>#c0492f</code></td>
+<td>Destructive actions (sign out, delete) and the unread nav dot
+only.</td>
+</tr>
+<tr>
+<td><strong>Warn / attention</strong></td>
+<td><code>--color-warn</code></td>
+<td><code>#9a5f0a</code></td>
+<td><strong>Functional, admin-only.</strong> “Needs a human” states in
+the moderation console (pending review, needs-more-info). Never
+member-facing.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Why two reds?</strong> Spark red (<code>#ed1b24</code>,
+bright) is a <em>brand</em> colour reserved for the single primary
+affordance (Ask) and the wordmark. Danger (<code>#c0492f</code>, a muted
+terracotta) is a <em>functional</em> destructive colour. They are
+intentionally different hues so “brand” and “danger” never read as the
+same thing. Do not use spark red for delete/error, and do not use danger
+for the Ask button.</p>
+</blockquote>
+<blockquote>
+<p><strong>Warn is not kudos gold.</strong> <code>--color-warn</code> is
+a muted amber-brown used <em>only</em> by the admin/moderation console
+to flag review states that need a human — the same functional-vs-brand
+split as danger-vs-spark. It is deliberately darker and browner than
+kudos gold (<code>#d98a1f</code>) and, critically, <strong>never appears
+in the member-facing product</strong>, so kudos remains the single
+status colour members ever see (§2.1). The light value is darkened to
+<code>#9a5f0a</code> to stay AA as text on the console’s 15%-tint
+badges. Never use <code>--color-warn</code> for kudos, and never use
+kudos gold for a warning.</p>
+</blockquote>
+<h3 id="neutrals">2.2 Neutrals</h3>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Token</th>
+<th>Light</th>
+<th>Dark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>App background</td>
+<td><code>--color-bg</code></td>
+<td><code>#eef1f4</code></td>
+<td><code>#0b1220</code></td>
+</tr>
+<tr>
+<td>Surface (cards, sheets, bars)</td>
+<td><code>--color-surface</code></td>
+<td><code>#ffffff</code></td>
+<td><code>#111a2b</code></td>
+</tr>
+<tr>
+<td>Text (primary)</td>
+<td><code>--color-fg</code></td>
+<td><code>#14212b</code></td>
+<td><code>#e2e8f0</code></td>
+</tr>
+<tr>
+<td>Text (muted)</td>
+<td><code>--color-muted</code></td>
+<td><code>#64757f</code></td>
+<td><code>#94a3b8</code></td>
+</tr>
+<tr>
+<td>Text (faint)</td>
+<td><code>--color-faint</code></td>
+<td><code>#93a1a9</code></td>
+<td><code>#5f7183</code></td>
+</tr>
+<tr>
+<td>Border</td>
+<td><code>--color-border</code></td>
+<td><code>#e5ebee</code></td>
+<td><code>#1e2c40</code></td>
+</tr>
+<tr>
+<td>Border (strong)</td>
+<td><code>--color-border-strong</code></td>
+<td><code>#d7e0e4</code></td>
+<td><code>#2a3a52</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="dark-theme-accents">2.3 Dark theme accents</h3>
+<p>Navy is the brand identity colour but is unusable as an
+<em>interactive</em> colour on a dark background. In dark theme,
+interactive elements use a lightened brand blue while navy remains the
+identity colour in wordmarks and large fills.</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Token</th>
+<th>Dark value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Interactive / accent (dark)</td>
+<td><code>--color-accent</code> (dark)</td>
+<td><code>#6f9bff</code></td>
+</tr>
+<tr>
+<td>Kudos (dark)</td>
+<td><code>--color-kudos</code> (dark)</td>
+<td><code>#e2a53f</code></td>
+</tr>
+<tr>
+<td>Verify (dark)</td>
+<td><code>--color-verify</code> (dark)</td>
+<td><code>#4bbf98</code></td>
+</tr>
+<tr>
+<td>Spark (dark)</td>
+<td><code>--color-spark</code> (dark)</td>
+<td><code>#ff5a5f</code></td>
+</tr>
+<tr>
+<td>Warn (dark)</td>
+<td><code>--color-warn</code> (dark)</td>
+<td><code>#e0a33a</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="semantic-mapping-what-the-code-references">2.4 Semantic mapping
+(what the code references)</h3>
+<p>Components must reference <strong>semantic</strong> tokens, never raw
+palette values. This is what makes applying the design system a
+<em>theming pass</em> rather than a rewrite — exactly as noted in
+<code>apps/web/src/app/globals.css</code>.</p>
+<blockquote>
+<p><strong>Where the values live.</strong> This guide is the canonical
+spec for the <em>reasoning</em>; the <em>values</em> live in
+<code>packages/design-tokens</code>, which generates the CSS token layer
+in <code>apps/web/src/app/globals.css</code>
+(<code>npm run tokens:build</code>; CI fails if the two diverge). Edit
+the package, never the generated region. The values are kept
+platform-neutral so a non-CSS client can consume the same tokens rather
+than a hand-copied duplicate of them — see that package’s README for the
+rationale.</p>
+</blockquote>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Semantic token</th>
+<th>Maps to (light)</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--color-accent</code></td>
+<td><code>--color-navy</code></td>
+<td>The primary interactive colour.</td>
+</tr>
+<tr>
+<td><code>--color-ok</code></td>
+<td><code>--color-verify</code></td>
+<td>Success / trust / affirmative.</td>
+</tr>
+<tr>
+<td><code>--color-bad</code></td>
+<td><code>--color-danger</code></td>
+<td>Destructive / error.</td>
+</tr>
+<tr>
+<td><code>--color-bg</code> / <code>--color-surface</code> /
+<code>--color-fg</code> / <code>--color-muted</code></td>
+<td>as above</td>
+<td>Canvas &amp; text.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Migration note.</strong> The production app currently ships
+placeholder tokens (a generic sky <code>#0ea5e9</code> accent) and the
+system font stack. Adopting this guide means: (1) set
+<code>--color-accent: #001f52</code> and add <code>--color-kudos</code>,
+<code>--color-verify</code>, <code>--color-spark</code>,
+<code>--color-danger</code> and the neutral scale in
+<code>globals.css</code>; (2) load <strong>Fraunces</strong> +
+<strong>Inter</strong> via <code>next/font</code> and set
+<code>--font-display</code> / <code>--font-sans</code>; (3) apply
+<code>--font-display</code> to heading elements. No component
+<em>markup</em> needs to change. See §12 for a drop-in block.</p>
+</blockquote>
+<h3 id="colour-usage-rules">2.5 Colour usage rules</h3>
+<ul>
+<li><strong>60 / 30 / 10, roughly.</strong> ~60% neutral canvas, ~30%
+surfaces and text, ~10% accent. If a screen is more than 10% saturated
+colour, something is wrong.</li>
+<li><strong>Kudos gold is sacred.</strong> Never use gold for anything
+that isn’t kudos or kudos-derived standing. It is the product’s one
+status signal.</li>
+<li><strong>Spark red is rationed.</strong> One spark element per screen
+at most — the Ask FAB. The wordmark’s medial <strong>a</strong> is the
+only other place it appears.</li>
+<li><strong>Never encode meaning in colour alone</strong> (see §9.2).
+Best answer has a label <em>and</em> a tint; the unread dot has position
+<em>and</em> colour.</li>
+</ul>
+<hr />
+<h2 id="typography">3. Typography</h2>
+<h3 id="typefaces">3.1 Typefaces</h3>
+<p>AskaPeer pairs a <strong>serif for headings</strong> with a
+<strong>sans for everything else</strong> — a deliberately editorial
+pairing that gives the product two registers at once: the
+<em>authority</em> of an institution (think WHO) and the <em>timeless,
+premium</em> restraint of a considered brand (think Rolex), without ever
+adding a hierarchy signal.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Typeface</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Display / headings</strong></td>
+<td><strong>Fraunces</strong></td>
+<td>Screen titles, thread question (H1), card &amp; section headings,
+large stat numbers</td>
+</tr>
+<tr>
+<td><strong>Text / UI / data</strong></td>
+<td><strong>Inter</strong></td>
+<td>Body copy, labels, buttons, chips, meta, stats, form fields —
+everything that isn’t a heading</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode css"><code class="sourceCode css"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>--font-display<span class="in">:</span> &#39;Fraunces&#39;<span class="op">,</span> Georgia<span class="op">,</span> &#39;Times New Roman&#39;<span class="op">,</span> serif;   <span class="co">/* headings only */</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>--font-sans<span class="in">:</span>    &#39;Inter&#39;<span class="op">,</span> -apple-system<span class="op">,</span> BlinkMacSystemFont<span class="op">,</span> &quot;Segoe UI&quot;<span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>                Roboto<span class="op">,</span> Helvetica<span class="op">,</span> Arial<span class="op">,</span> sans-serif;             <span class="co">/* everything else */</span></span></code></pre></div>
+<p><strong>Fraunces</strong> is an “old-style” serif with optical warmth
+— it carries gravitas at heading sizes and a subtle character
+(especially in <em>italic</em>, used sparingly for emphasis) that reads
+premium, not decorative. <strong>Inter</strong> is a neutral,
+highly-legible UI sans that keeps the interface crisp and clinical.</p>
+<ul>
+<li><strong>Hosting:</strong> self-host both via <code>next/font</code>
+(Next.js) — do <strong>not</strong> hot-link Google Fonts in production
+(privacy + performance). Ship only the weights in §3.3 and the
+<code>latin</code> subset for en-GB.</li>
+<li><strong>Fallbacks matter:</strong> the stacks above degrade
+gracefully (Georgia for the serif, system sans for Inter) so a slow font
+load never breaks layout.</li>
+<li><strong>Serif is for headings only.</strong> Never set body, labels,
+buttons, or data in the serif; never set a screen title in the sans.
+This split <em>is</em> the system.</li>
+</ul>
+<h3 id="type-scale">3.2 Type scale</h3>
+<p>Sizes are tuned for mobile reading. Headings are
+<strong>Fraunces</strong> (serif); the eyebrow, label, body, caption
+tiers are <strong>Inter</strong> (sans). <code>letter-spacing</code>
+tightens as serif size grows; the uppercase eyebrow/label tiers are
+tracked open.</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr>
+<th>Token</th>
+<th>Family</th>
+<th>Size / line-height</th>
+<th>Weight</th>
+<th>Tracking</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--text-display</code></td>
+<td>Fraunces</td>
+<td>26px / 1.12</td>
+<td>600</td>
+<td>−0.01em</td>
+<td>Screen titles (“Discussions”)</td>
+</tr>
+<tr>
+<td><code>--text-title</code></td>
+<td>Fraunces</td>
+<td>22px / 1.24</td>
+<td>600</td>
+<td>−0.005em</td>
+<td>Thread question (H1)</td>
+</tr>
+<tr>
+<td><code>--text-heading</code></td>
+<td>Fraunces</td>
+<td>17px / 1.3</td>
+<td>600</td>
+<td>0</td>
+<td>Card titles, sheet titles</td>
+</tr>
+<tr>
+<td><code>--text-stat</code></td>
+<td>Fraunces</td>
+<td>20–24px / 1.1</td>
+<td>600</td>
+<td>0</td>
+<td>Large stat numbers, kudos totals</td>
+</tr>
+<tr>
+<td><code>--text-eyebrow</code></td>
+<td>Inter</td>
+<td>11.5px / 1.2</td>
+<td>700</td>
+<td>+0.16em, uppercase</td>
+<td>Eyebrow labels above titles</td>
+</tr>
+<tr>
+<td><code>--text-body</code></td>
+<td>Inter</td>
+<td>14.5px / 1.5</td>
+<td>400</td>
+<td>0</td>
+<td>Answer bodies, primary reading text</td>
+</tr>
+<tr>
+<td><code>--text-body-sm</code></td>
+<td>Inter</td>
+<td>13.5px / 1.5</td>
+<td>400</td>
+<td>0</td>
+<td>Snippets, secondary reading</td>
+</tr>
+<tr>
+<td><code>--text-label</code></td>
+<td>Inter</td>
+<td>12px / 1.3</td>
+<td>700</td>
+<td>+0.06em, uppercase</td>
+<td>Field labels, section labels</td>
+</tr>
+<tr>
+<td><code>--text-caption</code></td>
+<td>Inter</td>
+<td>12px / 1.3</td>
+<td>600</td>
+<td>0</td>
+<td>Meta, stats, handles</td>
+</tr>
+</tbody>
+</table>
+<h3 id="weight-scale">3.3 Weight scale</h3>
+<p>Ship only these weights (keeps the font payload small).</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Family</th>
+<th>Weights</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Fraunces</strong></td>
+<td>600 Semibold, 700 Bold</td>
+<td>Headings; 600 is the default heading weight, 700 for the largest
+display / hero</td>
+</tr>
+<tr>
+<td><strong>Inter</strong></td>
+<td>400 Regular, 500 Medium, 600 Semibold, 700 Bold, 800 Extrabold</td>
+<td>400 body · 500 handles/emphasis · 600 meta/chips/buttons · 700
+labels &amp; eyebrows · 800 rare emphasis</td>
+</tr>
+</tbody>
+</table>
+<p>Fraunces <em>italic</em> (600) is permitted
+<strong>sparingly</strong> for a single emphasised word in a hero or
+headline (e.g. <em>“Ideas win on <strong>merit</strong>, not
+rank.”</em>). Never italicise body copy.</p>
+<h3 id="editorial-polish-the-whorolex-register">3.4 Editorial polish
+(the WHO/Rolex register)</h3>
+<p>A small set of moves lift the layout from “app” to “considered
+institution”. Use them consistently:</p>
+<ul>
+<li><strong>Eyebrow + title + keyline.</strong> A section or screen
+leads with an <em>eyebrow</em> (uppercase, tracked, Inter) above a
+<em>serif title</em>, followed by a short <strong>accent
+keyline</strong> (a ~44px, 2px bar). Use the keyline <strong>once per
+screen/section</strong>, not on every card — restraint is the
+point.</li>
+<li><strong>Confident scale.</strong> Give headings room; pair them with
+generous whitespace rather than dense stacking.</li>
+<li><strong>Hairline rhythm.</strong> Separate major sections with a
+single hairline (<code>--color-border</code>) rather than boxes where
+possible.</li>
+</ul>
+<h3 id="typographic-rules">3.5 Typographic rules</h3>
+<ul>
+<li><strong>British English throughout</strong> (en-GB): “specialise”,
+“colour”, “-ise” endings. The codebase locale is <code>en-GB</code> — do
+not introduce American spellings.</li>
+<li><strong>Sentence case</strong> for everything except the wordmark
+and eyebrow/micro-labels (which are <code>UPPERCASE</code> with
+tracking). No Title Case headings.</li>
+<li><strong>One H1 per screen</strong> — the thread question. Cards use
+<code>h3</code>; never skip heading levels (accessibility, §9).</li>
+<li><strong>Numerals are content.</strong> Kudos counts and large stats
+are set in Fraunces so they read as considered figures; align and never
+truncate them.</li>
+<li>Body copy target measure: <strong>60–75 characters</strong>. On the
+430px mobile frame the 16px side padding delivers this naturally;
+preserve it on wider viewports by constraining content to
+<code>--container-max</code> (see §4).</li>
+</ul>
+<hr />
+<h2 id="spacing-layout">4. Spacing &amp; layout</h2>
+<h3 id="spacing-scale">4.1 Spacing scale</h3>
+<p>A <strong>4px base unit</strong>. Use scale steps; do not invent
+one-off values.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>px</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--space-1</code></td>
+<td>4</td>
+<td>Icon-to-label, tight inline gaps</td>
+</tr>
+<tr>
+<td><code>--space-2</code></td>
+<td>8</td>
+<td>Chip gaps, stat gaps</td>
+</tr>
+<tr>
+<td><code>--space-3</code></td>
+<td>12</td>
+<td>Intra-card gaps, list gaps</td>
+</tr>
+<tr>
+<td><code>--space-4</code></td>
+<td>16</td>
+<td><strong>Standard screen side padding &amp; card
+padding</strong></td>
+</tr>
+<tr>
+<td><code>--space-5</code></td>
+<td>20</td>
+<td>Section separation</td>
+</tr>
+<tr>
+<td><code>--space-6</code></td>
+<td>24</td>
+<td>Pane bottom padding, large separation</td>
+</tr>
+<tr>
+<td><code>--space-8</code></td>
+<td>32</td>
+<td>Major section breaks</td>
+</tr>
+</tbody>
+</table>
+<p><strong>16px (<code>--space-4</code>) is the workhorse</strong> — the
+horizontal margin of virtually every screen and the padding of every
+card.</p>
+<h3 id="the-mobile-frame-breakpoints">4.2 The mobile frame &amp;
+breakpoints</h3>
+<p>AskaPeer is <strong>mobile-first</strong>. The canonical layout is a
+single column with a maximum content width; the “phone frame” is a
+desktop affordance, not the product.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Token</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--container-max</code></td>
+<td>430px</td>
+<td>Max width of the app column; centred on wider screens.</td>
+</tr>
+<tr>
+<td><code>--breakpoint-frame</code></td>
+<td>500px</td>
+<td>At/above this, show the device-frame chrome (desktop preview
+only).</td>
+</tr>
+<tr>
+<td><code>--breakpoint-lg</code></td>
+<td>1024px</td>
+<td>Admin console and future desktop-optimised surfaces.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The member-facing app stays a centred <strong>≤430px column</strong>
+at all widths. Do not build multi-column member layouts — they
+reintroduce desktop-first thinking and break the one-hand model.</li>
+<li>The <strong>admin console</strong> is a separate context and may use
+wider, denser desktop layouts.</li>
+</ul>
+<h3 id="app-shell-anatomy">4.3 App shell anatomy</h3>
+<pre><code>┌─────────────────────────────┐  ← safe-area-inset-top
+│  App bar        (52px)       │  surface, 1px bottom border
+├─────────────────────────────┤
+│                             ▲│
+│  Content (pager / overlay)  ││  scrolls; horizontal snap between panes
+│                             ▼│
+├─────────────────────────────┤
+│  Bottom nav     (62px)       │  surface, 1px top border, FAB centred
+└─────────────────────────────┘  ← safe-area-inset-bottom</code></pre>
+<ul>
+<li>Fixed heights: <code>--appbar-h: 52px</code>,
+<code>--nav-h: 62px</code>.</li>
+<li><strong>Always</strong> honour <code>env(safe-area-inset-*)</code>
+on the app bar (top) and bottom nav (bottom). Content must never sit
+under the notch or home indicator.</li>
+<li>The five destinations are fixed in order: <strong>Feed · Discussions
+· Ask (centre) · Activity · Profile.</strong> Ask is centred because it
+is the primary action.</li>
+</ul>
+<h3 id="layout-rules">4.4 Layout rules</h3>
+<ul>
+<li>One column, generous vertical rhythm, cards separated by
+<code>--space-3</code> (10–12px).</li>
+<li>Group related controls; separate unrelated ones with whitespace, not
+rules, wherever possible. Use 1px borders only to delineate true
+containers.</li>
+<li>Thumb zone: primary and destructive actions belong in the lower
+third; avoid putting frequent actions in the top corners.</li>
+</ul>
+<hr />
+<h2 id="elevation-radius-borders">5. Elevation, radius &amp;
+borders</h2>
+<h3 id="radius">5.1 Radius</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Token</th>
+<th>Value</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--radius-pill</code></td>
+<td>999px</td>
+<td>Chips, kudos buttons, primary/secondary buttons, input in reply
+dock</td>
+</tr>
+<tr>
+<td><code>--radius-lg</code></td>
+<td>20px</td>
+<td>Sheet top corners, large monogram tiles</td>
+</tr>
+<tr>
+<td><code>--radius</code></td>
+<td>16px</td>
+<td><strong>Default</strong> — cards, panels, inputs, stat blocks</td>
+</tr>
+<tr>
+<td><code>--radius-md</code></td>
+<td>14px</td>
+<td>Answers, checklist, secondary panels</td>
+</tr>
+<tr>
+<td><code>--radius-sm</code></td>
+<td>12px</td>
+<td>Inputs in the compose sheet, small containers</td>
+</tr>
+<tr>
+<td><code>--radius-avatar</code></td>
+<td>8–9px</td>
+<td><strong>Monogram tiles are rounded squares, not
+circles</strong></td>
+</tr>
+<tr>
+<td><code>--radius-avatar-lg</code></td>
+<td>20px</td>
+<td>Large profile monogram tile</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Monogram tiles are squircles, never circles.</strong> A
+circular avatar reads as “person / photo slot”. A rounded square reads
+as “identity token” — which is exactly the anonymity signal we want.
+This is a deliberate, load-bearing decision; do not “fix” it to
+circles.</p>
+</blockquote>
+<h3 id="elevation">5.2 Elevation</h3>
+<p>Elevation is subtle. Cards float a millimetre above the canvas;
+sheets and the FAB are the only strongly-raised elements.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Token</th>
+<th>Value</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--shadow-card</code></td>
+<td><code>0 1px 2px rgba(20,33,43,.06), 0 4px 16px rgba(20,33,43,.05)</code></td>
+<td>Cards, stat blocks, settings</td>
+</tr>
+<tr>
+<td><code>--shadow-fab</code></td>
+<td><code>0 6px 16px rgba(237,27,36,.4)</code></td>
+<td>The Ask FAB (spark-tinted)</td>
+</tr>
+<tr>
+<td><code>--shadow-sheet</code></td>
+<td><code>0 -8px 40px rgba(15,25,32,.18)</code></td>
+<td>Compose sheet rising over the scrim</td>
+</tr>
+<tr>
+<td><code>--shadow-none</code></td>
+<td><code>none</code></td>
+<td>Flat elements inside a card</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Prefer a <strong>1px border + faint card shadow</strong> over heavy
+drop shadows.</li>
+<li>In dark theme, reduce shadow opacity and lean on borders for
+separation.</li>
+</ul>
+<h3 id="borders">5.3 Borders</h3>
+<ul>
+<li>Default hairline: <code>1px solid var(--color-border)</code>.</li>
+<li>Container edges that need more definition:
+<code>--color-border-strong</code>.</li>
+<li>Focus/selected: <code>1px</code> (or <code>2px</code> focus ring) in
+<code>--color-accent</code> — see §9.3.</li>
+</ul>
+<hr />
+<h2 id="iconography-imagery">6. Iconography &amp; imagery</h2>
+<h3 id="icon-style">6.1 Icon style</h3>
+<ul>
+<li><strong>Line icons</strong>, 24×24 viewBox,
+<code>stroke-width: 2</code> (2.2–2.4 for small checkmarks/chevrons),
+<code>stroke-linecap/linejoin: round</code>. <code>currentColor</code>
+fill so icons inherit text colour.</li>
+<li>Rendered sizes: 15px (inline stat), 18–22px (buttons/nav), 25px (tab
+icons), 26px (FAB).</li>
+<li><strong>The kudos star is the one exception</strong>: a
+<em>filled</em> star, always in <code>--color-kudos</code>. It is the
+product’s signature glyph — keep it filled and gold everywhere, never
+outlined, never recoloured.</li>
+<li>One icon family, one weight. Do not mix filled and line styles
+within a control (except the kudos star, by definition).</li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> the production app currently uses emoji glyphs
+(📰 💬 ➕ 🔔 👤 👏) as placeholders. These must be replaced with the
+line-icon set + filled kudos star before launch; emoji are inconsistent
+across platforms and undermine the calm, clinical character.</p>
+</blockquote>
+<h3 id="imagery">6.2 Imagery</h3>
+<ul>
+<li><strong>No photography of people. Ever.</strong> (See §1.3 — this is
+a brand rule, not a stylistic one.)</li>
+<li>Identity is represented by <strong>monogram tiles</strong>: a
+rounded-square tile, a solid desaturated colour drawn from a fixed
+palette, white initials in weight 700. The tile colour is derived
+deterministically from the handle so a member’s tile is stable, but the
+colour carries <em>no meaning</em> (it is not a status or category
+signal).</li>
+<li>Illustration, if ever introduced, must be abstract/diagrammatic
+(e.g. body-area maps), never depict identifiable people.</li>
+<li>Clinical images attached to case discussions are governed by the
+de-identification checklist (§11) — no faces, tattoos, scars, or
+identifying features.</li>
+</ul>
+<h3 id="monogram-tile-spec">6.3 Monogram tile spec</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shape</td>
+<td>Rounded square, <code>--radius-avatar</code></td>
+</tr>
+<tr>
+<td>Sizes</td>
+<td>26px (sm), 30px (default), 72px (profile,
+<code>--radius-avatar-lg</code>)</td>
+</tr>
+<tr>
+<td>Initials</td>
+<td>1–2 letters from the handle, weight 700, white</td>
+</tr>
+<tr>
+<td>Background</td>
+<td>Solid, desaturated tone from the fixed monogram palette</td>
+</tr>
+<tr>
+<td>Meaning</td>
+<td>None — decorative identity token only</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="motion">7. Motion</h2>
+<p>Motion is <strong>functional and quick</strong> — it clarifies
+spatial relationships and confirms actions. Nothing is decorative;
+nothing bounces for personality.</p>
+<h3 id="duration-easing">7.1 Duration &amp; easing</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Token</th>
+<th>Value</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--motion-fast</code></td>
+<td>120ms</td>
+<td>Chip/button state, kudos toggle, hover</td>
+</tr>
+<tr>
+<td><code>--motion-base</code></td>
+<td>240ms</td>
+<td>Thread slide-in, view transitions</td>
+</tr>
+<tr>
+<td><code>--motion-sheet</code></td>
+<td>280ms</td>
+<td>Compose sheet rise/fall</td>
+</tr>
+<tr>
+<td><code>--motion-toast</code></td>
+<td>250ms</td>
+<td>Toast in/out</td>
+</tr>
+<tr>
+<td><code>--ease-standard</code></td>
+<td><code>cubic-bezier(.32,.72,0,1)</code></td>
+<td>Sheets &amp; large surfaces (decelerate)</td>
+</tr>
+<tr>
+<td><code>--ease-in-out</code></td>
+<td><code>ease</code></td>
+<td>General transitions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="signature-transitions">7.2 Signature transitions</h3>
+<ul>
+<li><strong>Pane paging</strong> — horizontal scroll-snap between Feed /
+Discussions / Activity / Profile; the matching nav icon lights on
+settle.</li>
+<li><strong>Thread overlay</strong> — slides in from the right
+(<code>translateX(100%)→0</code>), giving a clear “deeper” spatial
+model; back gesture reverses it.</li>
+<li><strong>Compose sheet</strong> — rises from the bottom over a
+40%-black scrim with the decelerate easing; a grabber handle signals
+draggability.</li>
+<li><strong>Kudos toggle</strong> — instant fill + count change at
+<code>--motion-fast</code>; the control is the feedback, no separate
+animation needed.</li>
+<li><strong>Toast</strong> — fades up 20px and back; auto-dismiss
+~2.2s.</li>
+<li><strong>Press feedback</strong> — cards scale to <code>.992</code>
+on <code>:active</code>; icon buttons flash a tint background.</li>
+</ul>
+<h3 id="reduced-motion">7.3 Reduced motion</h3>
+<p>Respect <code>prefers-reduced-motion: reduce</code>. Replace
+slides/rises with a <strong>fast opacity fade</strong> (≤120ms), disable
+the card press-scale, and never animate anything essential to
+comprehension. No parallax, no autoplay, ever.</p>
+<hr />
+<h2 id="component-library">8. Component library</h2>
+<p>Every component references semantic tokens (§12) and obeys the
+accessibility rules in §9. Anatomy, states, and do/don’ts follow. The
+live renderings are in <a
+href="./styleguide.html"><code>styleguide.html</code></a>.</p>
+<h3 id="buttons">8.1 Buttons</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Look</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Primary</strong></td>
+<td>Navy fill, white text, <code>--radius-pill</code>, 700</td>
+<td>The main action of a view (Post, Confirm, Send)</td>
+</tr>
+<tr>
+<td><strong>Secondary</strong></td>
+<td>Surface fill, <code>--color-border-strong</code> outline, muted
+text, 700</td>
+<td>Alternate actions</td>
+</tr>
+<tr>
+<td><strong>Ghost / icon</strong></td>
+<td>Transparent, muted <code>currentColor</code>, circular tap
+target</td>
+<td>App-bar and toolbar actions</td>
+</tr>
+<tr>
+<td><strong>Destructive</strong></td>
+<td><code>--color-danger</code> text or fill</td>
+<td>Sign out, delete</td>
+</tr>
+<tr>
+<td><strong>Ask (FAB)</strong></td>
+<td>Spark→spark-dark gradient, white plus, <code>--radius-lg</code>,
+<code>--shadow-fab</code></td>
+<td>The single primary action; centre of bottom nav</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>States:</strong> default, hover (darken ~8%), pressed
+(<code>--color-navy-dark</code>), disabled (<code>#c3ccd1</code> fill /
+reduced opacity, <code>cursor: not-allowed</code>), focus (visible ring,
+§9.3).</li>
+<li><strong>Min target 44×44px</strong> even when the visual is
+smaller.</li>
+<li>Only <strong>one primary button per view</strong>. The FAB is the
+app-wide primary; a sheet or form may have its own local primary
+(e.g. sheet <strong>Post</strong>).</li>
+</ul>
+<h3 id="chips-filters-tags">8.2 Chips (filters &amp; tags)</h3>
+<ul>
+<li><strong>Filter chip</strong> — pill,
+<code>--color-border-strong</code> outline on surface, 600 muted;
+<strong>active</strong> = navy fill, white text. Horizontally scrollable
+row, no wrap.</li>
+<li><strong>Category tag</strong> — small rounded rect
+(<code>6px</code>), <code>--color-navy-tint</code> bg,
+<code>--color-navy-dark</code> text, 700 — the body-area label (Knee,
+Shoulder…).</li>
+<li><strong>Topic tag</strong> — neutral grey variant for secondary
+labels (Research, Return to play).</li>
+<li><strong>Muted pill</strong> — transparent, faint text, for meta
+states (“Case discussion”, “Unanswered”).</li>
+</ul>
+<p>Do: use one active filter chip at a time in a single-select row.
+Don’t: colour category tags with kudos gold or spark red.</p>
+<h3 id="cards">8.3 Cards</h3>
+<p>The primary content container. <code>--color-surface</code>,
+<code>1px --color-border</code>, <code>--radius</code> (16px),
+<code>--space-4</code> padding, <code>--shadow-card</code>.
+<code>:active</code> scales to <code>.992</code>.</p>
+<ul>
+<li><strong>Article card (Feed)</strong> — tag row · title
+(<code>--text-heading</code>) · snippet · meta row (source · read-time ·
+kudos star+count).</li>
+<li><strong>Discussion card</strong> — tag row · title · 2-line clamped
+snippet · footer with author (monogram + handle) on the left and stats
+(answers, kudos, or “Answered”/time) on the right.</li>
+<li><strong>Answer card</strong> — inside a thread; author row, body,
+kudos button. The <strong>top/best answer</strong> gets a
+<code>--color-verify-tint</code> wash, a verify-tinted inset ring, and a
+<strong>Best answer</strong> badge.</li>
+</ul>
+<h3 id="author-line">8.4 Author line</h3>
+<p>Handle + kudos <strong>only</strong>. No grade, employer, or
+specialty — “a reader can weigh the contribution but not the
+contributor’s seniority” (from the code’s own comment). A kudos-derived
+<strong>top-contributor</strong> chip may appear; nothing else.</p>
+<h3 id="monogram-tile">8.5 Monogram tile</h3>
+<p>See §6.3. Rounded square, deterministic desaturated colour, white 700
+initials. Sizes sm/default/lg.</p>
+<h3 id="kudos-control">8.6 Kudos control</h3>
+<p>The product’s signature interactive element.</p>
+<ul>
+<li><strong>Anatomy:</strong> pill button, filled gold star +
+count.</li>
+<li><strong>States:</strong> default (surface,
+<code>--color-border-strong</code> outline, muted) → given
+(<code>--color-kudos-tint</code> bg, gold border,
+<code>--color-kudos</code> text). Toggling updates the count
+instantly.</li>
+<li>Read-only kudos (in meta rows) = filled gold star + count, no button
+chrome.</li>
+<li><strong>Accessibility:</strong> label as “Give kudos” / “Remove
+kudos”; the count must be announced. Never rely on colour alone — the
+star shape carries it too (§9.2).</li>
+</ul>
+<h3 id="status-safety-badges">8.7 Status &amp; safety badges</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Badge</th>
+<th>Look</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Best answer</strong></td>
+<td>Verify-tint pill, verify text, tick icon, uppercase</td>
+<td>Highest-kudos answer the asker/peers endorse</td>
+</tr>
+<tr>
+<td><strong>Answered</strong></td>
+<td>Verify text + tick, inline</td>
+<td>Thread has an accepted/qualifying answer</td>
+</tr>
+<tr>
+<td><strong>Verified member</strong></td>
+<td>“Verified member · since {year}”, verify accent</td>
+<td>Passed identity verification</td>
+</tr>
+<tr>
+<td><strong>De-identified &amp; attested</strong></td>
+<td>Verify-tint panel, shield-tick icon</td>
+<td>Case cleared the checklist + attestation</td>
+</tr>
+<tr>
+<td><strong>Unread dot</strong></td>
+<td>7px <code>--color-danger</code> dot, positioned on the
+tab/notification</td>
+<td>New activity</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bottom-navigation-fab">8.8 Bottom navigation + FAB</h3>
+<ul>
+<li>Five tabs; centre is the <strong>Ask FAB</strong> (§8.1). Active tab
+= navy icon + label; inactive = faint. Labels are 10px/600. An unread
+tab shows the danger dot.</li>
+<li>Height <code>--nav-h</code> + bottom safe-area inset. Surface bg,
+1px top border.</li>
+</ul>
+<h3 id="segmented-control">8.9 Segmented control</h3>
+<p>Grey track (<code>#e3e9ec</code>), 3px padding; active segment =
+surface pill with a soft shadow and navy text. Used for in-pane toggles
+(My questions / Notifications) and compose mode (Quick question / Case
+discussion).</p>
+<h3 id="forms-inputs">8.10 Forms &amp; inputs</h3>
+<ul>
+<li>Inputs: <code>--radius-sm</code>,
+<code>1px --color-border-strong</code>, faint fill
+(<code>#fbfcfd</code>), 15px text; <strong>focus</strong> = navy border
++ white fill.</li>
+<li><strong>Labels:</strong> <code>--text-label</code> (uppercase,
+tracked, muted, 700), above the field.</li>
+<li><strong>Hints:</strong> <code>--text-caption</code>, faint, sentence
+case, below the field.</li>
+<li>Reply-dock input: pill, inline send button (navy circle).</li>
+<li>Every input needs a programmatic label (not placeholder-as-label) —
+§9.</li>
+</ul>
+<h3 id="compose-sheet">8.11 Compose sheet</h3>
+<p>Bottom sheet, <code>--radius-lg</code> top corners, grabber, header
+(Cancel · title · Post). Mode toggle (Quick question / Case discussion).
+In <strong>case mode</strong> the de-identification checklist and
+attestation appear and <strong>the Post button is disabled until every
+checklist item and the attestation are ticked</strong> (§11).</p>
+<h3 id="de-identification-checklist-attestation">8.12 De-identification
+checklist &amp; attestation</h3>
+<p>A first-class safety component, not a form afterthought.</p>
+<ul>
+<li><strong>Checklist</strong> — navy-tint panel, shield icon heading,
+one checkbox row per rule (names, location, age-as-band, relative
+timelines, no club/facility, no identifying images). Accent-coloured
+checkboxes.</li>
+<li><strong>Attestation</strong> — a distinct
+<strong>kudos-tint</strong> panel with an italic confirmation that the
+case is de-identified and that a breach may result in removal and
+regulator referral.</li>
+<li><strong>Gate:</strong> Post stays disabled until
+<code>all checklist items ✓ AND attestation ✓</code>. This gate is
+mandatory and must never be bypassable.</li>
+</ul>
+<h3 id="notifications">8.13 Notifications</h3>
+<p>Row list: circular tinted icon (kudos-gold, navy, or mention-purple)
++ text (handle in 700) + timestamp. Unread rows get a navy-tint
+background. Kudos notifications use the gold star icon; replies use the
+discussion glyph.</p>
+<h3 id="profile">8.14 Profile</h3>
+<ul>
+<li>Centred large monogram tile, handle (<code>--text-display</code>),
+“Verified member · since {year}”, and a <strong>kudos hero</strong> pill
+(gold star + total + band).</li>
+<li>Stat block (Questions / Responses / Best answers) in a bordered
+surface.</li>
+<li><strong>Anonymity reassurance card</strong> (navy-tint): “You are
+anonymous to your peers…”</li>
+<li>Followed body-areas as chips; settings list with chevron rows;
+sign-out is a danger row.</li>
+</ul>
+<h3 id="toast">8.15 Toast</h3>
+<p>Dark pill (<code>--color-fg</code>-ish <code>#14212b</code>), white
+600 text, centred above the nav, fades up and auto-dismisses (~2.2s).
+For lightweight confirmations only (“Question posted to Discussions”).
+Never use a toast for errors that need action.</p>
+<h3 id="empty-coming-soon-states">8.16 Empty &amp; “coming soon”
+states</h3>
+<p>Calm, centred, one line of plain copy explaining what <em>will</em>
+be here (the codebase already does this: <em>“Research and news scored
+to your clinical interests will appear here.”</em>). No illustrations of
+people; a light neutral glyph at most.</p>
+<hr />
+<h2 id="accessibility">9. Accessibility</h2>
+<p>Target: <strong>WCAG 2.2 AA</strong>. A verified professional network
+used pitchside, on the ward, and one-handed cannot be anything less than
+robustly accessible.</p>
+<h3 id="colour-contrast">9.1 Colour contrast</h3>
+<ul>
+<li>Body text vs background ≥ <strong>4.5:1</strong>; large text
+(≥18.66px bold / 24px) and UI components ≥ <strong>3:1</strong>.</li>
+<li><strong>Known adjustments (use these, not the raw palette, for
+text):</strong>
+<ul>
+<li>Kudos as <strong>text</strong> must use
+<code>--color-kudos-text</code> (<code>#8a5a12</code>) — raw gold
+<code>#d98a1f</code> on white is ~2.4:1 and <strong>fails</strong>. The
+<em>star icon</em> + count may use gold (graphical, paired with shape);
+gold <em>words</em> may not.</li>
+<li>Verify as text uses <code>--color-verify-text</code>
+(<code>#256f59</code>).</li>
+<li><code>--color-faint</code> (<code>#93a1a9</code>, ~2.6:1) is for
+<strong>non-essential</strong> decoration and large text only — never
+for information a user must read.</li>
+<li>White on spark: use <code>--color-spark-dark</code>
+(<code>#c00f18</code>) under white text for AA.</li>
+</ul></li>
+<li>Verify contrast in <strong>both</strong> light and dark themes; the
+live showcase includes a contrast check.</li>
+</ul>
+<h3 id="never-colour-alone">9.2 Never colour alone</h3>
+<p>Every colour-coded state carries a second cue:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Colour</th>
+<th>Second cue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Best answer</td>
+<td>verify</td>
+<td>“Best answer” label + tick + tint wash</td>
+</tr>
+<tr>
+<td>Kudos</td>
+<td>gold</td>
+<td>filled star shape + numeric count</td>
+</tr>
+<tr>
+<td>Unread</td>
+<td>danger dot</td>
+<td>position + (for rows) tint background</td>
+</tr>
+<tr>
+<td>Active nav</td>
+<td>navy</td>
+<td>filled/active icon + label emphasis</td>
+</tr>
+<tr>
+<td>De-identified</td>
+<td>verify</td>
+<td>shield-tick icon + text</td>
+</tr>
+</tbody>
+</table>
+<h3 id="focus-targets-input">9.3 Focus, targets &amp; input</h3>
+<ul>
+<li><strong>Visible focus</strong> on every interactive element: a 2px
+<code>--color-accent</code> ring with a 2px offset. Never remove
+outlines without a replacement.</li>
+<li><strong>Touch targets ≥ 44×44px</strong> (icon buttons included),
+spacing ≥ 8px between adjacent targets.</li>
+<li>Inputs have real, programmatically-associated
+<code>&lt;label&gt;</code>s; placeholder text is never the only label.
+Hints via <code>aria-describedby</code>.</li>
+<li>Checklist/attestation checkboxes are keyboard-operable and expose
+their checked state; the disabled Post button uses
+<code>aria-disabled</code> and remains discoverable.</li>
+</ul>
+<h3 id="structure-semantics">9.4 Structure &amp; semantics</h3>
+<ul>
+<li>One <code>&lt;h1&gt;</code> per screen (the thread question); no
+skipped heading levels.</li>
+<li>Landmarks: <code>&lt;header&gt;</code>,
+<code>&lt;nav aria-label="Primary"&gt;</code>,
+<code>&lt;main&gt;</code>. The bottom nav uses
+<code>aria-current="page"</code> on the active tab.</li>
+<li>Icon-only buttons have <code>aria-label</code>s (Search, Back, Send,
+Give kudos…).</li>
+<li>Live regions: toast and async status (verification polling) announce
+politely.</li>
+</ul>
+<h3 id="motion-preferences">9.5 Motion &amp; preferences</h3>
+<p>Honour <code>prefers-reduced-motion</code> (§7.3) and
+<code>prefers-color-scheme</code> (light/dark). Support OS text-size /
+dynamic type: use relative units where possible and never clip text at
+200% zoom.</p>
+<hr />
+<h2 id="voice-tone">10. Voice &amp; tone</h2>
+<p>AskaPeer’s voice is a verified colleague talking to another:
+<strong>plain, warm, precise, and unafraid to be firm about the one rule
+that matters.</strong> British English, always.</p>
+<h3 id="principles">10.1 Principles</h3>
+<ol type="1">
+<li><strong>Plain over clever.</strong> Short sentences. No marketing
+gloss, no jargon, no exclamation marks. “We’re verifying your
+registration.” not “Hang tight!”</li>
+<li><strong>Reassure at the point of doubt.</strong> Anonymity, privacy
+and verification copy should lower anxiety exactly where it arises
+(“Your documents are never shown to other members.”).</li>
+<li><strong>Firm, once, about the rule.</strong> The no-identity rule is
+stated plainly and without hedging — and not repeated everywhere. When
+it’s said, it’s absolute: <em>“immediate and permanent removal… no
+exceptions and no appeals.”</em></li>
+<li><strong>Respect the reader’s expertise.</strong> These are qualified
+professionals. Don’t over-explain clinical matters; do explain product
+mechanics clearly.</li>
+<li><strong>Humane about hard states.</strong> Rejection, “needs more
+info”, and errors are written to keep the person’s dignity and give them
+a next step.</li>
+</ol>
+<h3 id="tone-by-context">10.2 Tone by context</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Context</th>
+<th>Tone</th>
+<th>Example (from the product)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Onboarding / the rule</td>
+<td>Serious, clear, unhedged</td>
+<td><em>“Askapeer works because nobody knows who anyone is.”</em></td>
+</tr>
+<tr>
+<td>Verification waiting</td>
+<td>Calm, reassuring</td>
+<td><em>“This usually takes a short while. We’ll email you the moment
+it’s done.”</em></td>
+</tr>
+<tr>
+<td>Anonymity reassurance</td>
+<td>Warm, definite</td>
+<td><em>“You are anonymous to your peers.”</em></td>
+</tr>
+<tr>
+<td>Empty states</td>
+<td>Forward-looking, plain</td>
+<td><em>“Replies to your posts… will appear here.”</em></td>
+</tr>
+<tr>
+<td>Errors</td>
+<td>Plain, blameless, actionable</td>
+<td><em>“Something went wrong. Please try again.”</em></td>
+</tr>
+<tr>
+<td>Safety / attestation</td>
+<td>Precise, consequential</td>
+<td><em>“I confirm this case is de-identified… a breach may result in
+removal and referral to my regulator.”</em></td>
+</tr>
+</tbody>
+</table>
+<h3 id="word-choices">10.3 Word choices</h3>
+<table>
+<thead>
+<tr>
+<th>Use</th>
+<th>Avoid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>member, peer, practitioner</td>
+<td>user, customer</td>
+</tr>
+<tr>
+<td>handle</td>
+<td>username, screen name</td>
+</tr>
+<tr>
+<td>kudos</td>
+<td>likes, upvotes, points, karma</td>
+</tr>
+<tr>
+<td>case discussion</td>
+<td>post (when it’s a case)</td>
+</tr>
+<tr>
+<td>verified</td>
+<td>approved (for members)</td>
+</tr>
+<tr>
+<td>de-identified</td>
+<td>anonymised (be specific)</td>
+</tr>
+<tr>
+<td>sign in / sign out</td>
+<td>log in / log out</td>
+</tr>
+<tr>
+<td>specialise, colour, organise (en-GB)</td>
+<td>specialize, color, organize</td>
+</tr>
+</tbody>
+</table>
+<h3 id="microcopy-rules">10.4 Microcopy rules</h3>
+<ul>
+<li><strong>Buttons are verbs</strong>: “Confirm handle”, “Post”, “Give
+kudos”, “Send”.</li>
+<li><strong>Labels are nouns</strong>, uppercase-tracked, terse:
+“Handle”, “Body area”.</li>
+<li><strong>Sentence case</strong> for all UI text except the wordmark
+and micro-labels.</li>
+<li>Numbers with units unpadded: “6 min read”, “500 kudos”, “top
+8%”.</li>
+<li>Never blame the user in an error; always offer the next action.</li>
+</ul>
+<hr />
+<h2 id="anonymity-safety-ux">11. Anonymity &amp; safety UX</h2>
+<p>This section is the reason AskaPeer’s design guide isn’t a generic
+one. These patterns are <strong>non-negotiable</strong> and outrank
+aesthetic preference.</p>
+<h3 id="anonymity-shown-not-stated">11.1 Anonymity, shown not
+stated</h3>
+<ul>
+<li>Members are represented by <strong>handle + monogram tile</strong>
+only, everywhere, without exception.</li>
+<li>The handle is <strong>permanent</strong> and this is said plainly at
+the point of choosing it (“Your handle is permanent… kudos and post
+history belong to it”).</li>
+<li>Provide quiet, definite reassurance where identity anxiety peaks —
+the profile’s <em>“You are anonymous to your peers”</em> card, the
+compose hint <em>“Posted under your handle only. No name, employer, or
+specialty is ever shown.”</em></li>
+<li><strong>Kudos is the only status.</strong> No seniority, no
+verified-expert tiers, no follower counts. Standing is expressed solely
+as kudos and kudos-derived bands.</li>
+</ul>
+<h3 id="the-one-rule-in-the-ui">11.2 The one rule, in the UI</h3>
+<p>Attempting to identify oneself or another member is fatal to the
+account. The interface states this once, firmly, at onboarding, and
+requires an explicit acknowledgement (“I understand, and I agree not to
+identify myself or any other member”). Do not soften it, and do not
+scatter it as nag copy.</p>
+<h3 id="verification-states">11.3 Verification states</h3>
+<p>Verification has a small set of holding states, each with reassuring,
+plain-English copy and a clear next step: <em>pending</em>, <em>awaiting
+capture</em>, <em>needs more info</em>, <em>approved/verified</em>,
+<em>rejected</em>. Documents are checked against the professional
+register and <strong>“never shown to other members”</strong> — say so.
+Status polling must announce changes (§9.4).</p>
+<h3 id="case-discussions-patient-safety-the-gate">11.4 Case discussions
+&amp; patient safety (the gate)</h3>
+<ul>
+<li>A case discussion <strong>cannot be posted</strong> until the full
+de-identification checklist and the attestation are complete (§8.12).
+This gate is mandatory, visible, and unbypassable.</li>
+<li>The de-identification rules are explicit and clinical: no
+names/initials, no location, age as a band, relative timelines, no
+club/facility, no identifying images.</li>
+<li>Posted cases display a <strong>“De-identification checklist
+completed &amp; attested”</strong> confirmation on the record, and use
+the structured case template (presenting complaint, de-identified
+patient, timeline, objective findings, question).</li>
+<li>Reporting a safety concern is always available and routed to
+priority moderation.</li>
+</ul>
+<h3 id="moderation-transparency">11.5 Moderation transparency</h3>
+<p>Moderators can access real identities <strong>for moderation
+only</strong>, and every such access is <strong>immutably
+logged</strong>. Where this is surfaced (admin console, audit), present
+it as a plain, tamper-evident record — the trust model is a feature, so
+show it honestly.</p>
+<hr />
+<h2 id="design-tokens-reference">12. Design tokens reference</h2>
+<p>The canonical token layer. Components reference these names; theming
+is a matter of changing the values, not the markup — matching the intent
+already stated in <code>apps/web/src/app/globals.css</code>.</p>
+<h3 id="drop-in-token-block-tailwind-v4-theme-light-dark">12.1 Drop-in
+token block (Tailwind v4 <code>@theme</code>, light + dark)</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode css"><code class="sourceCode css"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">@import</span> <span class="st">&quot;tailwindcss&quot;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">@theme</span> {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">/* ---- Brand ---- */</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  --color-navy<span class="in">:</span>          <span class="pp">#001f52</span>;</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  --color-navy-dark<span class="in">:</span>     <span class="pp">#001640</span>;</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  --color-navy-tint<span class="in">:</span>     <span class="pp">#e6ebf2</span>;</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  --color-navy-tint-2<span class="in">:</span>   <span class="pp">#f2f5f9</span>;</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  --color-spark<span class="in">:</span>         <span class="pp">#ed1b24</span>;</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  --color-spark-dark<span class="in">:</span>    <span class="pp">#c00f18</span>;</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  --color-spark-tint<span class="in">:</span>    <span class="pp">#fdecec</span>;</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  --color-kudos<span class="in">:</span>         <span class="pp">#d98a1f</span>;</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  --color-kudos-text<span class="in">:</span>    <span class="pp">#8a5a12</span>;</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  --color-kudos-tint<span class="in">:</span>    <span class="pp">#fbf0dc</span>;</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  --color-verify<span class="in">:</span>        <span class="pp">#2e8b6f</span>;</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  --color-verify-text<span class="in">:</span>   <span class="pp">#256f59</span>;</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  --color-verify-tint<span class="in">:</span>   <span class="pp">#e4f2eb</span>;</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  --color-danger<span class="in">:</span>        <span class="pp">#c0492f</span>;</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  --color-warn<span class="in">:</span>          <span class="pp">#9a5f0a</span>;  <span class="co">/* functional, admin console only — NOT kudos gold */</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">/* ---- Neutrals (light) ---- */</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  --color-bg<span class="in">:</span>            <span class="pp">#eef1f4</span>;</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  --color-surface<span class="in">:</span>       <span class="pp">#ffffff</span>;</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  --color-fg<span class="in">:</span>            <span class="pp">#14212b</span>;</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  --color-muted<span class="in">:</span>         <span class="pp">#64757f</span>;</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  --color-faint<span class="in">:</span>         <span class="pp">#93a1a9</span>;</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>  --color-border<span class="in">:</span>        <span class="pp">#e5ebee</span>;</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>  --color-border-strong<span class="in">:</span> <span class="pp">#d7e0e4</span>;</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>  <span class="co">/* ---- Semantic aliases (what components reference) ---- */</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>  --color-accent<span class="in">:</span>        var<span class="in">(</span>--color-navy<span class="in">)</span>;</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>  --color-ok<span class="in">:</span>            var<span class="in">(</span>--color-verify<span class="in">)</span>;</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>  --color-bad<span class="in">:</span>           var<span class="in">(</span>--color-danger<span class="in">)</span>;</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>  <span class="co">/* ---- Typography ---- */</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>  --font-display<span class="in">:</span> &#39;Fraunces&#39;<span class="op">,</span> Georgia<span class="op">,</span> &#39;Times New Roman&#39;<span class="op">,</span> serif; <span class="co">/* headings only */</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>  --font-sans<span class="in">:</span> &#39;Inter&#39;<span class="op">,</span> -apple-system<span class="op">,</span> BlinkMacSystemFont<span class="op">,</span> &quot;Segoe UI&quot;<span class="op">,</span> Roboto<span class="op">,</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>               Helvetica<span class="op">,</span> Arial<span class="op">,</span> sans-serif;                     <span class="co">/* everything else */</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>  <span class="co">/* ---- Radius ---- */</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>  --radius-sm<span class="in">:</span>        12px;</span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>  --radius-md<span class="in">:</span>        14px;</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>  --radius<span class="in">:</span>           16px;</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>  --radius-lg<span class="in">:</span>        20px;</span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>  --radius-pill<span class="in">:</span>      999px;</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>  --radius-avatar<span class="in">:</span>    9px;</span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>  --radius-avatar-lg<span class="in">:</span> 20px;</span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>  <span class="co">/* ---- Spacing (4px base) ---- */</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>  --space-1<span class="in">:</span> 4px;  --space-2<span class="in">:</span> 8px;  --space-3<span class="in">:</span> 12px; --space-4<span class="in">:</span> 16px;</span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>  --space-5<span class="in">:</span> 20px; --space-6<span class="in">:</span> 24px; --space-8<span class="in">:</span> 32px;</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>  <span class="co">/* ---- Elevation ---- */</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>  --shadow-card<span class="in">:</span>  0 1px 2px rgba<span class="in">(</span>20<span class="op">,</span>33<span class="op">,</span>43<span class="op">,</span><span class="fu">.06</span><span class="in">)</span><span class="op">,</span> 0 4px 16px rgba<span class="in">(</span>20<span class="op">,</span>33<span class="op">,</span>43<span class="op">,</span><span class="fu">.05</span><span class="in">)</span>;</span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>  --shadow-fab<span class="in">:</span>   0 6px 16px rgba<span class="in">(</span>237<span class="op">,</span>27<span class="op">,</span>36<span class="op">,</span><span class="fu">.4</span><span class="in">)</span>;</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>  --shadow-sheet<span class="in">:</span> 0 -8px 40px rgba<span class="in">(</span>15<span class="op">,</span>25<span class="op">,</span>32<span class="op">,</span><span class="fu">.18</span><span class="in">)</span>;</span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>  <span class="co">/* ---- Layout ---- */</span></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>  --container-max<span class="in">:</span> 430px;</span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>  --appbar-h<span class="in">:</span>      52px;</span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>  --nav-h<span class="in">:</span>         62px;</span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>  <span class="co">/* ---- Motion ---- */</span></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>  --motion-fast<span class="in">:</span>  120ms;</span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>  --motion-base<span class="in">:</span>  240ms;</span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a>  --motion-sheet<span class="in">:</span> 280ms;</span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a>  --motion-toast<span class="in">:</span> 250ms;</span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>  --ease-standard<span class="in">:</span> cubic-bezier<span class="in">(</span><span class="fu">.32</span><span class="op">,</span><span class="fu">.72</span><span class="op">,</span>0<span class="op">,</span>1<span class="in">)</span>;</span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a><span class="im">@media</span> <span class="fu">(</span><span class="kw">prefers-color-scheme</span><span class="ch">:</span> <span class="dv">dark</span><span class="fu">)</span> {</span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a>  <span class="im">@theme</span> {</span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>    --color-bg<span class="in">:</span>            <span class="pp">#0b1220</span>;</span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a>    --color-surface<span class="in">:</span>       <span class="pp">#111a2b</span>;</span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a>    --color-fg<span class="in">:</span>            <span class="pp">#e2e8f0</span>;</span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a>    --color-muted<span class="in">:</span>         <span class="pp">#94a3b8</span>;</span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a>    --color-faint<span class="in">:</span>         <span class="pp">#5f7183</span>;</span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>    --color-border<span class="in">:</span>        <span class="pp">#1e2c40</span>;</span>
+<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>    --color-border-strong<span class="in">:</span> <span class="pp">#2a3a52</span>;</span>
+<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a>    --color-accent<span class="in">:</span>        <span class="pp">#6f9bff</span>;  <span class="co">/* navy is unusable as interactive on dark */</span></span>
+<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a>    --color-kudos<span class="in">:</span>         <span class="pp">#e2a53f</span>;</span>
+<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a>    --color-kudos-text<span class="in">:</span>    <span class="pp">#e2a53f</span>;</span>
+<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a>    --color-verify<span class="in">:</span>        <span class="pp">#4bbf98</span>;</span>
+<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a>    --color-verify-text<span class="in">:</span>   <span class="pp">#4bbf98</span>;</span>
+<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a>    --color-spark<span class="in">:</span>         <span class="pp">#ff5a5f</span>;</span>
+<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a>    --color-warn<span class="in">:</span>          <span class="pp">#e0a33a</span>;</span>
+<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="token-naming-rules">12.2 Token naming rules</h3>
+<ul>
+<li>Reference <strong>semantic</strong> tokens
+(<code>--color-accent</code>, <code>--color-ok</code>,
+<code>--color-bad</code>) in components; reserve raw brand names
+(<code>--color-navy</code>) for the token layer and brand-specific
+one-offs (the wordmark, the FAB gradient).</li>
+<li>New tokens must be added here first, with a documented meaning,
+before use.</li>
+<li>Never hard-code a hex value in a component.</li>
+</ul>
+<hr />
+<h2 id="governance-changelog">13. Governance &amp; changelog</h2>
+<h3 id="how-this-guide-is-maintained">13.1 How this guide is
+maintained</h3>
+<ul>
+<li>This document and <a
+href="./styleguide.html"><code>styleguide.html</code></a> are the source
+of truth. A change to the <em>look</em> of the product starts here, then
+flows to <code>globals.css</code> and components.</li>
+<li>Proposing a change: open a PR that edits <strong>both</strong> the
+spec and the showcase so they never drift, and note the rationale
+against the first principles (§0).</li>
+<li>A design decision that reintroduces a hierarchy signal (§0.1) is
+rejected by default; the burden is on the proposer to show it
+doesn’t.</li>
+</ul>
+<h3 id="open-questions-to-resolve-with-the-team">13.2 Open questions (to
+resolve with the team)</h3>
+<ul>
+<li><strong>Launch scope</strong> affects nothing visual directly, but
+the range of professional bodies (FD-1) may influence body-area taxonomy
+chips.</li>
+<li><strong>Native platforms</strong> (iOS/Android): confirm whether
+these tokens map to native (they should — system font + semantic tokens
+translate cleanly).</li>
+<li><strong>Type licensing</strong>: Fraunces and Inter are both
+open-source (SIL Open Font License) — confirm self-hosting via
+<code>next/font</code> and that the shipped subset is <code>latin</code>
+only, for en-GB.</li>
+<li><strong>Icon set</strong>: choose and vendor a single line-icon
+library to replace the current emoji placeholders.</li>
+</ul>
+<h3 id="changelog">13.3 Changelog</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Version</th>
+<th>Date</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.2</td>
+<td>2026-07-25</td>
+<td><strong>Editorial typography pass.</strong> Introduced a
+<strong>Fraunces</strong> (serif display) + <strong>Inter</strong> (sans
+text/UI) pairing for a WHO/Rolex register; added the eyebrow → serif
+title → accent-keyline pattern (§3.4) and a confident type scale.
+Updated §3, §12 tokens, and the live showcase. Palette, components and
+safety patterns unchanged — a theming pass, not a redesign.</td>
+</tr>
+<tr>
+<td>0.1</td>
+<td>2026-07-25</td>
+<td>Initial style guide &amp; design system: foundations, colour, type,
+spacing, elevation, iconography, motion, component library,
+accessibility, voice &amp; tone, anonymity/safety UX, and token
+reference. Codifies the mobile look-and-feel prototype.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>AskaPeer — The No Ego Sports Medicine Network. This guide is a
+living document; if the product and the guide disagree, fix one of
+them.</em></p>
+
+</main>
+</body>
+</html>
