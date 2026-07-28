@@ -1,9 +1,10 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { reportAction, type ReportState, type ReportTarget } from './actions';
+import { useExclusivePanel } from './ExclusivePanels';
 
 /** EPIC-F §4 order — the two priority categories first, then the working set. */
 const CATEGORIES = [
@@ -36,14 +37,26 @@ function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: st
  */
 export function ReportButton({ target, targetId }: { target: ReportTarget; targetId: string }) {
   const t = useTranslations('report');
-  const [open, setOpen] = useState(false);
+  const panel = useExclusivePanel();
   const triggerLabel = target === 'handle' ? t('reportHandle') : t('report');
   const [state, formAction] = useActionState<ReportState, FormData>(
     (prev, formData) => reportAction(target, targetId, prev, formData),
     { status: 'idle' },
   );
 
-  if (state.status === 'submitted') {
+  /*
+   * A submitted report collapses to a confirmation, which needs no room — so release the
+   * row, or the sibling triggers (Reply, the other report affordance) would stay hidden
+   * behind a panel that is no longer really open.
+   */
+  const submitted = state.status === 'submitted';
+  useEffect(() => {
+    if (submitted) panel.close();
+    // `panel.close` is a fresh closure each render; depending on it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submitted]);
+
+  if (submitted) {
     return (
       <span className="text-xs" style={{ color: 'var(--color-ok)' }}>
         ✓ {t('submitted')}
@@ -51,11 +64,15 @@ export function ReportButton({ target, targetId }: { target: ReportTarget; targe
     );
   }
 
-  if (!open) {
+  // A sibling panel has the row — see ExclusivePanels for why this hides rather than
+  // closing the other one.
+  if (panel.hidden) return null;
+
+  if (!panel.isOpen) {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={panel.open}
         className="text-xs underline disabled:opacity-60"
         style={{ color: 'var(--color-muted)' }}
       >
@@ -102,7 +119,7 @@ export function ReportButton({ target, targetId }: { target: ReportTarget; targe
         <SubmitButton label={t('submit')} pendingLabel={t('submitting')} />
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={panel.close}
           className="text-xs underline"
           style={{ color: 'var(--color-muted)' }}
         >

@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { createAnswerAction, type AnswerState } from './actions';
+import { useExclusivePanel } from './ExclusivePanels';
 
 function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
@@ -101,13 +102,17 @@ export function AnswerComposer({
 /** A "Reply" affordance that reveals an inline reply composer under an answer. */
 export function ReplyAffordance({ postId, parentCommentId }: { postId: string; parentCommentId: string }) {
   const t = useTranslations('discussions');
-  const [open, setOpen] = useState(false);
+  const panel = useExclusivePanel();
 
-  if (!open) {
+  // A sibling panel (Report) has the row — see ExclusivePanels for why this hides rather
+  // than closing the other one.
+  if (panel.hidden) return null;
+
+  if (!panel.isOpen) {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={panel.open}
         className="text-xs underline"
         style={{ color: 'var(--color-muted)' }}
       >
@@ -116,8 +121,8 @@ export function ReplyAffordance({ postId, parentCommentId }: { postId: string; p
     );
   }
   return (
-    <div className="mt-2">
-      <AnswerComposer postId={postId} parentCommentId={parentCommentId} onDone={() => setOpen(false)} />
+    <div className="mt-2 w-full">
+      <AnswerComposer postId={postId} parentCommentId={parentCommentId} onDone={panel.close} />
     </div>
   );
 }
