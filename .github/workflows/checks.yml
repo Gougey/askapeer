@@ -24,6 +24,11 @@ jobs:
       - run: npm ci
       - name: Design-token guard
         run: npm run lint:tokens -w apps/web
+      # Focusable controls under 16px make iOS Safari zoom on focus, which resizes the
+      # visual viewport and makes fixed panels appear to change width. Fixed one control
+      # at a time twice before this guard existed.
+      - name: Input-zoom guard
+        run: npm run lint:inputs -w apps/web
       # The CSS token layer is generated from packages/design-tokens. Fails if globals.css
       # was hand-edited instead, which is the one way the two could silently diverge.
       - name: Design tokens up to date

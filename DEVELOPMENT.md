@@ -63,6 +63,22 @@ Open http://localhost:3000 — the home page shows live system health fetched fr
 why the values live outside the CSS (short version: CSS does not transfer to a non-CSS
 client, and the decisions are worth more than their CSS expression).
 
+### Form controls must be 16px
+
+Every focusable text control renders at `text-base` (16px). This is a **constraint, not a
+style choice**: iOS Safari auto-zooms when a focused control is smaller, and the zoom
+resizes the visual viewport, so `position: fixed` panels — the tag sheet, the anonymity
+gate, the bottom nav — visibly change width the moment the field is tapped. Installed to
+the home screen, with no browser chrome to re-anchor against, the whole panel appears to
+jump.
+
+It means some inputs read large against small surrounding type (the report box is the
+worst offender). That is the trade. The fix is never `maximum-scale=1` in the viewport
+meta, which stops the zoom by taking pinch-zoom away from everyone.
+
+`npm run lint:inputs -w apps/web` enforces it and runs in CI. For a genuine exception, add
+an `input-zoom-allow` comment on the line.
+
 ## Installable web app (PWA)
 
 The app installs to the home screen and runs **standalone** — full screen, no browser
