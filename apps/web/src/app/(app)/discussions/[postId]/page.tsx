@@ -6,6 +6,7 @@ import { AuthorLine, TagList } from '@/components/PostCard';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
 import { DeleteCommentButton } from './DeleteCommentButton';
 import { KudosButton } from './KudosButton';
+import { ExclusivePanels } from './ExclusivePanels';
 import { ReportButton } from './ReportButton';
 
 /**
@@ -66,8 +67,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
             on your own content. */}
         {!viewerContext.isAuthor && (
           <div className="flex flex-wrap items-center gap-3">
-            <ReportButton target="post" targetId={post.id} />
-            <ReportButton target="handle" targetId={post.author.handleId} />
+            {/* Both expand in place, so only one may hold the row at a time. */}
+            <ExclusivePanels>
+              <ReportButton target="post" targetId={post.id} />
+              <ReportButton target="handle" targetId={post.author.handleId} />
+            </ExclusivePanels>
           </div>
         )}
       </article>
@@ -131,7 +135,7 @@ async function Answer({
     >
       <AuthorLine author={comment.author} />
       <p className="mt-2 whitespace-pre-wrap text-sm">{comment.body}</p>
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-2 flex flex-wrap items-center gap-3">
         {comment.isMine ? (
           <StaticKudos label={t('kudos', { count: comment.kudosCount })} />
         ) : (
@@ -142,11 +146,15 @@ async function Answer({
             initialHasKudosed={comment.hasKudosed}
           />
         )}
-        {/* Replies are chronological conversation, so they don't sprout further nesting
-            controls in S5 — only top-level answers can be replied to. */}
-        {!isReply && <ReplyAffordance postId={postId} parentCommentId={comment.id} />}
+        {/* Reply and Report both expand in place into this row, so they are grouped: while
+            one is open the other's trigger is hidden rather than squeezed alongside it. */}
+        <ExclusivePanels>
+          {/* Replies are chronological conversation, so they don't sprout further nesting
+              controls in S5 — only top-level answers can be replied to. */}
+          {!isReply && <ReplyAffordance postId={postId} parentCommentId={comment.id} />}
+          {!comment.isMine && <ReportButton target="comment" targetId={comment.id} />}
+        </ExclusivePanels>
         {comment.isMine && <DeleteCommentButton postId={postId} commentId={comment.id} />}
-        {!comment.isMine && <ReportButton target="comment" targetId={comment.id} />}
       </div>
     </div>
   );
