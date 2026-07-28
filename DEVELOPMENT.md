@@ -52,6 +52,49 @@ Open http://localhost:3000 — the home page shows live system health fetched fr
 | `npm run typecheck` | typecheck all workspaces |
 | `npm run db:generate` / `db:migrate` | generate / apply migrations |
 | `npm run infra:up` / `infra:down` | start / stop Postgres + Redis |
+| `npm run tokens:build` / `tokens:check` | regenerate the CSS token layer from `packages/design-tokens` / fail if it drifted |
+
+## Design tokens
+
+`packages/design-tokens` is the source of truth for colour and type values;
+`apps/web/src/app/globals.css` is **generated** from it between `@tokens:start` /
+`@tokens:end` markers. Edit the package, run `npm run tokens:build`, commit both — CI runs
+`tokens:check` and fails if the CSS was hand-edited instead. See that package's README for
+why the values live outside the CSS (short version: CSS does not transfer to a non-CSS
+client, and the decisions are worth more than their CSS expression).
+
+## Installable web app (PWA)
+
+The app installs to the home screen and runs **standalone** — full screen, no browser
+chrome. That is the manifest (`apps/web/src/app/manifest.ts`) plus the icon set, and
+nothing else: **there is deliberately no service worker.** Standalone display does not
+need one, and a service worker's cache invalidation would fight a daily
+cosmetic-iteration loop. Offline, push and the Android install prompt are phase-2
+concerns (FD-3).
+
+Things that only bite once installed, all handled and all no-ops in a normal browser tab:
+
+- `viewportFit: 'cover'` in the root layout. It lets the page reach under the notch, and
+  it is also the switch that makes `env(safe-area-inset-*)` return anything but zero —
+  every safe-area rule in the app is inert without it.
+- The `AppBar` pads by the top inset (otherwise the wordmark sits behind the clock) and
+  `BottomNav` by the bottom inset (otherwise the tabs sit under the home indicator).
+- `start_url` is `/discussions`, not `/`: `requireAppAccess` already routes every session
+  state, so a signed-in member launches into the app rather than onto a sign-in screen.
+
+Icons are generated from the brand **mark** (a wordmark is illegible at 192px) and are
+committed, so this only runs when the brand artwork changes:
+
+```bash
+pip install Pillow && python3 apps/web/scripts/generate-pwa-icons.py
+```
+
+> **Known issue — signing in to the installed app on iOS.** An installed iOS web app has
+> its own cookie store, separate from Safari. A magic link tapped in Mail opens Safari and
+> signs *Safari* in, leaving the installed app signed out, with no address bar to paste the
+> link into. Android is unaffected. The 30-day refresh cookie makes this survivable while
+> the three of us are testing; a short numeric sign-in code is the fix, and is scheduled
+> before phase 2 (see FD-3 in the PRD).
 
 ## Verification (S2) — running without Onfido
 

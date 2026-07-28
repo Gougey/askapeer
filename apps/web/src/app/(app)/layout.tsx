@@ -13,7 +13,9 @@ export default async function AppShellLayout({ children }: { children: ReactNode
   await requireAppAccess();
 
   return (
-    <div className="mx-auto max-w-lg pb-20">
+    // Clearance for the fixed bottom nav, which itself grows by the home-indicator inset
+    // when installed — so the content padding has to grow with it or the last row hides.
+    <div className="mx-auto max-w-lg" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
       <AppBar />
       {children}
       <BottomNav />

@@ -2,7 +2,7 @@
   "name": "@askapeer/web",
   "version": "0.0.0",
   "private": true,
-  "description": "Askapeer web — Next.js (App Router), mobile-first, themeable.",
+  "description": "Askapeer web \u2014 Next.js (App Router), mobile-first, themeable.",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
@@ -11,6 +11,7 @@
     "lint:tokens": "node scripts/check-design-tokens.mjs"
   },
   "dependencies": {
+    "@askapeer/design-tokens": "*",
     "next": "^16.2.10",
     "next-intl": "^4.13.2",
     "react": "^19.2.7",

@@ -24,7 +24,14 @@ export function AppBar() {
     <header
       className="sticky top-0 z-20 flex items-center gap-2.5 px-4"
       style={{
-        height: 52,
+        /*
+         * minHeight rather than height, plus the status-bar inset as padding: installed to
+         * the home screen the page runs under the status bar, so without this the wordmark
+         * sits behind the clock. Both are no-ops in a normal browser tab, where the inset
+         * is 0 and the bar stays exactly 52px.
+         */
+        minHeight: 52,
+        paddingTop: 'env(safe-area-inset-top)',
         background: 'var(--color-surface)',
         borderBottom: '1px solid var(--color-border)',
       }}
