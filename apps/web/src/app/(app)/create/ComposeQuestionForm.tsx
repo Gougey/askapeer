@@ -5,23 +5,29 @@ import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import type { Category, Tag } from '@/lib/forum';
 import { createPostAction, type ComposeState } from './actions';
+import { ConfirmPostDialog } from './ConfirmPostDialog';
 import { TagPicker } from './TagPicker';
 
 /** Matches the API's ArrayMaxSize — the limit is explained here, enforced there. */
 const MAX_TAGS = 5;
 const TITLE_MAX = 200;
 
-function PublishButton({ disabled }: { disabled: boolean }) {
+/**
+ * Opens the anonymity gate rather than submitting. The actual submit lives inside the
+ * dialog, so the last thing a member does before publishing is answer the warning.
+ */
+function ReviewButton({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
   const t = useTranslations('compose');
   const { pending } = useFormStatus();
   return (
     <button
-      type="submit"
+      type="button"
+      onClick={onClick}
       disabled={disabled || pending}
       className="rounded-lg px-3 py-2 font-medium text-white disabled:opacity-50"
       style={{ background: 'var(--color-accent)' }}
     >
-      {pending ? t('publishing') : t('publish')}
+      {t('publish')}
     </button>
   );
 }
@@ -40,6 +46,7 @@ export function ComposeQuestionForm({
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [confirming, setConfirming] = useState(false);
   const categoryRef = useRef<HTMLSelectElement>(null);
 
   /*
@@ -57,24 +64,34 @@ export function ComposeQuestionForm({
     }
   }, [state, categoryId]);
 
+  /*
+   * Close the gate if the post was rejected. The error renders on the form, so leaving the
+   * dialog up would hide the only explanation of what went wrong behind the thing that
+   * caused it. A successful post never reaches here — the action redirects.
+   */
+  useEffect(() => {
+    if (state.status === 'error') setConfirming(false);
+  }, [state]);
+
   const complete = categoryId !== '' && title.trim() !== '' && body.trim() !== '';
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
       {/*
-        The zero-tolerance anonymity reminder. Domain-mandated in every posting UI
-        (EPIC-C §13.5, gap G-7) — it is not a dismissible hint, so it renders above the
-        fields where it is read before anything is typed, not after.
+        The zero-tolerance anonymity reminder — domain-mandated in every posting UI
+        (EPIC-C §13.5, gap G-7), so it stays here above the fields, where it is read
+        before anything is typed rather than after.
+
+        Reduced to a single line, with the full warning moved to the gate that opens on
+        "Post question" (ConfirmPostDialog). The standing block cost roughly a fifth of a
+        phone screen and, being unchanging, stopped being read. Split this way the rule is
+        present while composing *and* unavoidable at the moment of commitment, which is the
+        last point disclosure can still be prevented. Matches the reply composer, which
+        already carries a one-line form of the same reminder.
       */}
-      <aside
-        className="rounded-lg border p-3 text-sm"
-        style={{ borderColor: 'var(--color-bad)', color: 'var(--color-fg)' }}
-      >
-        <p className="font-medium">{t('anonymity.heading')}</p>
-        <p className="mt-1" style={{ color: 'var(--color-muted)' }}>
-          {t('anonymity.body')}
-        </p>
-      </aside>
+      <p className="text-sm" style={{ color: 'var(--color-bad)' }}>
+        {t('anonymity.inline')}
+      </p>
 
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium">{t('category')}</span>
@@ -129,7 +146,13 @@ export function ComposeQuestionForm({
         </p>
       )}
 
-      <PublishButton disabled={!complete} />
+      <ReviewButton disabled={!complete} onClick={() => setConfirming(true)} />
+
+      {/*
+        Rendered inside the <form> deliberately: its confirm button is a real submit, so
+        publishing still travels the same server action and the same pending state.
+      */}
+      {confirming && <ConfirmPostDialog onCancel={() => setConfirming(false)} />}
     </form>
   );
 }

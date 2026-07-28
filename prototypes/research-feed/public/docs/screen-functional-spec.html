@@ -1416,31 +1416,44 @@ dismiss → back.</li>
 <h4 id="d2-compose-question-createquestion-shell">D2 — Compose question
 · <code>/create/question</code> · shell</h4>
 <ul>
-<li><strong>Purpose</strong>: create a <code>type = question</code> post
-(publishes immediately — EPIC-C, no draft state for questions).</li>
-<li><strong>Content</strong>: <strong>category</strong> picker
+<li><p><strong>Purpose</strong>: create a <code>type = question</code>
+post (publishes immediately — EPIC-C, no draft state for
+questions).</p></li>
+<li><p><strong>Content</strong>: <strong>category</strong> picker
 (content-type: Clinical Case / Research / Career / Equipment / General);
 <strong>tags</strong> — <em>selected from the curated vocabulary</em>,
 facet-grouped, multi-select (members cannot create new tags — EPIC-C
 §3); <strong>title</strong>; <strong>body</strong>; <strong>optional
 poll</strong> (attach question + options); the <strong>zero-tolerance
-anonymity reminder</strong> (mandated §1.4); post.</li>
-<li><strong>Data → source</strong>: categories + selectable tags (read
-side of EPIC-J-managed vocabulary).</li>
-<li><strong>Actions → API</strong>: Post →
+anonymity reminder</strong> (mandated §1.4); post.</p>
+<p><em>Anonymity-reminder placement (revised 2026-07-28)</em>: split
+rather than a single standing block. A <strong>one-line</strong>
+reminder sits above the fields, so it is still read before anything is
+typed; the <strong>full</strong> warning appears in a confirmation gate
+opened by “Post question”, offering <strong>Post</strong> or <strong>Go
+back and edit</strong>. The standing block cost roughly a fifth of a
+phone screen and, being unchanging, stopped being read — this keeps the
+rule present while composing <em>and</em> makes it unavoidable at the
+moment of commitment, which is the last point disclosure can be
+prevented. The gate is a <strong>reminder, not an attestation</strong>:
+nothing is recorded. The recorded, identity-linked attestation remains
+EPIC-E’s and applies only to case discussions (D3).</p></li>
+<li><p><strong>Data → source</strong>: categories + selectable tags
+(read side of EPIC-J-managed vocabulary).</p></li>
+<li><p><strong>Actions → API</strong>: Post →
 <code>POST /v1/posts { category_id, type: "question", title, body, tag_ids[], poll? }</code>
 (EPIC-C) → <strong>C1</strong>. <em>(Changed 2026-07-27 from C4: landing
 on your own new thread puts an empty answer box under it, which reads as
 the post being reopened and prompting you to reply to yourself. C1 is
 newest-first, so the question is at the top on arrival — confirmation by
 arrival rather than by being parked inside what you just
-wrote.)</em></li>
-<li><strong>States</strong>: editing; validation (category required,
-title/body required); submitting.</li>
-<li><strong>Spec-gaps</strong>: <strong>G-6</strong> (poll payload on
+wrote.)</em></p></li>
+<li><p><strong>States</strong>: editing; validation (category required,
+title/body required); submitting.</p></li>
+<li><p><strong>Spec-gaps</strong>: <strong>G-6</strong> (poll payload on
 create); <strong>note</strong> — confirm tag application is
 <em>select-only</em> from the vocabulary (no free-text tag creation),
-consistent with admin-managed tags.</li>
+consistent with admin-managed tags.</p></li>
 </ul>
 <h4 id="d3-compose-case-discussion-createcase-shell">D3 — Compose case
 discussion · <code>/create/case</code> · shell</h4>
