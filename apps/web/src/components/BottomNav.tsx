@@ -34,7 +34,17 @@ export function BottomNav() {
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-10 border-t"
-      style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
+      style={{
+        background: 'var(--color-surface)',
+        borderColor: 'var(--color-muted)',
+        /*
+         * Installed to the home screen there is no browser chrome below this bar, so on a
+         * gesture-nav phone the tabs would sit under the home indicator. Padding rather
+         * than a fixed offset: the inset is 0 in a normal browser tab, so this costs
+         * nothing there and only takes effect where it is needed.
+         */
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
       aria-label={t('primaryNav')}
     >
       <ul className="mx-auto flex max-w-lg items-stretch">

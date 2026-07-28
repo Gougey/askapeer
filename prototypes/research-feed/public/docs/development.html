@@ -64,6 +64,10 @@ applies any not-yet-applied.</li>
 <h2 id="useful-scripts-from-the-repo-root">Useful scripts (from the repo
 root)</h2>
 <table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
 <thead>
 <tr>
 <th>Command</th>
@@ -91,8 +95,62 @@ root)</h2>
 <td><code>npm run infra:up</code> / <code>infra:down</code></td>
 <td>start / stop Postgres + Redis</td>
 </tr>
+<tr>
+<td><code>npm run tokens:build</code> / <code>tokens:check</code></td>
+<td>regenerate the CSS token layer from
+<code>packages/design-tokens</code> / fail if it drifted</td>
+</tr>
 </tbody>
 </table>
+<h2 id="design-tokens">Design tokens</h2>
+<p><code>packages/design-tokens</code> is the source of truth for colour
+and type values; <code>apps/web/src/app/globals.css</code> is
+<strong>generated</strong> from it between <code>@tokens:start</code> /
+<code>@tokens:end</code> markers. Edit the package, run
+<code>npm run tokens:build</code>, commit both — CI runs
+<code>tokens:check</code> and fails if the CSS was hand-edited instead.
+See that package’s README for why the values live outside the CSS (short
+version: CSS does not transfer to a non-CSS client, and the decisions
+are worth more than their CSS expression).</p>
+<h2 id="installable-web-app-pwa">Installable web app (PWA)</h2>
+<p>The app installs to the home screen and runs
+<strong>standalone</strong> — full screen, no browser chrome. That is
+the manifest (<code>apps/web/src/app/manifest.ts</code>) plus the icon
+set, and nothing else: <strong>there is deliberately no service
+worker.</strong> Standalone display does not need one, and a service
+worker’s cache invalidation would fight a daily cosmetic-iteration loop.
+Offline, push and the Android install prompt are phase-2 concerns
+(FD-3).</p>
+<p>Things that only bite once installed, all handled and all no-ops in a
+normal browser tab:</p>
+<ul>
+<li><code>viewportFit: 'cover'</code> in the root layout. It lets the
+page reach under the notch, and it is also the switch that makes
+<code>env(safe-area-inset-*)</code> return anything but zero — every
+safe-area rule in the app is inert without it.</li>
+<li>The <code>AppBar</code> pads by the top inset (otherwise the
+wordmark sits behind the clock) and <code>BottomNav</code> by the bottom
+inset (otherwise the tabs sit under the home indicator).</li>
+<li><code>start_url</code> is <code>/discussions</code>, not
+<code>/</code>: <code>requireAppAccess</code> already routes every
+session state, so a signed-in member launches into the app rather than
+onto a sign-in screen.</li>
+</ul>
+<p>Icons are generated from the brand <strong>mark</strong> (a wordmark
+is illegible at 192px) and are committed, so this only runs when the
+brand artwork changes:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install Pillow <span class="kw">&amp;&amp;</span> <span class="ex">python3</span> apps/web/scripts/generate-pwa-icons.py</span></code></pre></div>
+<blockquote>
+<p><strong>Known issue — signing in to the installed app on
+iOS.</strong> An installed iOS web app has its own cookie store,
+separate from Safari. A magic link tapped in Mail opens Safari and signs
+<em>Safari</em> in, leaving the installed app signed out, with no
+address bar to paste the link into. Android is unaffected. The 30-day
+refresh cookie makes this survivable while the three of us are testing;
+a short numeric sign-in code is the fix, and is scheduled before phase 2
+(see FD-3 in the PRD).</p>
+</blockquote>
 <h2 id="verification-s2-running-without-onfido">Verification (S2) —
 running without Onfido</h2>
 <p>EPIC-A’s pipeline needs two external providers we don’t have accounts
@@ -156,9 +214,9 @@ being stuck silently in <code>pending</code></li>
 <p>The timeout is <code>verification.onfido_timeout_hours</code> in
 <code>config.app_meta</code> (EPIC-J config), defaulting to 48h. To
 watch it fire without waiting two days:</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode sql"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">insert</span> <span class="kw">into</span> config.app_meta (<span class="kw">key</span>, <span class="fu">value</span>) <span class="kw">values</span> (<span class="st">&#39;verification.onfido_timeout_hours&#39;</span>, <span class="st">&#39;0.0011&#39;</span>)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">on</span> conflict (<span class="kw">key</span>) do <span class="kw">update</span> <span class="kw">set</span> <span class="fu">value</span> <span class="op">=</span> excluded.<span class="fu">value</span>;   <span class="co">-- ~4 seconds</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">insert</span> <span class="kw">into</span> config.app_meta (<span class="kw">key</span>, <span class="fu">value</span>) <span class="kw">values</span> (<span class="st">&#39;verification.onfido_timeout_hours&#39;</span>, <span class="st">&#39;0.0011&#39;</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">on</span> conflict (<span class="kw">key</span>) do <span class="kw">update</span> <span class="kw">set</span> <span class="fu">value</span> <span class="op">=</span> excluded.<span class="fu">value</span>;   <span class="co">-- ~4 seconds</span></span></code></pre></div>
 <p>Delete that row to restore the default. From
 <code>needs_more_info</code> the applicant can restart the pipeline
 themselves via the holding page’s “Try again”
@@ -313,8 +371,8 @@ instead.</p>
 <p><code>GET /health</code> (unprefixed) probes both dependencies and
 returns <strong>503</strong> if either is down, so a missing one is
 visible rather than silent:</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
 <h2 id="conventions-established-at-s0">Conventions established at
 S0</h2>
 <ul>

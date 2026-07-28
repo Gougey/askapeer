@@ -1360,15 +1360,33 @@ distribute test builds through TestFlight and EAS internal distribution.
 distribution channel — it cannot carry custom native code, so it could
 never run the identity-verification SDK that gates the
 product.)</em></p>
+<p><strong>Known issue to resolve before phase 2 — magic-link sign-in
+inside an installed app on iOS.</strong> An installed iOS web app has
+<strong>cookie and storage isolation from Safari</strong>. A magic link
+tapped in Mail opens Safari, which authenticates <em>Safari</em>; the
+installed app remains signed out, and standalone display has no address
+bar to paste the link into. Android is unaffected — Chrome’s installed
+apps share its cookie jar.</p>
+<p>This is tolerable for phase 1: the refresh cookie lasts 30 days, so
+it is one awkward sign-in a month for three people. It is
+<strong>not</strong> acceptable for a group of invited clinicians. The
+standard remedy is a <strong>short numeric code alongside the magic
+link</strong> — the email carries a 6-digit code typed into the app —
+which is API and UI work that should be scheduled before phase 2 opens,
+not discovered during it.</p>
 <p><strong>e. Groundwork already taken, which commits us to
-nothing.</strong> Design tokens have been extracted to
-<code>packages/design-tokens</code> as a platform-neutral source that
-generates the web CSS layer. CSS does not transfer to React Native — it
-has no cascade and no custom properties — so this preserves the
-<em>decisions</em> (which colour means kudos, what the neutral ramp is)
-independently of the CSS expressing them. It is cheap insurance ahead of
-a detailed visual pass, and is useful whether or not a native client is
-ever built.</p>
+nothing.</strong> The app is now <strong>installable and runs
+standalone</strong> (manifest, icon set, safe-area handling) —
+deliberately without a service worker, since offline and the Android
+install prompt are phase-2 concerns and cache invalidation would fight a
+daily design-iteration loop. Separately, design tokens have been
+extracted to <code>packages/design-tokens</code> as a platform-neutral
+source that generates the web CSS layer. CSS does not transfer to React
+Native — it has no cascade and no custom properties — so this preserves
+the <em>decisions</em> (which colour means kudos, what the neutral ramp
+is) independently of the CSS expressing them. It is cheap insurance
+ahead of a detailed visual pass, and is useful whether or not a native
+client is ever built.</p>
 <p><strong>One expectation to set</strong>: some visual work will be
 redone whichever path is chosen, because iOS and Android have their own
 navigation idioms, safe areas and system type. A native app that is
