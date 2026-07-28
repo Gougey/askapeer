@@ -112,6 +112,22 @@ and type values; <code>apps/web/src/app/globals.css</code> is
 See that package’s README for why the values live outside the CSS (short
 version: CSS does not transfer to a non-CSS client, and the decisions
 are worth more than their CSS expression).</p>
+<h3 id="form-controls-must-be-16px">Form controls must be 16px</h3>
+<p>Every focusable text control renders at <code>text-base</code>
+(16px). This is a <strong>constraint, not a style choice</strong>: iOS
+Safari auto-zooms when a focused control is smaller, and the zoom
+resizes the visual viewport, so <code>position: fixed</code> panels —
+the tag sheet, the anonymity gate, the bottom nav — visibly change width
+the moment the field is tapped. Installed to the home screen, with no
+browser chrome to re-anchor against, the whole panel appears to
+jump.</p>
+<p>It means some inputs read large against small surrounding type (the
+report box is the worst offender). That is the trade. The fix is never
+<code>maximum-scale=1</code> in the viewport meta, which stops the zoom
+by taking pinch-zoom away from everyone.</p>
+<p><code>npm run lint:inputs -w apps/web</code> enforces it and runs in
+CI. For a genuine exception, add an <code>input-zoom-allow</code>
+comment on the line.</p>
 <h2 id="installable-web-app-pwa">Installable web app (PWA)</h2>
 <p>The app installs to the home screen and runs
 <strong>standalone</strong> — full screen, no browser chrome. That is

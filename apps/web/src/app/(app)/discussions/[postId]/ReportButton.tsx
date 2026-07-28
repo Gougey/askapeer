@@ -104,7 +104,9 @@ export function ReportButton({ target, targetId }: { target: ReportTarget; targe
         rows={2}
         maxLength={2000}
         placeholder={t('commentPlaceholder')}
-        className="rounded-lg border px-3 py-2 text-xs"
+        // text-base (16px) is required, not a style choice — see scripts/check-input-zoom.mjs.
+        // It reads large against this panel's text-xs surroundings; that is the trade.
+        className="rounded-lg border px-3 py-2 text-base"
         style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
       />
       <p className="text-xs" style={{ color: 'var(--color-muted)' }}>

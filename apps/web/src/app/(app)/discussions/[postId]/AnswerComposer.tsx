@@ -80,7 +80,8 @@ export function AnswerComposer({
         rows={isReply ? 2 : 4}
         required
         placeholder={isReply ? t('replyPlaceholder') : t('answerPlaceholder')}
-        className="rounded-lg border px-3 py-2 text-sm"
+        // text-base (16px) is required, not a style choice — see scripts/check-input-zoom.mjs.
+        className="rounded-lg border px-3 py-2 text-base"
         style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
       />
       <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
