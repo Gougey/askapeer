@@ -137,7 +137,11 @@
     "heading": "Ask a question",
     "anonymity": {
       "heading": "Before you post — stay anonymous",
-      "body": "Never name yourself, a colleague, an employer or a patient. Identifying yourself or another member means permanent removal from Askapeer, with no exceptions."
+      "body": "Never name yourself, a colleague, an employer or a patient. Identifying yourself or another member means permanent removal from Askapeer, with no exceptions.",
+      "inline": "Stay anonymous — never name yourself, a colleague, an employer or a patient."
+    },
+    "confirm": {
+      "cancel": "Go back and edit"
     },
     "category": "Category",
     "categoryPlaceholder": "Choose a category",
