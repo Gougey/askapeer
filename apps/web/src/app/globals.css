@@ -13,6 +13,7 @@
 @font-face { font-family:'Inter'; src:url('/fonts/inter-600.woff2') format('woff2'); font-weight:600; font-style:normal; font-display:swap; }
 @font-face { font-family:'Inter'; src:url('/fonts/inter-700.woff2') format('woff2'); font-weight:700; font-style:normal; font-display:swap; }
 
+/* @tokens:start — generated from packages/design-tokens; edit there, then run `npm run tokens:build` */
 @theme {
   /* Brand */
   --color-navy: #001f52;
@@ -86,6 +87,7 @@
     --color-warn: #e0a33a;
   }
 }
+/* @tokens:end */
 
 html,
 body {

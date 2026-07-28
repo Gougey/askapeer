@@ -1,0 +1,23 @@
+{
+  "name": "@askapeer/design-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Platform-neutral source of truth for AskaPeer design tokens. Generates the web CSS layer; consumable directly by any non-CSS client.",
+  "type": "module",
+  "main": "index.mjs",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.mjs"
+    }
+  },
+  "files": [
+    "index.mjs",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "node scripts/write-css.mjs",
+    "check": "node scripts/write-css.mjs --check"
+  }
+}
