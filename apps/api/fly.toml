@@ -37,7 +37,14 @@ primary_region = "lhr"
   # simulated-callback endpoint 404s as though it were never deployed.
   VERIFICATION_SIMULATE = "true"
 
-  # Admin console (S11a): the email allowlist that can reach /admin (read-only
-  # members / verification / audit). Interim gate until the moderator/administrator
-  # JWT claims land (S11/S13). Comma-separate to add more admins.
-  ADMIN_EMAILS = "ade@halls1.com"
+  # Admin console (S11a): the email allowlist that can reach /admin, now a **Fly secret**
+  # rather than a value here. This repo is public, and the allowlist is a list of the
+  # founders' personal email addresses — publishing those to gate an admin console is a
+  # poor trade for a platform whose whole proposition is confidentiality.
+  #
+  #   flyctl secrets set ADMIN_EMAILS="a@x,b@y" -a askapeer-api
+  #
+  # Comma-separated, matched case-insensitively against members.email, resolved per
+  # request — so adding or removing an admin takes effect without waiting for a token to
+  # expire, though the process must restart to pick up a changed secret. Interim gate
+  # until the moderator/administrator JWT claims land (S11/S13).
