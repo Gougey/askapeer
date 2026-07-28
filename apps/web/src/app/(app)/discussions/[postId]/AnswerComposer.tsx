@@ -91,11 +91,37 @@ export function AnswerComposer({
           {t(`answerError.${state.reason ?? 'unavailable'}`)}
         </p>
       )}
-      <SubmitButton
-        label={isReply ? t('postReply') : t('postAnswer')}
-        pendingLabel={t('posting')}
-      />
+      <div className="flex items-center gap-3">
+        <SubmitButton
+          label={isReply ? t('postReply') : t('postAnswer')}
+          pendingLabel={t('posting')}
+        />
+        {/*
+          Only where there is something to go back to. The reply composer is revealed by an
+          affordance and needs a way out — the report panel beside it has one, and without
+          this a member who opened Reply by mistake had no way to close it. The top-level
+          answer composer is persistent: it is the section, so "cancel" would have nothing
+          to dismiss.
+        */}
+        {onDone && <CancelButton label={t('cancel')} onCancel={onDone} />}
+      </div>
     </form>
+  );
+}
+
+/** Disabled mid-flight: the reply is already away, so offering to back out would mislead. */
+function CancelButton({ label, onCancel }: { label: string; onCancel: () => void }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="button"
+      onClick={onCancel}
+      disabled={pending}
+      className="text-sm underline disabled:opacity-50"
+      style={{ color: 'var(--color-muted)' }}
+    >
+      {label}
+    </button>
   );
 }
 
