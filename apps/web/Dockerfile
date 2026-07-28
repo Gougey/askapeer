@@ -6,7 +6,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
+# Every workspace in the lockfile must have its manifest present for `npm ci` to resolve,
+# including ones the web app depends on.
+COPY packages/design-tokens/package.json packages/design-tokens/package.json
 RUN npm ci
+# The tokens are imported by the web build (manifest colours, theme-color), so the package
+# itself has to be in the image, not just its manifest.
+COPY packages/design-tokens packages/design-tokens
 COPY apps/web apps/web
 RUN npm run build -w apps/web
 
