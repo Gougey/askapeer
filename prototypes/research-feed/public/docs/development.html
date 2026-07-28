@@ -377,8 +377,23 @@ wiring:</p>
 <td><code>apps/api/fly.toml [env]</code></td>
 <td>staging only</td>
 </tr>
+<tr>
+<td><code>ADMIN_EMAILS</code></td>
+<td>Fly secret</td>
+<td>comma-separated allowlist for <code>/admin</code>; a <strong>secret,
+not <code>[env]</code></strong>, because this repo is public and the
+list is the founders’ personal email addresses</td>
+</tr>
 </tbody>
 </table>
+<p>Admin access (S11a) is that allowlist, matched case-insensitively
+against <code>members.email</code> and resolved <strong>per
+request</strong>, so adding or removing an admin takes effect without
+waiting for a token to expire — but the value is read at construction,
+so the process must restart to pick up a change
+(<code>flyctl secrets set</code> restarts the machines for you). There
+is no UI for this yet; the moderator/administrator claims and their
+management surfaces are S11/S13.</p>
 <p>The Redis instance is created with <strong>eviction
 disabled</strong>. BullMQ requires a <code>noeviction</code> policy —
 under memory pressure an evicting Redis would silently drop queue keys

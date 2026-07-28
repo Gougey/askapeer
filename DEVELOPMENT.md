@@ -250,6 +250,13 @@ so with Redis absent `POST /v1/auth/register` hangs indefinitely. Current stagin
 | `REDIS_URL` | Fly secret | `askapeer-redis` (Upstash, lhr) — secret, not `fly.toml [env]`, as the URL embeds a password |
 | `AUTH_DEV_MAGIC_LINK` | `apps/api/fly.toml [env]` | staging only |
 | `VERIFICATION_SIMULATE` | `apps/api/fly.toml [env]` | staging only |
+| `ADMIN_EMAILS` | Fly secret | comma-separated allowlist for `/admin`; a **secret, not `[env]`**, because this repo is public and the list is the founders' personal email addresses |
+
+Admin access (S11a) is that allowlist, matched case-insensitively against `members.email`
+and resolved **per request**, so adding or removing an admin takes effect without waiting
+for a token to expire — but the value is read at construction, so the process must restart
+to pick up a change (`flyctl secrets set` restarts the machines for you). There is no UI
+for this yet; the moderator/administrator claims and their management surfaces are S11/S13.
 
 The Redis instance is created with **eviction disabled**. BullMQ requires a `noeviction`
 policy — under memory pressure an evicting Redis would silently drop queue keys and lose
