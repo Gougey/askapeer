@@ -1,5 +1,13 @@
 import { Module } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtConfigModule } from '../auth/jwt-config.module';
+import { AppAccessGuard } from '../auth/app-access.guard';
+import { SettingsModule } from '../settings/settings.module';
 import { EmailSender } from './email.sender';
+import {
+  NotificationPreferencesController,
+  NotificationsController,
+} from './notifications.controller';
 import { NotificationsQueueModule } from './notifications.queue';
 import { NotificationsService } from './notifications.service';
 import { NotificationsWorker } from './notifications.worker';
@@ -16,8 +24,13 @@ import { NotificationsWorker } from './notifications.worker';
  * off — §4) has to reach it too.
  */
 @Module({
-  imports: [NotificationsQueueModule],
-  providers: [NotificationsService, NotificationsWorker, EmailSender],
+  imports: [
+    NotificationsQueueModule,
+    JwtConfigModule, // JwtAuthGuard verifies the access token
+    SettingsModule, // AppAccessGuard's paywall read
+  ],
+  controllers: [NotificationsController, NotificationPreferencesController],
+  providers: [NotificationsService, NotificationsWorker, EmailSender, JwtAuthGuard, AppAccessGuard],
   exports: [NotificationsService, EmailSender],
 })
 export class NotificationsModule {}

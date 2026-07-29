@@ -1,6 +1,7 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { and, desc, eq, isNull, lt, or, sql } from 'drizzle-orm';
 import type { Queue } from 'bullmq';
+import { encodeCursor, decodeCursor } from '../common/cursor';
 import { DRIZZLE, type Database } from '../db/db.module';
 import {
   comments,
@@ -12,18 +13,40 @@ import {
 } from '../db/schema';
 import { EmailSender } from './email.sender';
 import {
+  LIVE_NOTIFICATION_TYPES,
   type KudosReceivedPayload,
+  type LiveNotificationType,
   type NotificationPayload,
   type ReplyPayload,
   toSnippet,
 } from './notification-payloads';
+import type { ListNotificationsDto, UpdateNotificationPreferenceDto } from './notifications.dto';
 import { NOTIFICATIONS_QUEUE } from './notifications.queue';
 
-/** The types S10 actually fires. `mention` and `weekly_digest` exist in the enum but
- *  wait on EPIC-C's parser and `community.follows` respectively. */
-export type LiveNotificationType = 'reply' | 'kudos_received' | 'verification_status_change';
-
 export type Channels = { inApp: boolean; email: boolean; push: boolean };
+
+/** One row of the F4 matrix. */
+export type PreferenceRow = Channels & {
+  type: LiveNotificationType;
+  /** EPIC-G §6.1 — the email toggle for this type is fixed on and must render disabled. */
+  emailLocked: boolean;
+};
+
+export type NotificationItem = {
+  id: string;
+  type: string;
+  payload: unknown;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export type NotificationList = {
+  notifications: NotificationItem[];
+  nextCursor: string | null;
+  unreadCount: number;
+};
+
+const DEFAULT_PAGE_SIZE = 20;
 
 /**
  * What a member gets when they have expressed no preference. Held here, in one place,
@@ -159,6 +182,161 @@ export class NotificationsService {
         { jobId: `email-${dedupeKey.replace(/:/g, '-')}` },
       );
     }
+  }
+
+  /** The inbox (E1), newest first. */
+  async list(handleId: string, query: ListNotificationsDto): Promise<NotificationList> {
+    const cursor = decodeCursor(query.cursor);
+    const limit = DEFAULT_PAGE_SIZE;
+
+    const where = [eq(notifications.handleId, handleId)];
+    if (query.unreadOnly) where.push(isNull(notifications.readAt));
+    if (cursor) {
+      where.push(
+        or(
+          lt(notifications.createdAt, cursor.createdAt),
+          and(eq(notifications.createdAt, cursor.createdAt), lt(notifications.id, cursor.id)),
+        )!,
+      );
+    }
+
+    const rows = await this.db
+      .select({
+        id: notifications.id,
+        type: notifications.type,
+        payload: notifications.payload,
+        readAt: notifications.readAt,
+        createdAt: notifications.createdAt,
+      })
+      .from(notifications)
+      .where(and(...where))
+      .orderBy(desc(notifications.createdAt), desc(notifications.id))
+      // One extra row answers "is there another page?" without a second count query.
+      .limit(limit + 1);
+
+    const page = rows.slice(0, limit);
+    const last = page.at(-1);
+    return {
+      notifications: page.map((r) => ({
+        id: r.id,
+        type: r.type,
+        payload: r.payload,
+        readAt: r.readAt?.toISOString() ?? null,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null,
+      // Bundled with the page so opening the inbox doesn't need a second round-trip to
+      // decide whether the tab badge should still be showing.
+      unreadCount: await this.unreadCount(handleId),
+    };
+  }
+
+  /** The tab badge. Its own endpoint because the app shell needs it on every render,
+   *  where fetching a page of notifications to count them would be absurd. */
+  async unreadCount(handleId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(eq(notifications.handleId, handleId), isNull(notifications.readAt)));
+    return row?.count ?? 0;
+  }
+
+  /**
+   * Mark one notification read. Scoped to the caller's handle, and a miss is a 404
+   * whether the row belongs to someone else or does not exist — "this exists but isn't
+   * yours" is itself a disclosure, the same rule the thread read follows (EPIC-C §13.4).
+   *
+   * Already-read rows keep their original `read_at`: re-marking is a no-op, not a
+   * refresh, so the timestamp stays the moment the member actually saw it.
+   */
+  async markRead(handleId: string, notificationId: string): Promise<{ unreadCount: number }> {
+    const updated = await this.db
+      .update(notifications)
+      .set({ readAt: new Date() })
+      .where(
+        and(
+          eq(notifications.id, notificationId),
+          eq(notifications.handleId, handleId),
+          isNull(notifications.readAt),
+        ),
+      )
+      .returning({ id: notifications.id });
+
+    if (updated.length === 0) {
+      // Distinguish "already read" (fine) from "not yours / not there" (404).
+      const [existing] = await this.db
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(and(eq(notifications.id, notificationId), eq(notifications.handleId, handleId)));
+      if (!existing) throw new NotFoundException('No such notification.');
+    }
+    return { unreadCount: await this.unreadCount(handleId) };
+  }
+
+  async markAllRead(handleId: string): Promise<{ unreadCount: number }> {
+    await this.db
+      .update(notifications)
+      .set({ readAt: new Date() })
+      .where(and(eq(notifications.handleId, handleId), isNull(notifications.readAt)));
+    return { unreadCount: 0 };
+  }
+
+  /** The F4 matrix: every live type, stored values layered over the defaults. */
+  async getPreferences(handleId: string): Promise<{
+    preferences: PreferenceRow[];
+    /** False for the whole platform while the channel is inert (EPIC-G §6.2) — one flag
+     *  rather than a per-row one, so the UI has a single place to read "coming soon". */
+    pushAvailable: boolean;
+  }> {
+    const preferences = await Promise.all(
+      LIVE_NOTIFICATION_TYPES.map(async (type) => ({
+        type,
+        ...(await this.resolveChannels(handleId, type)),
+        emailLocked: type === 'verification_status_change',
+      })),
+    );
+    return { preferences, pushAvailable: false };
+  }
+
+  /**
+   * Set one type's three channels. Rejects disabling the verification-status email
+   * (EPIC-G §6.1) here as well as in the CHECK constraint — the constraint is the
+   * guarantee, this is the sentence a member can understand.
+   */
+  async setPreference(
+    handleId: string,
+    dto: UpdateNotificationPreferenceDto,
+  ): Promise<PreferenceRow> {
+    if (dto.type === 'verification_status_change' && !dto.emailEnabled) {
+      throw new BadRequestException(
+        'Email for verification and account-status changes cannot be turned off.',
+      );
+    }
+
+    const values = {
+      handleId,
+      type: dto.type,
+      inAppEnabled: dto.inAppEnabled,
+      emailEnabled: dto.emailEnabled,
+      pushEnabled: dto.pushEnabled,
+    };
+    await this.db
+      .insert(notificationPreferences)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [notificationPreferences.handleId, notificationPreferences.type],
+        set: {
+          inAppEnabled: values.inAppEnabled,
+          emailEnabled: values.emailEnabled,
+          pushEnabled: values.pushEnabled,
+        },
+      });
+
+    return {
+      type: dto.type,
+      ...(await this.resolveChannels(handleId, dto.type)),
+      emailLocked: dto.type === 'verification_status_change',
+    };
   }
 
   /**

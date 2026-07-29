@@ -15,6 +15,20 @@
  *    discussion text does not belong.
  */
 
+/**
+ * The types S10 actually fires, and therefore the only ones the preferences screen
+ * offers. `mention` and `weekly_digest` exist in the database enum but wait on EPIC-C's
+ * parser and `community.follows` respectively — a toggle for a notification that cannot
+ * arrive is worse than no toggle. Adding one later is adding it to this array.
+ */
+export const LIVE_NOTIFICATION_TYPES = [
+  'reply',
+  'kudos_received',
+  'verification_status_change',
+] as const;
+
+export type LiveNotificationType = (typeof LIVE_NOTIFICATION_TYPES)[number];
+
 /** Cap on the stored reply preview. Enough to know whether to open it, no more. */
 export const SNIPPET_LENGTH = 120;
 

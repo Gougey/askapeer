@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
+import { encodeCursor, decodeCursor } from '../common/cursor';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { categories, comments, handles, kudos, postTags, posts, tags } from '../db/schema';
 import { BadgeService } from './badge.service';
@@ -454,22 +455,4 @@ function authorBlock(
 function snippet(body: string): string {
   const flat = body.replace(/\s+/g, ' ').trim();
   return flat.length <= SNIPPET_LENGTH ? flat : `${flat.slice(0, SNIPPET_LENGTH).trimEnd()}…`;
-}
-
-/**
- * The cursor is opaque to the client on purpose — it encodes the sort key, so making it
- * readable would invite callers to construct one and pin the ordering contract in place.
- */
-function encodeCursor(createdAt: Date, id: string): string {
-  return Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
-}
-
-function decodeCursor(cursor?: string): { createdAt: Date; id: string } | null {
-  if (!cursor) return null;
-  const [iso, id] = Buffer.from(cursor, 'base64url').toString().split('|');
-  const createdAt = new Date(iso ?? '');
-  // A malformed cursor is a bad request, not an empty page — silently returning nothing
-  // would look like "you've reached the end" to anyone paginating.
-  if (!id || Number.isNaN(createdAt.getTime())) throw new BadRequestException('Invalid cursor.');
-  return { createdAt, id };
 }
