@@ -18,6 +18,23 @@ export type ReplyPayload = {
  *  where that would start. */
 export type KudosReceivedPayload = { targetType: 'post' | 'comment'; postId: string; postTitle: string };
 
+/**
+ * An account-status notice: a verification decision, or one of EPIC-F's member-affecting
+ * moderation actions. Mirrors `AccountNoticePayload` on the API.
+ *
+ * `event` is the discriminator the copy switches on — every one of these used to render
+ * as a single generic line, which told a warned member nothing about what had happened
+ * or why, while the email for the same event said it plainly.
+ */
+export type AccountNoticePayload = {
+  event: 'verification' | 'warned' | 'suspended' | 'expelled' | 'handle_renamed';
+  status?: string;
+  /** The moderator's stated reason. Shown to the member — being told you were actioned
+   *  without being told why is not being told. */
+  reason?: string | null;
+  newHandleName?: string;
+};
+
 export type Notification =
   | { id: string; type: 'reply'; payload: ReplyPayload; readAt: string | null; createdAt: string }
   | {
@@ -30,7 +47,7 @@ export type Notification =
   | {
       id: string;
       type: 'verification_status_change';
-      payload: Record<string, unknown>;
+      payload: AccountNoticePayload;
       readAt: string | null;
       createdAt: string;
     };

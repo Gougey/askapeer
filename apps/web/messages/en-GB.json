@@ -243,7 +243,12 @@
       "kudosOnPost": "Your question received kudos",
       "kudosOnComment": "Your answer received kudos",
       "statusChanged": "Your account status has changed",
-      "unread": "Unread"
+      "unread": "Unread",
+      "warned": "A moderator has issued you a warning",
+      "suspended": "Your access has been suspended",
+      "expelled": "Your membership has ended",
+      "handleRenamed": "A moderator changed your handle to {handle}",
+      "reason": "Reason given: {reason}"
     },
     "empty": {
       "notifications": "You're all caught up. Replies to your posts and kudos you receive will appear here.",
