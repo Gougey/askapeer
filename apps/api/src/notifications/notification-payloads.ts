@@ -60,7 +60,31 @@ export type KudosReceivedPayload = {
   postTitle: string;
 };
 
-export type NotificationPayload = ReplyPayload | KudosReceivedPayload;
+/**
+ * An account-status notice: a verification decision, or one of EPIC-F's member-affecting
+ * moderation actions.
+ *
+ * These share the `verification_status_change` type rather than getting one of their own,
+ * because §6.1 already defines that type as covering "account-status events (verification
+ * decisions, and — via EPIC-F — suspension/expulsion notices)". The `event` discriminator
+ * is what the copy switches on.
+ *
+ * This is the type whose email cannot be disabled, and that is doing real work here: a
+ * suspended member cannot reach the in-app inbox at all — the access gate stops them at
+ * the holding page — so email is the only channel that can tell them why. The locked
+ * channel and the case that needs it are the same design.
+ */
+export type AccountNoticePayload = {
+  event: 'verification' | 'warned' | 'suspended' | 'expelled' | 'handle_renamed';
+  /** Verification only — the status transitioned to. */
+  status?: string;
+  /** The moderator's or system's stated reason, where one was given. */
+  reason?: string | null;
+  /** `handle_renamed` only — what the handle is now. */
+  newHandleName?: string;
+};
+
+export type NotificationPayload = ReplyPayload | KudosReceivedPayload | AccountNoticePayload;
 
 /** Trim a body to a preview without slicing a word in half. */
 export function toSnippet(body: string): string {

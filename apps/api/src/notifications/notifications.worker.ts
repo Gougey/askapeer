@@ -33,6 +33,12 @@ export class NotificationsWorker implements OnModuleInit, OnModuleDestroy {
               job.data.targetId as string,
               job.data.actorHandleId as string,
             );
+          case 'account_notice':
+            return this.notifications.handleAccountNotice(
+              job.data.handleId as string,
+              job.data.payload,
+              job.data.dedupeKey as string,
+            );
           case 'email':
             return this.notifications.deliverEmail(
               job.data.handleId as string,

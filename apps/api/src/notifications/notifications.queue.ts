@@ -2,6 +2,7 @@ import { Global, Inject, Injectable, Logger, Module, type OnModuleDestroy } from
 import { Queue } from 'bullmq';
 import type { Redis } from 'ioredis';
 import { REDIS } from '../redis/redis.module';
+import type { AccountNoticePayload } from './notification-payloads';
 
 export const NOTIFICATIONS_QUEUE = Symbol('NOTIFICATIONS_QUEUE');
 
@@ -32,7 +33,19 @@ export type EmailJob = {
   data: { handleId: string; type: string; payload: Record<string, unknown> };
 };
 
-export type NotificationJob = ReplyEventJob | KudosEventJob | EmailJob;
+/**
+ * An account-status notice (EPIC-A decisions, EPIC-F moderation). Unlike the two events
+ * above this carries a rendered payload rather than ids: the caller has just performed
+ * the action inside a transaction and already holds everything the notice needs, and
+ * re-reading a `suspended` handle from the worker would mean teaching this epic to
+ * interpret another's state machine.
+ */
+export type AccountNoticeJob = {
+  name: 'account_notice';
+  data: { handleId: string; payload: AccountNoticePayload; dedupeKey: string };
+};
+
+export type NotificationJob = ReplyEventJob | KudosEventJob | AccountNoticeJob | EmailJob;
 
 /**
  * Typed enqueue facade. Domain services depend on this rather than on a raw BullMQ
@@ -65,6 +78,26 @@ export class NotificationEvents {
     actorHandleId: string,
   ): Promise<void> {
     await this.enqueue('kudos_received', { targetType, targetId, actorHandleId });
+  }
+
+  /**
+   * Something changed about the member's account or standing.
+   *
+   * `dedupeKey` is the id of the row that records the decision — a
+   * `verification_decisions` or `moderation_actions` id — so a retried job cannot tell a
+   * member twice that they were suspended, and the notice is traceable back to the
+   * audited action that caused it.
+   */
+  async accountNotice(
+    handleId: string,
+    payload: AccountNoticePayload,
+    dedupeKey: string,
+  ): Promise<void> {
+    await this.enqueue(
+      'account_notice',
+      { handleId, payload, dedupeKey },
+      `notice-${dedupeKey}`,
+    );
   }
 
   /**

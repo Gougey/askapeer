@@ -14,6 +14,7 @@ import {
 import { EmailSender } from './email.sender';
 import {
   LIVE_NOTIFICATION_TYPES,
+  type AccountNoticePayload,
   type KudosReceivedPayload,
   type LiveNotificationType,
   type NotificationPayload,
@@ -146,6 +147,22 @@ export class NotificationsService {
       payload,
       `kudos:${targetType}:${targetId}:${actorHandleId}`,
     );
+  }
+
+  /**
+   * An account-status notice (EPIC-A decision, or an EPIC-F moderation action).
+   *
+   * Unlike the reply and kudos handlers this does no recipient resolution — the caller
+   * has just acted on this handle and passes the payload it already holds. Nothing is
+   * suppressed either: there is no "don't notify yourself" case, because the actor is
+   * always a moderator or the system, never the recipient.
+   */
+  async handleAccountNotice(
+    handleId: string,
+    payload: AccountNoticePayload,
+    dedupeKey: string,
+  ): Promise<void> {
+    await this.record(handleId, 'verification_status_change', payload, dedupeKey);
   }
 
   /**
@@ -445,6 +462,39 @@ function emailCopy(
       subject: 'You received kudos on Askapeer',
       body: `Your ${p.targetType === 'post' ? 'question' : 'answer'} on “${p.postTitle}” received kudos.`,
     };
+  }
+  if (type === 'verification_status_change') {
+    const p = payload as AccountNoticePayload;
+    const because = p.reason ? ` Reason given: ${p.reason}` : '';
+    switch (p.event) {
+      case 'warned':
+        return {
+          subject: 'A moderator has issued a warning',
+          body: `A moderator has recorded a formal warning against your handle.${because}`,
+        };
+      case 'suspended':
+        // The one that most needs email: a suspended member cannot reach the in-app
+        // inbox, because the access gate stops them at the holding page.
+        return {
+          subject: 'Your Askapeer access has been suspended',
+          body: `Your handle has been suspended and you cannot access the community while it is.${because}`,
+        };
+      case 'expelled':
+        return {
+          subject: 'Your Askapeer membership has ended',
+          body: `Your handle has been permanently removed from Askapeer.${because}`,
+        };
+      case 'handle_renamed':
+        return {
+          subject: 'Your handle has been changed',
+          body: `A moderator has changed your handle to ${p.newHandleName}. Your contributions are unchanged.${because}`,
+        };
+      default:
+        return {
+          subject: 'Your Askapeer verification',
+          body: `status=${p.status ?? 'updated'}${p.reason ? ` reason="${p.reason}"` : ''}`,
+        };
+    }
   }
   return undefined;
 }
