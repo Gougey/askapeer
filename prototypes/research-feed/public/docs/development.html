@@ -17,11 +17,13 @@
 NestJS API and a Next.js web app, backed by Postgres + Redis. Features
 land as tracer-bullet slices (see
 <code>docs/2026-07-19-tracer-bullet-slice-backlog.md</code> and GitHub
-issues); <strong>S0–S5 are in, plus a read-only admin console (S11a)
-with verification actions, member reporting (S11b — report content or a
-handle), the moderation queue (S11c — remove content with kudos clawback
-/ warn / dismiss), handle enforcement (S11d — suspend / expel / rename),
-and the audited reveal-identity action (S11e)</strong>.</p>
+issues); <strong>S0–S5 are in, plus notifications and the Activity tab
+(S10 — in-app inbox, per-type preferences, own questions and answers), a
+read-only admin console (S11a) with verification actions, member
+reporting (S11b — report content or a handle), the moderation queue
+(S11c — remove content with kudos clawback / warn / dismiss), handle
+enforcement (S11d — suspend / expel / rename), and the audited
+reveal-identity action (S11e)</strong>.</p>
 <p><strong>Build approach:</strong> <em>prove-then-migrate</em> —
 develop locally + deploy to Fly.io (London) for the early slices;
 migrate to AWS <code>eu-west-2</code> before real practitioners. See the
@@ -103,15 +105,74 @@ root)</h2>
 </tbody>
 </table>
 <h2 id="design-tokens">Design tokens</h2>
-<p><code>packages/design-tokens</code> is the source of truth for colour
-and type values; <code>apps/web/src/app/globals.css</code> is
-<strong>generated</strong> from it between <code>@tokens:start</code> /
-<code>@tokens:end</code> markers. Edit the package, run
-<code>npm run tokens:build</code>, commit both — CI runs
-<code>tokens:check</code> and fails if the CSS was hand-edited instead.
-See that package’s README for why the values live outside the CSS (short
-version: CSS does not transfer to a non-CSS client, and the decisions
-are worth more than their CSS expression).</p>
+<p><code>packages/design-tokens</code> is the source of truth for
+colour, type <strong>and geometry</strong> values (spacing, layout,
+radius, elevation — style guide §4 and §5);
+<code>apps/web/src/app/globals.css</code> is <strong>generated</strong>
+from it between <code>@tokens:start</code> / <code>@tokens:end</code>
+markers. Edit the package, run <code>npm run tokens:build</code>, commit
+both — CI runs <code>tokens:check</code> and fails if the CSS was
+hand-edited instead. See that package’s README for why the values live
+outside the CSS (short version: CSS does not transfer to a non-CSS
+client, and the decisions are worth more than their CSS expression).</p>
+<p>Reference every token through <code>var()</code> in a style prop —
+<code>style={{ borderRadius: 'var(--radius)' }}</code> — the same way
+colours already are. Tailwind utilities stay Tailwind’s.</p>
+<h3 id="geometry-tokens-are-not-in-theme-and-three-are-renamed">Geometry
+tokens are not in <code>@theme</code>, and three are renamed</h3>
+<p>Tailwind v4 reads <code>@theme</code> namespaces as <em>utility
+scales</em>: <code>--radius-*</code> defines what <code>rounded-*</code>
+means, <code>--container-*</code> defines <code>max-w-*</code>,
+<code>--breakpoint-*</code> defines responsive variants. Declaring the
+style guide’s geometry there would rewrite utilities the app already
+uses, so it is emitted as a plain <code>:root</code> block instead.</p>
+<p><strong>Staying out of <code>@theme</code> is not enough on its
+own</strong> — this is the trap, and it cost a silent restyle before it
+was caught. Tailwind compiles <code>.rounded-lg</code> to
+<code>border-radius: var(--radius-lg)</code> and puts its own
+<code>--radius-lg</code> in <code>:root</code>; a second
+<code>:root</code> declaration of that name wins on source order. The
+first cut of the geometry tokens moved all 44 <code>rounded-lg</code>
+usages from 8px to 20px across screens that had already been demoed. The
+collision is by <strong>name</strong>, not by block, so the three names
+Tailwind claims are renamed:</p>
+<table>
+<thead>
+<tr>
+<th>Style guide §5.1</th>
+<th>In code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--radius-lg</code></td>
+<td><code>--radius-large</code></td>
+</tr>
+<tr>
+<td><code>--radius-md</code></td>
+<td><code>--radius-medium</code></td>
+</tr>
+<tr>
+<td><code>--radius-sm</code></td>
+<td><code>--radius-small</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>--radius-pill</code>, <code>--radius</code>,
+<code>--radius-avatar</code> and <code>--radius-avatar-lg</code> keep
+the guide’s spelling — Tailwind does not claim them. If you add a
+geometry token, check the compiled CSS for a second declaration of its
+name before assuming it is safe.</p>
+<p>Two things the guide leaves open and the code decides:
+<strong>dark-theme shadows are derived</strong>, not specified (§5.2
+gives the direction — “reduce opacity, lean on borders” — but no values;
+the light shadows tint toward navy, invisible on a dark ground), and the
+app-wide geometry migration is <strong>partial</strong>: the shared
+shell (app bar, bottom nav, cards, tag chips, the app column) and the
+Activity and settings screens are on tokens; the admin console is
+deliberately untouched (the guide treats it as a separate, desktop-first
+context) and a handful of one-off screens still use Tailwind radius
+utilities.</p>
 <h3 id="form-controls-must-be-16px">Form controls must be 16px</h3>
 <p>Every focusable text control renders at <code>text-base</code>
 (16px). This is a <strong>constraint, not a style choice</strong>: iOS
@@ -299,6 +360,76 @@ inherit it rather than re-deriving it.</li>
 <p>Answering, kudos and the ranked ordering are <strong>S5</strong> (now
 in): a thread renders its answers, members award kudos, and answers sort
 by that score.</p>
+<h2 id="notifications-and-the-activity-tab-s10">Notifications and the
+Activity tab (S10)</h2>
+<p>Replies, kudos and account-status changes reach members in-app
+(<code>/activity</code>) and by email. The domain services
+<strong>announce</strong>; EPIC-G decides who hears about it —
+<code>CommentsService</code> and <code>KudosService</code> enqueue a job
+carrying ids only, and the worker resolves the recipient (the parent
+comment’s author for a nested reply, the post author otherwise, never
+yourself).</p>
+<p>Four rules are worth knowing before extending this epic, because
+three of them are enforced by the database rather than by code
+remembering:</p>
+<ul>
+<li><strong><code>notifications.handle_id</code> is a foreign
+key</strong>, and that <em>is</em> EPIC-G §4’s pre-handle asymmetry. An
+applicant without a handle cannot have a notification row, so the
+<code>pending</code> / <code>needs_more_info</code> /
+<code>rejected</code> emails have nowhere to write one — and a rejected
+applicant never gets a handle at all. The branch lives in exactly one
+place, <code>verification/status-change.notifier.ts</code>.</li>
+<li><strong>A CHECK constraint rejects
+<code>email_enabled = false</code> for
+<code>verification_status_change</code></strong> (§6.1), on INSERT and
+UPDATE alike. This is not ceremony: a suspended member is stopped at the
+holding page by the access gate, so the inbox they cannot open is not a
+channel. Email is the only thing that reaches them, which is why it
+cannot be switched off.</li>
+<li><strong><code>dedupe_key</code> + <code>onConflictDoNothing</code>
+makes a retried job a no-op.</strong> BullMQ retries; without it a
+handler dying midway writes a second row. Notices key off the id of the
+audit row that caused them, so every one traces back to its
+<code>verification_decisions</code> or <code>moderation_actions</code>
+entry. One deliberate side effect: retracting and re-awarding kudos does
+not notify twice.</li>
+<li><strong>A missing <code>notification_preferences</code> row means
+the defaults apply</strong> — in-app and email on, push off — and rows
+are written only when a member changes something. Seeding a row per
+handle × type would make every new notification type a backfill, and any
+handle created before it ran would silently receive nothing.</li>
+</ul>
+<p><strong>Announcing never fails the action that caused it.</strong>
+<code>NotificationEvents</code> swallows and logs enqueue failures: the
+caller has already committed, so throwing would report a 500 for an
+answer that was genuinely posted, and the client’s retry would post it
+twice.</p>
+<p><strong>Email is still a stub.</strong>
+<code>notifications/email.sender.ts</code> logs what would be sent and
+is the single seam a real provider (SES or Postmark) binds to — used by
+EPIC-A’s pre-handle status email too. The F4 settings screen says so
+rather than implying mail is going out.
+<code>identity.member_emails</code> (the email-only view §3 wants
+<code>NotificationService</code>’s grant to target) lands with the real
+sender and the per-role split at the AWS migrate step; under one
+database role it would name the guarantee without providing it.</p>
+<p>Deferred, and why: <strong><code>mention</code></strong> needs
+EPIC-C’s <span class="citation" data-cites="mention">@mention</span>
+parser, which does not exist; the <strong>weekly digest</strong> needs
+<code>community.follows</code> (S7); <strong>push</strong> ships inert
+(§6.2) — the <code>push_enabled</code> preference is stored and shown
+greyed, but there is no <code>push_subscriptions</code> table or
+<code>/v1/push/*</code> yet, and no service worker to grant against. All
+three exist in the <code>notification_type</code> enum so adding them is
+behaviour, not a migration.</p>
+<p>One product decision that lives in code: <strong>kudos notifications
+do not name the giver.</strong> Nothing else in the product exposes who
+awarded kudos — the thread DTO carries counts and your own
+<code>hasKudosed</code> — so naming them in the inbox would introduce a
+disclosure by way of an implementation detail, and make reciprocal
+kudos-trading legible. See
+<code>notifications/notification-payloads.ts</code>.</p>
 <h2 id="admin-console-s11a">Admin console (S11a)</h2>
 <p>An allowlisted <strong>admin</strong> role gets a console at
 <code>/admin</code> (web) backed by <code>GET/POST /v1/admin/*</code>
