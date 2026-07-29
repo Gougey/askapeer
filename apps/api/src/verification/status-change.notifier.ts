@@ -1,22 +1,26 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { members } from '../db/schema';
+import { EmailSender } from '../notifications/email.sender';
 
 /**
- * The pre-handle status-change email (S2). Real delivery is EPIC-G's (S10) — until an
- * email sender exists this logs what would be sent, matching how S1 handled the magic
- * link. The call site in VerificationService does not change when S10 lands.
+ * The pre-handle status-change email (S2, EPIC-G §4).
  *
- * Pre-handle is the reason this lives here rather than waiting for EPIC-G: at this
- * point in the journey the applicant has no handle and no in-app surface to notify on,
- * so email is the only channel that reaches them.
+ * This lives outside the notification store on purpose, and permanently: at this point
+ * in the journey the applicant has no handle, so there is no `community.notifications`
+ * row to write — the table is handle-keyed and its foreign key says so. A rejected
+ * applicant never gets one at all. Email is the only channel that reaches them.
+ *
+ * Delivery now goes through the shared `EmailSender` (still a stub) rather than this
+ * class logging its own line, so there is one seam to bind a real provider to.
  */
 @Injectable()
 export class StatusChangeNotifier {
-  private readonly log = new Logger(StatusChangeNotifier.name);
-
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly email: EmailSender,
+  ) {}
 
   async statusChanged(memberId: string, toStatus: string, reason: string | null): Promise<void> {
     // Only the statuses the applicant should hear about directly.
@@ -28,9 +32,10 @@ export class StatusChangeNotifier {
       .where(eq(members.id, memberId));
     if (!member) return;
 
-    this.log.log(
-      `[email:stub] to=${member.email} subject="Your Askapeer verification" status=${toStatus}` +
-        (reason ? ` reason="${reason}"` : ''),
-    );
+    await this.email.send({
+      to: member.email,
+      subject: 'Your Askapeer verification',
+      body: `status=${toStatus}${reason ? ` reason="${reason}"` : ''}`,
+    });
   }
 }

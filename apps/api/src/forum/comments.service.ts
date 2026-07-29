@@ -2,11 +2,15 @@ import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundEx
 import { and, eq } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { comments, posts } from '../db/schema';
+import { NotificationEvents } from '../notifications/notifications.queue';
 import type { CreateCommentDto } from './forum.dto';
 
 @Injectable()
 export class CommentsService {
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly events: NotificationEvents,
+  ) {}
 
   /**
    * Post an answer, or a reply to one (EPIC-C §5, reply composer X3). A `parentCommentId`
@@ -43,6 +47,11 @@ export class CommentsService {
         body: dto.body.trim(),
       })
       .returning({ id: comments.id });
+
+    // Announce the event; who hears about it is EPIC-G's business, not this service's
+    // (it resolves the post or parent-comment author itself). Enqueued after the insert
+    // so the worker can always read the row it is told about.
+    await this.events.replyPosted(row.id);
     return { id: row.id };
   }
 

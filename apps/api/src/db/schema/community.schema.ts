@@ -431,6 +431,21 @@ export const notifications = community.table(
       .references(() => handles.id),
     type: notificationType('type').notNull(),
     payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    /**
+     * The originating event, e.g. `reply:<commentId>`. A BullMQ job is retried on
+     * failure, so without this a handler that dies between writing the row and
+     * finishing its remaining work would write a second row on the retry. Paired with
+     * `onConflictDoNothing`, it makes the whole handler idempotent — the retry sees no
+     * inserted row and knows the work was already done.
+     *
+     * A side effect worth naming: re-awarding kudos after retracting it does not notify
+     * a second time, because the key is the (target, giver) pair rather than the moment.
+     * Deliberate — a retract/re-award loop is not an event worth repeating.
+     *
+     * Nullable because not every notification descends from a discrete event (the
+     * weekly digest is periodic), and the unique index is partial to match.
+     */
+    dedupeKey: text('dedupe_key'),
     readAt: timestamp('read_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -442,6 +457,9 @@ export const notifications = community.table(
     index('notifications_unread_idx')
       .on(t.handleId)
       .where(sql`read_at is null`),
+    uniqueIndex('notifications_dedupe_unique')
+      .on(t.handleId, t.dedupeKey)
+      .where(sql`dedupe_key is not null`),
   ],
 );
 
