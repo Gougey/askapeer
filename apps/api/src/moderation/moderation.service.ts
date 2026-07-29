@@ -108,9 +108,20 @@ export class ModerationService {
         if (report.targetType === 'handle') {
           throw new BadRequestException('remove_content applies to a post or comment, not a handle.');
         }
-        const clawed = await this.removeContent(report, moderatorId, dto.reason);
+        const { authorHandleId, actionId, clawed } = await this.removeContent(
+          report,
+          moderatorId,
+          dto.reason,
+        );
         // Leaderboard mirrors the authoritative total, outside the DB transaction (EPIC-D §6).
         if (clawed) await this.badge.setScore(clawed.handleId, clawed.total);
+        // Removal is the one action whose effect a member could otherwise only discover by
+        // noticing their own post had vanished — and any kudos it earned went with it.
+        await this.events.accountNotice(
+          authorHandleId,
+          { event: 'content_removed', reason: dto.reason?.trim() || null, actionId },
+          actionId,
+        );
         return { ok: true };
       }
       case 'warn':
@@ -344,7 +355,7 @@ export class ModerationService {
     report: ReportRow,
     moderatorId: string,
     reason: string | undefined,
-  ): Promise<{ handleId: string; total: number } | null> {
+  ): Promise<{ authorHandleId: string; actionId: string; clawed: { handleId: string; total: number } | null }> {
     // Narrowed: `act` rejects a handle target before calling here, so this is post|comment
     // — which is exactly the `kudos.target_type` domain.
     const contentType: 'post' | 'comment' = report.targetType === 'post' ? 'post' : 'comment';
@@ -372,13 +383,16 @@ export class ModerationService {
         clawed = { handleId: content.handleId, total: row.kudosTotal };
       }
 
-      await tx.insert(moderationActions).values({
-        reportId: report.id,
-        targetHandleId: content.handleId,
-        actionType: 'remove_content',
-        moderatorId,
-        reason: reason?.trim() || null,
-      });
+      const [action] = await tx
+        .insert(moderationActions)
+        .values({
+          reportId: report.id,
+          targetHandleId: content.handleId,
+          actionType: 'remove_content',
+          moderatorId,
+          reason: reason?.trim() || null,
+        })
+        .returning({ id: moderationActions.id });
       // Resolve this report and any siblings pointing at the now-removed content.
       await tx
         .update(reports)
@@ -390,7 +404,7 @@ export class ModerationService {
             eq(reports.status, 'open'),
           ),
         );
-      return clawed;
+      return { authorHandleId: content.handleId, actionId: action.id, clawed };
     });
   }
 

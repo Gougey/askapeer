@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   web:
-    name: Web — design tokens + typecheck
+    name: Guards — tokens, inputs, disclosure + typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,5 +33,13 @@ jobs:
       # was hand-edited instead, which is the one way the two could silently diverge.
       - name: Design tokens up to date
         run: npm run tokens:check
+      # A member may see that they were reported and what a moderator decided — never who
+      # reported them, what that person wrote, or which moderator acted. Handing a reported
+      # member their reporter's handle invites retaliation. That boundary was a comment in
+      # one service until this check existed.
+      - name: Disclosure guard
+        run: npm run lint:disclosure -w apps/api
       - name: Typecheck
         run: npm run typecheck -w apps/web
+      - name: Typecheck API
+        run: npm run typecheck -w apps/api

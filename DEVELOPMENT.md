@@ -293,6 +293,40 @@ the **weekly digest** needs `community.follows` (S7); **push** ships inert (§6.
 All three exist in the `notification_type` enum so adding them is behaviour, not a
 migration.
 
+### Moderation notices, and what a member may see
+
+Every member-affecting moderation action — `warn`, `remove_content`, `suspend`, `expel`,
+`rename_handle` — writes an account-status notification, and the row opens a notice screen
+(`/activity/notices/:actionId`) showing the reported content, the category it was reported
+under, and the moderator's decision and comment. A warning that says only "your account
+status has changed" tells a member they did something wrong but not what.
+
+**None of this is in EPIC-F**, which defines the actions and their immutable audit trail
+but never says what the actioned member is told — there is no notice screen or appeal flow
+in that spec. Treat this section as the record of that decision.
+
+Three things are withheld from the member, and **`npm run lint:disclosure -w apps/api`
+enforces it** (in CI):
+
+| Withheld | Why |
+|---|---|
+| The reporter's handle | Handing a reported member their reporter's identity invites retaliation, and the reporting flow only has value if it is safe to use. |
+| The reporter's free-text comment | It can identify its author by circumstance ("I saw this right after your talk on…") even when it names nobody. The category is the substance without the fingerprint. |
+| Which moderator acted | `moderation_actions.moderator_id` is an identity-side member id — a real person, not a handle. |
+
+The guard derives member-facing API files from the `@Controller` route (anything not under
+`admin`, plus its one-hop local imports) and scans all of `apps/web/src` except the admin
+console, so a new `/me/` surface is covered the day it is written. It strips comments
+before scanning — the file that documents this boundary necessarily names the fields it
+withholds. The **filing** side is the designed exception: `ReportsService.create` takes the
+reporter's own handle from their own token and carries a `disclosure-allow` pragma.
+
+One structural limit worth knowing: a **suspended or expelled** member cannot pass
+`AppAccessGuard`, so they cannot open the notice screen at all — their access is precisely
+what was withdrawn. That is why EPIC-G §6.1 makes the account-status email non-optional,
+and it is the strongest argument for wiring a real email sender: right now that member gets
+an in-app notice they cannot reach and a stubbed email that never sends.
+
 One product decision that lives in code: **kudos notifications do not name the giver.**
 Nothing else in the product exposes who awarded kudos — the thread DTO carries counts and
 your own `hasKudosed` — so naming them in the inbox would introduce a disclosure by way of

@@ -423,6 +423,71 @@ greyed, but there is no <code>push_subscriptions</code> table or
 <code>/v1/push/*</code> yet, and no service worker to grant against. All
 three exist in the <code>notification_type</code> enum so adding them is
 behaviour, not a migration.</p>
+<h3 id="moderation-notices-and-what-a-member-may-see">Moderation
+notices, and what a member may see</h3>
+<p>Every member-affecting moderation action — <code>warn</code>,
+<code>remove_content</code>, <code>suspend</code>, <code>expel</code>,
+<code>rename_handle</code> — writes an account-status notification, and
+the row opens a notice screen (<code>/activity/notices/:actionId</code>)
+showing the reported content, the category it was reported under, and
+the moderator’s decision and comment. A warning that says only “your
+account status has changed” tells a member they did something wrong but
+not what.</p>
+<p><strong>None of this is in EPIC-F</strong>, which defines the actions
+and their immutable audit trail but never says what the actioned member
+is told — there is no notice screen or appeal flow in that spec. Treat
+this section as the record of that decision.</p>
+<p>Three things are withheld from the member, and
+<strong><code>npm run lint:disclosure -w apps/api</code> enforces
+it</strong> (in CI):</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Withheld</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The reporter’s handle</td>
+<td>Handing a reported member their reporter’s identity invites
+retaliation, and the reporting flow only has value if it is safe to
+use.</td>
+</tr>
+<tr>
+<td>The reporter’s free-text comment</td>
+<td>It can identify its author by circumstance (“I saw this right after
+your talk on…”) even when it names nobody. The category is the substance
+without the fingerprint.</td>
+</tr>
+<tr>
+<td>Which moderator acted</td>
+<td><code>moderation_actions.moderator_id</code> is an identity-side
+member id — a real person, not a handle.</td>
+</tr>
+</tbody>
+</table>
+<p>The guard derives member-facing API files from the
+<code>@Controller</code> route (anything not under <code>admin</code>,
+plus its one-hop local imports) and scans all of
+<code>apps/web/src</code> except the admin console, so a new
+<code>/me/</code> surface is covered the day it is written. It strips
+comments before scanning — the file that documents this boundary
+necessarily names the fields it withholds. The <strong>filing</strong>
+side is the designed exception: <code>ReportsService.create</code> takes
+the reporter’s own handle from their own token and carries a
+<code>disclosure-allow</code> pragma.</p>
+<p>One structural limit worth knowing: a <strong>suspended or
+expelled</strong> member cannot pass <code>AppAccessGuard</code>, so
+they cannot open the notice screen at all — their access is precisely
+what was withdrawn. That is why EPIC-G §6.1 makes the account-status
+email non-optional, and it is the strongest argument for wiring a real
+email sender: right now that member gets an in-app notice they cannot
+reach and a stubbed email that never sends.</p>
 <p>One product decision that lives in code: <strong>kudos notifications
 do not name the giver.</strong> Nothing else in the product exposes who
 awarded kudos — the thread DTO carries counts and your own

@@ -248,7 +248,8 @@
       "suspended": "Your access has been suspended",
       "expelled": "Your membership has ended",
       "handleRenamed": "A moderator changed your handle to {handle}",
-      "reason": "Reason given: {reason}"
+      "reason": "Reason given: {reason}",
+      "contentRemoved": "A moderator removed your content"
     },
     "empty": {
       "notifications": "You're all caught up. Replies to your posts and kudos you receive will appear here.",

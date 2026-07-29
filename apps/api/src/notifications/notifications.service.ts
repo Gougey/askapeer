@@ -472,6 +472,11 @@ function emailCopy(
           subject: 'A moderator has issued a warning',
           body: `A moderator has recorded a formal warning against your handle.${because}`,
         };
+      case 'content_removed':
+        return {
+          subject: 'A moderator removed your content',
+          body: `A moderator has removed one of your contributions from Askapeer.${because}`,
+        };
       case 'suspended':
         // The one that most needs email: a suspended member cannot reach the in-app
         // inbox, because the access gate stops them at the holding page.
