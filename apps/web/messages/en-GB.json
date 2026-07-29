@@ -259,6 +259,42 @@
       "questions": "Questions",
       "answers": "Answers",
       "onThread": "on “{title}”"
+    },
+    "notice": {
+      "back": "← Activity",
+      "decision": "Decision",
+      "reportedAs": "Reported as",
+      "yourQuestion": "Your question",
+      "yourAnswer": "Your answer",
+      "moderatorComment": "Moderator’s comment: {comment}",
+      "noComment": "The moderator did not leave a comment.",
+      "reporterPrivate": "Who reported this is not shared, with anyone.",
+      "openThread": "Open the thread",
+      "removed": "This content has been removed.",
+      "standardsNote": "If you think this was a mistake, reply to the email about this notice.",
+      "action": {
+        "warn": "You received a warning",
+        "remove_content": "Your content was removed",
+        "suspend": "Your access was suspended",
+        "expel": "Your membership was ended",
+        "rename_handle": "Your handle was changed",
+        "request_correction": "Your case discussion needs a correction"
+      },
+      "outcome": {
+        "warn": "A moderator recorded a formal warning against your handle. Your access is unchanged.",
+        "remove_content": "A moderator removed this content from the community.",
+        "suspend": "A moderator suspended your access to the community.",
+        "expel": "A moderator permanently removed your handle from Askapeer.",
+        "rename_handle": "A moderator changed your handle.",
+        "request_correction": "A moderator has asked you to correct this case discussion before it is published."
+      },
+      "category": {
+        "identifiable_patient_information": "Identifiable patient information",
+        "anonymity_violation": "Revealing an identity",
+        "harassment": "Harassment",
+        "spam": "Spam",
+        "other": "Other"
+      }
     }
   },
   "settings": {

@@ -82,6 +82,14 @@ export type AccountNoticePayload = {
   reason?: string | null;
   /** `handle_renamed` only — what the handle is now. */
   newHandleName?: string;
+  /**
+   * Moderation events only — the `community.moderation_actions` row behind this notice,
+   * so the member can open it and see what was reported, under what category, and what
+   * the moderator decided. Carried explicitly rather than inferred from `dedupe_key`
+   * (which happens to hold the same id): a notice that can be opened should say so in
+   * its own payload, not depend on the retry-guard's key format staying put.
+   */
+  actionId?: string;
 };
 
 export type NotificationPayload = ReplyPayload | KudosReceivedPayload | AccountNoticePayload;

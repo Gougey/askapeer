@@ -145,7 +145,11 @@ export class ModerationService {
     });
     // A warning nobody is told about is not a warning. This is the action where the
     // in-app channel matters most: the member keeps their access, so they will see it.
-    await this.events.accountNotice(owner.handleId, { event: 'warned', reason: trimmed }, actionId);
+    await this.events.accountNotice(
+      owner.handleId,
+      { event: 'warned', reason: trimmed, actionId },
+      actionId,
+    );
     return { ok: true };
   }
 
@@ -181,7 +185,11 @@ export class ModerationService {
     // Suspension is why EPIC-G §6.1 locks this type's email on: the access gate now stops
     // this member at the holding page, so the inbox they cannot open is not a channel.
     // Before this, a suspended member was locked out with no explanation at all.
-    await this.events.accountNotice(owner.handleId, { event: 'suspended', reason: trimmed }, actionId);
+    await this.events.accountNotice(
+      owner.handleId,
+      { event: 'suspended', reason: trimmed, actionId },
+      actionId,
+    );
     return { ok: true };
   }
 
@@ -286,7 +294,7 @@ export class ModerationService {
     // otherwise discover only by noticing their own posts are signed by a stranger.
     await this.events.accountNotice(
       owner.handleId,
-      { event: 'handle_renamed', newHandleName: trimmedName, reason: reason?.trim() || null },
+      { event: 'handle_renamed', newHandleName: trimmedName, reason: reason?.trim() || null, actionId },
       actionId,
     );
     return { ok: true };
