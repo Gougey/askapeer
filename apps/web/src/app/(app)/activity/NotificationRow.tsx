@@ -32,14 +32,31 @@ function present(n: Notification) {
       filled: false,
     };
   }
+  // An account-status notice. A verification decision belongs on the holding page, which
+  // is what explains a verification state; a moderation notice has nowhere to go — there
+  // is no detail screen for one, and there does not need to be, because the notice and
+  // its reason fit in the row. So it stays put and simply marks itself read.
+  const moderation = n.payload.event !== 'verification';
+  const severe = n.payload.event === 'suspended' || n.payload.event === 'expelled';
   return {
-    href: '/status',
+    href: moderation ? '/activity' : '/status',
     glyph: GLYPH.status,
-    tint: 'var(--color-verify-tint)',
-    ink: 'var(--color-verify-text)',
+    tint: moderation ? 'var(--color-navy-tint)' : 'var(--color-verify-tint)',
+    // Severity is carried by the words (§9.2); the icon only reinforces it.
+    ink: severe ? 'var(--color-danger)' : moderation ? 'var(--color-accent)' : 'var(--color-verify-text)',
     filled: true,
   };
 }
+
+/** Which line of copy an account notice gets — the `event` discriminator exists for
+ *  exactly this, and matches what the email for the same event says. */
+const NOTICE_KEY = {
+  warned: 'warned',
+  suspended: 'suspended',
+  expelled: 'expelled',
+  handle_renamed: 'handleRenamed',
+  verification: 'statusChanged',
+} as const;
 
 /**
  * One row of the inbox (screen E1, style guide §8.13): circular tinted icon, text with
@@ -102,12 +119,24 @@ export async function NotificationRow({ notification }: { notification: Notifica
               )}
               {notification.type === 'kudos_received' &&
                 t(notification.payload.targetType === 'post' ? 'kudosOnPost' : 'kudosOnComment')}
-              {notification.type === 'verification_status_change' && t('statusChanged')}
+              {notification.type === 'verification_status_change' &&
+                t(NOTICE_KEY[notification.payload.event] ?? 'statusChanged', {
+                  handle: notification.payload.newHandleName ?? '',
+                })}
             </span>
 
             {notification.type !== 'verification_status_change' && (
               <span className="truncate text-sm" style={{ color: 'var(--color-muted)' }}>
                 {notification.payload.postTitle}
+              </span>
+            )}
+
+            {/* The moderator's reason. Not truncated: this is the substance of the
+                notice, and a member told they were actioned without being told why has
+                not really been told. */}
+            {notification.type === 'verification_status_change' && notification.payload.reason && (
+              <span className="text-sm" style={{ color: 'var(--color-muted)' }}>
+                {t('reason', { reason: notification.payload.reason })}
               </span>
             )}
 
