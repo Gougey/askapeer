@@ -39,7 +39,15 @@ function present(n: Notification) {
   const moderation = n.payload.event !== 'verification';
   const severe = n.payload.event === 'suspended' || n.payload.event === 'expelled';
   return {
-    href: moderation ? '/activity' : '/status',
+    // A moderation notice opens the action behind it — what was reported, under what
+    // category, and what the moderator decided. Without that a warning tells a member
+    // they did something wrong but not what, which is not much of a warning. Notices
+    // written before the payload carried an actionId have nowhere to go, so they stay put.
+    href: moderation
+      ? n.payload.actionId
+        ? `/activity/notices/${n.payload.actionId}`
+        : '/activity'
+      : '/status',
     glyph: GLYPH.status,
     tint: moderation ? 'var(--color-navy-tint)' : 'var(--color-verify-tint)',
     // Severity is carried by the words (§9.2); the icon only reinforces it.

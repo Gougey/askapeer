@@ -33,6 +33,22 @@ export type AccountNoticePayload = {
    *  without being told why is not being told. */
   reason?: string | null;
   newHandleName?: string;
+  /** Moderation events only — the action behind the notice, which the row opens. */
+  actionId?: string;
+};
+
+/** What a member is shown about an action taken against them (screen E4). Deliberately
+ *  carries no reporter and no moderator — see the API service for why. */
+export type ModerationNotice = {
+  action: { id: string; type: string; reason: string | null; createdAt: string };
+  report: { category: string } | null;
+  content: {
+    targetType: 'post' | 'comment';
+    postId: string;
+    postTitle: string;
+    body: string;
+    removed: boolean;
+  } | null;
 };
 
 export type Notification =
@@ -126,6 +142,13 @@ export async function fetchNotificationPreferences(
       pushAvailable: false,
     }
   );
+}
+
+export async function fetchModerationNotice(
+  actionId: string,
+  token: string,
+): Promise<ModerationNotice | null> {
+  return apiGet<ModerationNotice>(`/me/moderation-notices/${actionId}`, token);
 }
 
 /** My questions and my answers — the two halves of E2, fetched together. */

@@ -6,8 +6,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BadgeService } from '../forum/badge.service';
 import { SettingsModule } from '../settings/settings.module';
 import { VerificationModule } from '../verification/verification.module';
+import { AppAccessGuard } from '../auth/app-access.guard';
 import { IdentityAccessController } from './identity-access.controller';
 import { IdentityAccessService } from './identity-access.service';
+import { ModerationNoticeController } from './moderation-notice.controller';
+import { ModerationNoticeService } from './moderation-notice.service';
 import { ModerationController } from './moderation.controller';
 import { ModerationService } from './moderation.service';
 
@@ -24,7 +27,15 @@ import { ModerationService } from './moderation.service';
     SettingsModule, // BadgeService's threshold settings
     VerificationModule, // expel routes the identity-status flip through the single writer
   ],
-  controllers: [ModerationController, IdentityAccessController],
-  providers: [ModerationService, IdentityAccessService, BadgeService, JwtAuthGuard, AdminGuard],
+  controllers: [ModerationController, IdentityAccessController, ModerationNoticeController],
+  providers: [
+    ModerationService,
+    IdentityAccessService,
+    ModerationNoticeService,
+    BadgeService,
+    JwtAuthGuard,
+    AdminGuard,
+    AppAccessGuard,
+  ],
 })
 export class ModerationModule {}
