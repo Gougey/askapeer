@@ -21,10 +21,21 @@ export type TokenGroup = {
   tokens: Token[];
 };
 
-/** The light theme, which is also the base the dark theme overrides. */
+/** Colour and type — the light theme, which is also the base the dark theme overrides. */
 export declare const lightGroups: TokenGroup[];
 
-/** Dark-theme overrides — only the tokens that genuinely differ. */
+/**
+ * Spacing, layout, radius and elevation. Emitted as plain `:root` custom properties
+ * rather than into Tailwind's `@theme`, because the style guide's names collide with
+ * Tailwind's utility namespaces and mean different values — see the comment on the
+ * implementation.
+ */
+export declare const geometryGroups: TokenGroup[];
+
+/** Dark-theme geometry overrides — shadows only; spacing and radius are theme independent. */
+export declare const darkGeometryGroups: TokenGroup[];
+
+/** Dark-theme overrides — only the tokens that genuinely differ, colour and geometry both. */
 export declare const darkOverrides: Token[];
 
 /**
@@ -33,5 +44,8 @@ export declare const darkOverrides: Token[];
  */
 export declare function resolveTheme(theme?: 'light' | 'dark'): Record<string, string>;
 
-/** The CSS token layer (`@theme` block + dark-scheme override) as written into globals.css. */
+/**
+ * The CSS token layer as written into globals.css: the `@theme` block (colour, type), the
+ * plain `:root` block (geometry), and the dark-scheme override covering both.
+ */
 export declare function toCss(): string;

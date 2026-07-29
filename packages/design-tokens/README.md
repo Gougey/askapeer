@@ -47,6 +47,45 @@ const t = resolveTheme('dark');
 t['color-accent']; // '#6f9bff' — aliases followed, no var() left
 ```
 
+## Colour and type are in `@theme`; geometry is not
+
+The generated region has two blocks, and the split is deliberate.
+
+| Block | Holds | Why |
+|---|---|---|
+| `@theme { … }` | colour, type | Tailwind's `--color-*` and `--font-*` namespaces, which is where they belong |
+| `:root { … }` | spacing, layout, radius, elevation | **Must not** be in `@theme` — see below |
+
+Tailwind v4 reads `@theme` namespaces as utility scales: `--radius-*` defines what
+`rounded-*` means, `--container-*` defines `max-w-*`, `--breakpoint-*` defines responsive
+variants. Declaring geometry there would rewrite utilities the app already uses.
+
+Geometry is referenced the same way colour already is — through `var()` in a style prop,
+not through a utility class:
+
+```tsx
+<div style={{ borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-card)' }} />
+```
+
+One rule for the whole design system: **tokens are referenced through `var()`; Tailwind
+utilities stay Tailwind's.**
+
+### Three radius tokens are renamed, and why
+
+| Style guide §5.1 | In code | Value |
+|---|---|---|
+| `--radius-lg` | **`--radius-large`** | 20px |
+| `--radius-md` | **`--radius-medium`** | 14px |
+| `--radius-sm` | **`--radius-small`** | 12px |
+| `--radius-pill`, `--radius`, `--radius-avatar`, `--radius-avatar-lg` | unchanged | — |
+
+Staying out of `@theme` is **not** enough on its own. Tailwind compiles `.rounded-lg` to
+`border-radius: var(--radius-lg)` and puts its own `--radius-lg: .5rem` in `:root`. A
+second `:root` declaration of the same name wins on source order, so the guide's 20px
+would silently apply to every `rounded-lg` in the app — 44 of them at the time of
+writing. The collision is by **name**, not by block, and only these three names are
+claimed by Tailwind.
+
 ## Editing
 
 Edit `index.mjs`, run `npm run tokens:build`, commit both. Never hand-edit the generated

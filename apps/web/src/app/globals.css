@@ -59,6 +59,71 @@
 }
 
 /*
+  Geometry (§4, §5) — a plain `:root` block, NOT `@theme`, and deliberately so.
+  Tailwind v4 treats `--radius-*`, `--container-*` and `--breakpoint-*` inside `@theme`
+  as utility scales, and the style guide uses those names for different values than
+  Tailwind does (--radius-lg is 20px here, 8px there). Declaring them in `@theme` would
+  silently restyle every `rounded-lg` in the app. Reference these with var() instead.
+*/
+:root {
+  /*
+    Spacing — 4px base unit (§4.1). Do not invent one-off values.
+    --space-4 (16px) is the workhorse: screen side padding and card padding.
+  */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /*
+    Layout (§4.2, §4.3). The member-facing app is a centred column at every width —
+    multi-column member layouts reintroduce desktop-first thinking. The admin console
+    is a separate context and is not bound by --container-max.
+  */
+  --container-max: 430px;
+  --breakpoint-frame: 500px;
+  --breakpoint-lg: 1024px;
+  --appbar-h: 52px;
+  --nav-h: 62px;
+
+  /*
+    Radius (§5.1). --radius (16px) is the default: cards, panels, inputs, stat blocks.
+
+    NAMING: the style guide calls these --radius-lg / -md / -sm. In code they are
+    --radius-large / -medium / -small, because Tailwind owns the first three names and
+    means different values by them (its --radius-lg is 8px against the guide's 20px).
+    Tailwind's `.rounded-lg` reads var(--radius-lg) from :root at runtime, so declaring
+    the guide's value under that name silently restyles every rounded-lg in the app —
+    staying out of the `@theme` block does NOT avoid this. The other four names are
+    unclaimed by Tailwind and keep the guide's spelling.
+
+    Monogram tiles are squircles, never circles: a circular avatar reads as "person /
+    photo slot", a rounded square reads as "identity token" — which is the anonymity
+    signal we want. Load-bearing; do not "fix" --radius-avatar to 999px.
+  */
+  --radius-pill: 999px;
+  --radius-large: 20px;
+  --radius: 16px;
+  --radius-medium: 14px;
+  --radius-small: 12px;
+  --radius-avatar: 9px;
+  --radius-avatar-lg: 20px;
+
+  /*
+    Elevation (§5.2). Deliberately subtle — prefer a 1px border plus a faint card
+    shadow over heavy drop shadows. Sheets and the FAB are the only strongly-raised
+    elements.
+  */
+  --shadow-card: 0 1px 2px rgba(20,33,43,.06), 0 4px 16px rgba(20,33,43,.05);
+  --shadow-fab: 0 6px 16px rgba(237,27,36,.4);
+  --shadow-sheet: 0 -8px 40px rgba(15,25,32,.18);
+  --shadow-none: none;
+}
+
+/*
   Dark theme. NB: this is a plain `:root` override inside the media query — NOT a second
   `@theme` block. Tailwind v4 hoists every `@theme` into one unconditional `:root`, so a
   nested `@theme` would make dark apply in *both* schemes. A normal media-gated `:root`
@@ -85,6 +150,10 @@
     --color-verify-text: #4bbf98;
     --color-spark: #ff5a5f;
     --color-warn: #e0a33a;
+
+    --shadow-card: 0 1px 2px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.24);
+    --shadow-fab: 0 6px 16px rgba(255,90,95,.35);
+    --shadow-sheet: 0 -8px 40px rgba(0,0,0,.45);
   }
 }
 /* @tokens:end */

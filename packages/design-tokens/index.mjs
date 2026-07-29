@@ -100,6 +100,122 @@ export const lightGroups = [
 ];
 
 /**
+ * Geometry — spacing, layout, radius, elevation (style guide §4 and §5).
+ *
+ * **These are deliberately NOT in the `@theme` block**, unlike colour and type, and that
+ * is the load-bearing decision in this file.
+ *
+ * Tailwind v4 reads `@theme` namespaces as utility scales: `--radius-*` defines what
+ * `rounded-*` means, `--container-*` defines `max-w-*`, `--breakpoint-*` defines
+ * responsive variants. Declaring geometry there would rewrite utilities the app already
+ * uses. So geometry is emitted as plain custom properties on `:root`, and components
+ * reference `var(--radius)` in a style prop exactly as they already reference
+ * `var(--color-fg)`.
+ *
+ * **Staying out of `@theme` is not by itself enough**, which is the trap worth recording:
+ * Tailwind compiles `.rounded-lg` to `border-radius: var(--radius-lg)` and puts its own
+ * `--radius-lg` in `:root`. A second `:root` declaration of that name wins on source
+ * order and changes the utility everywhere. Hence the three renamed radius tokens below
+ * (`--radius-large/-medium/-small`) — the collision is by *name*, not by block.
+ *
+ * One rule for every token: the design system is referenced through `var()`; Tailwind
+ * utilities stay Tailwind's.
+ *
+ * @type {TokenGroup[]}
+ */
+export const geometryGroups = [
+  {
+    comment: [
+      'Spacing — 4px base unit (§4.1). Do not invent one-off values.',
+      '--space-4 (16px) is the workhorse: screen side padding and card padding.',
+    ].join('\n'),
+    tokens: [
+      { name: 'space-1', value: '4px' },
+      { name: 'space-2', value: '8px' },
+      { name: 'space-3', value: '12px' },
+      { name: 'space-4', value: '16px' },
+      { name: 'space-5', value: '20px' },
+      { name: 'space-6', value: '24px' },
+      { name: 'space-8', value: '32px' },
+    ],
+  },
+  {
+    comment: [
+      'Layout (§4.2, §4.3). The member-facing app is a centred column at every width —',
+      'multi-column member layouts reintroduce desktop-first thinking. The admin console',
+      'is a separate context and is not bound by --container-max.',
+    ].join('\n'),
+    tokens: [
+      { name: 'container-max', value: '430px' },
+      { name: 'breakpoint-frame', value: '500px' },
+      { name: 'breakpoint-lg', value: '1024px' },
+      { name: 'appbar-h', value: '52px' },
+      { name: 'nav-h', value: '62px' },
+    ],
+  },
+  {
+    comment: [
+      'Radius (§5.1). --radius (16px) is the default: cards, panels, inputs, stat blocks.',
+      '',
+      'NAMING: the style guide calls these --radius-lg / -md / -sm. In code they are',
+      '--radius-large / -medium / -small, because Tailwind owns the first three names and',
+      'means different values by them (its --radius-lg is 8px against the guide\'s 20px).',
+      'Tailwind\'s `.rounded-lg` reads var(--radius-lg) from :root at runtime, so declaring',
+      'the guide\'s value under that name silently restyles every rounded-lg in the app —',
+      'staying out of the `@theme` block does NOT avoid this. The other four names are',
+      'unclaimed by Tailwind and keep the guide\'s spelling.',
+      '',
+      'Monogram tiles are squircles, never circles: a circular avatar reads as "person /',
+      'photo slot", a rounded square reads as "identity token" — which is the anonymity',
+      'signal we want. Load-bearing; do not "fix" --radius-avatar to 999px.',
+    ].join('\n'),
+    tokens: [
+      { name: 'radius-pill', value: '999px' },
+      { name: 'radius-large', value: '20px' },
+      { name: 'radius', value: '16px' },
+      { name: 'radius-medium', value: '14px' },
+      { name: 'radius-small', value: '12px' },
+      { name: 'radius-avatar', value: '9px' },
+      { name: 'radius-avatar-lg', value: '20px' },
+    ],
+  },
+  {
+    comment: [
+      'Elevation (§5.2). Deliberately subtle — prefer a 1px border plus a faint card',
+      'shadow over heavy drop shadows. Sheets and the FAB are the only strongly-raised',
+      'elements.',
+    ].join('\n'),
+    tokens: [
+      { name: 'shadow-card', value: '0 1px 2px rgba(20,33,43,.06), 0 4px 16px rgba(20,33,43,.05)' },
+      { name: 'shadow-fab', value: '0 6px 16px rgba(237,27,36,.4)' },
+      { name: 'shadow-sheet', value: '0 -8px 40px rgba(15,25,32,.18)' },
+      { name: 'shadow-none', value: 'none' },
+    ],
+  },
+];
+
+/**
+ * Dark-theme geometry overrides — shadows only; spacing, layout and radius are theme
+ * independent.
+ *
+ * §5.2 gives the *direction* ("reduce shadow opacity and lean on borders for separation")
+ * but not values, so these are derived rather than specified: the light shadows tint
+ * toward navy, which is invisible on a dark ground, so dark uses near-black at a higher
+ * opacity to read at all. Worth a look on a real screen before treating them as settled.
+ *
+ * @type {TokenGroup[]}
+ */
+export const darkGeometryGroups = [
+  {
+    tokens: [
+      { name: 'shadow-card', value: '0 1px 2px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.24)' },
+      { name: 'shadow-fab', value: '0 6px 16px rgba(255,90,95,.35)' },
+      { name: 'shadow-sheet', value: '0 -8px 40px rgba(0,0,0,.45)' },
+    ],
+  },
+];
+
+/**
  * Dark theme, as overrides on the light base. Only the tokens that actually change are
  * listed — anything absent is inherited, which is what keeps the two themes honest about
  * where they genuinely differ.
@@ -140,15 +256,23 @@ export const darkGroups = [
 ];
 
 /** The dark overrides flattened — the form `resolveTheme` applies. @type {Token[]} */
-export const darkOverrides = darkGroups.flatMap((group) => group.tokens);
+export const darkOverrides = [...darkGroups, ...darkGeometryGroups].flatMap((g) => g.tokens);
 
-/** Every light token, flattened out of its documentation groups. */
-const lightTokens = lightGroups.flatMap((group) => group.tokens);
+/**
+ * Every base token, flattened out of its documentation groups. Geometry joins colour and
+ * type here: the `@theme`/`:root` split is a CSS emission detail, and a non-CSS client
+ * wants one flat set of values.
+ */
+const lightTokens = [...lightGroups, ...geometryGroups].flatMap((group) => group.tokens);
 
 /**
  * A flat map of fully resolved values for one theme — aliases followed, no `var()` left.
  * This is the form a platform without custom properties (React Native, or any native
  * client) needs, and the reason the tokens live in JS rather than only in CSS.
+ *
+ * Values stay CSS-shaped: `16px`, and shadows as a CSS `box-shadow` string. A native
+ * client will need to parse the units and translate shadows to its own elevation model —
+ * which is a smaller and more honest job than re-typing the values off the style guide.
  *
  * @param {'light' | 'dark'} theme
  * @returns {Record<string, string>}
@@ -183,28 +307,50 @@ const toCssValue = (value) => (typeof value === 'string' ? value : `var(--${valu
 function cssComment(text, indent) {
   const lines = text.split('\n');
   if (lines.length === 1) return `${indent}/* ${lines[0]} */`;
-  return [`${indent}/*`, ...lines.map((l) => `${indent}  ${l}`), `${indent}*/`].join('\n');
+  // A blank line inside the block stays genuinely blank — `${indent}  ` on an empty line
+  // is trailing whitespace, which shows up as diff noise in the generated file.
+  const body = lines.map((l) => (l === '' ? '' : `${indent}  ${l}`));
+  return [`${indent}/*`, ...body, `${indent}*/`].join('\n');
+}
+
+/** Emits one group's tokens (and its comments) at a given indent. */
+function cssGroups(groups, indent) {
+  const out = [];
+  groups.forEach((group, index) => {
+    if (index > 0) out.push('');
+    if (group.comment) out.push(cssComment(group.comment, indent));
+    for (const token of group.tokens) {
+      if (token.comment) out.push(cssComment(token.comment, indent));
+      out.push(`${indent}--${token.name}: ${toCssValue(token.value)};`);
+    }
+  });
+  return out;
 }
 
 /**
- * The CSS token layer: the Tailwind `@theme` block plus the dark-scheme override.
- * Written verbatim into globals.css between its generated-region markers.
+ * The CSS token layer: the Tailwind `@theme` block (colour and type), the plain `:root`
+ * block (geometry — see `geometryGroups` for why it is not in `@theme`), and the
+ * dark-scheme override that covers both. Written verbatim into globals.css between its
+ * generated-region markers.
  *
  * @returns {string}
  */
 export function toCss() {
-  const out = ['@theme {'];
-  lightGroups.forEach((group, index) => {
-    if (index > 0) out.push('');
-    if (group.comment) out.push(cssComment(group.comment, '  '));
-    for (const token of group.tokens) {
-      if (token.comment) {
-        out.push(cssComment(token.comment, '  '));
-      }
-      out.push(`  --${token.name}: ${toCssValue(token.value)};`);
-    }
-  });
-  out.push('}', '');
+  const out = ['@theme {', ...cssGroups(lightGroups, '  '), '}', ''];
+
+  out.push(
+    cssComment(
+      [
+        'Geometry (§4, §5) — a plain `:root` block, NOT `@theme`, and deliberately so.',
+        "Tailwind v4 treats `--radius-*`, `--container-*` and `--breakpoint-*` inside `@theme`",
+        'as utility scales, and the style guide uses those names for different values than',
+        'Tailwind does (--radius-lg is 20px here, 8px there). Declaring them in `@theme` would',
+        'silently restyle every `rounded-lg` in the app. Reference these with var() instead.',
+      ].join('\n'),
+      '',
+    ),
+  );
+  out.push(':root {', ...cssGroups(geometryGroups, '  '), '}', '');
 
   out.push(
     cssComment(
@@ -218,12 +364,7 @@ export function toCss() {
     ),
   );
   out.push('@media (prefers-color-scheme: dark) {', '  :root {');
-  darkGroups.forEach((group, index) => {
-    if (index > 0) out.push('');
-    for (const token of group.tokens) {
-      out.push(`    --${token.name}: ${toCssValue(token.value)};`);
-    }
-  });
+  out.push(...cssGroups([...darkGroups, ...darkGeometryGroups], '    '));
   out.push('  }', '}');
   return out.join('\n');
 }
