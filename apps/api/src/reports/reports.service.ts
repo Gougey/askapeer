@@ -20,14 +20,17 @@ export class ReportsService {
    * content, or several members flagging it, is signal for the queue, not an error — and
    * suppressing a "you already reported this" would leak that a prior report exists.
    */
-  async create(reporterHandleId: string, dto: CreateReportDto): Promise<ReportResult> {
+  // The reporter's own handle, from their own token, written to their own report — the
+  // filing side of the boundary, not the reading side. The guard flags any mention in
+  // member-facing code, which is right; this is the exception it exists for.
+  async create(reporterHandleId: string, dto: CreateReportDto): Promise<ReportResult> { // disclosure-allow
     if (!(await this.targetExists(dto.targetType, dto.targetId))) {
       throw new NotFoundException(`No such ${dto.targetType}.`);
     }
     const [row] = await this.db
       .insert(reports)
       .values({
-        reporterHandleId,
+        reporterHandleId, // disclosure-allow — written here, never returned to a member
         targetType: dto.targetType,
         targetId: dto.targetId,
         category: dto.category,

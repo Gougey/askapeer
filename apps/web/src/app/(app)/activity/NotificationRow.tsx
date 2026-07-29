@@ -60,6 +60,7 @@ function present(n: Notification) {
  *  exactly this, and matches what the email for the same event says. */
 const NOTICE_KEY = {
   warned: 'warned',
+  content_removed: 'contentRemoved',
   suspended: 'suspended',
   expelled: 'expelled',
   handle_renamed: 'handleRenamed',

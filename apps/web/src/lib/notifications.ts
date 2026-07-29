@@ -27,7 +27,13 @@ export type KudosReceivedPayload = { targetType: 'post' | 'comment'; postId: str
  * or why, while the email for the same event said it plainly.
  */
 export type AccountNoticePayload = {
-  event: 'verification' | 'warned' | 'suspended' | 'expelled' | 'handle_renamed';
+  event:
+    | 'verification'
+    | 'warned'
+    | 'content_removed'
+    | 'suspended'
+    | 'expelled'
+    | 'handle_renamed';
   status?: string;
   /** The moderator's stated reason. Shown to the member — being told you were actioned
    *  without being told why is not being told. */

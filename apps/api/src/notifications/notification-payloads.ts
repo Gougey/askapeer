@@ -75,7 +75,13 @@ export type KudosReceivedPayload = {
  * channel and the case that needs it are the same design.
  */
 export type AccountNoticePayload = {
-  event: 'verification' | 'warned' | 'suspended' | 'expelled' | 'handle_renamed';
+  event:
+    | 'verification'
+    | 'warned'
+    | 'content_removed'
+    | 'suspended'
+    | 'expelled'
+    | 'handle_renamed';
   /** Verification only — the status transitioned to. */
   status?: string;
   /** The moderator's or system's stated reason, where one was given. */
