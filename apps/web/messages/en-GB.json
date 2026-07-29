@@ -106,7 +106,8 @@
       "memberSince": "Member since {year}",
       "identityNote": "This is everything other members can see about you.",
       "signOut": "Sign out",
-      "adminConsole": "Admin console"
+      "adminConsole": "Admin console",
+      "settings": "Settings"
     },
     "unreadNotifications": "{count, plural, one {# unread notification} other {# unread notifications}}"
   },
@@ -253,6 +254,31 @@
       "questions": "Questions",
       "answers": "Answers",
       "onThread": "on “{title}”"
+    }
+  },
+  "settings": {
+    "heading": "Settings",
+    "rows": {
+      "notifications": "Notifications"
+    },
+    "notifications": {
+      "heading": "Notifications",
+      "back": "← Settings",
+      "channels": {
+        "inApp": "In-app",
+        "email": "Email",
+        "push": "Push"
+      },
+      "types": {
+        "reply": "Replies to your posts and answers",
+        "kudos_received": "Kudos on your contributions",
+        "verification_status_change": "Your account status"
+      },
+      "notes": {
+        "accountEmailLocked": "Email about your account status cannot be turned off — you need to know if your access changes.",
+        "emailNotYetSending": "Email notifications aren't being sent yet. These settings will apply as soon as they are.",
+        "pushComingSoon": "Push notifications are coming soon."
+      }
     }
   }
 }

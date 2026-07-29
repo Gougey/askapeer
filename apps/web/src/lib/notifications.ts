@@ -50,6 +50,22 @@ export type MyCommentCard = {
   post: { id: string; title: string; type: 'question' | 'case_discussion' };
 };
 
+/** One row of the F4 matrix (EPIC-G §8). */
+export type NotificationPreference = {
+  type: 'reply' | 'kudos_received' | 'verification_status_change';
+  inApp: boolean;
+  email: boolean;
+  push: boolean;
+  /** §6.1 — account-status email cannot be turned off; the toggle renders disabled. */
+  emailLocked: boolean;
+};
+
+export type NotificationPreferences = {
+  preferences: NotificationPreference[];
+  /** False while the push channel is inert (§6.2) — one flag for the whole screen. */
+  pushAvailable: boolean;
+};
+
 async function apiGet<T>(path: string, token: string): Promise<T | null> {
   const res = await fetch(`${API_ORIGIN}/v1${path}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -82,6 +98,17 @@ export async function fetchUnreadCount(token: string): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+export async function fetchNotificationPreferences(
+  token: string,
+): Promise<NotificationPreferences> {
+  return (
+    (await apiGet<NotificationPreferences>('/notification-preferences', token)) ?? {
+      preferences: [],
+      pushAvailable: false,
+    }
+  );
 }
 
 /** My questions and my answers — the two halves of E2, fetched together. */
