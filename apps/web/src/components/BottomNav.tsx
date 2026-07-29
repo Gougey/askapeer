@@ -47,7 +47,10 @@ export function BottomNav() {
       }}
       aria-label={t('primaryNav')}
     >
-      <ul className="mx-auto flex max-w-lg items-stretch">
+      <ul
+        className="mx-auto flex items-stretch"
+        style={{ maxWidth: 'var(--container-max)', minHeight: 'var(--nav-h)' }}
+      >
         {TABS.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
           return (
@@ -62,7 +65,7 @@ export function BottomNav() {
                   aria-hidden
                   className={
                     'primary' in tab
-                      ? 'flex size-[52px] items-center justify-center rounded-[18px] text-white -mt-1'
+                      ? 'flex size-[52px] items-center justify-center text-white -mt-1'
                       : 'flex items-center justify-center'
                   }
                   style={
@@ -70,7 +73,8 @@ export function BottomNav() {
                       ? {
                           background:
                             'linear-gradient(135deg, var(--color-spark), var(--color-spark-dark))',
-                          boxShadow: '0 6px 16px rgba(237,27,36,.4)',
+                          borderRadius: 'var(--radius-large)',
+                          boxShadow: 'var(--shadow-fab)',
                         }
                       : undefined
                   }

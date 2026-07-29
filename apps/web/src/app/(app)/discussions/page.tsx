@@ -24,8 +24,9 @@ export default async function DiscussionsPage() {
           </p>
           <Link
             href="/create"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-white"
-            style={{ background: 'var(--color-accent)' }}
+            // §8.1 — a primary button is a navy pill, 700.
+            className="px-4 py-2 text-sm font-bold text-white"
+            style={{ background: 'var(--color-accent)', borderRadius: 'var(--radius-pill)' }}
           >
             {t('emptyCta')}
           </Link>
