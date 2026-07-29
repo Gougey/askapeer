@@ -30,7 +30,7 @@ export function AppBar() {
          * sits behind the clock. Both are no-ops in a normal browser tab, where the inset
          * is 0 and the bar stays exactly 52px.
          */
-        minHeight: 52,
+        minHeight: 'var(--appbar-h)',
         paddingTop: 'env(safe-area-inset-top)',
         background: 'var(--color-surface)',
         borderBottom: '1px solid var(--color-border)',

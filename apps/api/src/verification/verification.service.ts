@@ -309,9 +309,12 @@ export class VerificationService {
     decidedBy: string,
     reason: string | null,
   ): Promise<void> {
-    await this.db.transaction((tx) => this.applyTransition(tx, memberId, toStatus, decidedBy, reason));
+    const applied = await this.db.transaction((tx) =>
+      this.applyTransition(tx, memberId, toStatus, decidedBy, reason),
+    );
     // Outside the transaction: a notification failure must not roll back a decision.
-    await this.notifier.statusChanged(memberId, toStatus, reason);
+    // A no-op transition wrote no decision row, so there is nothing to announce.
+    if (applied) await this.notifier.statusChanged(memberId, toStatus, reason, applied.decisionId);
   }
 
   /**
@@ -328,11 +331,13 @@ export class VerificationService {
     toStatus: VerificationStatus,
     decidedBy: string,
     reason: string | null,
-  ): Promise<void> {
+  ): Promise<{ decisionId: string } | null> {
     const [member] = await tx.select().from(members).where(eq(members.id, memberId));
     if (!member) throw new NotFoundException('Member not found.');
     const fromStatus = member.verificationStatus;
-    if (fromStatus === toStatus) return;
+    // Null, not a decision: a no-op transition writes no audit row, so there is nothing
+    // to notify about and nothing to key a notification off.
+    if (fromStatus === toStatus) return null;
 
     await tx
       .update(members)
@@ -344,13 +349,26 @@ export class VerificationService {
       })
       .where(eq(members.id, memberId));
 
-    await tx.insert(verificationDecisions).values({ memberId, fromStatus, toStatus, decidedBy, reason });
+    const [decision] = await tx
+      .insert(verificationDecisions)
+      .values({ memberId, fromStatus, toStatus, decidedBy, reason })
+      .returning({ id: verificationDecisions.id });
     this.log.log(`${memberId}: ${fromStatus} -> ${toStatus} (by ${decidedBy})`);
+    return { decisionId: decision.id };
   }
 
-  /** Fire the status-change notification for a transition applied via {@link applyTransition}. */
-  async notifyStatusChanged(memberId: string, toStatus: string, reason: string | null): Promise<void> {
-    await this.notifier.statusChanged(memberId, toStatus, reason);
+  /**
+   * Fire the status-change notification for a transition applied via
+   * {@link applyTransition}. `decisionId` keys the notification to the audit row that
+   * caused it, so a retry cannot tell a member twice.
+   */
+  async notifyStatusChanged(
+    memberId: string,
+    toStatus: string,
+    reason: string | null,
+    decisionId: string,
+  ): Promise<void> {
+    await this.notifier.statusChanged(memberId, toStatus, reason, decisionId);
   }
 
   // ---------------------------------------------------------------------------

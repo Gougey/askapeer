@@ -19,6 +19,7 @@ import {
   reports,
 } from '../db/schema';
 import { isUniqueViolation } from '../db/pg-errors';
+import { NotificationEvents } from '../notifications/notifications.queue';
 import { BadgeService } from '../forum/badge.service';
 import { findBlocklistMatch, isValidFormat } from '../handles/handle-name';
 import { VerificationService } from '../verification/verification.service';
@@ -60,6 +61,7 @@ export class ModerationService {
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly badge: BadgeService,
     private readonly verification: VerificationService,
+    private readonly events: NotificationEvents,
   ) {}
 
   /**
@@ -126,16 +128,24 @@ export class ModerationService {
   private async warn(report: ReportRow, moderatorId: string, reason?: string): Promise<{ ok: true }> {
     const owner = await this.handleAndOwner(report);
     if (!owner) throw new NotFoundException(`No such ${report.targetType}.`);
-    await this.db.transaction(async (tx) => {
-      await tx.insert(moderationActions).values({
-        reportId: report.id,
-        targetHandleId: owner.handleId,
-        actionType: 'warn',
-        moderatorId,
-        reason: reason?.trim() || null,
-      });
+    const trimmed = reason?.trim() || null;
+    const actionId = await this.db.transaction(async (tx) => {
+      const [action] = await tx
+        .insert(moderationActions)
+        .values({
+          reportId: report.id,
+          targetHandleId: owner.handleId,
+          actionType: 'warn',
+          moderatorId,
+          reason: trimmed,
+        })
+        .returning({ id: moderationActions.id });
       await tx.update(reports).set({ status: 'actioned' }).where(eq(reports.id, report.id));
+      return action.id;
     });
+    // A warning nobody is told about is not a warning. This is the action where the
+    // in-app channel matters most: the member keeps their access, so they will see it.
+    await this.events.accountNotice(owner.handleId, { event: 'warned', reason: trimmed }, actionId);
     return { ok: true };
   }
 
@@ -151,18 +161,27 @@ export class ModerationService {
   private async suspend(report: ReportRow, moderatorId: string, reason?: string): Promise<{ ok: true }> {
     const owner = await this.handleAndOwner(report);
     if (!owner) throw new NotFoundException(`No such ${report.targetType}.`);
-    await this.db.transaction(async (tx) => {
+    const trimmed = reason?.trim() || null;
+    const actionId = await this.db.transaction(async (tx) => {
       await tx.update(handles).set({ status: 'suspended' }).where(eq(handles.id, owner.handleId));
-      await tx.insert(moderationActions).values({
-        reportId: report.id,
-        targetHandleId: owner.handleId,
-        actionType: 'suspend',
-        moderatorId,
-        reason: reason?.trim() || null,
-      });
+      const [action] = await tx
+        .insert(moderationActions)
+        .values({
+          reportId: report.id,
+          targetHandleId: owner.handleId,
+          actionType: 'suspend',
+          moderatorId,
+          reason: trimmed,
+        })
+        .returning({ id: moderationActions.id });
       await tx.update(reports).set({ status: 'actioned' }).where(eq(reports.id, report.id));
       await tx.delete(refreshTokens).where(eq(refreshTokens.memberId, owner.memberId));
+      return action.id;
     });
+    // Suspension is why EPIC-G §6.1 locks this type's email on: the access gate now stops
+    // this member at the holding page, so the inbox they cannot open is not a channel.
+    // Before this, a suspended member was locked out with no explanation at all.
+    await this.events.accountNotice(owner.handleId, { event: 'suspended', reason: trimmed }, actionId);
     return { ok: true };
   }
 
@@ -178,11 +197,17 @@ export class ModerationService {
     const owner = await this.handleAndOwner(report);
     if (!owner) throw new NotFoundException(`No such ${report.targetType}.`);
     const trimmed = reason?.trim() || null;
-    await this.db.transaction(async (tx) => {
+    const applied = await this.db.transaction(async (tx) => {
       await tx.update(handles).set({ status: 'expelled' }).where(eq(handles.id, owner.handleId));
       // Same transaction as the handle flip — the whole point of §7. Still routed through
       // the single writer of verification_status (VerificationService.applyTransition).
-      await this.verification.applyTransition(tx, owner.memberId, 'expelled', moderatorId, trimmed);
+      const decision = await this.verification.applyTransition(
+        tx,
+        owner.memberId,
+        'expelled',
+        moderatorId,
+        trimmed,
+      );
       await tx.insert(moderationActions).values({
         reportId: report.id,
         targetHandleId: owner.handleId,
@@ -192,8 +217,19 @@ export class ModerationService {
       });
       await tx.update(reports).set({ status: 'actioned' }).where(eq(reports.id, report.id));
       await tx.delete(refreshTokens).where(eq(refreshTokens.memberId, owner.memberId));
+      return decision;
     });
-    await this.verification.notifyStatusChanged(owner.memberId, 'expelled', trimmed);
+    // Routed through the notifier so the pre/post-handle split stays in one place. An
+    // expelled member always has a handle, so this reaches EPIC-G's path — which, before
+    // this change, dropped `expelled` on the floor and sent nothing at all.
+    if (applied) {
+      await this.verification.notifyStatusChanged(
+        owner.memberId,
+        'expelled',
+        trimmed,
+        applied.decisionId,
+      );
+    }
     return { ok: true };
   }
 
@@ -215,6 +251,7 @@ export class ModerationService {
     if (!owner) throw new NotFoundException(`No such ${report.targetType}.`);
     await this.assertNameAvailable(trimmedName);
 
+    let actionId = '';
     try {
       await this.db.transaction(async (tx) => {
         const [current] = await tx
@@ -227,20 +264,31 @@ export class ModerationService {
           previousName: current.name,
           changedBy: moderatorId,
         });
-        await tx.insert(moderationActions).values({
-          reportId: report.id,
-          targetHandleId: owner.handleId,
-          actionType: 'rename_handle',
-          moderatorId,
-          reason: reason?.trim() || null,
-        });
+        const [action] = await tx
+          .insert(moderationActions)
+          .values({
+            reportId: report.id,
+            targetHandleId: owner.handleId,
+            actionType: 'rename_handle',
+            moderatorId,
+            reason: reason?.trim() || null,
+          })
+          .returning({ id: moderationActions.id });
         await tx.update(reports).set({ status: 'actioned' }).where(eq(reports.id, report.id));
+        actionId = action.id;
       });
     } catch (err) {
       // The case-insensitive unique index is the final arbiter against a racing claim.
       if (isUniqueViolation(err)) throw new ConflictException('That handle name is not available.');
       throw err;
     }
+    // Their handle changed under them — the one moderation action a member could
+    // otherwise discover only by noticing their own posts are signed by a stranger.
+    await this.events.accountNotice(
+      owner.handleId,
+      { event: 'handle_renamed', newHandleName: trimmedName, reason: reason?.trim() || null },
+      actionId,
+    );
     return { ok: true };
   }
 

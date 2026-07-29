@@ -59,15 +59,30 @@ spec) — this is a build-phase choice, not a change to the production
 architecture; the API-first design makes the host swappable. Local
 development (Docker Compose: NestJS + Next.js + Postgres + Redis) comes
 before any deploy.</p>
-<p><strong>UI — functional now, style guide later.</strong> Do
+<p><strong>UI — build to the style guide.</strong> Do
 <strong>not</strong> build on the <code>mobile-lookfeel</code> prototype
-(a disposable taster). Build <strong>functional, minimally-styled,
-mobile-first</strong> screens straight from the screen &amp; functional
-spec, using a <strong>themeable component layer</strong> so the
-in-progress <strong>style guide</strong> drops in as a <em>theming
-pass</em>, not a rewrite (same logic as i18n string externalisation).
-The prototype is a reference for the bottom-nav <em>shape</em> only, not
-production code.</p>
+(a disposable taster); it is a reference for the bottom-nav
+<em>shape</em> only, not production code. Build
+<strong>mobile-first</strong> screens straight from the screen &amp;
+functional spec.</p>
+<blockquote>
+<p><strong>Superseded (2026-07-29).</strong> This section originally
+read <em>“functional now, style guide later”</em> — build
+minimally-styled screens and let the in-progress style guide drop in
+later as a theming pass. That was right while the guide was being
+written; it is <strong>no longer the position</strong>.
+<code>docs/style-guide/STYLE_GUIDE.md</code> has landed and is applied
+to <code>apps/web</code>, its values live in
+<code>packages/design-tokens</code>, and CI enforces parts of it
+(<code>lint:tokens</code> fails on raw hex or default Tailwind palette
+classes; <code>lint:inputs</code> on sub-16px controls). New screens are
+built to the guide.</p>
+<p>“Theming pass, not a rewrite” survives, but it means something
+narrower than it reads here: tokens are defined once and referenced
+through <code>var()</code>, so <em>changing</em> the design system
+propagates without rewriting components. It was never a licence to defer
+styling.</p>
+</blockquote>
 <p><strong>Accounts to start applying for now</strong>
 (business-verification lead times, even though their slices are later):
 <strong>Onfido</strong> (S2), <strong>Stripe</strong>/processor (S12;
@@ -283,8 +298,24 @@ PHI” policy in action. Text-only at MVP (images deferred).
 (<code>request_correction</code>).</li>
 </ul>
 <hr />
-<h2 id="s10-notifications-in-app-email-parallel-able-must">S10 —
-Notifications (in-app + email) [parallel-able] [Must]</h2>
+<h2
+id="s10-notifications-in-app-email-parallel-able-must-built-2026-07-29">S10
+— Notifications (in-app + email) [parallel-able] [Must] — <strong>built
+2026-07-29</strong></h2>
+<blockquote>
+<p><strong>Status.</strong> Built, with the scope agreed at the time:
+the in-app inbox (E1), per-type preferences (F4) and the settings hub
+(F3), <strong>My questions &amp; answers</strong> (E2, gap G-21), and
+account-status notices for every moderation action.
+<strong>Deferred</strong>: real email delivery (the sender is a single
+stub seam; toggles save but nothing is sent yet), the
+<code>identity.member_emails</code> view (it needs the per-role split),
+<code>mention</code> (needs EPIC-C’s parser), the weekly digest (needs
+<code>community.follows</code>, S7), and the push subscription registry
+(the channel ships inert per §6.2, with the preference stored and
+greyed). Fixed along the way: <strong>suspension and expulsion
+previously notified nobody on any channel.</strong></p>
+</blockquote>
 <ul>
 <li><strong>Delivers</strong>: members are notified in-app (Activity
 tab) and by email for replies, mentions, kudos, and verification/status

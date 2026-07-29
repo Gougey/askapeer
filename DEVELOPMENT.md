@@ -1,6 +1,6 @@
 # Development
 
-The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), and the audited reveal-identity action (S11e)**.
+The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), and the audited reveal-identity action (S11e)**.
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
@@ -56,12 +56,48 @@ Open http://localhost:3000 — the home page shows live system health fetched fr
 
 ## Design tokens
 
-`packages/design-tokens` is the source of truth for colour and type values;
+`packages/design-tokens` is the source of truth for colour, type **and geometry** values
+(spacing, layout, radius, elevation — style guide §4 and §5);
 `apps/web/src/app/globals.css` is **generated** from it between `@tokens:start` /
 `@tokens:end` markers. Edit the package, run `npm run tokens:build`, commit both — CI runs
 `tokens:check` and fails if the CSS was hand-edited instead. See that package's README for
 why the values live outside the CSS (short version: CSS does not transfer to a non-CSS
 client, and the decisions are worth more than their CSS expression).
+
+Reference every token through `var()` in a style prop — `style={{ borderRadius:
+'var(--radius)' }}` — the same way colours already are. Tailwind utilities stay Tailwind's.
+
+### Geometry tokens are not in `@theme`, and three are renamed
+
+Tailwind v4 reads `@theme` namespaces as *utility scales*: `--radius-*` defines what
+`rounded-*` means, `--container-*` defines `max-w-*`, `--breakpoint-*` defines responsive
+variants. Declaring the style guide's geometry there would rewrite utilities the app
+already uses, so it is emitted as a plain `:root` block instead.
+
+**Staying out of `@theme` is not enough on its own** — this is the trap, and it cost a
+silent restyle before it was caught. Tailwind compiles `.rounded-lg` to `border-radius:
+var(--radius-lg)` and puts its own `--radius-lg` in `:root`; a second `:root` declaration
+of that name wins on source order. The first cut of the geometry tokens moved all 44
+`rounded-lg` usages from 8px to 20px across screens that had already been demoed. The
+collision is by **name**, not by block, so the three names Tailwind claims are renamed:
+
+| Style guide §5.1 | In code |
+|---|---|
+| `--radius-lg` | `--radius-large` |
+| `--radius-md` | `--radius-medium` |
+| `--radius-sm` | `--radius-small` |
+
+`--radius-pill`, `--radius`, `--radius-avatar` and `--radius-avatar-lg` keep the guide's
+spelling — Tailwind does not claim them. If you add a geometry token, check the compiled
+CSS for a second declaration of its name before assuming it is safe.
+
+Two things the guide leaves open and the code decides: **dark-theme shadows are derived**,
+not specified (§5.2 gives the direction — "reduce opacity, lean on borders" — but no
+values; the light shadows tint toward navy, invisible on a dark ground), and the app-wide
+geometry migration is **partial**: the shared shell (app bar, bottom nav, cards, tag
+chips, the app column) and the Activity and settings screens are on tokens; the admin
+console is deliberately untouched (the guide treats it as a separate, desktop-first
+context) and a handful of one-off screens still use Tailwind radius utilities.
 
 ### Form controls must be 16px
 
@@ -208,6 +244,60 @@ Two rules worth knowing before extending this epic:
 
 Answering, kudos and the ranked ordering are **S5** (now in): a thread renders its
 answers, members award kudos, and answers sort by that score.
+
+## Notifications and the Activity tab (S10)
+
+Replies, kudos and account-status changes reach members in-app (`/activity`) and by
+email. The domain services **announce**; EPIC-G decides who hears about it — `CommentsService`
+and `KudosService` enqueue a job carrying ids only, and the worker resolves the recipient
+(the parent comment's author for a nested reply, the post author otherwise, never
+yourself).
+
+Four rules are worth knowing before extending this epic, because three of them are
+enforced by the database rather than by code remembering:
+
+- **`notifications.handle_id` is a foreign key**, and that *is* EPIC-G §4's pre-handle
+  asymmetry. An applicant without a handle cannot have a notification row, so the
+  `pending` / `needs_more_info` / `rejected` emails have nowhere to write one — and a
+  rejected applicant never gets a handle at all. The branch lives in exactly one place,
+  `verification/status-change.notifier.ts`.
+- **A CHECK constraint rejects `email_enabled = false` for `verification_status_change`**
+  (§6.1), on INSERT and UPDATE alike. This is not ceremony: a suspended member is stopped
+  at the holding page by the access gate, so the inbox they cannot open is not a channel.
+  Email is the only thing that reaches them, which is why it cannot be switched off.
+- **`dedupe_key` + `onConflictDoNothing` makes a retried job a no-op.** BullMQ retries;
+  without it a handler dying midway writes a second row. Notices key off the id of the
+  audit row that caused them, so every one traces back to its `verification_decisions` or
+  `moderation_actions` entry. One deliberate side effect: retracting and re-awarding kudos
+  does not notify twice.
+- **A missing `notification_preferences` row means the defaults apply** — in-app and email
+  on, push off — and rows are written only when a member changes something. Seeding a row
+  per handle × type would make every new notification type a backfill, and any handle
+  created before it ran would silently receive nothing.
+
+**Announcing never fails the action that caused it.** `NotificationEvents` swallows and
+logs enqueue failures: the caller has already committed, so throwing would report a 500
+for an answer that was genuinely posted, and the client's retry would post it twice.
+
+**Email is still a stub.** `notifications/email.sender.ts` logs what would be sent and is
+the single seam a real provider (SES or Postmark) binds to — used by EPIC-A's pre-handle
+status email too. The F4 settings screen says so rather than implying mail is going out.
+`identity.member_emails` (the email-only view §3 wants `NotificationService`'s grant to
+target) lands with the real sender and the per-role split at the AWS migrate step; under
+one database role it would name the guarantee without providing it.
+
+Deferred, and why: **`mention`** needs EPIC-C's @mention parser, which does not exist;
+the **weekly digest** needs `community.follows` (S7); **push** ships inert (§6.2) — the
+`push_enabled` preference is stored and shown greyed, but there is no
+`push_subscriptions` table or `/v1/push/*` yet, and no service worker to grant against.
+All three exist in the `notification_type` enum so adding them is behaviour, not a
+migration.
+
+One product decision that lives in code: **kudos notifications do not name the giver.**
+Nothing else in the product exposes who awarded kudos — the thread DTO carries counts and
+your own `hasKudosed` — so naming them in the inbox would introduce a disclosure by way of
+an implementation detail, and make reciprocal kudos-trading legible. See
+`notifications/notification-payloads.ts`.
 
 ## Admin console (S11a)
 

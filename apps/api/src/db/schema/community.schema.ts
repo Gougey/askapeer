@@ -2,10 +2,12 @@ import { sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
   boolean,
+  check,
   customType,
   date,
   index,
   integer,
+  jsonb,
   pgSchema,
   primaryKey,
   text,
@@ -240,6 +242,9 @@ export const comments = community.table(
   (t) => [
     index('comments_post_idx').on(t.postId, t.createdAt),
     index('comments_tsv_idx').using('gin', t.tsv),
+    // "My answers", newest first (Activity › My Q&A, screen E2). The post-scoped index
+    // above can't serve it — a member's answers are scattered across every thread.
+    index('comments_handle_idx').on(t.handleId, t.createdAt),
   ],
 );
 
@@ -384,5 +389,117 @@ export const moderationActions = community.table(
     // A handle's moderation history, newest first — the "has this handle been actioned
     // before?" read a reviewer needs, and what a warn/suspend escalation looks at.
     index('moderation_actions_target_idx').on(t.targetHandleId, t.createdAt),
+  ],
+);
+
+/**
+ * All five notification types (EPIC-G §5) ship in the enum from the start, though S10
+ * only fires three: `reply`, `kudos_received`, and post-handle
+ * `verification_status_change`. `mention` waits on EPIC-C's @mention parser and
+ * `weekly_digest` on `community.follows` (EPIC-B §8) — neither is schema work, and
+ * adding an enum value later costs a migration where carrying two unused labels costs
+ * nothing. Same reasoning as `moderation_action_type` shipping all six values at S11c.
+ */
+export const notificationType = community.enum('notification_type', [
+  'reply',
+  'mention',
+  'kudos_received',
+  'verification_status_change',
+  'weekly_digest',
+]);
+
+/**
+ * A member's in-app notification (EPIC-G §2, architecture §4.2).
+ *
+ * Handle-scoped, which is the whole of the pre-handle asymmetry (EPIC-G §4): a
+ * notification cannot exist for an applicant who has no handle, so the `pending` /
+ * `needs_more_info` / `rejected` status emails have no row here and never will — the FK
+ * is what makes that structural rather than a rule the write path is trusted to keep.
+ *
+ * `payload` is type-specific by design (§9): a `reply` carries the post and actor, a
+ * `kudos_received` carries the target. The shapes are defined and documented alongside
+ * the copy that renders them (`notifications/notification-copy.ts`) rather than pinned
+ * here, since the store is indifferent to them.
+ *
+ * Rows are a log of what happened, not a mirror of current state: retracting kudos does
+ * not delete the notification it caused. Deleting would let a member's unread count drop
+ * while they are looking at it, to undo an event that genuinely occurred.
+ */
+export const notifications = community.table(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    handleId: uuid('handle_id')
+      .notNull()
+      .references(() => handles.id),
+    type: notificationType('type').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    /**
+     * The originating event, e.g. `reply:<commentId>`. A BullMQ job is retried on
+     * failure, so without this a handler that dies between writing the row and
+     * finishing its remaining work would write a second row on the retry. Paired with
+     * `onConflictDoNothing`, it makes the whole handler idempotent — the retry sees no
+     * inserted row and knows the work was already done.
+     *
+     * A side effect worth naming: re-awarding kudos after retracting it does not notify
+     * a second time, because the key is the (target, giver) pair rather than the moment.
+     * Deliberate — a retract/re-award loop is not an event worth repeating.
+     *
+     * Nullable because not every notification descends from a discrete event (the
+     * weekly digest is periodic), and the unique index is partial to match.
+     */
+    dedupeKey: text('dedupe_key'),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // The inbox read (E1): one member's notifications, newest first.
+    index('notifications_handle_idx').on(t.handleId, t.createdAt.desc()),
+    // The unread badge runs on every app-shell render, so it gets its own partial index
+    // rather than counting across a member's whole history to find the few unread rows.
+    index('notifications_unread_idx')
+      .on(t.handleId)
+      .where(sql`read_at is null`),
+    uniqueIndex('notifications_dedupe_unique')
+      .on(t.handleId, t.dedupeKey)
+      .where(sql`dedupe_key is not null`),
+  ],
+);
+
+/**
+ * Per-type, per-channel delivery preferences (EPIC-G §6.1).
+ *
+ * **A missing row means the defaults apply** — in-app and email on, push off — and rows
+ * are written only when a member changes something. The alternative (seeding a row per
+ * handle × type) means every new notification type needs a backfill, and any handle
+ * created between the migration and the backfill silently receives nothing. Defaults
+ * belong in one place in the service, not in five rows per member.
+ *
+ * The CHECK is EPIC-G §6.1's one non-negotiable: `verification_status_change` email
+ * cannot be disabled, because an account-status change is not engagement content to opt
+ * out of. Enforced in the column rather than the controller for the same reason
+ * `reports.priority` is a generated column — a later write path can forget a validation
+ * rule, but it cannot forget a constraint.
+ */
+export const notificationPreferences = community.table(
+  'notification_preferences',
+  {
+    handleId: uuid('handle_id')
+      .notNull()
+      .references(() => handles.id),
+    type: notificationType('type').notNull(),
+    inAppEnabled: boolean('in_app_enabled').notNull().default(true),
+    emailEnabled: boolean('email_enabled').notNull().default(true),
+    // Push ships inert (EPIC-G §6.2): the preference and its storage exist from day one
+    // so switching the channel on is a config change, not a migration plus a UI change.
+    // Default false — nothing is opted into a channel that currently delivers nothing.
+    pushEnabled: boolean('push_enabled').notNull().default(false),
+  },
+  (t) => [
+    primaryKey({ columns: [t.handleId, t.type] }),
+    check(
+      'notification_preferences_verification_email_locked',
+      sql`not (type = 'verification_status_change' and email_enabled = false)`,
+    ),
   ],
 );

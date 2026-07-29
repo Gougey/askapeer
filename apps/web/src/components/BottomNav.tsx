@@ -27,7 +27,12 @@ const TABS = [
   { href: '/profile', key: 'profile', glyph: ICON.profile },
 ] as const;
 
-export function BottomNav() {
+/**
+ * @param unreadCount notifications awaiting the member — drives the Activity dot (§8.8).
+ *   Supplied by the shell layout rather than fetched here, which keeps this component
+ *   presentational and lets a server action revalidating the layout clear the dot.
+ */
+export function BottomNav({ unreadCount = 0 }: { unreadCount?: number }) {
   const t = useTranslations('shell');
   const pathname = usePathname();
 
@@ -47,7 +52,10 @@ export function BottomNav() {
       }}
       aria-label={t('primaryNav')}
     >
-      <ul className="mx-auto flex max-w-lg items-stretch">
+      <ul
+        className="mx-auto flex items-stretch"
+        style={{ maxWidth: 'var(--container-max)', minHeight: 'var(--nav-h)' }}
+      >
         {TABS.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
           return (
@@ -62,15 +70,16 @@ export function BottomNav() {
                   aria-hidden
                   className={
                     'primary' in tab
-                      ? 'flex size-[52px] items-center justify-center rounded-[18px] text-white -mt-1'
-                      : 'flex items-center justify-center'
+                      ? 'flex size-[52px] items-center justify-center text-white -mt-1'
+                      : 'relative flex items-center justify-center'
                   }
                   style={
                     'primary' in tab
                       ? {
                           background:
                             'linear-gradient(135deg, var(--color-spark), var(--color-spark-dark))',
-                          boxShadow: '0 6px 16px rgba(237,27,36,.4)',
+                          borderRadius: 'var(--radius-large)',
+                          boxShadow: 'var(--shadow-fab)',
                         }
                       : undefined
                   }
@@ -86,8 +95,31 @@ export function BottomNav() {
                   >
                     <path d={tab.glyph} />
                   </svg>
+                  {/* §8.7/§8.8 — the unread dot, danger red rather than spark, which is
+                      reserved for the Ask affordance and the wordmark. The count itself
+                      is not shown: this says "something is waiting", and the number is
+                      one tap away. */}
+                  {tab.key === 'activity' && unreadCount > 0 && (
+                    <span
+                      aria-hidden
+                      className="absolute"
+                      style={{
+                        top: -1,
+                        right: -3,
+                        width: 7,
+                        height: 7,
+                        borderRadius: 'var(--radius-pill)',
+                        background: 'var(--color-danger)',
+                      }}
+                    />
+                  )}
                 </span>
-                <span>{t(tab.key)}</span>
+                <span>
+                  {t(tab.key)}
+                  {tab.key === 'activity' && unreadCount > 0 && (
+                    <span className="sr-only"> {t('unreadNotifications', { count: unreadCount })}</span>
+                  )}
+                </span>
               </Link>
             </li>
           );

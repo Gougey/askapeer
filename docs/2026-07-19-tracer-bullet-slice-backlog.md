@@ -25,7 +25,11 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 **Infrastructure — prove-then-migrate.** Build the early slices (S0–S5, the thesis) on **Fly.io** (London region — already in use for the docs site / prototype), with **test/synthetic data and mocked verification**, so the core bet is validated fast and cheaply. **Migrate to the approved AWS `eu-west-2` stack before onboarding real practitioners** (real PII + UK-GDPR data residency) and before scale. AWS remains the **production target** (architecture spec) — this is a build-phase choice, not a change to the production architecture; the API-first design makes the host swappable. Local development (Docker Compose: NestJS + Next.js + Postgres + Redis) comes before any deploy.
 
-**UI — functional now, style guide later.** Do **not** build on the `mobile-lookfeel` prototype (a disposable taster). Build **functional, minimally-styled, mobile-first** screens straight from the screen & functional spec, using a **themeable component layer** so the in-progress **style guide** drops in as a *theming pass*, not a rewrite (same logic as i18n string externalisation). The prototype is a reference for the bottom-nav *shape* only, not production code.
+**UI — build to the style guide.** Do **not** build on the `mobile-lookfeel` prototype (a disposable taster); it is a reference for the bottom-nav *shape* only, not production code. Build **mobile-first** screens straight from the screen & functional spec.
+
+> **Superseded (2026-07-29).** This section originally read *"functional now, style guide later"* — build minimally-styled screens and let the in-progress style guide drop in later as a theming pass. That was right while the guide was being written; it is **no longer the position**. `docs/style-guide/STYLE_GUIDE.md` has landed and is applied to `apps/web`, its values live in `packages/design-tokens`, and CI enforces parts of it (`lint:tokens` fails on raw hex or default Tailwind palette classes; `lint:inputs` on sub-16px controls). New screens are built to the guide.
+>
+> "Theming pass, not a rewrite" survives, but it means something narrower than it reads here: tokens are defined once and referenced through `var()`, so *changing* the design system propagates without rewriting components. It was never a licence to defer styling.
 
 **Accounts to start applying for now** (business-verification lead times, even though their slices are later): **Onfido** (S2), **Stripe**/processor (S12; FD-2 working target is Stripe), an **email sender** (SES or e.g. Postmark, S10).
 
@@ -121,7 +125,9 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S10 — Notifications (in-app + email)  [parallel-able] [Must]
+## S10 — Notifications (in-app + email)  [parallel-able] [Must] — **built 2026-07-29**
+
+> **Status.** Built, with the scope agreed at the time: the in-app inbox (E1), per-type preferences (F4) and the settings hub (F3), **My questions & answers** (E2, gap G-21), and account-status notices for every moderation action. **Deferred**: real email delivery (the sender is a single stub seam; toggles save but nothing is sent yet), the `identity.member_emails` view (it needs the per-role split), `mention` (needs EPIC-C's parser), the weekly digest (needs `community.follows`, S7), and the push subscription registry (the channel ships inert per §6.2, with the preference stored and greyed). Fixed along the way: **suspension and expulsion previously notified nobody on any channel.**
 
 - **Delivers**: members are notified in-app (Activity tab) and by email for replies, mentions, kudos, and verification/status changes; per-type preferences work.
 - **Touches**: EPIC-G (`community.notifications`/`notification_preferences` incl. `push_enabled`; the BullMQ workers reacting to domain events; SES email; the **email-only `identity.member_emails` view**; digest; `verification_status_change` email non-optional). Screens E1, F4.

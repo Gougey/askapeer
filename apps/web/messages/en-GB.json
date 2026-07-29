@@ -99,10 +99,6 @@
       "feed": {
         "title": "Feed",
         "body": "Research and news scored to your clinical interests will appear here."
-      },
-      "activity": {
-        "title": "Activity",
-        "body": "Replies to your posts, kudos you've received, and your notifications will appear here."
       }
     },
     "profileScreen": {
@@ -110,8 +106,10 @@
       "memberSince": "Member since {year}",
       "identityNote": "This is everything other members can see about you.",
       "signOut": "Sign out",
-      "adminConsole": "Admin console"
-    }
+      "adminConsole": "Admin console",
+      "settings": "Settings"
+    },
+    "unreadNotifications": "{count, plural, one {# unread notification} other {# unread notifications}}"
   },
   "identityCheck": {
     "title": "Confirm your identity",
@@ -231,6 +229,56 @@
     "error": {
       "missing": "Choose a reason before submitting.",
       "unavailable": "Something went wrong. Please try again."
+    }
+  },
+  "activity": {
+    "heading": "Activity",
+    "tabs": {
+      "notifications": "Notifications",
+      "mine": "My Q&A"
+    },
+    "markAllRead": "Mark all as read",
+    "rows": {
+      "replied": "replied to you",
+      "kudosOnPost": "Your question received kudos",
+      "kudosOnComment": "Your answer received kudos",
+      "statusChanged": "Your account status has changed",
+      "unread": "Unread"
+    },
+    "empty": {
+      "notifications": "You're all caught up. Replies to your posts and kudos you receive will appear here.",
+      "mine": "You haven't posted yet. Your questions and answers will appear here.",
+      "mineCta": "Ask a question"
+    },
+    "mine": {
+      "questions": "Questions",
+      "answers": "Answers",
+      "onThread": "on “{title}”"
+    }
+  },
+  "settings": {
+    "heading": "Settings",
+    "rows": {
+      "notifications": "Notifications"
+    },
+    "notifications": {
+      "heading": "Notifications",
+      "back": "← Settings",
+      "channels": {
+        "inApp": "In-app",
+        "email": "Email",
+        "push": "Push"
+      },
+      "types": {
+        "reply": "Replies to your posts and answers",
+        "kudos_received": "Kudos on your contributions",
+        "verification_status_change": "Your account status"
+      },
+      "notes": {
+        "accountEmailLocked": "Email about your account status cannot be turned off — you need to know if your access changes.",
+        "emailNotYetSending": "Email notifications aren't being sent yet. These settings will apply as soon as they are.",
+        "pushComingSoon": "Push notifications are coming soon."
+      }
     }
   }
 }

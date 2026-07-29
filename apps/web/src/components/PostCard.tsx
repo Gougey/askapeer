@@ -30,12 +30,19 @@ export async function AuthorLine({ author }: { author: AuthorBlock }) {
 export function TagList({ tags }: { tags: TagRef[] }) {
   if (tags.length === 0) return null;
   return (
-    <ul className="flex flex-wrap gap-1.5">
+    <ul className="flex flex-wrap" style={{ gap: 'var(--space-2)' }}>
       {tags.map((tag) => (
         <li
           key={tag.id}
-          className="rounded-full border px-2 py-0.5 text-xs"
-          style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+          className="border px-2 py-0.5 text-xs"
+          // §8.2: a filter/topic chip is a pill outlined in --color-border-strong. The
+          // outline was --color-muted, which is a *text* colour — far too dark for a
+          // hairline (§5.3) and the reason the tag row read as heavier than the title.
+          style={{
+            borderRadius: 'var(--radius-pill)',
+            borderColor: 'var(--color-border-strong)',
+            color: 'var(--color-muted)',
+          }}
         >
           {tag.name}
         </li>
@@ -49,10 +56,19 @@ export async function PostCard({ post }: { post: PostCardDto }) {
   const t = await getTranslations('discussions');
   return (
     <li
-      className="rounded-xl border p-4"
-      style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
+      className="border"
+      // §8.3 — the card: surface, 1px hairline, --radius, --space-4 padding, and the
+      // faint card shadow. Previously a 12px `rounded-xl` with a --color-muted border,
+      // which is a text colour used as a hairline.
+      style={{
+        background: 'var(--color-surface)',
+        borderColor: 'var(--color-border)',
+        borderRadius: 'var(--radius)',
+        padding: 'var(--space-4)',
+        boxShadow: 'var(--shadow-card)',
+      }}
     >
-      <Link href={`/discussions/${post.id}`} className="flex flex-col gap-2">
+      <Link href={`/discussions/${post.id}`} className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
         <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
           {post.category.name}
         </span>

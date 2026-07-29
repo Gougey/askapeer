@@ -12,6 +12,7 @@ import { ReportsModule } from './reports/reports.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { AdminModule } from './admin/admin.module';
 import { SettingsModule } from './settings/settings.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SettingsModule } from './settings/settings.module';
     VerificationModule, // EPIC-A (S2)
     HandlesModule, // EPIC-B (S3)
     ForumModule, // EPIC-C + EPIC-D (S4, S5)
+    NotificationsModule, // EPIC-G (S10)
     ReportsModule, // EPIC-F reporting (S11b)
     ModerationModule, // EPIC-F moderation queue + remove/warn (S11c)
     AdminModule, // EPIC-A/F read-only admin console (S11a)

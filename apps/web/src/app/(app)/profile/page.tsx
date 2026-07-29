@@ -43,6 +43,15 @@ export default async function ProfilePage() {
 
       <p className="text-sm" style={{ color: 'var(--color-muted)' }}>{t('identityNote')}</p>
 
+      {/* Entry to the settings hub (F3) — the profile is where the screen spec puts it. */}
+      <Link
+        href="/settings"
+        className="border px-3 py-2 text-center text-sm font-medium"
+        style={{ borderColor: 'var(--color-border-strong)', borderRadius: 'var(--radius-pill)' }}
+      >
+        {t('settings')}
+      </Link>
+
       {state.isAdmin && (
         <Link
           href="/admin"

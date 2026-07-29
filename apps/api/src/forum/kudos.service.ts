@@ -2,6 +2,7 @@ import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nest
 import { and, eq, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { comments, handles, kudos, posts } from '../db/schema';
+import { NotificationEvents } from '../notifications/notifications.queue';
 import { BadgeService } from './badge.service';
 
 export type KudosTarget = 'post' | 'comment';
@@ -15,6 +16,7 @@ export class KudosService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly badge: BadgeService,
+    private readonly events: NotificationEvents,
   ) {}
 
   /**
@@ -53,7 +55,14 @@ export class KudosService {
     });
 
     // Leaderboard mirrors the authoritative total, outside the DB transaction (§6).
-    if (newTotal !== undefined) await this.badge.setScore(ref.authorHandleId, newTotal);
+    if (newTotal !== undefined) {
+      await this.badge.setScore(ref.authorHandleId, newTotal);
+      // Both of these hang off `newTotal !== undefined` for the same reason: it is
+      // undefined exactly when the insert was a no-op — the repeat tap EPIC-D §3 makes
+      // silent. A repeat tap that notified would turn an idempotent action into a way
+      // to badger someone.
+      await this.events.kudosAwarded(target, targetId, viewerHandleId);
+    }
     return { kudosCount: await this.countFor(target, targetId), hasKudosed: true };
   }
 
