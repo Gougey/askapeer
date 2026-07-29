@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { BottomNav } from '@/components/BottomNav';
 import { AppBar } from '@/components/Brand';
+import { fetchUnreadCount } from '@/lib/notifications';
 import { requireAppAccess } from '@/lib/onboarding';
 
 /**
@@ -10,7 +11,11 @@ import { requireAppAccess } from '@/lib/onboarding';
  * than a per-screen flag.
  */
 export default async function AppShellLayout({ children }: { children: ReactNode }) {
-  await requireAppAccess();
+  const { token } = await requireAppAccess();
+  // Fetched here rather than in the nav so the nav stays a presentational client
+  // component; the actions that mark notifications read revalidate this layout, which is
+  // what clears the dot without a manual refresh.
+  const unreadCount = await fetchUnreadCount(token);
 
   return (
     // The member-facing app is a centred --container-max column at every width (style
@@ -29,7 +34,7 @@ export default async function AppShellLayout({ children }: { children: ReactNode
     >
       <AppBar />
       {children}
-      <BottomNav />
+      <BottomNav unreadCount={unreadCount} />
     </div>
   );
 }

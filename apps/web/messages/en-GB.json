@@ -99,10 +99,6 @@
       "feed": {
         "title": "Feed",
         "body": "Research and news scored to your clinical interests will appear here."
-      },
-      "activity": {
-        "title": "Activity",
-        "body": "Replies to your posts, kudos you've received, and your notifications will appear here."
       }
     },
     "profileScreen": {
@@ -111,7 +107,8 @@
       "identityNote": "This is everything other members can see about you.",
       "signOut": "Sign out",
       "adminConsole": "Admin console"
-    }
+    },
+    "unreadNotifications": "{count, plural, one {# unread notification} other {# unread notifications}}"
   },
   "identityCheck": {
     "title": "Confirm your identity",
@@ -231,6 +228,31 @@
     "error": {
       "missing": "Choose a reason before submitting.",
       "unavailable": "Something went wrong. Please try again."
+    }
+  },
+  "activity": {
+    "heading": "Activity",
+    "tabs": {
+      "notifications": "Notifications",
+      "mine": "My Q&A"
+    },
+    "markAllRead": "Mark all as read",
+    "rows": {
+      "replied": "replied to you",
+      "kudosOnPost": "Your question received kudos",
+      "kudosOnComment": "Your answer received kudos",
+      "statusChanged": "Your account status has changed",
+      "unread": "Unread"
+    },
+    "empty": {
+      "notifications": "You're all caught up. Replies to your posts and kudos you receive will appear here.",
+      "mine": "You haven't posted yet. Your questions and answers will appear here.",
+      "mineCta": "Ask a question"
+    },
+    "mine": {
+      "questions": "Questions",
+      "answers": "Answers",
+      "onThread": "on “{title}”"
     }
   }
 }
