@@ -8,6 +8,7 @@ import { CommentsController } from './comments.controller';
 import { CommentsService } from './comments.service';
 import { KudosController } from './kudos.controller';
 import { KudosService } from './kudos.service';
+import { MeController } from './me.controller';
 import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
 import { VocabularyController } from './vocabulary.controller';
@@ -23,7 +24,13 @@ import { VocabularyService } from './vocabulary.service';
     JwtConfigModule, // JwtAuthGuard verifies the access token
     SettingsModule, // AppAccessGuard's paywall read + the badge threshold settings
   ],
-  controllers: [PostsController, CommentsController, KudosController, VocabularyController],
+  controllers: [
+    PostsController,
+    CommentsController,
+    KudosController,
+    VocabularyController,
+    MeController,
+  ],
   providers: [
     PostsService,
     CommentsService,

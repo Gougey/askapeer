@@ -1,0 +1,1 @@
+CREATE INDEX "comments_handle_idx" ON "community"."comments" USING btree ("handle_id","created_at");

@@ -43,6 +43,25 @@ export type PostCard = {
 
 export type PostList = { posts: PostCard[]; nextCursor: string | null };
 
+/**
+ * One of the caller's own answers (Activity › My Q&A, screen E2, gap G-21).
+ *
+ * Not the shared card DTO: this list answers "what have I written, and how was it
+ * received", so it carries the thread it belongs to rather than an author block — the
+ * author is always the caller, and repeating their own handle on every row is noise.
+ */
+export type MyCommentCard = {
+  id: string;
+  snippet: string;
+  kudosCount: number;
+  createdAt: string;
+  editedAt: string | null;
+  /** Where it lives, so the row can link into the thread. */
+  post: { id: string; title: string; type: 'question' | 'case_discussion' };
+};
+
+export type MyCommentList = { comments: MyCommentCard[]; nextCursor: string | null };
+
 export type ThreadComment = {
   id: string;
   author: AuthorBlock;
@@ -128,8 +147,17 @@ export class PostsService {
    * The Discussions list (screen C1), newest first. Keyset-paginated on `(created_at, id)`:
    * an offset would drift as new posts land at the head, silently repeating or skipping
    * rows for anyone reading page 2 of a live list.
+   *
+   * `authorHandleId` narrows it to one member's own questions — Activity › My Q&A
+   * (screen E2, gap G-21). Deliberately the same query rather than a parallel one: EPIC-C
+   * §13.2 makes the card DTO shared across every list surface, and two implementations
+   * of it would drift the moment a card gains a field.
+   *
+   * Note that it stays `status = 'published'` either way. Drafts and `needs_correction`
+   * are author-private but belong to `/v1/me/drafts` (EPIC-E, S9), which is a different
+   * screen with a different job — this one is "what I've contributed", not "what I owe".
    */
-  async list(query: ListPostsDto): Promise<PostList> {
+  async list(query: ListPostsDto, authorHandleId?: string): Promise<PostList> {
     const limit = query.limit ?? DEFAULT_PAGE_SIZE;
     const cursor = decodeCursor(query.cursor);
 
@@ -155,6 +183,7 @@ export class PostsService {
       .where(
         and(
           eq(posts.status, 'published'),
+          authorHandleId ? eq(posts.handleId, authorHandleId) : undefined,
           query.category ? eq(posts.categoryId, query.category) : undefined,
           // A tag filter needs the join table; the semi-join keeps one row per post even
           // though a post can match on several tags.
@@ -193,6 +222,61 @@ export class PostsService {
         kudosCount: Number(row.kudosCount),
         createdAt: row.createdAt.toISOString(),
         editedAt: row.editedAt?.toISOString() ?? null,
+      })),
+      nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null,
+    };
+  }
+
+  /**
+   * The caller's own answers, newest first (screen E2, gap G-21).
+   *
+   * A removed *post* takes its answers out of this list too: an answer to a thread that
+   * no longer exists has nowhere to link and nothing to show, so the join is an inner
+   * one on a published post rather than a left join with a placeholder.
+   */
+  async listMyComments(handleId: string, query: ListPostsDto): Promise<MyCommentList> {
+    const limit = query.limit ?? DEFAULT_PAGE_SIZE;
+    const cursor = decodeCursor(query.cursor);
+
+    const rows = await this.db
+      .select({
+        id: comments.id,
+        body: comments.body,
+        createdAt: comments.createdAt,
+        editedAt: comments.editedAt,
+        postId: posts.id,
+        postTitle: posts.title,
+        postType: posts.type,
+        kudosCount: commentKudosCountSql,
+      })
+      .from(comments)
+      .innerJoin(posts, eq(posts.id, comments.postId))
+      .where(
+        and(
+          eq(comments.handleId, handleId),
+          eq(comments.status, 'published'),
+          eq(posts.status, 'published'),
+          cursor
+            ? or(
+                lt(comments.createdAt, cursor.createdAt),
+                and(eq(comments.createdAt, cursor.createdAt), lt(comments.id, cursor.id)),
+              )
+            : undefined,
+        ),
+      )
+      .orderBy(desc(comments.createdAt), desc(comments.id))
+      .limit(limit + 1);
+
+    const page = rows.slice(0, limit);
+    const last = page.at(-1);
+    return {
+      comments: page.map((row) => ({
+        id: row.id,
+        snippet: snippet(row.body),
+        kudosCount: Number(row.kudosCount),
+        createdAt: row.createdAt.toISOString(),
+        editedAt: row.editedAt?.toISOString() ?? null,
+        post: { id: row.postId, title: row.postTitle, type: row.postType },
       })),
       nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null,
     };
@@ -410,6 +494,11 @@ const answerCountSql = sql<number>`(
 const postKudosCountSql = sql<number>`(
   select count(*) from ${kudos}
   where ${kudos.targetType} = 'post' and ${kudos.targetId} = ${posts.id}
+)`;
+
+const commentKudosCountSql = sql<number>`(
+  select count(*) from ${kudos}
+  where ${kudos.targetType} = 'comment' and ${kudos.targetId} = ${comments.id}
 )`;
 
 /**

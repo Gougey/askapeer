@@ -242,6 +242,9 @@ export const comments = community.table(
   (t) => [
     index('comments_post_idx').on(t.postId, t.createdAt),
     index('comments_tsv_idx').using('gin', t.tsv),
+    // "My answers", newest first (Activity › My Q&A, screen E2). The post-scoped index
+    // above can't serve it — a member's answers are scattered across every thread.
+    index('comments_handle_idx').on(t.handleId, t.createdAt),
   ],
 );
 
