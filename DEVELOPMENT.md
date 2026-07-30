@@ -293,6 +293,77 @@ the **weekly digest** needs `community.follows` (S7); **push** ships inert (§6.
 All three exist in the `notification_type` enum so adding them is behaviour, not a
 migration.
 
+### Sending real email
+
+Mail goes through one seam — `notifications/email/` — and the provider is chosen by
+`EMAIL_PROVIDER`: `log` (the default) writes to the API log and sends nothing; `postmark`
+sends for real. SES arrives with the AWS migrate step (architecture spec §6) as one more
+class and one more `case`. Callers ask for a **template**, never a body, which is what keeps
+three rules in one reviewable file (`templates.ts`) rather than spread across every epic:
+
+- Address by handle, never by name — `legal_name` is not reachable, by way of the
+  `identity.member_emails` view.
+- **Never quote member-authored content.** A reply's text, and above all a case discussion's,
+  does not travel to an inbox that may be read on a lock screen. The email says what
+  happened and links back.
+- Engagement mail links to notification settings; account mail does not offer, because that
+  channel cannot be turned off (EPIC-G §6.1) and an opt-out in the footer would be a lie.
+
+**Sending from `mail.askapeer.co.uk`, a subdomain of Andy's domain.** Postmark needs a DKIM
+TXT record and a `pm-bounces` CNAME on it; it does **not** need an SPF record, because its
+custom Return-Path is what makes SPF alignment pass. The root domain's own Microsoft 365
+mail is therefore untouched, which is the point of using a subdomain.
+
+Two things gate turning `EMAIL_PROVIDER=postmark` on, and getting them the wrong way round
+takes sign-in down: the domain must be **verified**, and the Postmark account must be
+**approved**. While an account is pending approval Postmark refuses any recipient outside
+the From domain, so every send fails — and `POST /v1/auth/request-link` surfaces that as a
+503. Until both are done, live stays on `log`.
+
+`AUTH_DEV_MAGIC_LINK=true` is the other half of this. It returns the sign-in token in the
+API response, which means **anyone who knows an address can sign in as that member**. It is
+tolerable only because this deployment has no real members, and it cannot come out until
+email sends. Treat it as the gate on letting anyone else near the platform.
+
+### Bounces, complaints, and rate limits
+
+**`POST /v1/webhooks/postmark`** consumes bounce and spam-complaint events, authenticated by
+HTTP Basic against `POSTMARK_WEBHOOK_SECRET` (Postmark's webhook URL field takes
+`https://postmark:<secret>@host/...`). With no secret configured it refuses everything
+rather than defaulting open. Only **hard** bounces and complaints suppress; a soft bounce is
+a full mailbox, and Postmark is already retrying it.
+
+Suppression lands in `identity.email_suppressions`, keyed by **address, not member** — a
+bounce is a fact about an address, which may belong to no member or to one who has since
+changed it. It is deliberately **not** a notification preference: a CHECK constraint forbids
+disabling the account-status email, and more importantly the member has not opted out of
+anything. Their address is broken, which is a delivery fact, not a wish.
+
+`EmailSender.deliver` is the choke point that checks it, so a suppressed address gets
+nothing **of any kind** — including the mail §6.1 makes non-optional. That is not a
+contradiction: §6.1 stops a *member* silencing that channel; it says nothing about an
+address that cannot physically receive mail, and sending anyway informs nobody while
+teaching the provider that we ignore bounces. ⚠️ **The real gap this leaves**: a member whose
+address dies becomes unreachable and cannot sign in, and there is no admin surface showing
+suppressed addresses yet. `email_suppressions_active_idx` exists for that read; until it is
+built, suppression is logged at warn level so it is at least visible.
+
+**Rate limiting** (architecture spec §5.3, named there and previously unbuilt) is a
+Redis-backed guard on `auth/*` and `POST /v1/reports`. Hand-rolled rather than
+`@nestjs/throttler` plus a storage adapter — ioredis is already here for BullMQ and the
+mechanism is an `INCR` and an `EXPIRE`. Two properties worth knowing:
+
+- **Limits are per dimension, not one number shared across them.** A per-email limit governs
+  one mailbox; a per-IP limit governs everyone behind that address — and our members work in
+  clinics where a whole building shares one outbound IP. The first cut used a single limit
+  and locked out a second member on the same IP.
+- **It fails open.** If Redis is unreachable the request is allowed, with a warning: the
+  limiter is a mitigation, not an authorisation boundary, and locking every member out of
+  sign-in because the cache blinked is the worse outage.
+
+Without this, `register` and `request-link` are a way to send mail to arbitrary strangers,
+which is how a sending reputation dies and a Postmark account gets suspended.
+
 ### Moderation notices, and what a member may see
 
 Every member-affecting moderation action — `warn`, `remove_content`, `suspend`, `expel`,

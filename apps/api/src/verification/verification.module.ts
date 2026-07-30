@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtConfigModule } from '../auth/jwt-config.module';
-import { NotificationsModule } from '../notifications/notifications.module';
+
 import { IDENTITY_CHECK, SimulatedIdentityCheck } from './providers/identity-check';
 import { REGISTER_LOOKUP, SimulatedRegisterLookup } from './providers/register-lookup';
 import { StatusChangeNotifier } from './status-change.notifier';
@@ -21,7 +21,6 @@ import { VerificationWorker } from './verification.worker';
   imports: [
     VerificationQueueModule,
     JwtConfigModule,
-    NotificationsModule, // the shared EmailSender for the pre-handle status email (§4)
   ],
   controllers: [VerificationController],
   providers: [

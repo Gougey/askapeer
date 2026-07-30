@@ -6,7 +6,10 @@ import { defineConfig } from 'drizzle-kit';
 dotenv.config({ path: resolve(process.cwd(), '../../.env') });
 
 export default defineConfig({
-  schema: './src/db/schema',
+  // The per-epic files, not the directory: `index.ts` re-exports all of them, so scanning
+  // the whole directory registers every object twice. Tables dedupe by name and hid this;
+  // views do not, and warn instead.
+  schema: './src/db/schema/*.schema.ts',
   out: './drizzle',
   dialect: 'postgresql',
   dbCredentials: {

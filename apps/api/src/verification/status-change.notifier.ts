@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { handles, members } from '../db/schema';
-import { EmailSender } from '../notifications/email.sender';
+import { handles, memberEmails } from '../db/schema';
+import { EmailSender } from '../notifications/email/email.sender';
 import { NotificationEvents } from '../notifications/notifications.queue';
 
 /**
@@ -55,17 +55,14 @@ export class StatusChangeNotifier {
     // directly. `expelled`/`suspended` never occur here — both require a handle.
     if (!['approved_verified', 'needs_more_info', 'rejected'].includes(toStatus)) return;
 
+    // Through the email-only view, like every other outbound-mail read (EPIC-G §3).
     const [member] = await this.db
-      .select({ email: members.email })
-      .from(members)
-      .where(eq(members.id, memberId));
+      .select({ email: memberEmails.email })
+      .from(memberEmails)
+      .where(eq(memberEmails.memberId, memberId));
     if (!member) return;
 
-    await this.email.send({
-      to: member.email,
-      subject: 'Your Askapeer verification',
-      body: `status=${toStatus}${reason ? ` reason="${reason}"` : ''}`,
-    });
+    await this.email.verificationStatus(member.email, toStatus, reason);
   }
 }
 

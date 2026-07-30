@@ -24,6 +24,14 @@ primary_region = "lhr"
   memory = "512mb"
 
 [env]
+  # Links in emails point here. Not a secret; must match the deployed web app.
+  WEB_ORIGIN = "https://askapeer-web.fly.dev"
+
+  # Outbound mail is still LOGGED, NOT SENT. Until this is a real provider,
+  # AUTH_DEV_MAGIC_LINK below cannot be turned off (nobody could sign in) and a suspended
+  # member receives nothing at all. EmailModule warns about this at boot in production.
+  EMAIL_PROVIDER = "log"
+
   # Staging (prove-phase) only: surface the magic-link token in the request-link
   # response so the auth flow is demoable before email delivery (S10). The AWS
   # production target will NOT set this.

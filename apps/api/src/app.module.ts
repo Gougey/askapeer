@@ -13,6 +13,7 @@ import { ModerationModule } from './moderation/moderation.module';
 import { AdminModule } from './admin/admin.module';
 import { SettingsModule } from './settings/settings.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { EmailModule } from './notifications/email/email.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     }),
     DbModule,
     RedisModule,
+    EmailModule, // outbound mail (global): sign-in links, verification and notices
     // Epic modules are added here as their slices land.
     HealthModule,
     AuthModule, // EPIC-A (S1)

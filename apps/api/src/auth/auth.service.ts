@@ -1,8 +1,16 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
+import { EmailSender } from '../notifications/email/email.sender';
 import { isUniqueViolation } from '../db/pg-errors';
 import { handles, magicLinks, members, reapplicationAttempts, refreshTokens } from '../db/schema';
 import { AdminAccessService } from '../admin/admin-access.service';
@@ -19,11 +27,14 @@ export type SessionTokens = { accessToken: string; refreshToken: string };
 
 @Injectable()
 export class AuthService {
+  private readonly log = new Logger(AuthService.name);
+
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly jwt: JwtService,
     private readonly verification: VerificationService,
     private readonly adminAccess: AdminAccessService,
+    private readonly email: EmailSender,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -99,7 +110,25 @@ export class AuthService {
       tokenHash: hashToken(raw),
       expiresAt: new Date(Date.now() + MAGIC_LINK_TTL_MS),
     });
-    // Real email delivery arrives with EPIC-G (S10); until then the token is returned in dev only.
+    // Send it. Whether the token is *also* returned in the response is the controller's
+    // call (AUTH_DEV_MAGIC_LINK) — and that flag is only safe to leave on because this
+    // deployment has no real members: it hands a working sign-in link to anyone who knows
+    // an address. Turning it off depends on this line working.
+    //
+    // A send failure must not be swallowed: "we've sent you a link" is a lie if nothing
+    // left the building, and the member would wait for mail that is never coming. It is
+    // surfaced as a 503 rather than a 500, because it is a transient upstream problem
+    // rather than a bug in the request — and the message says what to do about it. The
+    // underlying provider error is logged, never returned; it can name our own
+    // configuration.
+    try {
+      await this.email.magicLink(email, raw);
+    } catch (err) {
+      this.log.error(`Could not send a sign-in link: ${(err as Error).message}`);
+      throw new ServiceUnavailableException(
+        'We could not send your sign-in link just now. Please try again in a moment.',
+      );
+    }
     return { devToken: raw };
   }
 

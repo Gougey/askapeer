@@ -423,6 +423,93 @@ greyed, but there is no <code>push_subscriptions</code> table or
 <code>/v1/push/*</code> yet, and no service worker to grant against. All
 three exist in the <code>notification_type</code> enum so adding them is
 behaviour, not a migration.</p>
+<h3 id="sending-real-email">Sending real email</h3>
+<p>Mail goes through one seam — <code>notifications/email/</code> — and
+the provider is chosen by <code>EMAIL_PROVIDER</code>: <code>log</code>
+(the default) writes to the API log and sends nothing;
+<code>postmark</code> sends for real. SES arrives with the AWS migrate
+step (architecture spec §6) as one more class and one more
+<code>case</code>. Callers ask for a <strong>template</strong>, never a
+body, which is what keeps three rules in one reviewable file
+(<code>templates.ts</code>) rather than spread across every epic:</p>
+<ul>
+<li>Address by handle, never by name — <code>legal_name</code> is not
+reachable, by way of the <code>identity.member_emails</code> view.</li>
+<li><strong>Never quote member-authored content.</strong> A reply’s
+text, and above all a case discussion’s, does not travel to an inbox
+that may be read on a lock screen. The email says what happened and
+links back.</li>
+<li>Engagement mail links to notification settings; account mail does
+not offer, because that channel cannot be turned off (EPIC-G §6.1) and
+an opt-out in the footer would be a lie.</li>
+</ul>
+<p><strong>Sending from <code>mail.askapeer.co.uk</code>, a subdomain of
+Andy’s domain.</strong> Postmark needs a DKIM TXT record and a
+<code>pm-bounces</code> CNAME on it; it does <strong>not</strong> need
+an SPF record, because its custom Return-Path is what makes SPF
+alignment pass. The root domain’s own Microsoft 365 mail is therefore
+untouched, which is the point of using a subdomain.</p>
+<p>Two things gate turning <code>EMAIL_PROVIDER=postmark</code> on, and
+getting them the wrong way round takes sign-in down: the domain must be
+<strong>verified</strong>, and the Postmark account must be
+<strong>approved</strong>. While an account is pending approval Postmark
+refuses any recipient outside the From domain, so every send fails — and
+<code>POST /v1/auth/request-link</code> surfaces that as a 503. Until
+both are done, live stays on <code>log</code>.</p>
+<p><code>AUTH_DEV_MAGIC_LINK=true</code> is the other half of this. It
+returns the sign-in token in the API response, which means
+<strong>anyone who knows an address can sign in as that member</strong>.
+It is tolerable only because this deployment has no real members, and it
+cannot come out until email sends. Treat it as the gate on letting
+anyone else near the platform.</p>
+<h3 id="bounces-complaints-and-rate-limits">Bounces, complaints, and
+rate limits</h3>
+<p><strong><code>POST /v1/webhooks/postmark</code></strong> consumes
+bounce and spam-complaint events, authenticated by HTTP Basic against
+<code>POSTMARK_WEBHOOK_SECRET</code> (Postmark’s webhook URL field takes
+<code>https://postmark:&lt;secret&gt;@host/...</code>). With no secret
+configured it refuses everything rather than defaulting open. Only
+<strong>hard</strong> bounces and complaints suppress; a soft bounce is
+a full mailbox, and Postmark is already retrying it.</p>
+<p>Suppression lands in <code>identity.email_suppressions</code>, keyed
+by <strong>address, not member</strong> — a bounce is a fact about an
+address, which may belong to no member or to one who has since changed
+it. It is deliberately <strong>not</strong> a notification preference: a
+CHECK constraint forbids disabling the account-status email, and more
+importantly the member has not opted out of anything. Their address is
+broken, which is a delivery fact, not a wish.</p>
+<p><code>EmailSender.deliver</code> is the choke point that checks it,
+so a suppressed address gets nothing <strong>of any kind</strong> —
+including the mail §6.1 makes non-optional. That is not a contradiction:
+§6.1 stops a <em>member</em> silencing that channel; it says nothing
+about an address that cannot physically receive mail, and sending anyway
+informs nobody while teaching the provider that we ignore bounces. ⚠️
+<strong>The real gap this leaves</strong>: a member whose address dies
+becomes unreachable and cannot sign in, and there is no admin surface
+showing suppressed addresses yet.
+<code>email_suppressions_active_idx</code> exists for that read; until
+it is built, suppression is logged at warn level so it is at least
+visible.</p>
+<p><strong>Rate limiting</strong> (architecture spec §5.3, named there
+and previously unbuilt) is a Redis-backed guard on <code>auth/*</code>
+and <code>POST /v1/reports</code>. Hand-rolled rather than
+<code>@nestjs/throttler</code> plus a storage adapter — ioredis is
+already here for BullMQ and the mechanism is an <code>INCR</code> and an
+<code>EXPIRE</code>. Two properties worth knowing:</p>
+<ul>
+<li><strong>Limits are per dimension, not one number shared across
+them.</strong> A per-email limit governs one mailbox; a per-IP limit
+governs everyone behind that address — and our members work in clinics
+where a whole building shares one outbound IP. The first cut used a
+single limit and locked out a second member on the same IP.</li>
+<li><strong>It fails open.</strong> If Redis is unreachable the request
+is allowed, with a warning: the limiter is a mitigation, not an
+authorisation boundary, and locking every member out of sign-in because
+the cache blinked is the worse outage.</li>
+</ul>
+<p>Without this, <code>register</code> and <code>request-link</code> are
+a way to send mail to arbitrary strangers, which is how a sending
+reputation dies and a Postmark account gets suspended.</p>
 <h3 id="moderation-notices-and-what-a-member-may-see">Moderation
 notices, and what a member may see</h3>
 <p>Every member-affecting moderation action — <code>warn</code>,

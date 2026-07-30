@@ -3,12 +3,22 @@ import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { RefreshDto, RegisterDto, RequestLinkDto, VerifyLinkDto } from './auth.dto';
 import { JwtAuthGuard, type AuthedMember } from './jwt-auth.guard';
+import { RateLimit } from '../common/rate-limit/rate-limit.decorator';
+import { RateLimitGuard } from '../common/rate-limit/rate-limit.guard';
 
+/**
+ * Rate limits here are the difference between a sign-up form and an open relay: both
+ * `register` and `request-link` cause us to send mail to an address the caller chose
+ * (architecture spec §5.3). Limits are generous for a human and useless for a script.
+ */
 @Controller('auth')
+@UseGuards(RateLimitGuard)
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   // Register -> creates a pending member; no session is issued (auth is via magic link).
+  // Registration is a once-ever act for a real person, so this can be tight.
+  @RateLimit({ windowSeconds: 3600, limits: { ip: 20, email: 5 } })
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.auth.register(dto);
@@ -16,6 +26,10 @@ export class AuthController {
 
   // Always 200 (never reveal whether the email exists). In dev the token is returned
   // so the flow is testable before email delivery (S10) lands.
+  // Per-email as well as per-IP: the per-email limit is what stops one address being
+  // mail-bombed from many sources, and it applies before we know whether the account
+  // exists, so a 429 reveals nothing.
+  @RateLimit({ windowSeconds: 900, limits: { ip: 100, email: 10 } })
   @Post('request-link')
   @HttpCode(200)
   async requestLink(@Body() dto: RequestLinkDto) {
@@ -29,6 +43,9 @@ export class AuthController {
     return body;
   }
 
+  // Guessing a 32-byte token is not feasible, but a limit costs nothing and turns a
+  // brute-force attempt into something visible rather than merely futile.
+  @RateLimit({ windowSeconds: 900, limits: { ip: 100 } })
   @Post('verify-link')
   @HttpCode(200)
   verifyLink(@Body() dto: VerifyLinkDto) {
