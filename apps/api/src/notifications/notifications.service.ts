@@ -6,12 +6,12 @@ import { DRIZZLE, type Database } from '../db/db.module';
 import {
   comments,
   handles,
-  members,
+  memberEmails,
   notificationPreferences,
   notifications,
   posts,
 } from '../db/schema';
-import { EmailSender } from './email.sender';
+import { EmailSender } from './email/email.sender';
 import {
   LIVE_NOTIFICATION_TYPES,
   type AccountNoticePayload,
@@ -390,23 +390,36 @@ export class NotificationsService {
     payload: NotificationPayload,
   ): Promise<void> {
     const [row] = await this.db
-      .select({
-        // The only column this epic reads from `identity` (EPIC-G §3). Never `legal_name`
-        // — every template addresses the member by handle, and the eventual email-only
-        // view is what will make that a permission rather than a promise.
-        email: members.email,
-      })
+      // Read through `identity.member_emails`, not `identity.members` (EPIC-G §3): the
+      // view exposes `email` and nothing else, so `legal_name` is not merely unused here
+      // — it is not reachable. At the AWS migrate step the notification role is granted
+      // on the view and not the table, and this query keeps working unchanged.
+      .select({ email: memberEmails.email })
       .from(handles)
-      .innerJoin(members, eq(members.id, handles.memberId))
+      .innerJoin(memberEmails, eq(memberEmails.memberId, handles.memberId))
       .where(eq(handles.id, handleId));
     if (!row) return;
 
-    const copy = emailCopy(type, payload);
-    if (!copy) {
-      this.log.warn(`No email copy for notification type ${type}`);
+    if (type === 'reply') {
+      const p = payload as ReplyPayload;
+      await this.email.reply(row.email, p.actorHandleName, p.postTitle, p.postId);
       return;
     }
-    await this.email.send({ to: row.email, subject: copy.subject, body: copy.body });
+    if (type === 'kudos_received') {
+      const p = payload as KudosReceivedPayload;
+      await this.email.kudosReceived(row.email, p.targetType, p.postTitle, p.postId);
+      return;
+    }
+    if (type === 'verification_status_change') {
+      const p = payload as AccountNoticePayload;
+      await this.email.accountNotice(row.email, p.event, p.reason ?? null, {
+        newHandleName: p.newHandleName,
+        actionId: p.actionId,
+        status: p.status,
+      });
+      return;
+    }
+    this.log.warn(`No email template for notification type ${type}`);
   }
 
   private async postTarget(postId: string) {
@@ -435,71 +448,3 @@ export class NotificationsService {
   }
 }
 
-/**
- * Email copy per type. Plain English here rather than a message catalog: the catalog is
- * the web app's (`messages/en-GB.json`), and no API-side i18n mechanism exists yet.
- * Templating and translation arrive with the real sender — at which point this is the
- * one function to replace.
- *
- * Copy names handles only, and never quotes a case discussion's body — the same
- * discipline the payloads carry (EPIC-G §6.2), applied to the channel that leaves the
- * platform.
- */
-function emailCopy(
-  type: string,
-  payload: NotificationPayload,
-): { subject: string; body: string } | undefined {
-  if (type === 'reply') {
-    const p = payload as ReplyPayload;
-    return {
-      subject: `${p.actorHandleName} replied to you on Askapeer`,
-      body: `${p.actorHandleName} replied on “${p.postTitle}”.`,
-    };
-  }
-  if (type === 'kudos_received') {
-    const p = payload as KudosReceivedPayload;
-    return {
-      subject: 'You received kudos on Askapeer',
-      body: `Your ${p.targetType === 'post' ? 'question' : 'answer'} on “${p.postTitle}” received kudos.`,
-    };
-  }
-  if (type === 'verification_status_change') {
-    const p = payload as AccountNoticePayload;
-    const because = p.reason ? ` Reason given: ${p.reason}` : '';
-    switch (p.event) {
-      case 'warned':
-        return {
-          subject: 'A moderator has issued a warning',
-          body: `A moderator has recorded a formal warning against your handle.${because}`,
-        };
-      case 'content_removed':
-        return {
-          subject: 'A moderator removed your content',
-          body: `A moderator has removed one of your contributions from Askapeer.${because}`,
-        };
-      case 'suspended':
-        // The one that most needs email: a suspended member cannot reach the in-app
-        // inbox, because the access gate stops them at the holding page.
-        return {
-          subject: 'Your Askapeer access has been suspended',
-          body: `Your handle has been suspended and you cannot access the community while it is.${because}`,
-        };
-      case 'expelled':
-        return {
-          subject: 'Your Askapeer membership has ended',
-          body: `Your handle has been permanently removed from Askapeer.${because}`,
-        };
-      case 'handle_renamed':
-        return {
-          subject: 'Your handle has been changed',
-          body: `A moderator has changed your handle to ${p.newHandleName}. Your contributions are unchanged.${because}`,
-        };
-      default:
-        return {
-          subject: 'Your Askapeer verification',
-          body: `status=${p.status ?? 'updated'}${p.reason ? ` reason="${p.reason}"` : ''}`,
-        };
-    }
-  }
-  return undefined;
-}

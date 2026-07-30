@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtConfigModule } from '../auth/jwt-config.module';
 import { AppAccessGuard } from '../auth/app-access.guard';
 import { SettingsModule } from '../settings/settings.module';
-import { EmailSender } from './email.sender';
+
 import {
   NotificationPreferencesController,
   NotificationsController,
@@ -19,9 +19,9 @@ import { NotificationsWorker } from './notifications.worker';
  * enqueue side lives in the global `NotificationsQueueModule`, so the forum (and later
  * moderation and verification) can announce an event without importing any of this.
  *
- * `EmailSender` is exported because it is the platform's single outbound-mail seam, and
- * EPIC-A's pre-handle status email (which by definition has no notification row to hang
- * off — §4) has to reach it too.
+ * Mail itself lives in the global `EmailModule`: EPIC-A's sign-in link and pre-handle
+ * status notices need it too, and routing those through this epic would be a strange
+ * dependency to draw.
  */
 @Module({
   imports: [
@@ -30,7 +30,7 @@ import { NotificationsWorker } from './notifications.worker';
     SettingsModule, // AppAccessGuard's paywall read
   ],
   controllers: [NotificationsController, NotificationPreferencesController],
-  providers: [NotificationsService, NotificationsWorker, EmailSender, JwtAuthGuard, AppAccessGuard],
-  exports: [NotificationsService, EmailSender],
+  providers: [NotificationsService, NotificationsWorker, JwtAuthGuard, AppAccessGuard],
+  exports: [NotificationsService],
 })
 export class NotificationsModule {}

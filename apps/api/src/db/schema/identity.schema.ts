@@ -52,6 +52,31 @@ export const members = identity.table(
 );
 
 /** One-time magic-link tokens for passwordless sign-in (architecture §5.2). */
+/**
+ * The email-only projection of `identity.members` (EPIC-G §3).
+ *
+ * `NotificationService` needs one column from the identity schema — `email`, to send mail
+ * — and must never read `legal_name`. Every template addresses a member by their handle,
+ * even though the service technically has the rows to do otherwise.
+ *
+ * The view exists so that becomes a **permission** rather than a promise: at the AWS
+ * migrate step, when per-role grants land (architecture spec §4.1), the notification
+ * role is granted on this view and **not** on `identity.members`, and a query selecting
+ * `legal_name` fails at the database rather than in review. Under the prove phase's
+ * single role it provides no enforcement on its own — but reading through it now means
+ * the hardening is a grant, not a refactor, and nothing new accretes a direct
+ * `members` read in the meantime.
+ */
+export const memberEmails = identity
+  .view('member_emails', {
+    memberId: uuid('member_id').notNull(),
+    email: text('email').notNull(),
+  })
+  // Declared, not generated: the DDL is hand-authored in the migration alongside the
+  // grant comment it belongs with, since the point of this view is a permission boundary
+  // rather than a shape.
+  .existing();
+
 export const magicLinks = identity.table('magic_links', {
   id: uuid('id').primaryKey().defaultRandom(),
   memberId: uuid('member_id')

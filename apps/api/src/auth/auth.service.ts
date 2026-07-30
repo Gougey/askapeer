@@ -3,6 +3,7 @@ import { ConflictException, Inject, Injectable, UnauthorizedException } from '@n
 import { JwtService } from '@nestjs/jwt';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
+import { EmailSender } from '../notifications/email/email.sender';
 import { isUniqueViolation } from '../db/pg-errors';
 import { handles, magicLinks, members, reapplicationAttempts, refreshTokens } from '../db/schema';
 import { AdminAccessService } from '../admin/admin-access.service';
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly verification: VerificationService,
     private readonly adminAccess: AdminAccessService,
+    private readonly email: EmailSender,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -99,7 +101,11 @@ export class AuthService {
       tokenHash: hashToken(raw),
       expiresAt: new Date(Date.now() + MAGIC_LINK_TTL_MS),
     });
-    // Real email delivery arrives with EPIC-G (S10); until then the token is returned in dev only.
+    // Send it. Whether the token is *also* returned in the response is the controller's
+    // call (AUTH_DEV_MAGIC_LINK) — and that flag is only safe to leave on because this
+    // deployment has no real members: it hands a working sign-in link to anyone who knows
+    // an address. Turning it off depends on this line working.
+    await this.email.magicLink(email, raw);
     return { devToken: raw };
   }
 
