@@ -36,6 +36,14 @@ DOCS=(
   "development|$REPO_ROOT/DEVELOPMENT.md|Development Setup|Running the monorepo locally: prerequisites, migrations, and how the simulated verification providers stand in for HCPC and Onfido.|Build"
 )
 
+# Pages that are already HTML and are copied verbatim rather than rendered from markdown —
+# an interactive mockup, say, whose whole point is that it behaves like the screen it is
+# drawing. Same slug|src|title|desc|group shape, so they land in the index alongside the
+# specs; build-index.py only reads the slug, title, description and group.
+STATIC_DOCS=(
+  "case-discussion-mockup|$REPO_ROOT/docs/2026-07-30-case-discussion-mockup.html|Case Discussion — Form & Attestation (mockup)|Interactive draft of the case-discussion composer, the six-item de-identification checklist and the attestation gate, annotated with the clinical questions still open for Andrew. Tick the boxes to see the publish gate.|Client"
+)
+
 for entry in "${DOCS[@]}"; do
   IFS='|' read -r slug src title desc group <<< "$entry"
   echo "Building $slug from $src"
@@ -43,6 +51,12 @@ for entry in "${DOCS[@]}"; do
   python3 "$(dirname "$0")/wrap-doc.py" "$slug" "$title" "$OUT/$slug.html" <<< "$body_html"
 done
 
-python3 "$(dirname "$0")/build-index.py" "$OUT/index.html" "${DOCS[@]}"
+for entry in "${STATIC_DOCS[@]}"; do
+  IFS='|' read -r slug src title desc group <<< "$entry"
+  echo "Copying $slug from $src"
+  cp "$src" "$OUT/$slug.html"
+done
+
+python3 "$(dirname "$0")/build-index.py" "$OUT/index.html" "${DOCS[@]}" "${STATIC_DOCS[@]}"
 
 echo "Done. Output in $OUT/"
