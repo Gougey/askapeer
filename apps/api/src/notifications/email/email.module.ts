@@ -1,6 +1,7 @@
 import { Global, Inject, Logger, Module, type OnModuleInit } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EMAIL_PROVIDER, LoggingEmailProvider, type EmailProvider } from './email-provider';
+import { PostmarkEmailProvider } from './postmark.provider';
 import { EmailSender } from './email.sender';
 
 /**
@@ -10,10 +11,10 @@ import { EmailSender } from './email.sender';
  * sign-in link and pre-handle verification notices, EPIC-G's notification worker — and
  * routing them all through one epic's module would be an odd dependency to draw.
  *
- * **The provider is chosen by config, and the only implementation today is the logger.**
- * Adding a real one (SES per the architecture spec §6, or Postmark) is a class in this
- * directory plus a branch below; every call site is already the production path, exactly
- * as the verification providers are structured.
+ * **The provider is chosen by `EMAIL_PROVIDER`**: `log` (default) writes to the API log
+ * and sends nothing; `postmark` sends for real. SES arrives with the AWS migrate step
+ * (architecture spec §6) as one more class and one more case — every call site is already
+ * the production path, exactly as the verification providers are structured.
  */
 @Global()
 @Module({
@@ -25,8 +26,10 @@ import { EmailSender } from './email.sender';
       useFactory: (config: ConfigService): EmailProvider => {
         const kind = config.get<string>('EMAIL_PROVIDER') ?? 'log';
         switch (kind) {
-          // case 'ses': return new SesEmailProvider(config);
-          // case 'postmark': return new PostmarkEmailProvider(config);
+          case 'postmark':
+            return new PostmarkEmailProvider(config);
+          // 'ses' arrives with the AWS migrate step (architecture spec §6); the seam is
+          // what keeps that a class in this directory and a case here.
           default:
             return new LoggingEmailProvider();
         }
