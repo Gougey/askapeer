@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EMAIL_PROVIDER, LoggingEmailProvider, type EmailProvider } from './email-provider';
 import { PostmarkEmailProvider } from './postmark.provider';
 import { EmailSender } from './email.sender';
+import { EmailSuppressionService } from './email-suppression.service';
+import { PostmarkWebhookController } from './postmark-webhook.controller';
 
 /**
  * Outbound mail.
@@ -36,8 +38,10 @@ import { EmailSender } from './email.sender';
       },
     },
     EmailSender,
+    EmailSuppressionService,
   ],
-  exports: [EmailSender, EMAIL_PROVIDER],
+  controllers: [PostmarkWebhookController],
+  exports: [EmailSender, EmailSuppressionService, EMAIL_PROVIDER],
 })
 export class EmailModule implements OnModuleInit {
   private readonly log = new Logger(EmailModule.name);

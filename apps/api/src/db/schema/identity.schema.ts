@@ -77,6 +77,46 @@ export const memberEmails = identity
   // rather than a shape.
   .existing();
 
+export const emailSuppressionKind = identity.enum('email_suppression_kind', [
+  'hard_bounce',
+  'spam_complaint',
+  'manual',
+]);
+
+/**
+ * Addresses we must stop mailing (fed by the Postmark bounce/complaint webhook).
+ *
+ * **Deliberately not a notification preference.** The obvious-looking implementation is to
+ * set `email_enabled = false` on the member's preferences, and it is wrong twice over:
+ * a CHECK constraint forbids disabling the account-status email (EPIC-G §6.1), and it
+ * would be a lie about what happened — the member has not opted out of anything. Their
+ * address is broken, which is a fact about delivery, not about their wishes. Keeping the
+ * two separate means that if the address is fixed, mail resumes without having to guess
+ * which preferences were theirs and which were ours.
+ *
+ * Keyed by **email, not member id**: a bounce tells us about an address. It may belong to
+ * no member, or to a member who has since changed it, and either way the address is what
+ * we must not send to.
+ *
+ * `cleared_at` rather than a delete, so a re-suppression can see it happened before —
+ * a repeatedly bouncing address is a different conversation from a one-off.
+ */
+export const emailSuppressions = identity.table(
+  'email_suppressions',
+  {
+    email: text('email').primaryKey(),
+    kind: emailSuppressionKind('kind').notNull(),
+    /** The provider's own description, kept verbatim for diagnosis. */
+    reason: text('reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    clearedAt: timestamp('cleared_at', { withTimezone: true }),
+  },
+  (t) => [
+    // "What is currently suppressed, newest first" — the review list.
+    index('email_suppressions_active_idx').on(t.createdAt).where(sql`cleared_at is null`),
+  ],
+);
+
 export const magicLinks = identity.table('magic_links', {
   id: uuid('id').primaryKey().defaultRandom(),
   memberId: uuid('member_id')

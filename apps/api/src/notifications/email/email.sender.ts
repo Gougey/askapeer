@@ -1,6 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EMAIL_PROVIDER, type EmailProvider, type OutboundEmail } from './email-provider';
+import { EmailSuppressionService } from './email-suppression.service';
 import { templates } from './templates';
 
 /**
@@ -13,9 +14,12 @@ import { templates } from './templates';
  */
 @Injectable()
 export class EmailSender {
+  private readonly log = new Logger(EmailSender.name);
+
   constructor(
     @Inject(EMAIL_PROVIDER) private readonly provider: EmailProvider,
     private readonly config: ConfigService,
+    private readonly suppressions: EmailSuppressionService,
   ) {}
 
   /**
@@ -56,7 +60,17 @@ export class EmailSender {
     await this.deliver(to, templates.accountNotice(this.ctx, event, reason, extra));
   }
 
+  /**
+   * The single choke point every email passes through — which is why the suppression check
+   * lives here rather than in each caller. A hard-bounced or complained-about address gets
+   * nothing, of any kind: see `EmailSuppressionService` for why that includes the mail
+   * EPIC-G §6.1 makes non-optional.
+   */
   private async deliver(to: string, body: Omit<OutboundEmail, 'to'>): Promise<void> {
+    if (await this.suppressions.isSuppressed(to)) {
+      this.log.warn(`Suppressed address, not sending "${body.subject}" to ${to}`);
+      return;
+    }
     await this.provider.send({ to, ...body });
   }
 }
