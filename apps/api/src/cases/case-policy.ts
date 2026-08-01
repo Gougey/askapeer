@@ -51,11 +51,14 @@ export const CHECKLIST_KEYS: readonly string[] = CHECKLIST_ITEMS.map((i) => i.ke
  * PRD §10.3, verbatim.
  *
  * The second sentence is the one doing the work — it is why a member reads the checklist
- * rather than clicking through it — so it is deliberately not softened. Andrew Renshaw has
- * an open question against whether we would in practice make the regulatory referral this
- * promises (case-discussion review, 2026-08-01, question 6); an attestation nobody would
- * act on is worse than a softer one we would, so if that answer changes the wording, this
- * constant is where it changes.
+ * rather than clicking through it — so it is deliberately not softened.
+ *
+ * Note what it does and does not say: "**may result in** … referral to my professional
+ * regulatory body" states a possible consequence, not an undertaking by the platform to
+ * make that referral. That distinction was checked and the wording deliberately kept as
+ * it is (case-discussion review, closed 2026-08-01). It may be reworded later; this
+ * constant is the only place it would change, and past attestations are unaffected
+ * because each stores its own verbatim copy.
  */
 export const ATTESTATION_TEXT =
   'I confirm that this case discussion is de-identified in accordance with AskaPeer’s ' +

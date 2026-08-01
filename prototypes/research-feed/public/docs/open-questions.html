@@ -464,18 +464,29 @@ findings / the question), on the judgement that fewer, larger fields get
 better answers than nine boxes half-filled with “n/a”; (3) <strong>what
 the timeline counts from</strong> — <strong>days since onset</strong>,
 not since injury, because overuse and gradual-onset presentations have
-no injury event to count from. <strong>Still open, and deliberately safe
-to answer late</strong>: a sport-specific checklist item (in sport the
-clinical facts alone can identify someone — “23-year-old male,
-Championship-level footballer, ACL rupture, 3 weeks ago” breaks no
-listed rule); whether patient consent is needed for a properly
-de-identified case and should be a further checklist item; and whether
-the attestation’s promise of a regulatory referral is one we would
-actually act on. Each of the three costs <strong>one line of
-data</strong> to apply — the checklist and attestation wording are
-served from <code>GET /v1/case-discussions/policy</code>, so the
-composer renders what the publish route enforces and there is no second
-copy to keep in step. <em>(EPIC-E spec §2, §4, §12.)</em></li>
+no injury event to count from. <strong>The other three closed 2026-08-01
+with no change — the built version stands, and EPIC-E now has no open
+questions</strong>: (4) <strong>sport-specific checklist item</strong> —
+<strong>no</strong>, six items stand; the identification-by-combination
+risk (sport + level + timing, sharpened by the day-count timeline plus a
+visible publish date) is <strong>accepted as a known residual</strong>
+and handled by moderation instead, where identifiable patient
+information is already a priority report category with its own queue
+tier; reopen if it leaks in a real case. (5) <strong>Consent</strong> —
+<strong>no consent item</strong>; a properly de-identified case does not
+require patient consent to discuss. (6) <strong>The regulatory
+referral</strong> — <strong>closed, wording unchanged</strong>: the
+question assumed the attestation commits the platform to referring a
+breach, and it does not — “<strong>may result in</strong> … referral to
+my professional regulatory body” states a possible consequence rather
+than an undertaking, so there is no promise to fail to honour. May be
+reworded later. All three would have cost <strong>one line of
+data</strong> had they gone the other way — the checklist and
+attestation wording are served from
+<code>GET /v1/case-discussions/policy</code>, so the composer renders
+what the publish route enforces and there is no second copy to keep in
+step; that property still holds. <em>(EPIC-E spec §2, §4,
+§12.)</em></li>
 </ul>
 <hr />
 <h2 id="per-epic-open-questions">3. Per-epic open questions</h2>

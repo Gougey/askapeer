@@ -237,7 +237,7 @@ All resolved by Adrian on 2026-07-17:
 
 ### Clinical review, 2026-08-01 (Andrew Renshaw)
 
-Six questions were put to Andrew ahead of building S9, as a working mockup of the composer (`docs/2026-07-30-case-discussion-mockup.html`). Three were answered and are **built**; three remain open and are **not blocking**, because each changes copy or one list entry rather than the schema.
+Six questions were put to Andrew ahead of building S9, as a working mockup of the composer (`docs/2026-07-30-case-discussion-mockup.html`). Three were answered before the build and shaped the schema; the other three were closed on 2026-08-01 with **no change** — the built version stands. **All six are now settled.**
 
 **Answered and built:**
 
@@ -245,10 +245,12 @@ Six questions were put to Andrew ahead of building S9, as a working mockup of th
 - ~~**Are these the right nine fields?**~~ — **resolved: four prose fields**, plus the two structural ones. See Section 2 for the mapping from the PRD's nine and the reasoning.
 - ~~**What does the timeline count from?**~~ — **resolved: days since onset.** "Onset" rather than "injury" precisely because overuse and gradual-onset presentations — a large share of sports medicine — have no injury event to count from. Stored as an integer day count (`onset_days`), rendered back in the units a clinician would speak in ("3 weeks since onset").
 
-**Open, and safe to answer after the build:**
+**Closed 2026-08-01 — the built version stands, no change made:**
 
-- **Does the checklist need a sport-specific item?** In sport the clinical facts alone can identify someone — "23-year-old male, Championship-level footballer, ACL rupture, 3 weeks ago" breaks no listed rule and may describe one findable person. The proposed item is *no combination of sport, level and timing that could identify someone*, with a possible distinction between elite and recreational. **Cost to add: one entry in `CHECKLIST_ITEMS`** (`apps/api/src/cases/case-policy.ts`) — the composer renders the list from the API and the attest route gates on it, so nothing else changes. Note that the answered timeline question sharpens this one rather than settling it: a day count plus a visible publish date gives an approximate onset date, which is exactly the "combination" concern.
-- **Consent, and who may read these.** Whether a practitioner needs patient consent to discuss a properly de-identified case, and whether that should be a further checklist item. Same one-line cost as above.
-- **Would we really make the regulatory referral?** The attestation promises it, and that sentence is why members read the checklist rather than click through it. An attestation nobody would act on is worse than a softer one that would be. Changing it means editing `ATTESTATION_TEXT`; past attestations are unaffected, since each stores the exact wording it was given.
+- ~~**Does the checklist need a sport-specific item?**~~ — **resolved: no, six items stand.** The concern was that in sport the clinical facts alone can identify someone: "23-year-old male, Championship-level footballer, ACL rupture, 3 weeks ago" breaks no listed rule and may describe one findable person. **Decision: accepted as a known residual risk rather than adding a seventh item.** The residual is real and worth recording honestly — a day count plus a visible publish date gives an approximate onset date, which is the "combination" case — and the mitigation is moderation rather than the composer: identifiable patient information is a **priority report category** with its own queue tier (Section 7, EPIC-F). Reopen this if a real case shows the combination leaking in practice.
+- ~~**Consent, and who may read these.**~~ — **resolved: no consent item.** A properly de-identified case does not require patient consent to discuss, and the checklist stays at six.
+- ~~**Would we really make the regulatory referral?**~~ — **closed for now, wording unchanged.** The question assumed the attestation *commits* the platform to referring a breach; it does not. The wording is "**may result in** permanent removal from the platform and referral to my professional regulatory body" — a statement of possible consequence, not an undertaking, so there is no promise here we could fail to honour. It may be reworded later; if it is, only `ATTESTATION_TEXT` changes, and past attestations are unaffected because each stores verbatim the exact wording it was given.
 
-The build is deliberately shaped so all three land as data rather than as schema: the checklist and the attestation text are served from `GET /v1/case-discussions/policy`, so there is one copy of the policy and the composer cannot drift from what the publish route enforces.
+**No open questions remain for EPIC-E.**
+
+Two notes for whoever revisits this. First, all three closed to *no code change*, which is the outcome the design was shaped for: the checklist and attestation text are served from `GET /v1/case-discussions/policy`, so had any of them gone the other way it would have been one line in `apps/api/src/cases/case-policy.ts` and nothing else. Second, that property still holds — adding a seventh checklist item, or softening the attestation, remains a single-line change today.
