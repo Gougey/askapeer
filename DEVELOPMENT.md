@@ -258,9 +258,14 @@ legal identity**, that it is de-identified.
 Renshaw's clinical review on 2026-08-01 cut it: `age_band` (Child 0–11 / Youth 12–17 /
 Adult 18+), `onset_days`, and four prose fields — presenting condition, history of
 presenting condition, objective findings, and the question. See EPIC-E §2 for the mapping
-from the PRD's nine, and EPIC-E §12 for the three review questions still open (a
-sport-specific checklist item, consent, and whether we would really make the regulatory
-referral). All three are copy or one list entry, which is why they didn't block the build.
+from the PRD's nine. His other three questions were closed on 2026-08-01 with **no
+change** (EPIC-E §12): no sport-specific checklist item, no consent item, and the
+attestation wording as it stands. One of those is worth knowing about rather than
+forgetting — **the identification-by-combination risk is accepted, not eliminated**: sport
+plus level plus timing can identify someone without breaking any listed rule, and a day
+count against a visible publish date gives an approximate onset date. The mitigation is
+moderation, where identifiable patient information is a priority report category, not the
+composer.
 
 Two kinds of enforcement, and they are not interchangeable:
 
