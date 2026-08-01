@@ -179,6 +179,11 @@
       "missing_fields": "Add a category, a question and some detail before posting.",
       "rejected": "We couldn't accept that post. Check your category and tags and try again.",
       "unavailable": "Something went wrong. Please try again."
+    },
+    "typeSwitch": {
+      "label": "What are you posting?",
+      "question": "Quick question",
+      "case": "Case discussion"
     }
   },
   "discussions": {
@@ -207,7 +212,14 @@
     "answerError": {
       "empty": "Write an answer before posting.",
       "unavailable": "Something went wrong. Please try again."
-    }
+    },
+    "caseHeading": "{age} · {onset} since onset",
+    "caseAge": {
+      "child": "Child (0–11)",
+      "youth": "Youth (12–17)",
+      "adult": "Adult (18+)"
+    },
+    "caseBadge": "Case"
   },
   "report": {
     "report": "Report",
@@ -235,7 +247,8 @@
     "heading": "Activity",
     "tabs": {
       "notifications": "Notifications",
-      "mine": "My Q&A"
+      "mine": "My Q&A",
+      "drafts": "Drafts"
     },
     "markAllRead": "Mark all as read",
     "rows": {
@@ -322,5 +335,94 @@
         "pushComingSoon": "Push notifications are coming soon."
       }
     }
+  },
+  "caseCompose": {
+    "heading": "Discuss a case",
+    "headingResume": "Finish your case",
+    "headingCorrection": "Correct your case",
+    "intro": "A case discussion is de-identified before it is published. The form takes the age band and timeline for you, and you confirm the rest.",
+    "resumeDrafts": "{count, plural, one {You have 1 unfinished case} other {You have # unfinished cases}}",
+    "needsCorrection": "A moderator asked for this case to be corrected. Your replies and kudos are unaffected — fix the details below, confirm the checklist again, and re-publish.",
+    "anonymity": "Stay anonymous — never name yourself, a colleague, an employer or a patient.",
+    "category": "Category",
+    "categoryPlaceholder": "Choose a category",
+    "structural": {
+      "legend": "Enforced by the form, not by trust",
+      "hint": "No date of birth and no calendar dates can be entered anywhere on this form."
+    },
+    "ageBand": "Age band",
+    "ageBandPlaceholder": "Choose",
+    "onsetDays": "Days since onset",
+    "onsetDaysPlaceholder": "e.g. 21",
+    "fields": {
+      "presentingCondition": {
+        "label": "Presenting condition",
+        "hint": "Location of pain, nature and severity, aggravating and easing factors."
+      },
+      "historyPresentingCondition": {
+        "label": "History of presenting condition",
+        "hint": "How and when it started, and the mechanism — acute or gradual."
+      },
+      "objectiveFindings": {
+        "label": "Objective findings",
+        "hint": "What you found on examination."
+      },
+      "communityQuestion": {
+        "label": "Your question",
+        "hint": "What have you tried, what worked, what did not, and what do you need help with?"
+      }
+    },
+    "checklist": {
+      "legend": "Before this can be published",
+      "textOnlyNote": "{count} items, not the eight in the policy — the two about photographs do not apply while cases are text-only."
+    },
+    "attestation": {
+      "legend": "Attestation",
+      "confirm": "I confirm the above",
+      "recorded": "Recorded with a timestamp against your verified identity — not your handle."
+    },
+    "gate": {
+      "incomplete": "Fill in every field to continue",
+      "outstanding": "{count, plural, one {1 confirmation still to give} other {# confirmations still to give}}",
+      "ready": "Ready to publish"
+    },
+    "publish": "Post case discussion",
+    "publishing": "Posting…",
+    "saveDraft": "Save as draft",
+    "visibility": "Published under your handle. Visible to every verified member.",
+    "error": {
+      "missing_fields": "Fill in the category, age band, timeline and all four fields before posting.",
+      "checklist": "Every de-identification item must be confirmed before a case can be published.",
+      "attestation": "The attestation must be confirmed before a case can be published.",
+      "rejected": "We couldn't publish that case. Check your details and try again.",
+      "unavailable": "Something went wrong. Please try again.",
+      "draftKept": "Your case has been kept as a draft."
+    }
+  },
+  "drafts": {
+    "heading": "Unfinished cases",
+    "private": "Only you can see these. A case discussion is not visible to anyone else — moderators included — until you publish it.",
+    "empty": "Nothing unfinished. Cases you save before publishing will appear here.",
+    "status": {
+      "draft": "Draft",
+      "needs_correction": "Needs correction"
+    },
+    "ageBand": {
+      "child": "Child",
+      "youth": "Youth",
+      "adult": "Adult"
+    },
+    "meta": "{age} · {onset} since onset",
+    "checklistDone": "Checklist complete",
+    "checklistRemaining": "{remaining} of {total} still to confirm"
+  },
+  "caseThread": {
+    "fields": {
+      "presentingCondition": "Presenting condition",
+      "historyPresentingCondition": "History of presenting condition",
+      "objectiveFindings": "Objective findings",
+      "communityQuestion": "The question"
+    },
+    "attested": "The author has attested that this case is de-identified."
   }
 }

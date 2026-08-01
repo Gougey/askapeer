@@ -22,8 +22,10 @@ issues); <strong>S0–S5 are in, plus notifications and the Activity tab
 read-only admin console (S11a) with verification actions, member
 reporting (S11b — report content or a handle), the moderation queue
 (S11c — remove content with kudos clawback / warn / dismiss), handle
-enforcement (S11d — suspend / expel / rename), and the audited
-reveal-identity action (S11e)</strong>.</p>
+enforcement (S11d — suspend / expel / rename), the audited
+reveal-identity action (S11e), and case discussions (S9 — the
+de-identified template, the checklist-and-attestation publish gate, and
+private drafts)</strong>.</p>
 <p><strong>Build approach:</strong> <em>prove-then-migrate</em> —
 develop locally + deploy to Fly.io (London) for the early slices;
 migrate to AWS <code>eu-west-2</code> before real practitioners. See the
@@ -360,6 +362,84 @@ inherit it rather than re-deriving it.</li>
 <p>Answering, kudos and the ranked ordering are <strong>S5</strong> (now
 in): a thread renders its answers, members award kudos, and answers sort
 by that score.</p>
+<h2 id="case-discussions-s9">Case discussions (S9)</h2>
+<p>The platform’s highest-risk surface, and the one place the “no
+patient-identifiable information” policy stops being a promise and
+becomes a mechanism. A case discussion is a <code>community.posts</code>
+row of <code>type = case_discussion</code> that starts at
+<code>status = draft</code> and is invisible to everyone but its author
+— moderators included — until its author has completed a six-item
+de-identification checklist and attested, under their <strong>verified
+legal identity</strong>, that it is de-identified.</p>
+<p><strong>The template is six fields, not the PRD’s nine</strong>
+(<code>community.case_details</code>). Andrew Renshaw’s clinical review
+on 2026-08-01 cut it: <code>age_band</code> (Child 0–11 / Youth 12–17 /
+Adult 18+), <code>onset_days</code>, and four prose fields — presenting
+condition, history of presenting condition, objective findings, and the
+question. See EPIC-E §2 for the mapping from the PRD’s nine, and EPIC-E
+§12 for the three review questions still open (a sport-specific
+checklist item, consent, and whether we would really make the regulatory
+referral). All three are copy or one list entry, which is why they
+didn’t block the build.</p>
+<p>Two kinds of enforcement, and they are not interchangeable:</p>
+<ul>
+<li><strong>Structural</strong> — age is a three-option select and the
+timeline is an integer day count. No field on the composer will accept a
+date of birth or a calendar date, so checklist items 3 and 4 hold even
+when someone ticks without reading.</li>
+<li><strong>Attested</strong> — the checklist and attestation cover what
+only the author can know: that the prose names nobody, no clinic, no
+club.</li>
+</ul>
+<p>Things worth knowing before touching this epic:</p>
+<ul>
+<li><strong>The gate is server-side.</strong>
+<code>POST /v1/case-discussions/:id/attest</code> re-reads the checklist
+from the database and refuses if any live item is unconfirmed. The
+composer’s disabled publish button is a courtesy on the far side of
+that; a hand-rolled request gets nowhere. <code>scratchpad</code>-style
+proof: the flow refuses an empty checklist, a partial one, an unknown
+item key, stale attestation wording, <code>confirmed: false</code>, and
+another member’s draft (404, not 403).</li>
+<li><strong>One copy of the policy.</strong>
+<code>GET /v1/case-discussions/policy</code> serves the checklist, the
+attestation text and the disclaimer from
+<code>apps/api/src/cases/case-policy.ts</code>; the composer renders
+that rather than its own list. A second copy in the web app would
+eventually show five items while the server gated on six.</li>
+<li><strong>Editing clears the checklist</strong>, in the API and in the
+composer both. The confirmations describe <em>that</em> text; carrying
+them across an edit would let altered content publish on the strength of
+a tick applied to something else. Resuming a draft therefore always
+starts with an empty checklist.</li>
+<li><strong><code>identity.case_attestations</code> is
+INSERT-only</strong> and binds <code>member_id</code>, not
+<code>handle_id</code> — the one deliberate identity↔︎community join
+(architecture §4.3). A re-attested case writes a second row; the first
+is never touched. <code>posts.service.ts</code> reads
+<code>attested_at</code> from it and <em>never</em>
+<code>member_id</code>: knowing a case was attested is what a reader
+needs, knowing who by is the identity link only a logged reveal may
+cross.</li>
+<li><strong><code>posts.title</code>/<code>posts.body</code> are a
+projection</strong> of <code>case_details</code>, derived on write so
+every EPIC-C surface (list, search, moderation) works without
+special-casing the type. The title is the presenting condition
+truncated; the body is the labelled fields, for the full-text index
+only. Screen C4 renders the structured fields, and the list card pairs
+the derived title with the author’s question rather than the
+machine-phrased body.</li>
+<li><strong>A published case is not editable</strong> (403). The
+attestation describes the text as published. Getting it back into an
+editable state is a moderator’s <code>request_correction</code> →
+<code>needs_correction</code>, which is <strong>S11f (issue #40), not
+yet built</strong> — so the re-attest path exists and works, but nothing
+can currently put a case into that state.</li>
+</ul>
+<p>Drafts live at <code>/activity/drafts</code> and nowhere else — they
+are not in Discussions and not in “My questions and answers”, both of
+which answer “what have I contributed”, which an unpublished case has
+not yet done.</p>
 <h2 id="notifications-and-the-activity-tab-s10">Notifications and the
 Activity tab (S10)</h2>
 <p>Replies, kudos and account-status changes reach members in-app

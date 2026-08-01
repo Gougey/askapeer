@@ -40,5 +40,8 @@ import { VocabularyService } from './vocabulary.service';
     JwtAuthGuard,
     AppAccessGuard,
   ],
+  // EPIC-E (S9) reads a case discussion's thread back through the same reader questions
+  // use, so the two post types stay one shape everywhere downstream.
+  exports: [PostsService],
 })
 export class ForumModule {}

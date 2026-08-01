@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { VerificationModule } from './verification/verification.module';
 import { HandlesModule } from './handles/handles.module';
 import { ForumModule } from './forum/forum.module';
+import { CasesModule } from './cases/cases.module';
 import { ReportsModule } from './reports/reports.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { AdminModule } from './admin/admin.module';
@@ -31,6 +32,7 @@ import { EmailModule } from './notifications/email/email.module';
     VerificationModule, // EPIC-A (S2)
     HandlesModule, // EPIC-B (S3)
     ForumModule, // EPIC-C + EPIC-D (S4, S5)
+    CasesModule, // EPIC-E case discussions (S9)
     NotificationsModule, // EPIC-G (S10)
     ReportsModule, // EPIC-F reporting (S11b)
     ModerationModule, // EPIC-F moderation queue + remove/warn (S11c)

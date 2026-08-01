@@ -2,7 +2,18 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from '@nes
 import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { encodeCursor, decodeCursor } from '../common/cursor';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { categories, comments, handles, kudos, postTags, posts, tags } from '../db/schema';
+import {
+  caseAttestations,
+  caseDetails,
+  categories,
+  comments,
+  handles,
+  kudos,
+  postTags,
+  posts,
+  tags,
+} from '../db/schema';
+import { CHECKLIST_ITEMS } from '../cases/case-policy';
 import { BadgeService } from './badge.service';
 import type { CreatePostDto, ListPostsDto } from './forum.dto';
 
@@ -77,10 +88,36 @@ export type ThreadComment = {
   editedAt: string | null;
 };
 
+/**
+ * The structured template of a case discussion (EPIC-E §2), present on the thread DTO only
+ * when `post.type === 'case_discussion'`.
+ *
+ * `post.body` also exists for a case, but it is a flattened projection built for the search
+ * index — screen C4 renders *this* instead, so the six fields stay six labelled fields
+ * rather than a wall of prose (EPIC-E §7).
+ *
+ * `checklist` and `attestedAt` are the audit face of the gate: shown to the author while a
+ * draft is unfinished, and to a moderator triaging a report, as the evidence that the
+ * de-identification promise was actually made.
+ */
+export type CaseDetail = {
+  ageBand: 'child' | 'youth' | 'adult';
+  onsetDays: number;
+  presentingCondition: string;
+  historyPresentingCondition: string;
+  objectiveFindings: string;
+  communityQuestion: string;
+  checklist: { key: string; label: string; confirmed: boolean }[];
+  checklistComplete: boolean;
+  attestedAt: string | null;
+};
+
 /** The thread DTO (EPIC-C §13.1). `viewerContext` is bundled so the client can render
  *  every control state in one round-trip rather than N follow-up calls. */
 export type Thread = {
   post: Omit<PostCard, 'snippet'> & { body: string; status: string };
+  /** Present only for `type = case_discussion` (EPIC-E §2). */
+  caseDetail?: CaseDetail;
   comments: ThreadComment[];
   viewerContext: { isAuthor: boolean; hasKudosedPost: boolean };
 };
@@ -176,10 +213,13 @@ export class PostsService {
         kudosTotal: handles.kudosTotal,
         answerCount: answerCountSql,
         kudosCount: postKudosCountSql,
+        // Null for a question — the join only matches case discussions (EPIC-E §2).
+        communityQuestion: caseDetails.communityQuestion,
       })
       .from(posts)
       .innerJoin(handles, eq(posts.handleId, handles.id))
       .innerJoin(categories, eq(posts.categoryId, categories.id))
+      .leftJoin(caseDetails, eq(caseDetails.postId, posts.id))
       .where(
         and(
           eq(posts.status, 'published'),
@@ -214,7 +254,12 @@ export class PostsService {
         id: row.id,
         type: row.type,
         title: row.title,
-        snippet: snippet(row.body),
+        // A case discussion's `body` is the labelled projection built for the search index,
+        // and its title is already the presenting condition — so snippeting the body would
+        // print "Presenting condition: …" back to the reader, repeating the title in
+        // machine phrasing. The author's actual question is the useful other half of the
+        // card: what the presentation is, then what they are asking about it.
+        snippet: snippet(row.communityQuestion ?? row.body),
         category: { id: row.categoryId, name: row.categoryName },
         tags: tagsByPost.get(row.id) ?? [],
         author: authorBlock(row, badged),
@@ -320,10 +365,11 @@ export class PostsService {
       throw new NotFoundException('No such post.');
     }
 
-    const [tagsByPost, ranked, hasKudosedPost] = await Promise.all([
+    const [tagsByPost, ranked, hasKudosedPost, caseDetail] = await Promise.all([
       this.tagsFor([row.id]),
       this.rankedComments(row.id, viewerHandleId),
       this.viewerKudosedPost(row.id, viewerHandleId),
+      row.type === 'case_discussion' ? this.caseDetailFor(row.id) : Promise.resolve(undefined),
     ]);
 
     // One badge lookup covers the post author and every commenter shown.
@@ -347,11 +393,58 @@ export class PostsService {
         createdAt: row.createdAt.toISOString(),
         editedAt: row.editedAt?.toISOString() ?? null,
       },
+      ...(caseDetail ? { caseDetail } : {}),
       comments: ranked.map((c) => ({
         ...c,
         author: { ...c.author, isTopContributor: badged.has(c.author.handleId) },
       })),
       viewerContext: { isAuthor, hasKudosedPost },
+    };
+  }
+
+  /**
+   * The structured template behind a case discussion (EPIC-E §2).
+   *
+   * The attestation timestamp is read across the schema boundary deliberately and
+   * narrowly: `attested_at` only, never `member_id`. Knowing a case *was* attested is what
+   * a reader needs; knowing *who* by is the identity link that only a logged
+   * reveal-identity action may cross (PRD §9.4). Taking the whole row here and picking a
+   * field off it later is exactly how that boundary erodes, so the query never selects it.
+   *
+   * The latest attestation wins — a case sent back for correction and re-attested has more
+   * than one, and the current one is the one describing the text on screen.
+   */
+  private async caseDetailFor(postId: string): Promise<CaseDetail | undefined> {
+    const [detail] = await this.db
+      .select()
+      .from(caseDetails)
+      .where(eq(caseDetails.postId, postId));
+    if (!detail) return undefined;
+
+    const [attestation] = await this.db
+      .select({ attestedAt: caseAttestations.attestedAt })
+      .from(caseAttestations)
+      .where(eq(caseAttestations.postId, postId))
+      .orderBy(desc(caseAttestations.attestedAt))
+      .limit(1);
+
+    const state = detail.checklistState ?? {};
+    const checklist = CHECKLIST_ITEMS.map((item) => ({
+      key: item.key,
+      label: item.label,
+      confirmed: state[item.key] === true,
+    }));
+
+    return {
+      ageBand: detail.ageBand,
+      onsetDays: detail.onsetDays,
+      presentingCondition: detail.presentingCondition,
+      historyPresentingCondition: detail.historyPresentingCondition,
+      objectiveFindings: detail.objectiveFindings,
+      communityQuestion: detail.communityQuestion,
+      checklist,
+      checklistComplete: checklist.every((i) => i.confirmed),
+      attestedAt: attestation?.attestedAt.toISOString() ?? null,
     };
   }
 

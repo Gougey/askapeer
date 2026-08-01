@@ -1,6 +1,6 @@
 # Development
 
-The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), and the audited reveal-identity action (S11e)**.
+The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), and case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts)**.
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
@@ -244,6 +244,66 @@ Two rules worth knowing before extending this epic:
 
 Answering, kudos and the ranked ordering are **S5** (now in): a thread renders its
 answers, members award kudos, and answers sort by that score.
+
+## Case discussions (S9)
+
+The platform's highest-risk surface, and the one place the "no patient-identifiable
+information" policy stops being a promise and becomes a mechanism. A case discussion is a
+`community.posts` row of `type = case_discussion` that starts at `status = draft` and is
+invisible to everyone but its author — moderators included — until its author has
+completed a six-item de-identification checklist and attested, under their **verified
+legal identity**, that it is de-identified.
+
+**The template is six fields, not the PRD's nine** (`community.case_details`). Andrew
+Renshaw's clinical review on 2026-08-01 cut it: `age_band` (Child 0–11 / Youth 12–17 /
+Adult 18+), `onset_days`, and four prose fields — presenting condition, history of
+presenting condition, objective findings, and the question. See EPIC-E §2 for the mapping
+from the PRD's nine, and EPIC-E §12 for the three review questions still open (a
+sport-specific checklist item, consent, and whether we would really make the regulatory
+referral). All three are copy or one list entry, which is why they didn't block the build.
+
+Two kinds of enforcement, and they are not interchangeable:
+
+- **Structural** — age is a three-option select and the timeline is an integer day count.
+  No field on the composer will accept a date of birth or a calendar date, so checklist
+  items 3 and 4 hold even when someone ticks without reading.
+- **Attested** — the checklist and attestation cover what only the author can know: that
+  the prose names nobody, no clinic, no club.
+
+Things worth knowing before touching this epic:
+
+- **The gate is server-side.** `POST /v1/case-discussions/:id/attest` re-reads the
+  checklist from the database and refuses if any live item is unconfirmed. The composer's
+  disabled publish button is a courtesy on the far side of that; a hand-rolled request
+  gets nowhere. `scratchpad`-style proof: the flow refuses an empty checklist, a partial
+  one, an unknown item key, stale attestation wording, `confirmed: false`, and another
+  member's draft (404, not 403).
+- **One copy of the policy.** `GET /v1/case-discussions/policy` serves the checklist,
+  the attestation text and the disclaimer from `apps/api/src/cases/case-policy.ts`; the
+  composer renders that rather than its own list. A second copy in the web app would
+  eventually show five items while the server gated on six.
+- **Editing clears the checklist**, in the API and in the composer both. The
+  confirmations describe *that* text; carrying them across an edit would let altered
+  content publish on the strength of a tick applied to something else. Resuming a draft
+  therefore always starts with an empty checklist.
+- **`identity.case_attestations` is INSERT-only** and binds `member_id`, not `handle_id` —
+  the one deliberate identity↔community join (architecture §4.3). A re-attested case
+  writes a second row; the first is never touched. `posts.service.ts` reads `attested_at`
+  from it and *never* `member_id`: knowing a case was attested is what a reader needs,
+  knowing who by is the identity link only a logged reveal may cross.
+- **`posts.title`/`posts.body` are a projection** of `case_details`, derived on write so
+  every EPIC-C surface (list, search, moderation) works without special-casing the type.
+  The title is the presenting condition truncated; the body is the labelled fields, for
+  the full-text index only. Screen C4 renders the structured fields, and the list card
+  pairs the derived title with the author's question rather than the machine-phrased body.
+- **A published case is not editable** (403). The attestation describes the text as
+  published. Getting it back into an editable state is a moderator's `request_correction`
+  → `needs_correction`, which is **S11f (issue #40), not yet built** — so the re-attest
+  path exists and works, but nothing can currently put a case into that state.
+
+Drafts live at `/activity/drafts` and nowhere else — they are not in Discussions and not
+in "My questions and answers", both of which answer "what have I contributed", which an
+unpublished case has not yet done.
 
 ## Notifications and the Activity tab (S10)
 

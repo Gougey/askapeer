@@ -116,7 +116,9 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S9 — Case discussions (checklist + attestation)  [parallel-able] [Must] — *the differentiator*
+## S9 — Case discussions (checklist + attestation)  [parallel-able] [Must] — *the differentiator* — **built 2026-08-01**
+
+> **Status.** Built. The template is **six fields, not the PRD's nine** — Andrew Renshaw's clinical review on 2026-08-01 answered the three questions that shaped the schema (age bands, field set, what the timeline counts from); see EPIC-E §2 and §12. Three review questions remain open and were deliberately not blocking, because each is one line of data: a sport-specific checklist item, patient consent, and whether the attestation's regulatory-referral promise is one we would act on. **Deferred**: `request_correction` — the moderator action that puts a published case into `needs_correction` — is **S11f (issue #40)**, so the author-side re-attest path exists and works but nothing can currently trigger it.
 
 - **Delivers**: a member creates a de-identified case discussion through the gated flow — draft → six-item checklist → attestation → publish — with structural age-band/relative-date fields and the disclaimer.
 - **Touches**: EPIC-E (`case_details`, `case_attestations` immutable, `POST /v1/case-discussions` draft, `PATCH`, `PUT …/checklist`, `POST …/attest`); EPIC-C `posts.status` `draft`/`needs_correction`; the author-private drafts read (`/v1/me/drafts` G-8/G-21). Screens D3, D4; C4 case rendering.

@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { fetchThread, type ThreadComment } from '@/lib/forum';
+import { fetchCasePolicy, formatOnset } from '@/lib/cases';
 import { requireAccessToken } from '@/lib/session';
 import { AuthorLine, TagList } from '@/components/PostCard';
+import { CaseBody } from './CaseBody';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
 import { DeleteCommentButton } from './DeleteCommentButton';
 import { KudosButton } from './KudosButton';
@@ -22,7 +24,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
   // both, deliberately, since "this exists but isn't for you" is itself a disclosure.
   if (!thread) notFound();
 
-  const [t, format] = await Promise.all([getTranslations('discussions'), getFormatter()]);
+  const [t, format, casePolicy] = await Promise.all([
+    getTranslations('discussions'),
+    getFormatter(),
+    // Only a case discussion needs the disclaimer, and only the API has the canonical
+    // wording — so it is fetched for a case and skipped entirely for a question.
+    thread.caseDetail ? fetchCasePolicy(token) : Promise.resolve(null),
+  ]);
   const { post, viewerContext } = thread;
 
   // The ranked list is flat; group replies under their parent for indentation.
@@ -40,11 +48,31 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
         <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
           {post.category.name}
         </span>
-        <h1 className="text-xl font-semibold">{post.title}</h1>
+        {/*
+          A case discussion's `title` is a truncation of its presenting condition, derived
+          for list surfaces — printing it here would state the first field twice, once cut
+          short. So the heading carries the two structural facts instead, which are what a
+          clinician frames the rest of the case against, and the presenting condition
+          appears once, in full, directly beneath.
+        */}
+        <h1 className="text-xl font-semibold">
+          {thread.caseDetail
+            ? t('caseHeading', {
+                age: t(`caseAge.${thread.caseDetail.ageBand}`),
+                onset: formatOnset(thread.caseDetail.onsetDays),
+              })
+            : post.title}
+        </h1>
         <AuthorLine author={post.author} />
-        {/* Member-authored prose: rendered as text, newlines preserved. No HTML or
-            markdown is interpreted, so a post can't inject markup into anyone's page. */}
-        <p className="whitespace-pre-wrap text-sm">{post.body}</p>
+        {thread.caseDetail ? (
+          // A case discussion renders its structured template (EPIC-E §7), not `post.body`
+          // — that column is the flattened projection built for the search index.
+          <CaseBody detail={thread.caseDetail} disclaimer={casePolicy?.disclaimer ?? ''} />
+        ) : (
+          /* Member-authored prose: rendered as text, newlines preserved. No HTML or
+             markdown is interpreted, so a post can't inject markup into anyone's page. */
+          <p className="whitespace-pre-wrap text-sm">{post.body}</p>
+        )}
         <TagList tags={post.tags} />
         <div className="flex items-center gap-3">
           {viewerContext.isAuthor ? (

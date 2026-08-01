@@ -36,23 +36,28 @@ Source of truth: `docs/askapeer-prd-v0.1.md`, Section 6.2 (template fields) and 
 
 ## 2. Data model
 
-A case discussion is a `community.posts` row (EPIC-C's table) with `type = case_discussion`, extended with a 1:1 structured-fields table — the PRD's Section 6.2 template is nine distinct structured questions, not a single free-text body, so a dedicated table is more faithful to the requirement than overloading EPIC-C's generic `title`/`body` columns:
+A case discussion is a `community.posts` row (EPIC-C's table) with `type = case_discussion`, extended with a 1:1 structured-fields table — the template is a set of distinct structured questions, not a single free-text body, so a dedicated table is more faithful to the requirement than overloading EPIC-C's generic `title`/`body` columns.
+
+> **Amended 2026-08-01, after Andrew Renshaw's clinical review.** The PRD's Section 6.2 template had nine prose fields; the built template has **four**, plus the two structural fields. `relevant_history` and `subjective_findings` fold into the presenting condition and its history; `red_flags_considered`, `differential_diagnosis`, `interventions_tried` and `response_to_treatment` collapse into the closing question, since a practitioner asking for help states what they tried and what it did as part of asking. The judgement behind the cut: fewer, larger fields get better answers than nine boxes half of which get filled with "n/a". The age bands were cut from nine demographic decades to three clinical ones, and the timeline became an integer day count rather than free text. **This section, not PRD §6.2, is now the built shape.**
 
 ```
 community.case_details
-  post_id                    uuid PK, FK -> community.posts
-  presenting_complaint       text
-  relevant_history           text      -- "non-identifying" per template item 2；
-                                          -- enforcement is the checklist (Section 4),
-                                          -- not a structural constraint on this field
-  subjective_findings        text
-  objective_findings         text
-  red_flags_considered       text
-  differential_diagnosis     text
-  interventions_tried        text
-  response_to_treatment      text
-  community_question         text      -- "specific question to the community"
+  post_id                       uuid PK, FK -> community.posts
+  age_band                      case_age_band  -- child (0–11) | youth (12–17) | adult (18+)
+  onset_days                    integer        -- days since onset; CHECK between 0 and 36500
+  presenting_condition          text           -- location, nature/severity, aggravating and
+                                               -- easing factors
+  history_presenting_condition  text           -- how/when it started; mechanism (acute/gradual)
+  objective_findings            text
+  community_question            text           -- what was tried, what worked, what is needed
+  checklist_state               jsonb          -- draft working state; NOT the audit record
 ```
+
+`age_band` and `onset_days` are the **structural** half of de-identification (Section 4): a three-option select and an integer mean the composer has no field anywhere that will accept a date of birth or a calendar date. Checklist items 3 and 4 are therefore enforced by the form's shape rather than trusted to the member — which is what makes them hold even when someone ticks without reading.
+
+`checklist_state` is mutable draft state, cleared on every edit (Section 8). The audit record is the immutable `checklist_snapshot` written at attestation, below.
+
+**`posts.title` and `posts.body` are still populated for a case**, derived from these fields at write time: the title is the presenting condition truncated at a word boundary, and the body is the labelled fields concatenated so EPIC-C's generated full-text column indexes the whole case. Both are a *projection* — `case_details` is canonical, screen C4 renders the structured fields, and the list card pairs the derived title with the author's `community_question` rather than the machine-phrased body. Deriving them rather than adding a title field back to the template is deliberate: the clinical review removed the title, and a screen that demanded one anyway would be overriding it.
 
 The attestation itself lives in `identity.case_attestations` (architecture spec, Section 4.3) — reproduced here for reference, not redefined:
 
@@ -107,8 +112,8 @@ The eight items are exactly PRD Section 10.2's list — this spec doesn't add or
 
 1. No patient names, initials, or aliases
 2. No address, postcode, or identifying location data
-3. No exact date of birth — age expressed as a band (e.g. 40–49 years)
-4. No exact treatment dates — timelines expressed as relative (e.g. "3 weeks post-injury")
+3. No exact date of birth — age expressed as a band (Child / Youth / Adult, per the 2026-08-01 clinical review; the PRD's "40–49 years" example predates it)
+4. No exact treatment dates — timelines expressed as relative (a day count since onset)
 5. No facility, club, or team name that would uniquely identify the patient
 6. No patient photographs showing faces, unique tattoos, scars, or identifying features
 7. Images reviewed for embedded metadata — platform strips EXIF automatically; content compliance confirmed
@@ -226,6 +231,24 @@ All resolved by Adrian on 2026-07-17:
 - ~~**Corrected resubmission mechanics**~~ — **resolved**: same post (preserves comments + kudos), unpublished to `needs_correction`, re-attested; kudos are *not* clawed back (distinct from `remove_content`). Full mechanics in Section 8.
 - ~~**Draft visibility to moderators**~~ — **resolved: no.** An unattested draft is not visible to moderators before publish — nothing has been published or attested yet, so there's nothing to moderate, and pre-publish visibility would be surveillance overreach inconsistent with the trust model.
 
-No open questions remain for EPIC-E.
-
 **Remaining minor implementation detail** (not a design open question): a timeout after which an un-corrected `needs_correction` case is treated as `removed` (Section 8) — worth setting, but not safety-critical since the content is already off public view.
+
+---
+
+### Clinical review, 2026-08-01 (Andrew Renshaw)
+
+Six questions were put to Andrew ahead of building S9, as a working mockup of the composer (`docs/2026-07-30-case-discussion-mockup.html`). Three were answered and are **built**; three remain open and are **not blocking**, because each changes copy or one list entry rather than the schema.
+
+**Answered and built:**
+
+- ~~**What are the right age bands?**~~ — **resolved: three clinical bands**, Child (0–11) / Youth (12–17) / Adult (18+), replacing the nine demographic decades in the mockup. Decade banding implies a precision the platform neither needs nor wants to carry, and the boundaries that matter in sports medicine are skeletal maturity and adolescent growth, not decades.
+- ~~**Are these the right nine fields?**~~ — **resolved: four prose fields**, plus the two structural ones. See Section 2 for the mapping from the PRD's nine and the reasoning.
+- ~~**What does the timeline count from?**~~ — **resolved: days since onset.** "Onset" rather than "injury" precisely because overuse and gradual-onset presentations — a large share of sports medicine — have no injury event to count from. Stored as an integer day count (`onset_days`), rendered back in the units a clinician would speak in ("3 weeks since onset").
+
+**Open, and safe to answer after the build:**
+
+- **Does the checklist need a sport-specific item?** In sport the clinical facts alone can identify someone — "23-year-old male, Championship-level footballer, ACL rupture, 3 weeks ago" breaks no listed rule and may describe one findable person. The proposed item is *no combination of sport, level and timing that could identify someone*, with a possible distinction between elite and recreational. **Cost to add: one entry in `CHECKLIST_ITEMS`** (`apps/api/src/cases/case-policy.ts`) — the composer renders the list from the API and the attest route gates on it, so nothing else changes. Note that the answered timeline question sharpens this one rather than settling it: a day count plus a visible publish date gives an approximate onset date, which is exactly the "combination" concern.
+- **Consent, and who may read these.** Whether a practitioner needs patient consent to discuss a properly de-identified case, and whether that should be a further checklist item. Same one-line cost as above.
+- **Would we really make the regulatory referral?** The attestation promises it, and that sentence is why members read the checklist rather than click through it. An attestation nobody would act on is worse than a softer one that would be. Changing it means editing `ATTESTATION_TEXT`; past attestations are unaffected, since each stores the exact wording it was given.
+
+The build is deliberately shaped so all three land as data rather than as schema: the checklist and the attestation text are served from `GET /v1/case-discussions/policy`, so there is one copy of the policy and the composer cannot drift from what the publish route enforces.
