@@ -81,7 +81,10 @@ export type AccountNoticePayload = {
     | 'content_removed'
     | 'suspended'
     | 'expelled'
-    | 'handle_renamed';
+    | 'handle_renamed'
+    /** A case discussion sent back to its author to fix (EPIC-E §8, S11f). The only
+     *  notice that asks the member to *act* — their case stays hidden until they do. */
+    | 'correction_requested';
   /** Verification only — the status transitioned to. */
   status?: string;
   /** The moderator's or system's stated reason, where one was given. */

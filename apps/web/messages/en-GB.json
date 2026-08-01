@@ -262,7 +262,8 @@
       "expelled": "Your membership has ended",
       "handleRenamed": "A moderator changed your handle to {handle}",
       "reason": "Reason given: {reason}",
-      "contentRemoved": "A moderator removed your content"
+      "contentRemoved": "A moderator removed your content",
+      "correctionRequested": "Your case discussion needs a correction"
     },
     "empty": {
       "notifications": "You're all caught up. Replies to your posts and kudos you receive will appear here.",
@@ -300,7 +301,7 @@
         "suspend": "A moderator suspended your access to the community.",
         "expel": "A moderator permanently removed your handle from Askapeer.",
         "rename_handle": "A moderator changed your handle.",
-        "request_correction": "A moderator has asked you to correct this case discussion before it is published."
+        "request_correction": "A moderator has asked you to correct this case discussion. It has been hidden from other members until you fix it and confirm the de-identification checklist again."
       },
       "category": {
         "identifiable_patient_information": "Identifiable patient information",
@@ -308,7 +309,10 @@
         "harassment": "Harassment",
         "spam": "Spam",
         "other": "Other"
-      }
+      },
+      "yourCase": "Your case discussion",
+      "awaitingCorrection": "This case is hidden from other members until you republish it. Its answers and their kudos are safe and come back with it.",
+      "fixAndRepublish": "Fix and republish"
     }
   },
   "settings": {

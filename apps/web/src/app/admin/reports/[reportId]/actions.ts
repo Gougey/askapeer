@@ -46,7 +46,8 @@ export type ModerationAction =
   | 'dismiss'
   | 'suspend'
   | 'expel'
-  | 'rename_handle';
+  | 'rename_handle'
+  | 'request_correction';
 export type ModerationResult = { ok: true } | { ok: false; message: string };
 
 /**

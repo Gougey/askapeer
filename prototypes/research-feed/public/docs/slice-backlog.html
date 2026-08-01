@@ -287,12 +287,10 @@ The other three were closed on 2026-08-01 with <strong>no
 change</strong> — no sport-specific checklist item (the combination risk
 is accepted and handled by priority moderation), no consent item, and
 the attestation wording kept as it stands, since “may result in” states
-a consequence rather than committing the platform to anything.
-<strong>Deferred</strong>: <code>request_correction</code> — the
-moderator action that puts a published case into
-<code>needs_correction</code> — is <strong>S11f (issue #40)</strong>, so
-the author-side re-attest path exists and works but nothing can
-currently trigger it.</p>
+a consequence rather than committing the platform to anything. The
+correction loop it pairs with — <code>request_correction</code>,
+<strong>S11f (issue #40)</strong> — landed straight after, so the loop
+is now closed end to end.</p>
 </blockquote>
 <ul>
 <li><strong>Delivers</strong>: a member creates a de-identified case
@@ -350,8 +348,25 @@ toggle) per the resolved decision — no delivery at MVP. Weekly digest
 reads <code>community.follows</code> (needs S7).</li>
 </ul>
 <hr />
-<h2 id="s11-reporting-moderation-audited-identity-access-must">S11 —
-Reporting, moderation &amp; audited identity access [Must]</h2>
+<h2
+id="s11-reporting-moderation-audited-identity-access-must-complete-2026-08-01">S11
+— Reporting, moderation &amp; audited identity access [Must] —
+<strong>complete 2026-08-01</strong></h2>
+<blockquote>
+<p><strong>Status.</strong> All of S11 is built: reporting (S11b), the
+queue (S11c), handle enforcement (S11d), the audited reveal (S11e), the
+read-only console + verification actions (S11a), and — last —
+<strong><code>request_correction</code> (S11f, issue #40)</strong>,
+which was blocked on case discussions and landed once S9 did. All
+<strong>seven</strong> action types are now live.</p>
+<p>Two things worth carrying from S11f. It <strong>does not claw back
+kudos</strong>, which is the whole reason it is not
+<code>remove_content</code>: a correction says the case is worth
+keeping, and the answers under it were given in good faith. And it
+<strong>clears the stored checklist</strong>, without which an author
+could re-attest unchanged content the moment the notice arrived — the
+composer would refuse, but the composer is not the gate.</p>
+</blockquote>
 <ul>
 <li><strong>Delivers</strong>: any member can report content/handles; a
 moderator triages a priority-ordered queue and takes actions
@@ -360,8 +375,8 @@ reveal-identity action works; the manual <strong>verification
 review</strong> queue is operable.</li>
 <li><strong>Touches</strong>: EPIC-F (<code>community.reports</code>
 incl. <code>handle</code> target + <code>anonymity_violation</code>
-priority; <code>moderation_actions</code> immutable incl. all six action
-types; <code>POST /v1/reports</code>;
+priority; <code>moderation_actions</code> immutable incl. all seven
+action types; <code>POST /v1/reports</code>;
 <code>/v1/admin/reports…/action</code>; <code>reveal-identity</code> →
 <code>identity_access_log</code>, field set G-24); EPIC-D kudos clawback
 on <code>remove_content</code>; EPIC-A manual review queue (G4/G5/G6).

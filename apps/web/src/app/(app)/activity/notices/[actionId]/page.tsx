@@ -79,7 +79,13 @@ export default async function ModerationNoticePage({
       {notice.content && (
         <section className="flex flex-col border" style={{ ...panel, gap: 'var(--space-2)' }}>
           <h2 className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--color-muted)' }}>
-            {t(notice.content.targetType === 'post' ? 'yourQuestion' : 'yourAnswer')}
+            {t(
+              notice.content.targetType === 'comment'
+                ? 'yourAnswer'
+                : notice.content.postType === 'case_discussion'
+                  ? 'yourCase'
+                  : 'yourQuestion',
+            )}
           </h2>
           <p className="text-sm font-medium">{notice.content.postTitle}</p>
           <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--color-muted)' }}>
@@ -89,6 +95,26 @@ export default async function ModerationNoticePage({
             <p className="text-xs font-semibold" style={{ color: 'var(--color-danger)' }}>
               {t('removed')}
             </p>
+          ) : notice.content.awaitingCorrection ? (
+            /*
+              A correction is the one notice that asks the member to do something, so it
+              gets the action rather than a link back to the thread — which is hidden
+              anyway until they republish. Saying the kudos are safe matters here: the
+              member's first fear on being told their case was pulled is that the
+              discussion under it is gone.
+            */
+            <>
+              <p className="text-xs font-semibold" style={{ color: 'var(--color-warn)' }}>
+                {t('awaitingCorrection')}
+              </p>
+              <Link
+                href={`/create/case/${notice.content.postId}`}
+                className="text-sm font-semibold"
+                style={{ color: 'var(--color-accent)' }}
+              >
+                {t('fixAndRepublish')}
+              </Link>
+            </>
           ) : (
             <Link
               href={`/discussions/${notice.content.postId}`}

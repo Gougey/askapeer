@@ -70,10 +70,18 @@ community.moderation_actions           -- immutable: INSERT-only grant
 | `warn` | No status change; a logged, immutable record a member received a formal warning | This epic |
 | `suspend` | `community.handles.status = suspended` **only** — deliberately does *not* touch `identity.members.verification_status` (resolved 2026-07-17; see Section 7) | EPIC-B (status) |
 | `expel` | `community.handles.status = expelled` **and** `identity.members.verification_status = expelled`, both in the same transaction; permanent | EPIC-B (status), Section 7 (identity linkage — resolved) |
-| `request_correction` | Case discussion → `needs_correction` (EPIC-C `posts.status`): the whole thread is hidden from public view, its comments and kudos **preserved** (crucially, kudos are **not** clawed back — unlike `remove_content` — because this is a fix-and-restore, not a removal); the author re-edits and re-attests to republish | EPIC-E (mechanics, its §8) |
+| `request_correction` | Case discussion → `needs_correction` (EPIC-C `posts.status`): the whole thread is hidden from public view, its comments and kudos **preserved** (crucially, kudos are **not** clawed back — unlike `remove_content` — because this is a fix-and-restore, not a removal); the author re-edits and re-attests to republish. **Also clears `case_details.checklist_state`** — see the note below | EPIC-E (mechanics, its §8) |
 | `rename_handle` | `community.handles.handle_name` changed, old name recorded in `community.handle_name_history` | EPIC-B |
 
 Every action writes one `community.moderation_actions` row regardless of type — this is the immutable trail the architecture spec's Section 4.4 requires for "moderation actions" generally, not just the four original action types.
+
+> **`request_correction` must clear the case's stored checklist** (`community.case_details.checklist_state`), added during the S11f build on 2026-08-01 after probing the loop.
+>
+> EPIC-E's publish gate re-reads that state from the database and refuses to attest unless every live item is confirmed. A case that has already been published necessarily has a *complete* stored checklist — so without clearing it, the author can re-attest the instant the notice arrives: unchanged content, one API call, nothing re-confirmed. The composer would not permit it, since it always starts a correction with an empty checklist, but the composer is not the gate and the whole epic's trustworthiness rests on that distinction.
+>
+> It is also the correct semantics rather than merely the safe ones. The state means "what the author has confirmed about the text as it stands", and a moderator has just ruled that the text as it stands is wrong. Editing a draft clears it for exactly the same reason (EPIC-E §8).
+>
+> **`request_correction` applies only to a published case discussion.** A question has no attestation to re-make and no correction composer to return to, so sending one there would strand it in a state its author cannot leave; the API refuses, and the queue DTO carries `target.contentType` so the console can hide the action rather than offer one that always errors.
 
 ---
 

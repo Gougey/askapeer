@@ -118,7 +118,7 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ## S9 — Case discussions (checklist + attestation)  [parallel-able] [Must] — *the differentiator* — **built 2026-08-01**
 
-> **Status.** Built. The template is **six fields, not the PRD's nine** — Andrew Renshaw's clinical review on 2026-08-01 answered the three questions that shaped the schema (age bands, field set, what the timeline counts from); see EPIC-E §2 and §12. The other three were closed on 2026-08-01 with **no change** — no sport-specific checklist item (the combination risk is accepted and handled by priority moderation), no consent item, and the attestation wording kept as it stands, since "may result in" states a consequence rather than committing the platform to anything. **Deferred**: `request_correction` — the moderator action that puts a published case into `needs_correction` — is **S11f (issue #40)**, so the author-side re-attest path exists and works but nothing can currently trigger it.
+> **Status.** Built. The template is **six fields, not the PRD's nine** — Andrew Renshaw's clinical review on 2026-08-01 answered the three questions that shaped the schema (age bands, field set, what the timeline counts from); see EPIC-E §2 and §12. The other three were closed on 2026-08-01 with **no change** — no sport-specific checklist item (the combination risk is accepted and handled by priority moderation), no consent item, and the attestation wording kept as it stands, since "may result in" states a consequence rather than committing the platform to anything. The correction loop it pairs with — `request_correction`, **S11f (issue #40)** — landed straight after, so the loop is now closed end to end.
 
 - **Delivers**: a member creates a de-identified case discussion through the gated flow — draft → six-item checklist → attestation → publish — with structural age-band/relative-date fields and the disclaimer.
 - **Touches**: EPIC-E (`case_details`, `case_attestations` immutable, `POST /v1/case-discussions` draft, `PATCH`, `PUT …/checklist`, `POST …/attest`); EPIC-C `posts.status` `draft`/`needs_correction`; the author-private drafts read (`/v1/me/drafts` G-8/G-21). Screens D3, D4; C4 case rendering.
@@ -138,10 +138,14 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S11 — Reporting, moderation & audited identity access  [Must]
+## S11 — Reporting, moderation & audited identity access  [Must] — **complete 2026-08-01**
+
+> **Status.** All of S11 is built: reporting (S11b), the queue (S11c), handle enforcement (S11d), the audited reveal (S11e), the read-only console + verification actions (S11a), and — last — **`request_correction` (S11f, issue #40)**, which was blocked on case discussions and landed once S9 did. All **seven** action types are now live.
+>
+> Two things worth carrying from S11f. It **does not claw back kudos**, which is the whole reason it is not `remove_content`: a correction says the case is worth keeping, and the answers under it were given in good faith. And it **clears the stored checklist**, without which an author could re-attest unchanged content the moment the notice arrived — the composer would refuse, but the composer is not the gate.
 
 - **Delivers**: any member can report content/handles; a moderator triages a priority-ordered queue and takes actions (remove/warn/suspend/expel/request-correction/rename); the audited reveal-identity action works; the manual **verification review** queue is operable.
-- **Touches**: EPIC-F (`community.reports` incl. `handle` target + `anonymity_violation` priority; `moderation_actions` immutable incl. all six action types; `POST /v1/reports`; `/v1/admin/reports…/action`; `reveal-identity` → `identity_access_log`, field set G-24); EPIC-D kudos clawback on `remove_content`; EPIC-A manual review queue (G4/G5/G6). Screens X1, G1–G6. The **moderator** JWT claim.
+- **Touches**: EPIC-F (`community.reports` incl. `handle` target + `anonymity_violation` priority; `moderation_actions` immutable incl. all seven action types; `POST /v1/reports`; `/v1/admin/reports…/action`; `reveal-identity` → `identity_access_log`, field set G-24); EPIC-D kudos clawback on `remove_content`; EPIC-A manual review queue (G4/G5/G6). Screens X1, G1–G6. The **moderator** JWT claim.
 - **Depends on**: S4/S5 (content to moderate), S2 (verification review branch).
 - **Notes**: where the two founding guarantees (anonymity, no-PHI) are enforced. `suspend`/`expel` wire to the handle/identity status + the session-revocation gate. Needed before opening to real users.
 

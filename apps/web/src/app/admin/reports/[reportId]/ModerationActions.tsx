@@ -14,6 +14,12 @@ const ALL_ACTIONS: ActionDef[] = [
     hint: 'Hides the post/answer and claws back the kudos it earned. Irreversible reputation change.',
   },
   {
+    key: 'request_correction',
+    label: 'Send back for correction',
+    color: 'var(--color-warn)',
+    hint: 'Case discussions only. Hides the thread until the author fixes it and re-attests — its answers and their kudos are preserved and come back with it. Use this, not Remove content, when the case is worth keeping.',
+  },
+  {
     key: 'warn',
     label: 'Warn',
     color: 'var(--color-warn)',
@@ -49,16 +55,25 @@ const ALL_ACTIONS: ActionDef[] = [
  * The moderation decision panel (EPIC-F §6, screen G2). Renders only for an open report;
  * a resolved one shows its outcome. Each action asks for confirmation — and an optional
  * reason recorded on the immutable action row — before it writes, since removal and
- * warnings are consequential and audited. `remove_content` is offered only for content
- * targets; a handle can't be "removed" (that's suspend/expel, S11d).
+ * warnings are consequential and audited.
+ *
+ * Two actions are filtered rather than offered-and-rejected, because a button that always
+ * errors is worse than no button: `remove_content` is content-only (a handle can't be
+ * "removed" — that's suspend/expel, S11d), and `request_correction` is offered only on a
+ * **published case discussion**, the one thing that has an attestation to re-make (S11f).
+ * The API enforces both independently; this only keeps the panel honest.
  */
 export function ModerationActions({
   reportId,
   targetType,
+  contentType,
+  contentStatus,
   status,
 }: {
   reportId: string;
   targetType: ReportTargetType;
+  contentType: string | null;
+  contentStatus: string | null;
   status: string;
 }) {
   const [chosen, setChosen] = useState<ModerationAction | null>(null);
@@ -75,7 +90,13 @@ export function ModerationActions({
     );
   }
 
-  const actions = ALL_ACTIONS.filter((a) => a.key !== 'remove_content' || targetType !== 'handle');
+  const correctable =
+    targetType === 'post' && contentType === 'case_discussion' && contentStatus === 'published';
+  const actions = ALL_ACTIONS.filter((a) => {
+    if (a.key === 'remove_content') return targetType !== 'handle';
+    if (a.key === 'request_correction') return correctable;
+    return true;
+  });
   const action = actions.find((a) => a.key === chosen);
 
   function choose(key: ModerationAction) {

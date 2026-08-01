@@ -199,6 +199,18 @@ export const templates = {
           'If you believe this is a mistake, reply to this email.',
         ],
       },
+      correction_requested: {
+        subject: 'Your case discussion needs a correction',
+        heading: 'Your case discussion needs a correction',
+        lines: [
+          'A moderator has asked you to correct one of your case discussions. It is hidden from other members until you republish it — the answers and kudos it received are unaffected and will come back with it.',
+          ...because,
+          'Open it, make the change, confirm the de-identification checklist again, and post it.',
+        ],
+        // Deliberately the notice rather than the composer: the member needs to read what
+        // was wrong before they are dropped into editing it. The notice links onward.
+        cta: openNotice,
+      },
       handle_renamed: {
         subject: 'Your handle has been changed',
         heading: 'Your handle has been changed',
