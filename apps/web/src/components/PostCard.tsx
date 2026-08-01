@@ -69,8 +69,31 @@ export async function PostCard({ post }: { post: PostCardDto }) {
       }}
     >
       <Link href={`/discussions/${post.id}`} className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
-        <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
-          {post.category.name}
+        <span className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+          <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
+            {post.category.name}
+          </span>
+          {/*
+            A case discussion is flagged in the list because it is a different kind of
+            content to open: de-identified patient material, carrying a disclaimer and a
+            published attestation. A reader should know which one they are clicking into
+            before they read it, not after.
+
+            Outlined rather than filled — it is a type label, not a status. The one filled
+            status colour in the product is kudos gold, and it belongs to kudos alone.
+          */}
+          {post.type === 'case_discussion' && (
+            <span
+              className="border px-2 py-0.5 text-xs"
+              style={{
+                borderRadius: 'var(--radius-pill)',
+                borderColor: 'var(--color-border-strong)',
+                color: 'var(--color-muted)',
+              }}
+            >
+              {t('caseBadge')}
+            </span>
+          )}
         </span>
         <h2 className="font-medium">{post.title}</h2>
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>

@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { jsonb, pgSchema, text, timestamp, uuid, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import {
+  inet,
+  jsonb,
+  pgSchema,
+  text,
+  timestamp,
+  uuid,
+  uniqueIndex,
+  index,
+} from 'drizzle-orm/pg-core';
 
 /**
  * The `identity` schema (EPIC-A) — real, personally-identifying data. In production
@@ -272,4 +281,52 @@ export const identityAccessLog = identity.table(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('identity_access_log_member_idx').on(t.memberId, t.createdAt)],
+);
+
+/**
+ * A member's attestation that a case discussion is de-identified (EPIC-E §5, PRD §10.3,
+ * architecture §4.3 — "the deliberate exception" where identity and community data join).
+ *
+ * This table is why the attestation is worth anything. Everything else a member does is
+ * attributed to their handle; this one act is bound to their **verified legal identity**,
+ * because the promise being made ("I have de-identified this, and I understand a breach
+ * may be referred to my regulator") is a professional undertaking and a pseudonymous one
+ * would be unenforceable. That is also why it lives in `identity` rather than next to
+ * `case_details` in `community`.
+ *
+ * `post_id` is a bare uuid with no cross-schema FK, for the same reason
+ * `identity_access_log.handle_id` is: `identity` must not depend on `community` or the
+ * schema imports go circular. `member_id` is the FK that carries the meaning.
+ *
+ * INSERT-only, like every other audit record in this schema (PRD §9.4 — immutable). A
+ * `needs_correction` post that is re-attested writes a **second row**; the first is never
+ * updated or deleted, so the history of what was attested, and when, stays complete.
+ */
+export const caseAttestations = identity.table(
+  'case_attestations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    memberId: uuid('member_id')
+      .notNull()
+      .references(() => members.id, { onDelete: 'cascade' }),
+    postId: uuid('post_id').notNull(),
+    /** The exact wording shown, stored verbatim — a later policy edit must not rewrite
+     *  what this member was asked to agree to. */
+    attestationText: text('attestation_text').notNull(),
+    /** The checklist as it stood at this moment: `[{ key, label, confirmed }]`. Snapshotted
+     *  rather than referenced so the record stays self-contained when the checklist's own
+     *  wording changes, and so the six-item (text-only) era is still legible once images
+     *  restore items 6 and 7 (EPIC-E §4). */
+    checklistSnapshot: jsonb('checklist_snapshot')
+      .$type<{ key: string; label: string; confirmed: boolean }[]>()
+      .notNull(),
+    attestedAt: timestamp('attested_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Evidential, per architecture §4.3. Nullable: behind a proxy it can be absent, and a
+     *  missing address must not be a reason to refuse an otherwise valid attestation. */
+    ipAddress: inet('ip_address'),
+  },
+  (t) => [
+    index('case_attestations_post_idx').on(t.postId, t.attestedAt),
+    index('case_attestations_member_idx').on(t.memberId, t.attestedAt),
+  ],
 );

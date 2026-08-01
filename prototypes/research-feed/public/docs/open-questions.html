@@ -447,6 +447,35 @@ removal). (3) <strong>Draft visibility to moderators</strong> —
 dependency already resolved (images deferred → six-item checklist).
 <em>(EPIC-E spec §4, §8, §9, §11, §12; EPIC-C spec §2; EPIC-F spec
 §3.)</em></li>
+<li><strong>EPIC-E clinical review — three of six questions answered
+2026-08-01 (Andrew Renshaw); three open but not blocking.</strong> The
+composer was put to Andrew as a working mockup
+(<code>docs/2026-07-30-case-discussion-mockup.html</code>) with six
+questions attached, ahead of building S9. <strong>Answered and
+built</strong>: (1) <strong>age bands</strong> — three <em>clinical</em>
+bands (Child 0–11 / Youth 12–17 / Adult 18+), not the nine demographic
+decades proposed, because the boundaries that change sports-medicine
+management are skeletal maturity and adolescent growth, and decade
+banding implies a precision the platform neither needs nor wants; (2)
+<strong>template fields</strong> — cut from the PRD’s nine to
+<strong>four prose fields</strong> plus the two structural ones
+(presenting condition / history of presenting condition / objective
+findings / the question), on the judgement that fewer, larger fields get
+better answers than nine boxes half-filled with “n/a”; (3) <strong>what
+the timeline counts from</strong> — <strong>days since onset</strong>,
+not since injury, because overuse and gradual-onset presentations have
+no injury event to count from. <strong>Still open, and deliberately safe
+to answer late</strong>: a sport-specific checklist item (in sport the
+clinical facts alone can identify someone — “23-year-old male,
+Championship-level footballer, ACL rupture, 3 weeks ago” breaks no
+listed rule); whether patient consent is needed for a properly
+de-identified case and should be a further checklist item; and whether
+the attestation’s promise of a regulatory referral is one we would
+actually act on. Each of the three costs <strong>one line of
+data</strong> to apply — the checklist and attestation wording are
+served from <code>GET /v1/case-discussions/policy</code>, so the
+composer renders what the publish route enforces and there is no second
+copy to keep in step. <em>(EPIC-E spec §2, §4, §12.)</em></li>
 </ul>
 <hr />
 <h2 id="per-epic-open-questions">3. Per-epic open questions</h2>

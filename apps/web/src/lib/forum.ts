@@ -1,4 +1,5 @@
 import { API_ORIGIN } from './api';
+import type { CaseDetail } from './cases';
 
 /** Mirrors the EPIC-C §13 DTOs the API returns. */
 export type AuthorBlock = {
@@ -38,6 +39,10 @@ export type ThreadComment = {
 
 export type Thread = {
   post: Omit<PostCard, 'snippet'> & { body: string; status: string };
+  /** Present only for `type = case_discussion` (EPIC-E §2). The structured template is
+   *  what screen C4 renders for a case; `post.body` is a flattened copy for the search
+   *  index and is never shown. */
+  caseDetail?: CaseDetail;
   comments: ThreadComment[];
   viewerContext: { isAuthor: boolean; hasKudosedPost: boolean };
 };

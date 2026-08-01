@@ -71,10 +71,20 @@ function trailNames(id: string, byId: Map<string, Tag>): string[] {
   return names;
 }
 
-export function TagPicker({ tags, max }: { tags: Tag[]; max: number }) {
+export function TagPicker({
+  tags,
+  max,
+  initialSelectedIds,
+}: {
+  tags: Tag[];
+  max: number;
+  /** Tags already on the post — resuming a case-discussion draft (EPIC-E, S9). Absent
+   *  when composing something new, which is every other caller. */
+  initialSelectedIds?: string[];
+}) {
   const t = useTranslations('compose');
   const index = useMemo(() => indexTags(tags), [tags]);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(initialSelectedIds ?? []);
   const [open, setOpen] = useState(false);
   const [capHit, setCapHit] = useState(false);
   const addButtonRef = useRef<HTMLButtonElement>(null);

@@ -213,6 +213,84 @@ export const postTags = community.table(
   (t) => [primaryKey({ columns: [t.postId, t.tagId] }), index('post_tags_tag_idx').on(t.tagId)],
 );
 
+/**
+ * The age bands a case discussion may use (EPIC-E §4, checklist item 3 — "age expressed
+ * as a band", never a date of birth).
+ *
+ * Three bands, not the nine the mockup guessed at, and they are **clinical rather than
+ * demographic**: Andrew Renshaw's review (2026-08-01) cut them to the boundaries that
+ * change sports-medicine management — skeletal immaturity, adolescent growth, and the
+ * adult presentation. Decade bands would have implied a precision the platform does not
+ * want to carry and does not clinically need.
+ *
+ * A free-text age field does not exist anywhere in the composer, which is the point: this
+ * is the structural half of de-identification, enforced by the form rather than trusted
+ * to the checklist (EPIC-E §4's "structural" enforcement group).
+ */
+export const caseAgeBand = community.enum('case_age_band', ['child', 'youth', 'adult']);
+
+/**
+ * The structured case-discussion template (EPIC-E §2, PRD §6.2 as revised).
+ *
+ * Six fields, per Andrew Renshaw's clinical review (2026-08-01), replacing the PRD's
+ * original nine: `relevant_history` and `subjective_findings` fold into the presenting
+ * condition and its history, and `red_flags_considered` / `differential_diagnosis` /
+ * `interventions_tried` / `response_to_treatment` collapse into the closing question —
+ * a practitioner asking for help states what they tried and what it did as part of
+ * asking. Fewer, larger fields get better answers than nine boxes half of which get
+ * "n/a".
+ *
+ * 1:1 with a `posts` row of `type = case_discussion`, rather than overloading the generic
+ * `title`/`body` columns, because the template is genuinely a set of distinct clinical
+ * questions and rendering it needs to keep them distinct. `posts.title`/`posts.body` are
+ * still populated for a case — derived from these fields at write time — so every list,
+ * search and moderation surface built on EPIC-C keeps working without special-casing the
+ * type. This table is the canonical copy; those two columns are a projection of it.
+ */
+export const caseDetails = community.table(
+  'case_details',
+  {
+    postId: uuid('post_id')
+      .primaryKey()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+  ageBand: caseAgeBand('age_band').notNull(),
+  /**
+   * Days since onset — the structural replacement for checklist item 4's "no exact
+   * treatment dates" (EPIC-E §4). An integer offset with no anchor date stored anywhere
+   * means the composer has no field that can accept a calendar date at all.
+   *
+   * "Onset" rather than "injury": Andrew's review settled the open question of what the
+   * timeline counts from, and overuse and gradual-onset presentations — a large share of
+   * sports medicine — have no injury event to count from.
+   */
+    onsetDays: integer('onset_days').notNull(),
+    presentingCondition: text('presenting_condition').notNull(),
+    historyPresentingCondition: text('history_presenting_condition').notNull(),
+    objectiveFindings: text('objective_findings').notNull(),
+    communityQuestion: text('community_question').notNull(),
+    /**
+     * The checklist as the author has it ticked *so far* — `{ [itemKey]: true }`, working
+     * state for a draft that hasn't been attested yet (EPIC-E §3 step 3).
+     *
+     * It lives server-side rather than in the browser for the reason EPIC-E §3 step 4
+     * gives: attesting re-checks every live item here, so the gate is never the client's
+     * word for it. A member can also close the composer half-way through and come back to
+     * it. This column is mutable working state and is *not* the audit record — that is the
+     * immutable snapshot written to `identity.case_attestations` at the moment of attest.
+     */
+    checklistState: jsonb('checklist_state')
+      .$type<Record<string, boolean>>()
+      .notNull()
+      .default({}),
+  },
+  (t) => [
+    // Mirrors the DTO's bound rather than trusting it. A negative offset is nonsense, and
+    // the upper bound (100 years) exists so a mis-entered *year* can't land here as a day
+    // count and be rendered as a plausible-looking timeline.
+    check('case_details_onset_days_range', sql`${t.onsetDays} between 0 and 36500`),
+  ],
+);
+
 export const commentStatus = community.enum('comment_status', ['published', 'removed']);
 
 /**
