@@ -437,14 +437,53 @@ machine-phrased body.</li>
 <li><strong>A published case is not editable</strong> (403). The
 attestation describes the text as published. Getting it back into an
 editable state is a moderator’s <code>request_correction</code> →
-<code>needs_correction</code>, which is <strong>S11f (issue #40), not
-yet built</strong> — so the re-attest path exists and works, but nothing
-can currently put a case into that state.</li>
+<code>needs_correction</code> (S11f, below).</li>
 </ul>
 <p>Drafts live at <code>/activity/drafts</code> and nowhere else — they
 are not in Discussions and not in “My questions and answers”, both of
 which answer “what have I contributed”, which an unpublished case has
 not yet done.</p>
+<h3 id="the-correction-loop-s11f">The correction loop (S11f)</h3>
+<p><code>request_correction</code> is the seventh moderation action and
+the middle path between removing a case and letting a de-identification
+slip stand: it sends a published case discussion back to its author. The
+thread goes to <code>needs_correction</code> — hidden from everyone but
+the author, using EPIC-C §13.4’s existing read rule rather than anything
+new — the author edits and re-attests, and it republishes with its
+discussion intact.</p>
+<ul>
+<li><strong>Kudos are not clawed back, and that is the entire reason it
+is a separate action from <code>remove_content</code>.</strong> Removal
+reverses reputation because the contribution should not have existed; a
+correction says the opposite. The answers underneath were given in good
+faith and are usually untouched by whatever is wrong with the case, so
+clawing back would punish the wrong members. Nothing in
+<code>requestCorrection</code> touches <code>kudos</code> or
+<code>handles.kudos_total</code>, and nothing should be added that
+does.</li>
+<li><strong>It clears <code>checklist_state</code>.</strong> Without
+that the author could re-attest the moment the notice arrived —
+unchanged content, one API call, nothing re-confirmed — because
+<code>attest</code> gates on the state left over from the original
+publish, which is still complete. The composer would not allow it, but
+the composer is not the gate. This was found by probing the loop, not by
+reading it.</li>
+<li><strong>Case discussions only, and only while published.</strong> A
+question has no attestation to re-make, so sending one back would strand
+it in a state its author has no composer to leave; the API refuses, and
+the admin panel hides the button rather than offering one that always
+errors (<code>target.contentType</code> on the queue DTO exists for
+that).</li>
+<li>The author is notified (<code>correction_requested</code>), and the
+notice screen gives them a <strong>Fix and republish</strong> link
+straight into the composer plus an explicit reassurance that the answers
+and kudos are safe — the first fear on being told your case was pulled
+is that the discussion under it is gone.</li>
+<li>Other members’ answers on a hidden case drop out of their own “My
+answers” list while it is hidden and return when it republishes. That
+falls out of <code>listMyComments</code> already filtering on
+<code>posts.status = 'published'</code>; no extra handling.</li>
+</ul>
 <h2 id="notifications-and-the-activity-tab-s10">Notifications and the
 Activity tab (S10)</h2>
 <p>Replies, kudos and account-status changes reach members in-app

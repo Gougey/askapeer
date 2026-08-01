@@ -53,7 +53,12 @@ export type ModerationNotice = {
     postId: string;
     postTitle: string;
     body: string;
+    /** `question` | `case_discussion` for a post; null for a comment. */
+    postType: string | null;
     removed: boolean;
+    /** Hidden pending the author's own fix (`needs_correction`, S11f) — deliberately
+     *  distinct from `removed`: this one comes back, with its kudos. */
+    awaitingCorrection: boolean;
   } | null;
 };
 

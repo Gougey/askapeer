@@ -6,11 +6,15 @@ import { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from '../handles/handle-name';
  *
  * - `remove_content` / `warn` — content-level (S11c).
  * - `suspend` / `expel` / `rename_handle` — handle-level enforcement (S11d).
+ * - `request_correction` — the case-discussion fix loop (S11f).
  * - `dismiss` — close a baseless report with no action row (the `dismissed` report status
  *   exists for exactly this; a queue is unusable without it).
  *
- * `request_correction` (the case-discussion fix loop) is the remaining action, deferred to
- * S11f since it depends on case discussions (S9).
+ * `request_correction` and `remove_content` are deliberately **not** interchangeable, and
+ * the difference is kudos: removal is a judgement that the contribution should not exist,
+ * so it reverses the reputation it earned; correction is "fix this and put it back", so
+ * the thread's answers and their kudos survive untouched. Using removal where correction
+ * was meant silently penalises everyone who answered.
  */
 export const MODERATION_ACTIONS = [
   'remove_content',
@@ -19,6 +23,7 @@ export const MODERATION_ACTIONS = [
   'suspend',
   'expel',
   'rename_handle',
+  'request_correction',
 ] as const;
 export type ModerationAction = (typeof MODERATION_ACTIONS)[number];
 

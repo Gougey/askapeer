@@ -61,6 +61,7 @@ function present(n: Notification) {
 const NOTICE_KEY = {
   warned: 'warned',
   content_removed: 'contentRemoved',
+  correction_requested: 'correctionRequested',
   suspended: 'suspended',
   expelled: 'expelled',
   handle_renamed: 'handleRenamed',

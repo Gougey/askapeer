@@ -80,7 +80,13 @@ export default async function ReportDetailPage({
         </div>
       )}
 
-      <ModerationActions reportId={report.id} targetType={report.targetType} status={report.status} />
+      <ModerationActions
+        reportId={report.id}
+        targetType={report.targetType}
+        contentType={report.target.contentType}
+        contentStatus={report.target.contentStatus}
+        status={report.status}
+      />
 
       {/* The audited exception (screen G3): the one place a handle is linked to a real
           person, and only via this explicit, separately-logged action (EPIC-F §5). */}

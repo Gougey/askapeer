@@ -90,6 +90,9 @@ export type ReportQueueItem = {
     handleName: string | null;
     snippet: string;
     contentStatus: string | null;
+    /** `question` | `case_discussion` for a post target; null otherwise. Decides whether
+     *  `request_correction` is offered — it applies to case discussions only (S11f). */
+    contentType: string | null;
     exists: boolean;
   };
 };

@@ -8,6 +8,7 @@ import {
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import {
+  caseDetails,
   comments,
   handleBlocklist,
   handleNameHistory,
@@ -39,6 +40,12 @@ export type ReportTargetContext = {
   snippet: string;
   /** post/comment status (e.g. already `removed`); null for a handle target. */
   contentStatus: string | null;
+  /**
+   * `question` | `case_discussion` for a post target; null otherwise. The queue needs it
+   * because `request_correction` applies only to case discussions (S11f) — offering it on
+   * a question would put the post in a state its author has no composer to leave.
+   */
+  contentType: string | null;
   exists: boolean;
 };
 
@@ -132,7 +139,119 @@ export class ModerationService {
         return this.expel(report, moderatorId, dto.reason);
       case 'rename_handle':
         return this.renameHandle(report, moderatorId, dto.reason, dto.newHandleName);
+      case 'request_correction':
+        return this.requestCorrection(report, moderatorId, dto.reason);
     }
+  }
+
+  /**
+   * Send a published case discussion back to its author to fix (EPIC-F §3, EPIC-E §8).
+   *
+   * The middle path between removing a case and letting a de-identification slip stand:
+   * the thread goes to `needs_correction`, which hides it from everyone but its author
+   * (EPIC-C §13.4's read rule, inherited — nothing extra is needed here to hide it), the
+   * author edits and re-attests, and it republishes with its discussion intact.
+   *
+   * **Kudos are not clawed back, and that is the whole point of this being a separate
+   * action.** `remove_content` reverses reputation because the contribution should not
+   * have existed; a correction says the opposite — the case is worth having, it just needs
+   * fixing. The answers underneath it were given in good faith and are usually untouched
+   * by whatever is wrong with the case, so penalising the people who wrote them would
+   * punish the wrong members entirely. Nothing in this method touches `kudos` or
+   * `handles.kudos_total`, and nothing should be added that does.
+   *
+   * Restricted to published case discussions: a question has no attestation to re-make and
+   * no correction loop to re-enter, so sending one here would strand it in a state its
+   * author has no composer to leave.
+   */
+  private async requestCorrection(
+    report: ReportRow,
+    moderatorId: string,
+    reason?: string,
+  ): Promise<{ ok: true }> {
+    if (report.targetType !== 'post') {
+      throw new BadRequestException(
+        'request_correction applies to a case discussion, not a comment or handle.',
+      );
+    }
+
+    const { authorHandleId, actionId } = await this.db.transaction(async (tx) => {
+      const [post] = await tx
+        .select({ handleId: posts.handleId, type: posts.type, status: posts.status })
+        .from(posts)
+        .where(eq(posts.id, report.targetId));
+      if (!post) throw new NotFoundException('No such post.');
+
+      if (post.type !== 'case_discussion') {
+        throw new BadRequestException(
+          'Only a case discussion can be sent back for correction. Use remove_content for a question.',
+        );
+      }
+      if (post.status !== 'published') {
+        // Already corrected, already removed, or still a draft — all cases where the
+        // moderator is looking at stale queue state rather than at what is live.
+        throw new ConflictException(`This case discussion is ${post.status}, not published.`);
+      }
+
+      await tx
+        .update(posts)
+        .set({ status: 'needs_correction' })
+        .where(eq(posts.id, report.targetId));
+
+      /*
+       * Clear the stored checklist, so republishing requires confirming it again.
+       *
+       * Without this the author can re-attest the moment the notice arrives — unchanged
+       * content, one API call, nothing re-confirmed — because `attest` gates on the
+       * checklist state left over from the original publish, which is still complete. The
+       * composer would not allow it, but the composer is not the gate; the server is
+       * (EPIC-E §3 step 4), and that is the whole reason this epic is trustworthy.
+       *
+       * It is also the right semantics rather than just the safe ones: the state means
+       * "what the author has confirmed about the text as it stands", and a moderator has
+       * just said the text as it stands is wrong. Editing a draft clears it for exactly
+       * the same reason (EPIC-E §8).
+       */
+      await tx
+        .update(caseDetails)
+        .set({ checklistState: {} })
+        .where(eq(caseDetails.postId, report.targetId));
+
+      const [action] = await tx
+        .insert(moderationActions)
+        .values({
+          reportId: report.id,
+          targetHandleId: post.handleId,
+          actionType: 'request_correction',
+          moderatorId,
+          reason: reason?.trim() || null,
+        })
+        .returning({ id: moderationActions.id });
+
+      // Siblings pointing at the same case resolve too — it is off public view, so every
+      // open complaint about it has been addressed by this one action.
+      await tx
+        .update(reports)
+        .set({ status: 'actioned' })
+        .where(
+          and(
+            eq(reports.targetType, 'post'),
+            eq(reports.targetId, report.targetId),
+            eq(reports.status, 'open'),
+          ),
+        );
+
+      return { authorHandleId: post.handleId, actionId: action.id };
+    });
+
+    // The one action that asks the member to *do* something, so the notice matters more
+    // here than anywhere else: until they re-attest, their case stays hidden.
+    await this.events.accountNotice(
+      authorHandleId,
+      { event: 'correction_requested', reason: reason?.trim() || null, actionId },
+      actionId,
+    );
+    return { ok: true };
   }
 
   /** A logged formal warning against the offending handle; content and status untouched. */
@@ -461,6 +580,7 @@ export class ModerationService {
         id: posts.id,
         title: posts.title,
         status: posts.status,
+        type: posts.type,
         handleId: handles.id,
         handleName: handles.handleName,
       })
@@ -470,7 +590,14 @@ export class ModerationService {
     return new Map(
       rows.map((r) => [
         r.id,
-        { handleId: r.handleId, handleName: r.handleName, snippet: r.title, contentStatus: r.status, exists: true },
+        {
+          handleId: r.handleId,
+          handleName: r.handleName,
+          snippet: r.title,
+          contentStatus: r.status,
+          contentType: r.type,
+          exists: true,
+        },
       ]),
     );
   }
@@ -491,7 +618,14 @@ export class ModerationService {
     return new Map(
       rows.map((r) => [
         r.id,
-        { handleId: r.handleId, handleName: r.handleName, snippet: excerpt(r.body), contentStatus: r.status, exists: true },
+        {
+          handleId: r.handleId,
+          handleName: r.handleName,
+          snippet: excerpt(r.body),
+          contentStatus: r.status,
+          contentType: null,
+          exists: true,
+        },
       ]),
     );
   }
@@ -505,7 +639,14 @@ export class ModerationService {
     return new Map(
       rows.map((r) => [
         r.id,
-        { handleId: r.id, handleName: r.name, snippet: r.name, contentStatus: null, exists: true },
+        {
+          handleId: r.id,
+          handleName: r.name,
+          snippet: r.name,
+          contentStatus: null,
+          contentType: null,
+          exists: true,
+        },
       ]),
     );
   }
@@ -526,6 +667,7 @@ const MISSING_TARGET: ReportTargetContext = {
   handleName: null,
   snippet: '(deleted)',
   contentStatus: null,
+  contentType: null,
   exists: false,
 };
 

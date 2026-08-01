@@ -158,7 +158,9 @@ the same transaction; permanent</td>
 its comments and kudos <strong>preserved</strong> (crucially, kudos are
 <strong>not</strong> clawed back — unlike <code>remove_content</code> —
 because this is a fix-and-restore, not a removal); the author re-edits
-and re-attests to republish</td>
+and re-attests to republish. <strong>Also clears
+<code>case_details.checklist_state</code></strong> — see the note
+below</td>
 <td>EPIC-E (mechanics, its §8)</td>
 </tr>
 <tr>
@@ -173,6 +175,31 @@ recorded in <code>community.handle_name_history</code></td>
 regardless of type — this is the immutable trail the architecture spec’s
 Section 4.4 requires for “moderation actions” generally, not just the
 four original action types.</p>
+<blockquote>
+<p><strong><code>request_correction</code> must clear the case’s stored
+checklist</strong>
+(<code>community.case_details.checklist_state</code>), added during the
+S11f build on 2026-08-01 after probing the loop.</p>
+<p>EPIC-E’s publish gate re-reads that state from the database and
+refuses to attest unless every live item is confirmed. A case that has
+already been published necessarily has a <em>complete</em> stored
+checklist — so without clearing it, the author can re-attest the instant
+the notice arrives: unchanged content, one API call, nothing
+re-confirmed. The composer would not permit it, since it always starts a
+correction with an empty checklist, but the composer is not the gate and
+the whole epic’s trustworthiness rests on that distinction.</p>
+<p>It is also the correct semantics rather than merely the safe ones.
+The state means “what the author has confirmed about the text as it
+stands”, and a moderator has just ruled that the text as it stands is
+wrong. Editing a draft clears it for exactly the same reason (EPIC-E
+§8).</p>
+<p><strong><code>request_correction</code> applies only to a published
+case discussion.</strong> A question has no attestation to re-make and
+no correction composer to return to, so sending one there would strand
+it in a state its author cannot leave; the API refuses, and the queue
+DTO carries <code>target.contentType</code> so the console can hide the
+action rather than offer one that always errors.</p>
+</blockquote>
 <hr />
 <h2 id="report-categories-and-queue-ordering">4. Report categories and
 queue ordering</h2>

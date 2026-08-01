@@ -17,7 +17,19 @@ export type ModerationNotice = {
     postId: string;
     postTitle: string;
     body: string;
+    /** `question` | `case_discussion` for a post; null for a comment. The screen labels a
+     *  case as a case rather than calling it "your question", and routes its fix CTA to
+     *  the case composer. */
+    postType: string | null;
     removed: boolean;
+    /**
+     * The case is hidden pending the author's own fix (`needs_correction`, S11f) — a
+     * different thing from `removed`, and the distinction is the whole message: removed
+     * content is gone and its kudos with it, a correction is waiting on them and comes
+     * back intact. Kept separate from `removed` so the screen cannot accidentally tell a
+     * member their work was deleted when it is sitting there waiting for an edit.
+     */
+    awaitingCorrection: boolean;
   } | null;
 };
 
@@ -115,6 +127,7 @@ export class ModerationNoticeService {
           title: posts.title,
           body: posts.body,
           status: posts.status,
+          type: posts.type,
           handleId: posts.handleId,
         })
         .from(posts)
@@ -125,7 +138,9 @@ export class ModerationNoticeService {
         postId: row.id,
         postTitle: row.title,
         body: row.body,
+        postType: row.type,
         removed: row.status === 'removed',
+        awaitingCorrection: row.status === 'needs_correction',
       };
     }
     if (targetType === 'comment') {
@@ -146,7 +161,11 @@ export class ModerationNoticeService {
         postId: row.postId,
         postTitle: row.postTitle,
         body: row.body,
+        postType: null,
         removed: row.status === 'removed',
+        // A comment is never sent back for correction — the action targets a case
+        // discussion, which is always a post.
+        awaitingCorrection: false,
       };
     }
     // target_type = handle: the action was about the member, not a piece of content.
