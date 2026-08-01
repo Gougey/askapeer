@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Case discussion — form and attestation (draft for review)</title>
+
+<style>
+  /* AskaPeer tokens, verbatim from packages/design-tokens. The mock must look like the
+     product, not like a mockup of it. Fraunces/Inter can't load here (no external fonts),
+     so these are the same fallback stacks production uses. */
+  :root {
+    --navy: #001f52;
+    --navy-dark: #001640;
+    --navy-tint: #e6ebf2;
+    --navy-tint-2: #f2f5f9;
+    --spark: #ed1b24;
+    --kudos: #d98a1f;
+    --kudos-text: #8a5a12;
+    --kudos-tint: #fbf0dc;
+    --verify: #2e8b6f;
+    --verify-text: #256f59;
+    --verify-tint: #e4f2eb;
+    --danger: #c0492f;
+
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --fg: #14212b;
+    --muted: #64757f;
+    --faint: #93a1a9;
+    --border: #e5ebee;
+    --border-strong: #d7e0e4;
+
+    --radius: 16px;
+    --radius-md: 14px;
+    --radius-sm: 12px;
+    --radius-pill: 999px;
+    --shadow-card: 0 1px 2px rgba(20,33,43,.06), 0 4px 16px rgba(20,33,43,.05);
+
+    /* The annotation layer is deliberately outside the product's palette — a cool slate
+       that belongs to the document, not the app, so nothing here is mistaken for UI. */
+    --note-ink: #3d4b57;
+    --note-bg: #e7ecf0;
+    --note-rule: #c2ced7;
+
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1220; --surface: #111a2b; --fg: #e2e8f0; --muted: #94a3b8; --faint: #5f7183;
+      --border: #1e2c40; --border-strong: #2a3a52;
+      --navy-tint: #16233b; --navy-tint-2: #141f33; --verify-tint: #14332a; --kudos-tint: #2e2413;
+      --navy: #6f9bff; --kudos: #e2a53f; --kudos-text: #e2a53f; --verify-text: #4bbf98;
+      --shadow-card: 0 1px 2px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.24);
+      --note-ink: #b8c4cf; --note-bg: #18212e; --note-rule: #2d3a48;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1220; --surface: #111a2b; --fg: #e2e8f0; --muted: #94a3b8; --faint: #5f7183;
+    --border: #1e2c40; --border-strong: #2a3a52;
+    --navy-tint: #16233b; --navy-tint-2: #141f33; --verify-tint: #14332a; --kudos-tint: #2e2413;
+    --navy: #6f9bff; --kudos: #e2a53f; --kudos-text: #e2a53f; --verify-text: #4bbf98;
+    --shadow-card: 0 1px 2px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.24);
+    --note-ink: #b8c4cf; --note-bg: #18212e; --note-rule: #2d3a48;
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f4; --surface: #ffffff; --fg: #14212b; --muted: #64757f; --faint: #93a1a9;
+    --border: #e5ebee; --border-strong: #d7e0e4;
+    --navy-tint: #e6ebf2; --navy-tint-2: #f2f5f9; --verify-tint: #e4f2eb; --kudos-tint: #fbf0dc;
+    --navy: #001f52; --kudos: #d98a1f; --kudos-text: #8a5a12; --verify-text: #256f59;
+    --shadow-card: 0 1px 2px rgba(20,33,43,.06), 0 4px 16px rgba(20,33,43,.05);
+    --note-ink: #3d4b57; --note-bg: #e7ecf0; --note-rule: #c2ced7;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 64px; }
+
+  header.doc { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+  header.doc h1 {
+    font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 4vw, 36px);
+    margin: 0; text-wrap: balance; letter-spacing: -0.01em;
+  }
+  .standfirst { color: var(--muted); max-width: 62ch; margin: 0; }
+  .status {
+    display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+    background: var(--kudos-tint); color: var(--kudos-text);
+    border-radius: var(--radius-pill); padding: 5px 13px;
+    font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  }
+
+  .split { display: grid; grid-template-columns: minmax(0, 430px) minmax(0, 1fr); gap: 40px; align-items: start; margin-top: 32px; }
+  @media (max-width: 900px) { .split { grid-template-columns: 1fr; gap: 32px; } }
+
+  /* ---- the product mock ---------------------------------------------------- */
+  .device {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 24px; box-shadow: var(--shadow-card); overflow: hidden;
+    position: sticky; top: 24px;
+  }
+  @media (max-width: 900px) { .device { position: static; } }
+
+  .appbar {
+    display: flex; align-items: center; gap: 10px; padding: 0 16px;
+    min-height: 52px; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .wordmark { font-weight: 800; font-size: 17px; letter-spacing: -.02em; }
+  .wordmark span { color: var(--spark); }
+
+  .sheet { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .sheet-head h2 { font-family: var(--font-display); font-weight: 600; font-size: 19px; margin: 0; }
+  .cancel { color: var(--muted); font-size: 14px; background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; }
+
+  .segmented { display: flex; gap: 3px; padding: 3px; background: var(--navy-tint-2); border-radius: var(--radius-pill); }
+  .segmented button {
+    flex: 1; border: 0; padding: 8px 4px; border-radius: var(--radius-pill); cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); background: transparent;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--surface); color: var(--navy); box-shadow: var(--shadow-card); }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field > label, .grouplabel {
+    font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
+  }
+  .field input[type="text"], .field textarea, .field select {
+    font: inherit; font-size: 16px; /* 16px minimum — iOS zooms below it */
+    color: var(--fg); background: var(--surface);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    padding: 9px 11px; width: 100%; box-sizing: border-box; resize: vertical;
+  }
+  .field textarea { min-height: 62px; }
+  .field input:focus-visible, .field textarea:focus-visible, .field select:focus-visible,
+  button:focus-visible, .check:focus-within {
+    outline: 2px solid var(--navy); outline-offset: 2px;
+  }
+  .hint { font-size: 12px; color: var(--faint); }
+
+  .structural { border: 1px dashed var(--verify); background: var(--verify-tint); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+  .structural .tag {
+    align-self: flex-start; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--verify-text);
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* checklist + attestation, per style guide §8.12 */
+  .panel { border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .panel.checklist { background: var(--navy-tint); }
+  .panel.attest { background: var(--kudos-tint); }
+  .panel h3 { margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 7px; color: var(--fg); }
+  .check { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.45; cursor: pointer; }
+  .check input { accent-color: var(--navy); width: 17px; height: 17px; margin: 1px 0 0; flex: none; cursor: pointer; }
+  .panel.attest .check input { accent-color: var(--kudos-text); }
+  .attest-text { font-style: italic; font-size: 13.5px; color: var(--fg); margin: 0; }
+
+  .postbar { display: flex; flex-direction: column; gap: 8px; }
+  .post {
+    font: inherit; font-weight: 700; font-size: 15px; color: #fff; background: var(--navy);
+    border: 0; border-radius: var(--radius-pill); padding: 12px; cursor: pointer; width: 100%;
+  }
+  .post[disabled] { background: var(--border-strong); color: var(--faint); cursor: not-allowed; }
+  .gate { font-size: 12px; text-align: center; color: var(--muted); }
+  .gate.ready { color: var(--verify-text); font-weight: 600; }
+
+  /* ---- annotations --------------------------------------------------------- */
+  .pin {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 19px; height: 19px; border-radius: var(--radius-pill);
+    background: var(--note-ink); color: var(--bg);
+    font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; flex: none;
+    vertical-align: 1px; margin-left: 6px;
+  }
+  .notes { display: flex; flex-direction: column; gap: 0; }
+  .notes > h2 {
+    font-family: var(--font-display); font-weight: 600; font-size: 21px; margin: 0 0 4px;
+  }
+  .notes > .lede { color: var(--muted); margin: 0 0 20px; max-width: 60ch; }
+  .note {
+    display: grid; grid-template-columns: 26px 1fr; gap: 12px;
+    padding: 18px 0; border-top: 1px solid var(--note-rule);
+  }
+  .note h3 { margin: 0 0 6px; font-size: 16px; font-weight: 700; text-wrap: balance; }
+  .note p { margin: 0 0 8px; color: var(--note-ink); max-width: 62ch; }
+  .note p:last-child { margin-bottom: 0; }
+  .note .ask { color: var(--fg); font-weight: 600; }
+  .note .pin { margin: 2px 0 0; }
+  .example {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+    background: var(--note-bg); border-left: 3px solid var(--danger);
+    padding: 9px 12px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin: 0 0 8px;
+  }
+  .settled { margin-top: 28px; padding: 16px; background: var(--note-bg); border-radius: var(--radius-md); }
+  .settled h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .settled ul { margin: 0; padding-left: 18px; color: var(--note-ink); }
+  .settled li { margin-bottom: 4px; }
+  footer.doc { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--note-rule); color: var(--faint); font-size: 13px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .post, .segmented button { transition: background 140ms ease, color 140ms ease; }
+  }
+  .backlink {
+    display: inline-block; margin-bottom: 20px; font-size: 13px; font-weight: 600;
+    color: var(--muted); text-decoration: none;
+  }
+  .backlink:hover, .backlink:focus-visible { color: var(--fg); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="backlink" href="/docs/">← Askapeer technical documents</a>
+  <header class="doc">
+    <span class="status">Draft for Andy — not built yet</span>
+    <h1>Case discussion: the form, and the gate before publishing</h1>
+    <p class="standfirst">
+      This is my current reading of the spec, drawn as the screen. Everything on the left is
+      what a member would see. The numbered pins mark the six things I think only you can
+      settle — they are questions about clinical practice, not about software.
+    </p>
+  </header>
+
+  <div class="split">
+    <!-- ============ THE MOCK ============ -->
+    <section class="device" aria-label="Case discussion composer, mockup">
+      <div class="appbar"><span class="wordmark">Ask<span>a</span>Peer</span></div>
+
+      <form class="sheet" id="composer" onsubmit="return false;">
+        <div class="sheet-head">
+          <button type="button" class="cancel">Cancel</button>
+          <h2>New case</h2>
+          <span style="width:44px"></span>
+        </div>
+
+        <div class="segmented" role="group" aria-label="What are you posting?">
+          <button type="button" aria-pressed="false">Quick question</button>
+          <button type="button" aria-pressed="true">Case discussion</button>
+        </div>
+
+        <!-- structural de-identification: the two fields the platform enforces -->
+        <div class="structural">
+          <span class="tag">Enforced by the form, not by trust</span>
+          <div class="row2">
+            <div class="field">
+              <label for="age">Age band <span class="pin">2</span></label>
+              <select id="age">
+                <option>Under 12</option><option>12–15</option><option>16–17</option>
+                <option selected>18–24</option><option>25–34</option><option>35–44</option>
+                <option>45–54</option><option>55–64</option><option>65+</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="timing">Timeline <span class="pin">4</span></label>
+              <input id="timing" type="text" value="3 weeks post-injury" />
+            </div>
+          </div>
+          <p class="hint">No date of birth and no calendar dates can be entered anywhere in this form.</p>
+        </div>
+
+        <div class="field">
+          <label for="f1">Presenting complaint</label>
+          <textarea id="f1">Acute posterior thigh pain during maximal sprint effort, unable to continue.</textarea>
+        </div>
+        <div class="field">
+          <label for="f2">Relevant history <span class="pin">1</span></label>
+          <textarea id="f2">Semi-professional sprinter. Two prior hamstring strains on the same side, most recent last season.</textarea>
+        </div>
+        <div class="field">
+          <label for="f3">Subjective findings</label>
+          <textarea id="f3">Sharp pain at time of injury, now a persistent ache. Apprehension on acceleration.</textarea>
+        </div>
+        <div class="field">
+          <label for="f4">Objective findings</label>
+          <textarea id="f4">Tenderness at the proximal musculotendinous junction. Pain and weakness on resisted knee flexion at 90°.</textarea>
+        </div>
+        <div class="field">
+          <label for="f5">Red flags considered</label>
+          <textarea id="f5">No neurological deficit, no bony tenderness, no night pain. Avulsion considered and thought unlikely.</textarea>
+        </div>
+        <div class="field">
+          <label for="f6">Differential diagnosis</label>
+          <textarea id="f6">Grade 2 biceps femoris strain. Considered proximal tendinopathy and referred lumbar pain.</textarea>
+        </div>
+        <div class="field">
+          <label for="f7">Interventions tried</label>
+          <textarea id="f7">Relative rest, progressive isometric then eccentric loading, gradual return-to-run protocol.</textarea>
+        </div>
+        <div class="field">
+          <label for="f8">Response to treatment</label>
+          <textarea id="f8">Good early progress, then a plateau at higher-speed running with recurring apprehension.</textarea>
+        </div>
+        <div class="field">
+          <label for="f9">Your question for the community</label>
+          <textarea id="f9">What criteria are others using to progress to maximal sprinting after a repeat hamstring injury?</textarea>
+        </div>
+        <p class="hint" style="margin:-6px 0 0">Fields not shown: none. This is the whole template. <span class="pin">3</span></p>
+
+        <!-- checklist -->
+        <div class="panel checklist">
+          <h3>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/>
+            </svg>
+            Before this can be published <span class="pin">1</span>
+          </h3>
+          <label class="check"><input type="checkbox" class="gatecheck" /> No patient names, initials, or aliases</label>
+          <label class="check"><input type="checkbox" class="gatecheck" /> No address, postcode, or identifying location</label>
+          <label class="check"><input type="checkbox" class="gatecheck" /> Age given as a band, not a date of birth</label>
+          <label class="check"><input type="checkbox" class="gatecheck" /> Timelines relative, with no calendar dates</label>
+          <label class="check"><input type="checkbox" class="gatecheck" /> No facility, club, or team that would identify the patient</label>
+          <label class="check"><input type="checkbox" class="gatecheck" /> No documents containing patient identifiers</label>
+          <p class="hint" style="margin:2px 0 0">Six items, not the eight in the policy — the two about photographs do not apply while cases are text-only.</p>
+        </div>
+
+        <!-- attestation -->
+        <div class="panel attest">
+          <h3>Attestation <span class="pin">6</span></h3>
+          <p class="attest-text">
+            “I confirm that this case discussion is de-identified in accordance with AskaPeer’s
+            patient privacy policy. I understand that any breach of patient confidentiality is a
+            serious professional and legal matter and may result in permanent removal from the
+            platform and referral to my professional regulatory body.”
+          </p>
+          <label class="check"><input type="checkbox" class="gatecheck" id="attestbox" /> I confirm the above</label>
+          <p class="hint" style="margin:2px 0 0">Recorded with a timestamp against your verified identity — not your handle.</p>
+        </div>
+
+        <div class="postbar">
+          <button type="button" class="post" id="postbtn" disabled>Post case discussion</button>
+          <p class="gate" id="gatemsg">Every item and the attestation must be ticked</p>
+          <p class="hint" style="text-align:center">Published under your handle. Visible to every verified member. <span class="pin">5</span></p>
+        </div>
+      </form>
+    </section>
+
+    <!-- ============ THE QUESTIONS ============ -->
+    <section class="notes">
+      <h2>Six things I need from you</h2>
+      <p class="lede">Roughly in order of how much damage getting them wrong would do.</p>
+
+      <article class="note">
+        <span class="pin">1</span>
+        <div>
+          <h3>Is generic de-identification enough for sports medicine?</h3>
+          <p>The checklist bans names, places, dates and club names. It says nothing about the
+             <em>combination</em> — and in sport the clinical facts alone can name someone:</p>
+          <p class="example">23-year-old male · Championship-level footballer · ACL rupture · 3 weeks ago</p>
+          <p>Not one banned item, and possibly one identifiable person, findable in the press. The
+             higher the level, the smaller the population.</p>
+          <p class="ask">Does the checklist need a sport-specific item — no combination of sport,
+             level and timing that could identify someone? And should elite sport be handled
+             differently from recreational?</p>
+        </div>
+      </article>
+
+      <article class="note">
+        <span class="pin">2</span>
+        <div>
+          <h3>What are the right age bands?</h3>
+          <p>We have committed to a fixed selector with no free date field. The bands shown are my
+             guess. Decades are the norm in general medicine, but an adolescent case turns on 14
+             versus 17 — skeletal maturity, growth plates — so decade bands may destroy the clinical
+             value in exactly the cases where it matters most.</p>
+          <p class="ask">Narrow bands for under-18s and wider above, or something else entirely?</p>
+        </div>
+      </article>
+
+      <article class="note">
+        <span class="pin">3</span>
+        <div>
+          <h3>Are these the right nine fields?</h3>
+          <p>They come from the PRD, not from clinical practice. Two things I would expect a sports
+             clinician to want are missing: <strong>mechanism of injury</strong> and
+             <strong>imaging or investigations</strong>.</p>
+          <p class="ask">What would you add, cut, or rename? This is the cheapest question to answer
+             now and the most expensive to change once it is built.</p>
+        </div>
+      </article>
+
+      <article class="note">
+        <span class="pin">4</span>
+        <div>
+          <h3>What does the timeline count from?</h3>
+          <p>The spec says “X weeks post-injury”. Overuse and chronic presentations have no injury
+             event to count from.</p>
+          <p class="ask">What should the options be — post-injury, post-surgery, post-onset,
+             post-presentation?</p>
+        </div>
+      </article>
+
+      <article class="note">
+        <span class="pin">5</span>
+        <div>
+          <h3>Consent, and who gets to read these</h3>
+          <p>Does a practitioner need the patient’s consent to discuss a properly de-identified
+             case, and should that be a seventh checklist item? My understanding is that UK guidance
+             generally permits it without explicit consent — I would not build on that without you
+             confirming the HCPC expectation and what practitioners actually do.</p>
+          <p class="ask">Also: every verified member can read these. Comfortable with that?</p>
+        </div>
+      </article>
+
+      <article class="note">
+        <span class="pin">6</span>
+        <div>
+          <h3>Would we really make the referral?</h3>
+          <p>The attestation commits us to referring a breach to the member’s professional
+             regulatory body. That is a strong promise, and it is the sentence doing most of the
+             work — it is why people will read the checklist rather than tick through it.</p>
+          <p class="ask">Is that the right threshold, and would we actually do it? An attestation
+             nobody would act on is worse than a softer one we would.</p>
+        </div>
+      </article>
+
+      <div class="settled">
+        <h3>Already decided — no need to reopen</h3>
+        <ul>
+          <li>Text only at launch, so no photographs and no EXIF problem.</li>
+          <li>Six checklist items rather than eight, for that reason.</li>
+          <li>The attestation wording itself, from the privacy policy.</li>
+          <li>A moderator can send a case back for correction without losing its replies or kudos.</li>
+          <li>Drafts are private — moderators cannot see a case before it is published.</li>
+        </ul>
+      </div>
+
+      <footer class="doc">
+        Drawn from EPIC-E and PRD §10. Fonts fall back here — the real app sets headings in
+        Fraunces. Tick the boxes on the left to see the publish gate open.
+      </footer>
+    </section>
+  </div>
+</div>
+
+<script>
+  // The gate is the point of the screen, so it works: Post stays disabled until every
+  // checklist item and the attestation are ticked (style guide §8.12 — must never be bypassable).
+  const boxes = Array.from(document.querySelectorAll('.gatecheck'));
+  const btn = document.getElementById('postbtn');
+  const msg = document.getElementById('gatemsg');
+  function sync() {
+    const done = boxes.filter(b => b.checked).length;
+    const all = done === boxes.length;
+    btn.disabled = !all;
+    msg.textContent = all
+      ? 'Ready to publish'
+      : `${boxes.length - done} of ${boxes.length} still to confirm`;
+    msg.classList.toggle('ready', all);
+  }
+  boxes.forEach(b => b.addEventListener('change', sync));
+  sync();
+
+  document.querySelectorAll('.segmented button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.segmented button').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+    });
+  });
+</script>
+</body>
+</html>
