@@ -499,6 +499,15 @@ your own `hasKudosed` — so naming them in the inbox would introduce a disclosu
 an implementation detail, and make reciprocal kudos-trading legible. See
 `notifications/notification-payloads.ts`.
 
+Following from that: **a kudos row does not navigate.** Tapping it marks it read and stays
+in the inbox. There is no actor to open — see above — and the row already names the post
+beneath the message, so opening the thread costs a member their place in the list and
+shows them nothing new. This is deliberate and will look inconsistent next to the rows
+that *do* navigate (a reply has a reply to read, a moderation notice its detail screen, a
+verification notice the holding page that explains it); `present()` in `NotificationRow.tsx`
+returns a **nullable** `href` for exactly this, and `openNotificationAction` redirects only
+when one is given. Don't "restore" the link.
+
 ## Admin console (S11a)
 
 An allowlisted **admin** role gets a console at `/admin` (web) backed by
