@@ -54,6 +54,31 @@ Open http://localhost:3000 — the home page shows live system health fetched fr
 | `npm run infra:up` / `infra:down` | start / stop Postgres + Redis |
 | `npm run tokens:build` / `tokens:check` | regenerate the CSS token layer from `packages/design-tokens` / fail if it drifted |
 
+## Paginated lists
+
+Every list API has returned a keyset `nextCursor` since S4. **No screen read it**, so each
+list stopped at 20 rows. Invisible at 13 seeded posts; the moment the corpus reached 65 the
+Discussions list was showing 20 and silently hiding 45 — content members had written that
+nobody could reach.
+
+`components/LoadMore.tsx` is the shared control, used by Discussions, the notification inbox
+and My Q&A. Drafts are deliberately unpaginated: `/v1/me/drafts` returns all of them, and a
+member with more than a screenful of unfinished cases has a different problem.
+
+- **URL-driven, not accumulate-on-click.** The cursor lives in the query string, so a page
+  is addressable, survives a reload, and works with no JavaScript. Appending would need the
+  cards re-implemented as client components — `PostCard` and the activity rows are async
+  server components — and a second copy of a card is the drift the shared `TagPicker`
+  exists to avoid.
+- **"More" replaces rather than extends**, which is only tolerable because the app bar's
+  back control restores the previous page *and its scroll position* (measured: 0px drift).
+  Paging forward is reversible rather than a one-way door.
+- **My Q&A carries two cursors** (`?q=` and `?a=`), because it is two lists on one screen
+  and a shared `cursor` would silently reset the other list to its first page.
+- **`BackToStart` appears past page one.** Paging does not change the pathname, so the app
+  bar's back control is hidden on the tab routes; without this the only way to the top of
+  the list is the nav tab, which reads as a reset rather than a return.
+
 ## Getting back (the app bar's back control)
 
 `components/BackControl.tsx`, rendered by the `AppBar`, so **every non-tab screen has a way
@@ -158,6 +183,11 @@ volume, and each property is there for a reason worth keeping if you edit it:
 | Uneven categories (General 30 … Equipment 7) | Same reason |
 | One handle well past 50 kudos | `DEFAULT_MIN_KUDOS` is 50 — no top-contributor badge can appear until someone clears it |
 | Unanswered threads, zero-kudos posts | An empty state is a state |
+
+Demo members are **fully onboarded** (`anonymity_acknowledged_at` set), so you can sign in
+as one and see the app as another member. The first cut left that null and the effect was
+invisible until someone tried: `requireAppAccess` bounced all fourteen to onboarding, so
+they were authors of content they could never see.
 
 **Tag hints are matched by name against the seeded taxonomy, and a hint that matches
 nothing is skipped rather than failing the run** — Andrew's vocabulary can be re-cut

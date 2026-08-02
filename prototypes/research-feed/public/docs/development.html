@@ -106,6 +106,37 @@ root)</h2>
 </tr>
 </tbody>
 </table>
+<h2 id="paginated-lists">Paginated lists</h2>
+<p>Every list API has returned a keyset <code>nextCursor</code> since
+S4. <strong>No screen read it</strong>, so each list stopped at 20 rows.
+Invisible at 13 seeded posts; the moment the corpus reached 65 the
+Discussions list was showing 20 and silently hiding 45 — content members
+had written that nobody could reach.</p>
+<p><code>components/LoadMore.tsx</code> is the shared control, used by
+Discussions, the notification inbox and My Q&amp;A. Drafts are
+deliberately unpaginated: <code>/v1/me/drafts</code> returns all of
+them, and a member with more than a screenful of unfinished cases has a
+different problem.</p>
+<ul>
+<li><strong>URL-driven, not accumulate-on-click.</strong> The cursor
+lives in the query string, so a page is addressable, survives a reload,
+and works with no JavaScript. Appending would need the cards
+re-implemented as client components — <code>PostCard</code> and the
+activity rows are async server components — and a second copy of a card
+is the drift the shared <code>TagPicker</code> exists to avoid.</li>
+<li><strong>“More” replaces rather than extends</strong>, which is only
+tolerable because the app bar’s back control restores the previous page
+<em>and its scroll position</em> (measured: 0px drift). Paging forward
+is reversible rather than a one-way door.</li>
+<li><strong>My Q&amp;A carries two cursors</strong> (<code>?q=</code>
+and <code>?a=</code>), because it is two lists on one screen and a
+shared <code>cursor</code> would silently reset the other list to its
+first page.</li>
+<li><strong><code>BackToStart</code> appears past page one.</strong>
+Paging does not change the pathname, so the app bar’s back control is
+hidden on the tab routes; without this the only way to the top of the
+list is the nav tab, which reads as a reset rather than a return.</li>
+</ul>
 <h2 id="getting-back-the-app-bars-back-control">Getting back (the app
 bar’s back control)</h2>
 <p><code>components/BackControl.tsx</code>, rendered by the
@@ -272,6 +303,12 @@ appear until someone clears it</td>
 </tr>
 </tbody>
 </table>
+<p>Demo members are <strong>fully onboarded</strong>
+(<code>anonymity_acknowledged_at</code> set), so you can sign in as one
+and see the app as another member. The first cut left that null and the
+effect was invisible until someone tried: <code>requireAppAccess</code>
+bounced all fourteen to onboarding, so they were authors of content they
+could never see.</p>
 <p><strong>Tag hints are matched by name against the seeded taxonomy,
 and a hint that matches nothing is skipped rather than failing the
 run</strong> — Andrew’s vocabulary can be re-cut without this file being

@@ -3,15 +3,27 @@ import { getTranslations } from 'next-intl/server';
 import { fetchPosts } from '@/lib/forum';
 import { requireAccessToken } from '@/lib/session';
 import { PostCard } from '@/components/PostCard';
+import { BackToStart, LoadMore } from '@/components/LoadMore';
 
 /**
  * The Discussions list (screen C1), chronological. The personalised feed and trending
- * fallback are S7 — until then newest-first is the whole ordering, which at seed-period
- * volumes is also the most useful one.
+ * fallback are the rest of S7 — until then newest-first is the whole ordering.
+ *
+ * Paginated on the API's keyset cursor. It always returned one; this screen used to drop
+ * it, which was invisible at 13 seeded posts and hid 45 of 65 the moment the corpus was
+ * rebuilt.
  */
-export default async function DiscussionsPage() {
+export default async function DiscussionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cursor?: string }>;
+}) {
+  const { cursor } = await searchParams;
   const token = await requireAccessToken();
-  const [t, { posts }] = await Promise.all([getTranslations('discussions'), fetchPosts(token)]);
+  const [t, { posts, nextCursor }] = await Promise.all([
+    getTranslations('discussions'),
+    fetchPosts(token, cursor),
+  ]);
 
   return (
     <main className="flex flex-col gap-4 px-4 py-6">
@@ -47,6 +59,10 @@ export default async function DiscussionsPage() {
         </Link>
       </div>
 
+      {/* Paging does not change the pathname, so the app bar's back control is hidden here
+          (it treats the tabs as roots). Past page one, this is the way back to the top. */}
+      {cursor && <BackToStart href="/discussions" />}
+
       {posts.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
           <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
@@ -62,11 +78,16 @@ export default async function DiscussionsPage() {
           </Link>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </ul>
+        <>
+          <ul className="flex flex-col gap-3">
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </ul>
+          {nextCursor && (
+            <LoadMore href={`/discussions?cursor=${encodeURIComponent(nextCursor)}`} labelKey="older" />
+          )}
+        </>
       )}
     </main>
   );

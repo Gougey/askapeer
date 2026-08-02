@@ -386,8 +386,16 @@ async function main(): Promise<void> {
       authors.push(found);
       continue;
     }
-    // A handle needs a member behind it. These are demo accounts; they never sign in, and
-    // they are approved so their content is visible the same way a real member's is.
+    /*
+     * A handle needs a member behind it, and that member needs to be able to *use* the
+     * app — not just own rows.
+     *
+     * `anonymity_acknowledged_at` was missing on the first cut, and the effect was
+     * invisible until someone tried to sign in as a demo account: `requireAppAccess`
+     * bounced all fourteen of them to onboarding. Being able to look at the app as another
+     * member is most of what demo accounts are for, so they are onboarded here rather than
+     * left as authors of content they could never see.
+     */
     const [member] = await db
       .insert(members)
       .values({
@@ -396,6 +404,7 @@ async function main(): Promise<void> {
         professionalBody: 'hcpc',
         registrationNumber: `DEMO${Math.floor(rand() * 900000 + 100000)}`,
         verificationStatus: 'approved_verified',
+        anonymityAcknowledgedAt: new Date(),
       })
       .returning({ id: members.id });
     const [handle] = await db
@@ -404,7 +413,17 @@ async function main(): Promise<void> {
       .returning({ id: handles.id, name: handles.handleName });
     authors.push(handle);
   }
-  console.log(`${authors.length} authors ready.`);
+  // Existing handles predate this script and may have been created before the
+  // acknowledgement was recorded; without it they cannot reach the app either.
+  await db
+    .update(members)
+    .set({ anonymityAcknowledgedAt: new Date() })
+    .where(
+      sql`${members.anonymityAcknowledgedAt} is null and exists (
+        select 1 from community.handles h where h.member_id = ${members.id}
+      )`,
+    );
+  console.log(`${authors.length} authors ready, all able to sign in.`);
 
   // ---- vocabulary lookups ---------------------------------------------------------------
   const cats = await db.select({ id: categories.id, name: categories.name, postType: categories.postType }).from(categories);

@@ -3,6 +3,7 @@ import { fetchNotifications } from '@/lib/notifications';
 import { requireAccessToken } from '@/lib/session';
 import { markAllReadAction } from './actions';
 import { NotificationRow } from './NotificationRow';
+import { BackToStart, LoadMore } from '@/components/LoadMore';
 
 /**
  * E1 — the notification inbox. Replies, kudos, and post-handle account-status changes,
@@ -12,11 +13,16 @@ import { NotificationRow } from './NotificationRow';
  * in-app channel is the one that has always worked, and the push toggle only ever
  * governed a second copy of the same event.
  */
-export default async function ActivityPage() {
+export default async function ActivityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cursor?: string }>;
+}) {
+  const { cursor } = await searchParams;
   const token = await requireAccessToken();
-  const [t, { notifications, unreadCount }] = await Promise.all([
+  const [t, { notifications, unreadCount, nextCursor }] = await Promise.all([
     getTranslations('activity'),
-    fetchNotifications(token),
+    fetchNotifications(token, cursor),
   ]);
 
   if (notifications.length === 0) {
@@ -24,14 +30,16 @@ export default async function ActivityPage() {
     return (
       <div className="flex flex-col items-center py-16 text-center" style={{ gap: 'var(--space-3)' }}>
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-          {t('empty.notifications')}
+          {cursor ? t('empty.noMore') : t('empty.notifications')}
         </p>
+        {cursor && <BackToStart href="/activity" />}
       </div>
     );
   }
 
   return (
     <div className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
+      {cursor && <BackToStart href="/activity" />}
       {unreadCount > 0 && (
         <form action={markAllReadAction} className="flex justify-end">
           <button
@@ -49,6 +57,12 @@ export default async function ActivityPage() {
           <NotificationRow key={notification.id} notification={notification} />
         ))}
       </ul>
+
+      {/* The inbox grows without limit, so this is the list that would have hidden the
+          most over time — it just had the fewest rows to prove it today. */}
+      {nextCursor && (
+        <LoadMore href={`/activity?cursor=${encodeURIComponent(nextCursor)}`} labelKey="older" />
+      )}
     </div>
   );
 }

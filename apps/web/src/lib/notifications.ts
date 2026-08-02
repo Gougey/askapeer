@@ -120,9 +120,13 @@ async function apiGet<T>(path: string, token: string): Promise<T | null> {
   return (await res.json()) as T;
 }
 
-export async function fetchNotifications(token: string): Promise<NotificationList> {
+export async function fetchNotifications(
+  token: string,
+  cursor?: string,
+): Promise<NotificationList> {
+  const path = cursor ? `/notifications?cursor=${encodeURIComponent(cursor)}` : '/notifications';
   return (
-    (await apiGet<NotificationList>('/notifications', token)) ?? {
+    (await apiGet<NotificationList>(path, token)) ?? {
       notifications: [],
       nextCursor: null,
       unreadCount: 0,
@@ -162,13 +166,34 @@ export async function fetchModerationNotice(
   return apiGet<ModerationNotice>(`/me/moderation-notices/${actionId}`, token);
 }
 
-/** My questions and my answers — the two halves of E2, fetched together. */
+/**
+ * My questions and my answers — the two halves of E2, fetched together.
+ *
+ * Two independent cursors, because they are two lists on one screen: paging your answers
+ * must not reset your questions. They travel as `q` and `a` in the query string.
+ */
 export async function fetchMyContributions(
   token: string,
-): Promise<{ posts: PostCard[]; comments: MyCommentCard[] }> {
+  cursors: { posts?: string; comments?: string } = {},
+): Promise<{
+  posts: PostCard[];
+  comments: MyCommentCard[];
+  postsCursor: string | null;
+  commentsCursor: string | null;
+}> {
+  const path = (base: string, cursor?: string) =>
+    cursor ? `${base}?cursor=${encodeURIComponent(cursor)}` : base;
   const [posts, comments] = await Promise.all([
-    apiGet<{ posts: PostCard[] }>('/me/posts', token),
-    apiGet<{ comments: MyCommentCard[] }>('/me/comments', token),
+    apiGet<{ posts: PostCard[]; nextCursor: string | null }>(path('/me/posts', cursors.posts), token),
+    apiGet<{ comments: MyCommentCard[]; nextCursor: string | null }>(
+      path('/me/comments', cursors.comments),
+      token,
+    ),
   ]);
-  return { posts: posts?.posts ?? [], comments: comments?.comments ?? [] };
+  return {
+    posts: posts?.posts ?? [],
+    comments: comments?.comments ?? [],
+    postsCursor: posts?.nextCursor ?? null,
+    commentsCursor: comments?.nextCursor ?? null,
+  };
 }

@@ -89,8 +89,12 @@ async function apiGet<T>(path: string, token: string): Promise<T | null> {
 
 export async function fetchPosts(
   token: string,
+  cursor?: string,
 ): Promise<{ posts: PostCard[]; nextCursor: string | null }> {
-  return (await apiGet('/posts', token)) ?? { posts: [], nextCursor: null };
+  // The API has returned a keyset `nextCursor` since S4; until now no caller passed one
+  // back, so every list stopped at 20 rows and the rest of the corpus was unreachable.
+  const path = cursor ? `/posts?cursor=${encodeURIComponent(cursor)}` : '/posts';
+  return (await apiGet(path, token)) ?? { posts: [], nextCursor: null };
 }
 
 export async function fetchThread(postId: string, token: string): Promise<Thread | null> {
