@@ -112,31 +112,53 @@ S4. <strong>No screen read it</strong>, so each list stopped at 20 rows.
 Invisible at 13 seeded posts; the moment the corpus reached 65 the
 Discussions list was showing 20 and silently hiding 45 — content members
 had written that nobody could reach.</p>
-<p><code>components/LoadMore.tsx</code> is the shared control, used by
-Discussions, the notification inbox and My Q&amp;A. Drafts are
-deliberately unpaginated: <code>/v1/me/drafts</code> returns all of
-them, and a member with more than a screenful of unfinished cases has a
-different problem.</p>
+<p><strong>Discussions and the notification inbox scroll
+infinitely</strong> (<code>components/InfiniteList.tsx</code>);
+<strong>My Q&amp;A pages</strong> with <code>LoadMore</code>, because it
+is two lists on one screen and a single scroll sentinel cannot say which
+one to extend. Drafts are unpaginated: <code>/v1/me/drafts</code>
+returns all of them, and a member with more than a screenful of
+unfinished cases has a different problem.</p>
 <ul>
-<li><strong>URL-driven, not accumulate-on-click.</strong> The cursor
-lives in the query string, so a page is addressable, survives a reload,
-and works with no JavaScript. Appending would need the cards
-re-implemented as client components — <code>PostCard</code> and the
-activity rows are async server components — and a second copy of a card
-is the drift the shared <code>TagPicker</code> exists to avoid.</li>
-<li><strong>“More” replaces rather than extends</strong>, which is only
-tolerable because the app bar’s back control restores the previous page
-<em>and its scroll position</em> (measured: 0px drift). Paging forward
-is reversible rather than a one-way door.</li>
-<li><strong>My Q&amp;A carries two cursors</strong> (<code>?q=</code>
-and <code>?a=</code>), because it is two lists on one screen and a
-shared <code>cursor</code> would silently reset the other list to its
-first page.</li>
-<li><strong><code>BackToStart</code> appears past page one.</strong>
-Paging does not change the pathname, so the app bar’s back control is
-hidden on the tab routes; without this the only way to the top of the
-list is the nav tab, which reads as a reset rather than a return.</li>
+<li><strong>Pages arrive already rendered.</strong> A server action
+returns React elements, so there is no client copy of
+<code>PostCard</code> or the activity row to drift from the async server
+one — the same argument that keeps the tag picker a single
+component.</li>
+<li><strong>Keeping is the hard part, not loading.</strong> Loaded
+cursors go to <code>sessionStorage</code> and are replayed on mount, so
+returning from a thread rebuilds the list you were looking at. Two bugs
+were found by measuring rather than reading, and both are easy to
+reintroduce:
+<ul>
+<li>The <strong>scroll recorder ran during the replay</strong>,
+overwriting the saved position with wherever the half-built page had
+clamped to. Measured 6212px short.</li>
+<li>Recording on every scroll event <strong>saved 0 on the way
+out</strong>: opening a post makes Next scroll the new route to the top,
+which fires one last <code>scroll</code> before unmount. The recorder is
+now debounced (200ms) so a navigation’s jump is cancelled by the cleanup
+and never lands, while scrolling by hand settles and is recorded.
+<code>pagehide</code> writes immediately instead — the page is really
+going, and no unmount is coming to cancel it.</li>
+<li>Restoring also <strong>retries across frames</strong>: the replayed
+cards lay out over several, so a single <code>scrollTo</code> clamps to
+a document that has not finished growing.</li>
+</ul></li>
+<li><strong>The fallback link is always rendered, not a
+<code>&lt;noscript&gt;</code>.</strong> It is the no-JS route, the
+recovery when the action errors, and the manual option when the viewport
+is tall enough that the observer never fires. Verified with JavaScript
+off: page one renders and the link pages the old way.</li>
+<li><strong><code>BackToStart</code> appears past page one</strong> on
+the paged surfaces. Paging does not change the pathname, so the app
+bar’s back control is hidden on tab routes; without it the only way to
+the top of a list is the nav tab, which reads as a reset rather than a
+return.</li>
 </ul>
+<p>Measured on the 65-post corpus: scrolling alone reaches all 65 with
+no duplicates; opening the 45th and pressing back restores all 65
+<strong>and the exact scroll position (0px drift)</strong>.</p>
 <h2 id="getting-back-the-app-bars-back-control">Getting back (the app
 bar’s back control)</h2>
 <p><code>components/BackControl.tsx</code>, rendered by the

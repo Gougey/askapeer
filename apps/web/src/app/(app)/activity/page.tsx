@@ -3,7 +3,9 @@ import { fetchNotifications } from '@/lib/notifications';
 import { requireAccessToken } from '@/lib/session';
 import { markAllReadAction } from './actions';
 import { NotificationRow } from './NotificationRow';
-import { BackToStart, LoadMore } from '@/components/LoadMore';
+import { BackToStart } from '@/components/LoadMore';
+import { InfiniteList } from '@/components/InfiniteList';
+import { loadMoreNotifications } from './load-more';
 
 /**
  * E1 — the notification inbox. Replies, kudos, and post-handle account-status changes,
@@ -52,17 +54,20 @@ export default async function ActivityPage({
         </form>
       )}
 
-      <ul className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
-        {notifications.map((notification) => (
-          <NotificationRow key={notification.id} notification={notification} />
-        ))}
-      </ul>
-
       {/* The inbox grows without limit, so this is the list that would have hidden the
           most over time — it just had the fewest rows to prove it today. */}
-      {nextCursor && (
-        <LoadMore href={`/activity?cursor=${encodeURIComponent(nextCursor)}`} labelKey="older" />
-      )}
+      <ul className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+        <InfiniteList
+          initialCursor={nextCursor}
+          loadMore={loadMoreNotifications}
+          storageKey="ap:list:activity"
+          fallbackHref={nextCursor ? `/activity?cursor=${encodeURIComponent(nextCursor)}` : null}
+        >
+          {notifications.map((notification) => (
+            <NotificationRow key={notification.id} notification={notification} />
+          ))}
+        </InfiniteList>
+      </ul>
     </div>
   );
 }

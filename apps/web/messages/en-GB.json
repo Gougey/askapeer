@@ -450,6 +450,8 @@
   "pagination": {
     "more": "Show more",
     "older": "Show older",
-    "newest": "← Back to newest"
+    "newest": "← Back to newest",
+    "loading": "Loading more…",
+    "failed": "Could not load more. Try the button below."
   }
 }

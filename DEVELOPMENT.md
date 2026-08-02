@@ -61,23 +61,36 @@ list stopped at 20 rows. Invisible at 13 seeded posts; the moment the corpus rea
 Discussions list was showing 20 and silently hiding 45 — content members had written that
 nobody could reach.
 
-`components/LoadMore.tsx` is the shared control, used by Discussions, the notification inbox
-and My Q&A. Drafts are deliberately unpaginated: `/v1/me/drafts` returns all of them, and a
-member with more than a screenful of unfinished cases has a different problem.
+**Discussions and the notification inbox scroll infinitely** (`components/InfiniteList.tsx`);
+**My Q&A pages** with `LoadMore`, because it is two lists on one screen and a single scroll
+sentinel cannot say which one to extend. Drafts are unpaginated: `/v1/me/drafts` returns all
+of them, and a member with more than a screenful of unfinished cases has a different problem.
 
-- **URL-driven, not accumulate-on-click.** The cursor lives in the query string, so a page
-  is addressable, survives a reload, and works with no JavaScript. Appending would need the
-  cards re-implemented as client components — `PostCard` and the activity rows are async
-  server components — and a second copy of a card is the drift the shared `TagPicker`
-  exists to avoid.
-- **"More" replaces rather than extends**, which is only tolerable because the app bar's
-  back control restores the previous page *and its scroll position* (measured: 0px drift).
-  Paging forward is reversible rather than a one-way door.
-- **My Q&A carries two cursors** (`?q=` and `?a=`), because it is two lists on one screen
-  and a shared `cursor` would silently reset the other list to its first page.
-- **`BackToStart` appears past page one.** Paging does not change the pathname, so the app
-  bar's back control is hidden on the tab routes; without this the only way to the top of
-  the list is the nav tab, which reads as a reset rather than a return.
+- **Pages arrive already rendered.** A server action returns React elements, so there is no
+  client copy of `PostCard` or the activity row to drift from the async server one — the
+  same argument that keeps the tag picker a single component.
+- **Keeping is the hard part, not loading.** Loaded cursors go to `sessionStorage` and are
+  replayed on mount, so returning from a thread rebuilds the list you were looking at. Two
+  bugs were found by measuring rather than reading, and both are easy to reintroduce:
+  - The **scroll recorder ran during the replay**, overwriting the saved position with
+    wherever the half-built page had clamped to. Measured 6212px short.
+  - Recording on every scroll event **saved 0 on the way out**: opening a post makes Next
+    scroll the new route to the top, which fires one last `scroll` before unmount. The
+    recorder is now debounced (200ms) so a navigation's jump is cancelled by the cleanup
+    and never lands, while scrolling by hand settles and is recorded. `pagehide` writes
+    immediately instead — the page is really going, and no unmount is coming to cancel it.
+  - Restoring also **retries across frames**: the replayed cards lay out over several, so
+    a single `scrollTo` clamps to a document that has not finished growing.
+- **The fallback link is always rendered, not a `<noscript>`.** It is the no-JS route, the
+  recovery when the action errors, and the manual option when the viewport is tall enough
+  that the observer never fires. Verified with JavaScript off: page one renders and the
+  link pages the old way.
+- **`BackToStart` appears past page one** on the paged surfaces. Paging does not change the
+  pathname, so the app bar's back control is hidden on tab routes; without it the only way
+  to the top of a list is the nav tab, which reads as a reset rather than a return.
+
+Measured on the 65-post corpus: scrolling alone reaches all 65 with no duplicates; opening
+the 45th and pressing back restores all 65 **and the exact scroll position (0px drift)**.
 
 ## Getting back (the app bar's back control)
 

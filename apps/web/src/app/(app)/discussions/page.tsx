@@ -3,7 +3,9 @@ import { getTranslations } from 'next-intl/server';
 import { fetchPosts } from '@/lib/forum';
 import { requireAccessToken } from '@/lib/session';
 import { PostCard } from '@/components/PostCard';
-import { BackToStart, LoadMore } from '@/components/LoadMore';
+import { BackToStart } from '@/components/LoadMore';
+import { InfiniteList } from '@/components/InfiniteList';
+import { loadMorePosts } from './load-more';
 
 /**
  * The Discussions list (screen C1), chronological. The personalised feed and trending
@@ -78,16 +80,25 @@ export default async function DiscussionsPage({
           </Link>
         </div>
       ) : (
-        <>
-          <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-3">
+          {/*
+            The <ul> owns the list and the loader appends into it, so every card — page one
+            and every page after — is a sibling <li>. Wrapping the extra pages in their own
+            container would nest lists and change what a screen reader announces.
+          */}
+          <InfiniteList
+            initialCursor={nextCursor}
+            loadMore={loadMorePosts}
+            storageKey="ap:list:discussions"
+            fallbackHref={
+              nextCursor ? `/discussions?cursor=${encodeURIComponent(nextCursor)}` : null
+            }
+          >
             {posts.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}
-          </ul>
-          {nextCursor && (
-            <LoadMore href={`/discussions?cursor=${encodeURIComponent(nextCursor)}`} labelKey="older" />
-          )}
-        </>
+          </InfiniteList>
+        </ul>
       )}
     </main>
   );
