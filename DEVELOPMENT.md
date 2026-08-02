@@ -184,6 +184,11 @@ volume, and each property is there for a reason worth keeping if you edit it:
 | One handle well past 50 kudos | `DEFAULT_MIN_KUDOS` is 50 — no top-contributor badge can appear until someone clears it |
 | Unanswered threads, zero-kudos posts | An empty state is a state |
 
+**Every active handle takes part, real ones first** — the founders included. They had
+handles and were never used, so they showed up in the app as members who had never posted,
+answered or awarded anything, which is the one view of the product nobody needs to test.
+Reporters vary too, and a report never points at its own author's content.
+
 Demo members are **fully onboarded** (`anonymity_acknowledged_at` set), so you can sign in
 as one and see the app as another member. The first cut left that null and the effect was
 invisible until someone tried: `requireAppAccess` bounced all fourteen to onboarding, so
