@@ -109,7 +109,9 @@
       "adminConsole": "Admin console",
       "settings": "Settings"
     },
-    "unreadNotifications": "{count, plural, one {# unread notification} other {# unread notifications}}"
+    "unreadNotifications": "{count, plural, one {# unread notification} other {# unread notifications}}",
+    "back": "Back",
+    "cancel": "Cancel"
   },
   "identityCheck": {
     "title": "Confirm your identity",

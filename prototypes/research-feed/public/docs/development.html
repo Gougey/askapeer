@@ -106,6 +106,43 @@ root)</h2>
 </tr>
 </tbody>
 </table>
+<h2 id="getting-back-the-app-bars-back-control">Getting back (the app
+bar’s back control)</h2>
+<p><code>components/BackControl.tsx</code>, rendered by the
+<code>AppBar</code>, so <strong>every non-tab screen has a way out by
+construction</strong>. Before it, four screens were dead ends — a
+thread, and all three composers — and the two screens that did have a
+back link had their own, which is not a pattern but a coincidence.</p>
+<p>This matters more here than in a normal web app: the PWA installs
+<strong>standalone</strong>, so there is no browser chrome, no browser
+back button, and on iOS no edge-swipe either. A screen with no explicit
+exit strands the member.</p>
+<ul>
+<li><strong>History first, parent second.</strong>
+<code>router.back()</code> is what “back” means: it restores the list
+you came from <em>and the query you typed</em>, because a search is a
+URL. An “up” link to a fixed parent would silently reset the search —
+which was the reported complaint.</li>
+<li><strong>The parent fallback is keyed on session entry, not
+<code>history.length</code>.</strong> That was the first implementation
+and it was wrong: a tab that has been anywhere at all, even
+<code>about:blank</code>, reports a length above 1, so
+<code>back()</code> fired and left the app. A browser test caught it
+landing on a blank page — in a standalone install, an app with nothing
+in it. <code>sessionStorage['ap:entryPath']</code> records where the
+session began; anywhere else, history back is safe.</li>
+<li><strong>Roots render nothing</strong> (<code>/feed</code>,
+<code>/discussions</code>, <code>/activity</code>,
+<code>/profile</code>) — the nav is the way out of a tab.
+<code>BackControl</code> still <em>mounts</em> there, so the entry
+screen is recorded even when it is a tab; only its output is null.</li>
+<li><strong>Composers say “Cancel”</strong> and show the word, because
+on <code>/create*</code> the consequence is discarding what you wrote
+rather than changing screen.</li>
+</ul>
+<p><strong>Not done:</strong> leaving a composer with text in it
+discards silently. The case composer has “Save as draft”; the question
+composer has nothing. An unsaved-work guard is a follow-up.</p>
 <h2 id="search-and-tag-filtering-s7-part">Search and tag filtering (S7,
 part)</h2>
 <p><code>GET /v1/search?q=&amp;category=&amp;tag=&amp;cursor=</code>

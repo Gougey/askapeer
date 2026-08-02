@@ -54,6 +54,35 @@ Open http://localhost:3000 — the home page shows live system health fetched fr
 | `npm run infra:up` / `infra:down` | start / stop Postgres + Redis |
 | `npm run tokens:build` / `tokens:check` | regenerate the CSS token layer from `packages/design-tokens` / fail if it drifted |
 
+## Getting back (the app bar's back control)
+
+`components/BackControl.tsx`, rendered by the `AppBar`, so **every non-tab screen has a way
+out by construction**. Before it, four screens were dead ends — a thread, and all three
+composers — and the two screens that did have a back link had their own, which is not a
+pattern but a coincidence.
+
+This matters more here than in a normal web app: the PWA installs **standalone**, so there
+is no browser chrome, no browser back button, and on iOS no edge-swipe either. A screen
+with no explicit exit strands the member.
+
+- **History first, parent second.** `router.back()` is what "back" means: it restores the
+  list you came from *and the query you typed*, because a search is a URL. An "up" link to
+  a fixed parent would silently reset the search — which was the reported complaint.
+- **The parent fallback is keyed on session entry, not `history.length`.** That was the
+  first implementation and it was wrong: a tab that has been anywhere at all, even
+  `about:blank`, reports a length above 1, so `back()` fired and left the app. A browser
+  test caught it landing on a blank page — in a standalone install, an app with nothing in
+  it. `sessionStorage['ap:entryPath']` records where the session began; anywhere else,
+  history back is safe.
+- **Roots render nothing** (`/feed`, `/discussions`, `/activity`, `/profile`) — the nav is
+  the way out of a tab. `BackControl` still *mounts* there, so the entry screen is recorded
+  even when it is a tab; only its output is null.
+- **Composers say "Cancel"** and show the word, because on `/create*` the consequence is
+  discarding what you wrote rather than changing screen.
+
+**Not done:** leaving a composer with text in it discards silently. The case composer has
+"Save as draft"; the question composer has nothing. An unsaved-work guard is a follow-up.
+
 ## Search and tag filtering (S7, part)
 
 `GET /v1/search?q=&category=&tag=&cursor=` (EPIC-C §4) plus screen C3 at `/search`. The
