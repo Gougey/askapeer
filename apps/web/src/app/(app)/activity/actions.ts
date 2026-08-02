@@ -32,18 +32,24 @@ export async function markReadAction(notificationId: string): Promise<void> {
 }
 
 /**
- * Open a notification: mark it read, then go where it points.
+ * Open a notification: mark it read, then go where it points — if it points anywhere.
  *
  * A form action rather than an onClick, so the row works with no client JavaScript and
  * the read state is committed before navigation rather than racing it. `redirect` throws
  * by design, so it sits outside anything that would catch it.
+ *
+ * `href` is null for notifications that say everything they have to say in the row — a
+ * kudos, or a moderation notice too old to carry an `actionId`. Those return without
+ * redirecting rather than bouncing through `/activity` to land back where they started:
+ * `markReadAction` has already revalidated the inbox, so the row visibly turns read
+ * without the member losing their scroll position.
  */
 export async function openNotificationAction(
   notificationId: string,
-  href: string,
-): Promise<never> {
+  href: string | null,
+): Promise<void> {
   await markReadAction(notificationId);
-  redirect(href);
+  if (href) redirect(href);
 }
 
 export async function markAllReadAction(): Promise<void> {

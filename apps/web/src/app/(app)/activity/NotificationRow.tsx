@@ -10,11 +10,29 @@ const GLYPH = {
   status: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1 5h2v6h-2zm0 8h2v2h-2z',
 } as const;
 
-/** Where the row leads, and how it is dressed. */
-function present(n: Notification) {
+/**
+ * Where the row leads, and how it is dressed. A null `href` means the row has nowhere
+ * useful to go and only marks itself read.
+ */
+function present(n: Notification): {
+  href: string | null;
+  glyph: string;
+  tint: string;
+  ink: string;
+  filled: boolean;
+} {
   if (n.type === 'kudos_received') {
     return {
-      href: `/discussions/${n.payload.postId}`,
+      /*
+       * Kudos goes nowhere, deliberately.
+       *
+       * Opening the thread was the obvious default and the wrong one: kudos is
+       * pseudonymous by design, so there is no actor to go and look at, and the row
+       * already names the post below. Everything the notification has to say fits in the
+       * row, so navigating away from the inbox costs a member their place in it and
+       * returns nothing. Tapping marks it read, which is the only thing left to do with it.
+       */
+      href: null,
       glyph: GLYPH.kudos,
       // Kudos gold is the product's one status colour and this is a kudos event — the
       // single place outside the kudos control itself where it is correct to use it.
@@ -33,9 +51,9 @@ function present(n: Notification) {
     };
   }
   // An account-status notice. A verification decision belongs on the holding page, which
-  // is what explains a verification state; a moderation notice has nowhere to go — there
-  // is no detail screen for one, and there does not need to be, because the notice and
-  // its reason fit in the row. So it stays put and simply marks itself read.
+  // is what explains a verification state; a moderation notice opens its own detail screen
+  // (E4), added later — so the comment that used to sit here saying no such screen existed
+  // was describing a world that no longer holds.
   const moderation = n.payload.event !== 'verification';
   const severe = n.payload.event === 'suspended' || n.payload.event === 'expelled';
   return {
@@ -46,7 +64,7 @@ function present(n: Notification) {
     href: moderation
       ? n.payload.actionId
         ? `/activity/notices/${n.payload.actionId}`
-        : '/activity'
+        : null
       : '/status',
     glyph: GLYPH.status,
     tint: moderation ? 'var(--color-navy-tint)' : 'var(--color-verify-tint)',
