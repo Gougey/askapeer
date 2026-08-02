@@ -270,7 +270,8 @@
     "empty": {
       "notifications": "You're all caught up. Replies to your posts and kudos you receive will appear here.",
       "mine": "You haven't posted yet. Your questions and answers will appear here.",
-      "mineCta": "Ask a question"
+      "mineCta": "Ask a question",
+      "noMore": "Nothing older to show."
     },
     "mine": {
       "questions": "Questions",
@@ -445,5 +446,12 @@
     "didYouMean": "Nothing matched “{query}” exactly. Showing {count, plural, one {1 close match} other {# close matches}}.",
     "noResults": "No results. Try fewer words, a broader tag, or check the spelling.",
     "more": "Show more results"
+  },
+  "pagination": {
+    "more": "Show more",
+    "older": "Show older",
+    "newest": "← Back to newest",
+    "loading": "Loading more…",
+    "failed": "Could not load more. Try the button below."
   }
 }

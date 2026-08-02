@@ -54,6 +54,44 @@ Open http://localhost:3000 — the home page shows live system health fetched fr
 | `npm run infra:up` / `infra:down` | start / stop Postgres + Redis |
 | `npm run tokens:build` / `tokens:check` | regenerate the CSS token layer from `packages/design-tokens` / fail if it drifted |
 
+## Paginated lists
+
+Every list API has returned a keyset `nextCursor` since S4. **No screen read it**, so each
+list stopped at 20 rows. Invisible at 13 seeded posts; the moment the corpus reached 65 the
+Discussions list was showing 20 and silently hiding 45 — content members had written that
+nobody could reach.
+
+**Discussions and the notification inbox scroll infinitely** (`components/InfiniteList.tsx`);
+**My Q&A pages** with `LoadMore`, because it is two lists on one screen and a single scroll
+sentinel cannot say which one to extend. Drafts are unpaginated: `/v1/me/drafts` returns all
+of them, and a member with more than a screenful of unfinished cases has a different problem.
+
+- **Pages arrive already rendered.** A server action returns React elements, so there is no
+  client copy of `PostCard` or the activity row to drift from the async server one — the
+  same argument that keeps the tag picker a single component.
+- **Keeping is the hard part, not loading.** Loaded cursors go to `sessionStorage` and are
+  replayed on mount, so returning from a thread rebuilds the list you were looking at. Two
+  bugs were found by measuring rather than reading, and both are easy to reintroduce:
+  - The **scroll recorder ran during the replay**, overwriting the saved position with
+    wherever the half-built page had clamped to. Measured 6212px short.
+  - Recording on every scroll event **saved 0 on the way out**: opening a post makes Next
+    scroll the new route to the top, which fires one last `scroll` before unmount. The
+    recorder is now debounced (200ms) so a navigation's jump is cancelled by the cleanup
+    and never lands, while scrolling by hand settles and is recorded. `pagehide` writes
+    immediately instead — the page is really going, and no unmount is coming to cancel it.
+  - Restoring also **retries across frames**: the replayed cards lay out over several, so
+    a single `scrollTo` clamps to a document that has not finished growing.
+- **The fallback link is always rendered, not a `<noscript>`.** It is the no-JS route, the
+  recovery when the action errors, and the manual option when the viewport is tall enough
+  that the observer never fires. Verified with JavaScript off: page one renders and the
+  link pages the old way.
+- **`BackToStart` appears past page one** on the paged surfaces. Paging does not change the
+  pathname, so the app bar's back control is hidden on tab routes; without it the only way
+  to the top of a list is the nav tab, which reads as a reset rather than a return.
+
+Measured on the 65-post corpus: scrolling alone reaches all 65 with no duplicates; opening
+the 45th and pressing back restores all 65 **and the exact scroll position (0px drift)**.
+
 ## Getting back (the app bar's back control)
 
 `components/BackControl.tsx`, rendered by the `AppBar`, so **every non-tab screen has a way
@@ -158,6 +196,16 @@ volume, and each property is there for a reason worth keeping if you edit it:
 | Uneven categories (General 30 … Equipment 7) | Same reason |
 | One handle well past 50 kudos | `DEFAULT_MIN_KUDOS` is 50 — no top-contributor badge can appear until someone clears it |
 | Unanswered threads, zero-kudos posts | An empty state is a state |
+
+**Every active handle takes part, real ones first** — the founders included. They had
+handles and were never used, so they showed up in the app as members who had never posted,
+answered or awarded anything, which is the one view of the product nobody needs to test.
+Reporters vary too, and a report never points at its own author's content.
+
+Demo members are **fully onboarded** (`anonymity_acknowledged_at` set), so you can sign in
+as one and see the app as another member. The first cut left that null and the effect was
+invisible until someone tried: `requireAppAccess` bounced all fourteen to onboarding, so
+they were authors of content they could never see.
 
 **Tag hints are matched by name against the seeded taxonomy, and a hint that matches
 nothing is skipped rather than failing the run** — Andrew's vocabulary can be re-cut

@@ -376,9 +376,22 @@ async function main(): Promise<void> {
   await db.update(handles).set({ kudosTotal: 0 });
 
   // ---- authors -------------------------------------------------------------------------
-  const existing = await db.select({ id: handles.id, name: handles.handleName }).from(handles);
+  /*
+   * **Real handles first, demo handles to top up.**
+   *
+   * Every active handle already on the platform takes part — the founders included. They
+   * had handles and were never used, so they appeared in the app as members who had never
+   * posted, answered or awarded anything, which is the one view of the product nobody
+   * needs to test. Ordering them first means the round-robin gives them a fair share of
+   * the most recent content rather than the tail.
+   */
+  const existing = await db
+    .select({ id: handles.id, name: handles.handleName })
+    .from(handles)
+    .where(sql`${handles.status} = 'active'`);
   const byName = new Map(existing.map((h) => [h.name, h]));
-  const authors: { id: string; name: string }[] = [];
+  const realHandles = existing.filter((h) => !HANDLE_NAMES.includes(h.name));
+  const authors: { id: string; name: string }[] = [...realHandles];
 
   for (const name of HANDLE_NAMES) {
     const found = byName.get(name);
@@ -386,8 +399,16 @@ async function main(): Promise<void> {
       authors.push(found);
       continue;
     }
-    // A handle needs a member behind it. These are demo accounts; they never sign in, and
-    // they are approved so their content is visible the same way a real member's is.
+    /*
+     * A handle needs a member behind it, and that member needs to be able to *use* the
+     * app — not just own rows.
+     *
+     * `anonymity_acknowledged_at` was missing on the first cut, and the effect was
+     * invisible until someone tried to sign in as a demo account: `requireAppAccess`
+     * bounced all fourteen of them to onboarding. Being able to look at the app as another
+     * member is most of what demo accounts are for, so they are onboarded here rather than
+     * left as authors of content they could never see.
+     */
     const [member] = await db
       .insert(members)
       .values({
@@ -396,6 +417,7 @@ async function main(): Promise<void> {
         professionalBody: 'hcpc',
         registrationNumber: `DEMO${Math.floor(rand() * 900000 + 100000)}`,
         verificationStatus: 'approved_verified',
+        anonymityAcknowledgedAt: new Date(),
       })
       .returning({ id: members.id });
     const [handle] = await db
@@ -404,7 +426,20 @@ async function main(): Promise<void> {
       .returning({ id: handles.id, name: handles.handleName });
     authors.push(handle);
   }
-  console.log(`${authors.length} authors ready.`);
+  // Existing handles predate this script and may have been created before the
+  // acknowledgement was recorded; without it they cannot reach the app either.
+  await db
+    .update(members)
+    .set({ anonymityAcknowledgedAt: new Date() })
+    .where(
+      sql`${members.anonymityAcknowledgedAt} is null and exists (
+        select 1 from community.handles h where h.member_id = ${members.id}
+      )`,
+    );
+  console.log(
+    `${authors.length} authors ready, all able to sign in ` +
+      `(${realHandles.length} real: ${realHandles.map((h) => h.name).join(', ') || 'none'}).`,
+  );
 
   // ---- vocabulary lookups ---------------------------------------------------------------
   const cats = await db.select({ id: categories.id, name: categories.name, postType: categories.postType }).from(categories);
@@ -591,7 +626,9 @@ async function main(): Promise<void> {
 
   // ---- reports and moderation --------------------------------------------------------------
   const published = made.slice(0, 6);
-  const reporter = authors[authors.length - 1];
+  // Reporters vary: a real handle files one, demo handles the others. A queue where every
+  // report came from the same member is not a queue anyone has triaged.
+  const reporters = [authors[0], authors[authors.length - 1], authors[1] ?? authors[0]];
   const cases = await db
     .select({ id: posts.id, handleId: posts.handleId })
     .from(posts)
@@ -599,10 +636,15 @@ async function main(): Promise<void> {
     .limit(2);
 
   const reportRows = [
-    { reporterHandleId: reporter.id, targetType: 'post' as const, targetId: published[1].id, category: 'spam' as const, comment: 'Looks like a promotional post.' },
-    { reporterHandleId: reporter.id, targetType: 'post' as const, targetId: published[2].id, category: 'other' as const, comment: null },
-    ...(cases[0] ? [{ reporterHandleId: reporter.id, targetType: 'post' as const, targetId: cases[0].id, category: 'identifiable_patient_information' as const, comment: 'The club is named in the history.' }] : []),
-  ];
+    { reporterHandleId: reporters[0].id, targetType: 'post' as const, targetId: published[1].id, category: 'spam' as const, comment: 'Looks like a promotional post.' },
+    { reporterHandleId: reporters[1].id, targetType: 'post' as const, targetId: published[2].id, category: 'other' as const, comment: null },
+    ...(cases[0] ? [{ reporterHandleId: reporters[2].id, targetType: 'post' as const, targetId: cases[0].id, category: 'identifiable_patient_information' as const, comment: 'The club is named in the history.' }] : []),
+  ].filter((r) => {
+    // Never let a report point at its own author's content: the moderation queue would
+    // show someone reporting themselves, which is not a case worth demonstrating.
+    const target = made.find((m) => m.id === r.targetId);
+    return target ? target.authorId !== r.reporterHandleId : true;
+  });
   const insertedReports = await db.insert(reports).values(reportRows).returning({ id: reports.id, targetId: reports.targetId });
 
   // One dismissed, one actioned with a warning — so the queue has resolved items as well

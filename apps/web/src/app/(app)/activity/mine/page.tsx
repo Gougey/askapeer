@@ -3,6 +3,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { PostCard } from '@/components/PostCard';
 import { fetchMyContributions, type MyCommentCard } from '@/lib/notifications';
 import { requireAccessToken } from '@/lib/session';
+import { BackToStart, LoadMore } from '@/components/LoadMore';
 
 /**
  * One of my answers. Deliberately lighter than a `PostCard`: this list is about what I
@@ -56,12 +57,35 @@ async function MyAnswerCard({ comment }: { comment: MyCommentCard }) {
  * E2 — my questions and answers, published only. Drafts and corrections are a different
  * screen with a different job (D4, EPIC-E) and deliberately do not appear here.
  */
-export default async function MyActivityPage() {
+/**
+ * E2 — my questions and my answers.
+ *
+ * Two lists, two cursors (`q` and `a`). Paging one must not reset the other, so each keeps
+ * its own place in the URL — a single shared `cursor` would silently send the other list
+ * back to its first page.
+ */
+export default async function MyActivityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; a?: string }>;
+}) {
+  const { q: postsCur, a: commentsCur } = await searchParams;
   const token = await requireAccessToken();
-  const [t, { posts, comments }] = await Promise.all([
+  const [t, { posts, comments, postsCursor, commentsCursor }] = await Promise.all([
     getTranslations('activity'),
-    fetchMyContributions(token),
+    fetchMyContributions(token, { posts: postsCur, comments: commentsCur }),
   ]);
+
+  // Preserve the other list's position when paging this one.
+  const href = (next: { q?: string | null; a?: string | null }) => {
+    const params = new URLSearchParams();
+    const qv = next.q === undefined ? postsCur : next.q;
+    const av = next.a === undefined ? commentsCur : next.a;
+    if (qv) params.set('q', qv);
+    if (av) params.set('a', av);
+    const s = params.toString();
+    return s ? `/activity/mine?${s}` : '/activity/mine';
+  };
 
   if (posts.length === 0 && comments.length === 0) {
     return (
@@ -82,6 +106,7 @@ export default async function MyActivityPage() {
 
   return (
     <div className="flex flex-col" style={{ gap: 'var(--space-6)' }}>
+      {(postsCur || commentsCur) && <BackToStart href="/activity/mine" />}
       {posts.length > 0 && (
         <section className="flex flex-col" style={{ gap: 'var(--space-3)' }}>
           <h2 className="text-sm font-semibold" style={{ color: 'var(--color-muted)' }}>
@@ -92,6 +117,7 @@ export default async function MyActivityPage() {
               <PostCard key={post.id} post={post} />
             ))}
           </ul>
+          {postsCursor && <LoadMore href={href({ q: postsCursor })} labelKey="older" />}
         </section>
       )}
 
@@ -105,6 +131,7 @@ export default async function MyActivityPage() {
               <MyAnswerCard key={comment.id} comment={comment} />
             ))}
           </ul>
+          {commentsCursor && <LoadMore href={href({ a: commentsCursor })} labelKey="older" />}
         </section>
       )}
     </div>
