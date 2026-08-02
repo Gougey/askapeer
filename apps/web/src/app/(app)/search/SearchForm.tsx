@@ -89,7 +89,13 @@ export function SearchForm({
       }}
     >
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">{t('queryLabel')}</span>
+        {/*
+          Visually hidden, not deleted. The screen already says "Search" as its heading and
+          again on the button, and a third one above the box was noise — but the input still
+          needs an accessible name, and a placeholder is not one: it disappears the moment
+          anyone types, and assistive technology does not treat it as a label.
+        */}
+        <span className="sr-only">{t('queryLabel')}</span>
         <input
           name="q"
           type="search"
