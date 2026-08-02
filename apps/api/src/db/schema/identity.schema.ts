@@ -57,6 +57,15 @@ export const members = identity.table(
     uniqueIndex('members_registration_unique')
       .on(t.professionalBody, t.registrationNumber, t.registrationCountry)
       .where(sql`${t.verificationStatus} <> 'rejected'`),
+    /*
+     * One address is one account, whatever it was typed in.
+     *
+     * The column's own `.unique()` is byte-wise, so `Ade@x.com` and `ade@x.com` are two
+     * different accounts to it — for one person, with one inbox. The DTOs lower-case
+     * every email on the way in (`NormaliseEmail`), and this index is what makes that
+     * hold even if some future route forgets to.
+     */
+    uniqueIndex('members_email_lower_unique').on(sql`lower(${t.email})`),
   ],
 );
 

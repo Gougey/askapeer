@@ -38,7 +38,26 @@ export function SignInForm() {
     <form action={action} className="space-y-3">
       <label className="block space-y-1 text-sm">
         <span>{t('email')}</span>
-        <input name="email" type="email" required className={field} />
+        {/*
+          `type="email"` alone is not enough on a phone: several Android keyboards still
+          auto-capitalise the first letter, and predictive text will happily "correct" an
+          address. The value is lower-cased server-side regardless (see the API's
+          NormaliseEmail), so this is about not showing the member a capital they did not
+          ask for — not about correctness.
+
+          Not `text-transform: lowercase`: that restyles the display and leaves the
+          submitted value untouched, which is the worst of both — it looks fixed and isn't.
+        */}
+        <input
+          name="email"
+          type="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          autoComplete="email"
+          required
+          className={field}
+        />
       </label>
       {state.status === 'error' && (
         <p className="text-sm" style={{ color: 'var(--color-bad)' }}>{state.message}</p>
@@ -65,7 +84,26 @@ export function RegisterForm() {
       </label>
       <label className="block space-y-1 text-sm">
         <span>{t('email')}</span>
-        <input name="email" type="email" required className={field} />
+        {/*
+          `type="email"` alone is not enough on a phone: several Android keyboards still
+          auto-capitalise the first letter, and predictive text will happily "correct" an
+          address. The value is lower-cased server-side regardless (see the API's
+          NormaliseEmail), so this is about not showing the member a capital they did not
+          ask for — not about correctness.
+
+          Not `text-transform: lowercase`: that restyles the display and leaves the
+          submitted value untouched, which is the worst of both — it looks fixed and isn't.
+        */}
+        <input
+          name="email"
+          type="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          autoComplete="email"
+          required
+          className={field}
+        />
       </label>
       <label className="block space-y-1 text-sm">
         <span>{t('professionalBody')}</span>
