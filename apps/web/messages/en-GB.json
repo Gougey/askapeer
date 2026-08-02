@@ -218,8 +218,7 @@
       "child": "Child (0–11)",
       "youth": "Youth (12–17)",
       "adult": "Adult (18+)"
-    },
-    "caseBadge": "Case"
+    }
   },
   "report": {
     "report": "Report",
