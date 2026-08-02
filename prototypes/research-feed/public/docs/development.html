@@ -717,6 +717,18 @@ awarded kudos — the thread DTO carries counts and your own
 disclosure by way of an implementation detail, and make reciprocal
 kudos-trading legible. See
 <code>notifications/notification-payloads.ts</code>.</p>
+<p>Following from that: <strong>a kudos row does not navigate.</strong>
+Tapping it marks it read and stays in the inbox. There is no actor to
+open — see above — and the row already names the post beneath the
+message, so opening the thread costs a member their place in the list
+and shows them nothing new. This is deliberate and will look
+inconsistent next to the rows that <em>do</em> navigate (a reply has a
+reply to read, a moderation notice its detail screen, a verification
+notice the holding page that explains it); <code>present()</code> in
+<code>NotificationRow.tsx</code> returns a <strong>nullable</strong>
+<code>href</code> for exactly this, and
+<code>openNotificationAction</code> redirects only when one is given.
+Don’t “restore” the link.</p>
 <h2 id="admin-console-s11a">Admin console (S11a)</h2>
 <p>An allowlisted <strong>admin</strong> role gets a console at
 <code>/admin</code> (web) backed by <code>GET/POST /v1/admin/*</code>
