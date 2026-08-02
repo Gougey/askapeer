@@ -564,3 +564,11 @@ down, so a missing one is visible rather than silent:
 - **Module-per-epic** in the API (`src/<epic>/…`), matching the technical specs.
 - **i18n from day one**: every user-facing string is a key in `apps/web/messages/en-GB.json` (never a hardcoded literal). Adding locales later is additive.
 - **Themeable UI**: colours are CSS variables (`apps/web/src/app/globals.css`); the style guide, when ready, overrides the tokens — a theming pass, not a rewrite.
+- **Emails are trimmed and lower-cased on the way in**, by `NormaliseEmail()` on the auth
+  DTOs (`apps/api/src/auth/auth.dto.ts`) — on the DTO rather than in a service so any route
+  added later is covered by construction. A unique index on `lower(email)` (migration
+  `0017`) is the backstop that makes it hold even if a future path skips the DTO; a plain
+  `.unique()` on the column is byte-wise and treats `Ade@x.com` and `ade@x.com` as two
+  accounts for one inbox. Found in testing on 2026-08-01: signing in with different casing
+  from registration silently found no member, and `requestLink` cannot say so, because
+  revealing whether an address exists is a disclosure. Don't "simplify" either half away.

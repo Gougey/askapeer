@@ -822,6 +822,18 @@ literal). Adding locales later is additive.</li>
 <li><strong>Themeable UI</strong>: colours are CSS variables
 (<code>apps/web/src/app/globals.css</code>); the style guide, when
 ready, overrides the tokens — a theming pass, not a rewrite.</li>
+<li><strong>Emails are trimmed and lower-cased on the way in</strong>,
+by <code>NormaliseEmail()</code> on the auth DTOs
+(<code>apps/api/src/auth/auth.dto.ts</code>) — on the DTO rather than in
+a service so any route added later is covered by construction. A unique
+index on <code>lower(email)</code> (migration <code>0017</code>) is the
+backstop that makes it hold even if a future path skips the DTO; a plain
+<code>.unique()</code> on the column is byte-wise and treats
+<code>Ade@x.com</code> and <code>ade@x.com</code> as two accounts for
+one inbox. Found in testing on 2026-08-01: signing in with different
+casing from registration silently found no member, and
+<code>requestLink</code> cannot say so, because revealing whether an
+address exists is a disclosure. Don’t “simplify” either half away.</li>
 </ul>
 
 </main>
