@@ -139,9 +139,17 @@ Things worth knowing before changing any of it:
   while 32 sat beneath it. The composer's picker drops an ancestor when a descendant is
   chosen — deliberately, so a post never carries both — and that only works if broadening
   happens at query time. It now does, in both the list and search.
-- **Two predicates, doing different jobs.** An indexable disjunction (`posts.tsv` GIN, tag
-  names, category name) narrows to candidates; then the query is re-checked against the
-  *combined* vector. The second exists because negation was being silently ignored:
+- **A materialised CTE builds the candidate set, and `AS MATERIALIZED` is load-bearing.**
+  The first cut wrote `(indexable disjunction) AND (expensive re-check)` and assumed the
+  planner would use the GIN index for the first half. Measured at 50,000 posts it did not:
+  a sequential scan of every row with a correlated subquery run 50,065 times, **287ms** of
+  database time. Forcing the cheap half to run first and produce a small set is what makes
+  the index count. Category *names* are no longer matched — that cost a second full scan
+  and duplicated the category dropdown next to the search box.
+- **The negation re-check runs only when the query negates.** Applying it to everything
+  cost **258ms against 42ms**, because it rebuilds a tsvector per candidate. It can only
+  change the answer when something is excluded, so it is gated on the query containing a
+  `-term`. It exists because negation was otherwise silently ignored:
   `knee -runner` returned every post tagged "Knee Joint" whose body said "runner", since
   the tag branch matched a name containing "knee" and not "runner". Only survivors of the
   first predicate reach the second, so the unindexable one runs on a handful of rows.
@@ -151,6 +159,11 @@ Things worth knowing before changing any of it:
   because presenting a fuzzy match as an exact one is worse than the miss.
 - **Offset paging, not the keyset cursor the lists use.** A keyset cursor needs a stable
   indexed sort key; this sort is a computed relevance score, which is neither.
+- **Measured at 50,067 posts** (synthetic bulk, since removed): typical queries 5–10ms
+  end-to-end, a term matching 10% of the corpus 83ms, the trigram fallback 43ms. Postgres
+  FTS is comfortable well past the volume this platform will see for a long time. The next
+  lever, if it is ever needed, is a stored tsvector on `posts` covering tags as well as
+  title and body, maintained by trigger — one index, one predicate, no per-row rebuild.
 - **Synonyms are wired but unpopulated.** A tag contributes `name || synonyms` to every
   match — same tag, more of the words people use for it, not a second mechanism. Proven by
   putting `{MTSS, shin splints}` on one tag: both queries went from **0 hits to 2**, and
