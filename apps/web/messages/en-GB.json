@@ -445,7 +445,9 @@
     "resultCount": "{count, plural, one {1 result} other {# results}}",
     "didYouMean": "Nothing matched “{query}” exactly. Showing {count, plural, one {1 close match} other {# close matches}}.",
     "noResults": "No results. Try fewer words, a broader tag, or check the spelling.",
-    "more": "Show more results"
+    "more": "Show more results",
+    "advanced": "Advanced search",
+    "advancedWithCount": "Advanced search ({count, plural, one {1 filter} other {# filters}})"
   },
   "pagination": {
     "more": "Show more",

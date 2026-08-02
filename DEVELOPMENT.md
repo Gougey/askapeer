@@ -176,6 +176,18 @@ Things worth knowing before changing any of it:
   spec is explicit that this is *not* a separate screen. Until S13 lands, seed them by
   migration the same way Andrew's taxonomy itself was seeded; don't block on the admin UI.
 
+**The query stands alone; category and tags live behind "Advanced search".** They are
+*narrowing* controls, and narrowing is not what makes tags valuable here — a tag's name and
+synonyms are folded into the free-text match already, which is what takes "knee" from 4
+hits to 10. Hiding them costs nothing in recall and stops a member scrolling past a picker
+they rarely want to reach the button they always do (form height 395px → 184px collapsed).
+
+It is a native `<details>`, so keyboard support and no-JS behaviour are free and `open` is
+decided on the server. **A search arriving with filters in the URL opens expanded**, with
+the count on the label ("Advanced search (2 filters)") — otherwise a bookmarked or shared
+filtered search looks like a plain box returning suspiciously few results, with nothing on
+screen explaining why.
+
 The search screen is a **GET form**, so a search is a URL: bookmarkable, shareable, and
 working without JavaScript. The tag filter is the composer's `TagPicker`, moved to
 `components/` and reused with `fieldName="tag"` — the same type-ahead and drill-down over
