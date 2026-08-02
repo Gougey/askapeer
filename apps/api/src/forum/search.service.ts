@@ -5,6 +5,16 @@ import { BadgeService } from './badge.service';
 import type { PostCard } from './posts.service';
 
 const DEFAULT_PAGE_SIZE = 20;
+/**
+ * What a tag contributes to the match: its name **and its synonyms**.
+ *
+ * `community.tags.synonyms` is a text[] on the tag row, so this is not a second mechanism
+ * bolted alongside tags — it is the same tag matching on more of the words people use for
+ * it. A post tagged *Medial tibial stress syndrome* should be found by "MTSS" and by
+ * "shin splints", which is what a clinician actually types; without the synonyms both
+ * return nothing while the post sits there correctly tagged.
+ */
+const TAG_TEXT = sql`(t.name || ' ' || array_to_string(t.synonyms, ' '))`;
 /** Below this a trigram match returns half the corpus; above it, real typos stop matching. */
 const TRGM_THRESHOLD = 0.3;
 
@@ -91,7 +101,7 @@ export class SearchService {
           or exists (
             select 1 from community.post_tags pt
             join community.tags t on t.id = pt.tag_id
-            where pt.post_id = p.id and similarity(t.name, ${term}) > ${TRGM_THRESHOLD}
+            where pt.post_id = p.id and similarity(${TAG_TEXT}, ${term}) > ${TRGM_THRESHOLD}
           )
         )`
       : /*
@@ -115,14 +125,14 @@ export class SearchService {
             select 1 from community.post_tags pt
             join community.tags t on t.id = pt.tag_id
             where pt.post_id = p.id
-              and to_tsvector('english', t.name) @@ websearch_to_tsquery('english', ${term})
+              and to_tsvector('english', ${TAG_TEXT}) @@ websearch_to_tsquery('english', ${term})
           )
           or to_tsvector('english', cat.name) @@ websearch_to_tsquery('english', ${term})
         ) and (
           p.tsv
           || setweight(to_tsvector('english', cat.name), 'C')
           || setweight(to_tsvector('english', coalesce((
-               select string_agg(t.name, ' ')
+               select string_agg(${TAG_TEXT}, ' ')
                from community.post_tags pt
                join community.tags t on t.id = pt.tag_id
                where pt.post_id = p.id
@@ -137,7 +147,7 @@ export class SearchService {
               select 1 from community.post_tags pt
               join community.tags t on t.id = pt.tag_id
               where pt.post_id = p.id
-                and to_tsvector('english', t.name) @@ websearch_to_tsquery('english', ${term})
+                and to_tsvector('english', ${TAG_TEXT}) @@ websearch_to_tsquery('english', ${term})
             ) then 0.15 else 0 end
         )`;
 

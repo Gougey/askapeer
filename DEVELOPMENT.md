@@ -84,10 +84,17 @@ Things worth knowing before changing any of it:
   because presenting a fuzzy match as an exact one is worse than the miss.
 - **Offset paging, not the keyset cursor the lists use.** A keyset cursor needs a stable
   indexed sort key; this sort is a computed relevance score, which is neither.
-- **The synonym column is empty.** `community.tags.synonyms` exists, is wired into nothing
-  yet, and has 0 rows populated. That is why "MTSS" and "shin splints" both return nothing
-  despite a correctly-tagged *Medial tibial stress syndrome* post. It is a data top-up on
-  tags we already have, not a separate mechanism — it needs Andrew, not code.
+- **Synonyms are wired but unpopulated.** A tag contributes `name || synonyms` to every
+  match — same tag, more of the words people use for it, not a second mechanism. Proven by
+  putting `{MTSS, shin splints}` on one tag: both queries went from **0 hits to 2**, and
+  the top hit was a case titled *"Diffuse medial shin pain in a military recruit"*, which
+  contains neither phrase and was found entirely through its tag.
+
+  All 588 tags currently have `synonyms = '{}'`, so today those queries still return
+  nothing. **This needs Andrew, not code.** Maintenance is screen **G8**
+  (`/admin/config/tags`, S13) where synonyms are a field on the tag editor — the screen
+  spec is explicit that this is *not* a separate screen. Until S13 lands, seed them by
+  migration the same way Andrew's taxonomy itself was seeded; don't block on the admin UI.
 
 The search screen is a **GET form**, so a search is a URL: bookmarkable, shareable, and
 working without JavaScript. The tag filter is the composer's `TagPicker`, moved to
