@@ -552,6 +552,31 @@ The Redis instance is created with **eviction disabled**. BullMQ requires a `noe
 policy — under memory pressure an evicting Redis would silently drop queue keys and lose
 verification jobs, where a refused write fails loudly instead.
 
+### Machine autostop, and why one stays running
+
+Both apps set `min_machines_running = 1`, so one machine per app stays up in `lhr` while
+the second still stops when idle.
+
+This is worth knowing before anyone "optimises" it back to zero. **Fly Proxy stops an idle
+machine after several minutes, and that timeout is not configurable** — there is no
+idle-timeout setting in `fly.toml`, so keeping a machine running is the *only* way to avoid
+paying a cold start on the next request. During active testing the API paid it twice over,
+because the web app's server-side fetch wakes the API after the web machine has itself
+woken. Costs about **$3.32/month per app** at `shared-cpu-1x`/512mb.
+
+Two related symptoms that were the same cause, and should now be rare:
+
+- `flyctl ssh console -a askapeer-api` failing with *"app has no started VMs"* — the
+  documented remedy was to `curl` the health endpoint first to wake it, and that still
+  works if you meet it on the second machine.
+- The research-feed/docs app (`min_machines_running = 0`, unchanged) can show a release
+  stuck at "deploying" in the dashboard: the machines update, then auto-stop before Fly's
+  final health confirmation. Cosmetic — confirm a deploy by curling for the new content,
+  not by the dashboard badge.
+
+Drop back to `0` if this staging app goes quiet for a stretch, and revisit at the AWS
+migration.
+
 `GET /health` (unprefixed) probes both dependencies and returns **503** if either is
 down, so a missing one is visible rather than silent:
 

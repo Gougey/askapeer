@@ -17,7 +17,17 @@ primary_region = "lhr"
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 0
+  # One machine stays up in lhr; the second still stops when idle.
+  #
+  # Fly Proxy stops an idle machine after several minutes, and that timeout is **not**
+  # configurable — there is no idle-timeout setting in fly.toml, so the only way to avoid
+  # a cold start is to keep a machine running. During active testing the API pays that
+  # start twice over: the web app's server-side fetch wakes it after the web machine has
+  # itself woken.
+  #
+  # Costs about $3.32/month at shared-cpu-1x/512mb. Revisit at the AWS migration, and drop
+  # back to 0 if this staging app goes quiet for a stretch.
+  min_machines_running = 1
 
 [[vm]]
   size = "shared-cpu-1x"

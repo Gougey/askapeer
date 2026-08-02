@@ -13,7 +13,10 @@ primary_region = "lhr"
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 0
+  # One machine stays up in lhr — see the note in apps/api/fly.toml. Fly's idle timeout is
+  # not configurable, so keeping a machine running is the only way to avoid the cold start.
+  # About $3.32/month at shared-cpu-1x/512mb.
+  min_machines_running = 1
 
 [[vm]]
   size = "shared-cpu-1x"
