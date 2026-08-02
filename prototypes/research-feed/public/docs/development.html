@@ -806,6 +806,35 @@ disabled</strong>. BullMQ requires a <code>noeviction</code> policy —
 under memory pressure an evicting Redis would silently drop queue keys
 and lose verification jobs, where a refused write fails loudly
 instead.</p>
+<h3 id="machine-autostop-and-why-one-stays-running">Machine autostop,
+and why one stays running</h3>
+<p>Both apps set <code>min_machines_running = 1</code>, so one machine
+per app stays up in <code>lhr</code> while the second still stops when
+idle.</p>
+<p>This is worth knowing before anyone “optimises” it back to zero.
+<strong>Fly Proxy stops an idle machine after several minutes, and that
+timeout is not configurable</strong> — there is no idle-timeout setting
+in <code>fly.toml</code>, so keeping a machine running is the
+<em>only</em> way to avoid paying a cold start on the next request.
+During active testing the API paid it twice over, because the web app’s
+server-side fetch wakes the API after the web machine has itself woken.
+Costs about <strong>$3.32/month per app</strong> at
+<code>shared-cpu-1x</code>/512mb.</p>
+<p>Two related symptoms that were the same cause, and should now be
+rare:</p>
+<ul>
+<li><code>flyctl ssh console -a askapeer-api</code> failing with
+<em>“app has no started VMs”</em> — the documented remedy was to
+<code>curl</code> the health endpoint first to wake it, and that still
+works if you meet it on the second machine.</li>
+<li>The research-feed/docs app (<code>min_machines_running = 0</code>,
+unchanged) can show a release stuck at “deploying” in the dashboard: the
+machines update, then auto-stop before Fly’s final health confirmation.
+Cosmetic — confirm a deploy by curling for the new content, not by the
+dashboard badge.</li>
+</ul>
+<p>Drop back to <code>0</code> if this staging app goes quiet for a
+stretch, and revisit at the AWS migration.</p>
 <p><code>GET /health</code> (unprefixed) probes both dependencies and
 returns <strong>503</strong> if either is down, so a missing one is
 visible rather than silent:</p>
