@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { fetchNotificationPreferences } from '@/lib/notifications';
 import { requireAccessToken } from '@/lib/session';
@@ -27,10 +26,8 @@ export default async function NotificationSettingsPage() {
 
   return (
     <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
+      {/* The app bar's back control replaces the inline link this used to carry. */}
       <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
-        <Link href="/settings" className="text-sm font-semibold" style={{ color: 'var(--color-accent)' }}>
-          {t('back')}
-        </Link>
         <h1 className="text-xl font-semibold">{t('heading')}</h1>
       </div>
 

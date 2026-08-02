@@ -39,10 +39,9 @@ export default async function ModerationNoticePage({
 
   return (
     <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
+      {/* No inline back link: the app bar carries one on every non-tab screen now, and two
+          back affordances on one screen is worse than the none this used to have. */}
       <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
-        <Link href="/activity" className="text-sm font-semibold" style={{ color: 'var(--color-accent)' }}>
-          {t('back')}
-        </Link>
         <h1 className="text-xl font-semibold">{t(`action.${notice.action.type}`)}</h1>
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
           {format.relativeTime(new Date(notice.action.createdAt))}

@@ -1,3 +1,4 @@
+import { BackControl } from './BackControl';
 /**
  * Brand marks. The logo is navy, so on dark backgrounds a light variant is swapped in
  * via <picture> + prefers-color-scheme (the red "a" is preserved in both). See the
@@ -36,6 +37,14 @@ export function AppBar() {
         borderBottom: '1px solid var(--color-border)',
       }}
     >
+      {/*
+        The way out of any non-tab screen. It lives here rather than on each screen so
+        every screen gets one by construction — the two screens that had their own back
+        link were the two somebody remembered, which is not a pattern.
+
+        It renders nothing on the four tab destinations, so the bar is unchanged there.
+      */}
+      <BackControl />
       <picture>
         <source srcSet="/brand/askapeer-mark-dark.png" media="(prefers-color-scheme: dark)" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
