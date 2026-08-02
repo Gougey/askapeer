@@ -127,6 +127,13 @@
       "when": 1785587612229,
       "tag": "0017_daily_mysterio",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785661295000,
+      "tag": "0018_rapid_monster_badoon",
+      "breakpoints": true
     }
   ]
 }

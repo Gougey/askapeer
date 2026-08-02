@@ -47,7 +47,14 @@ export type Thread = {
   viewerContext: { isAuthor: boolean; hasKudosedPost: boolean };
 };
 
-export type Category = { id: string; name: string; description: string | null };
+export type Category = {
+  id: string;
+  name: string;
+  description: string | null;
+  /** The post type this category is for, or null for either. The question composer hides
+   *  the case-discussion one; a case's category is resolved server-side, never picked. */
+  postType: 'question' | 'case_discussion' | null;
+};
 
 /**
  * One node of the clinical taxonomy (region → axis → sub-group → leaf). The API returns

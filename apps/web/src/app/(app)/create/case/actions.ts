@@ -13,7 +13,7 @@ export type CaseComposeState = {
 };
 
 type CaseFields = {
-  categoryId: string;
+  /* No category: the API resolves it from the vocabulary (`categories.post_type`). */
   ageBand: string;
   onsetDays: number;
   presentingCondition: string;
@@ -27,7 +27,6 @@ function readFields(formData: FormData): CaseFields | null {
   const onsetRaw = String(formData.get('onsetDays') ?? '').trim();
   const onsetDays = Number(onsetRaw);
   const fields = {
-    categoryId: String(formData.get('categoryId') ?? ''),
     ageBand: String(formData.get('ageBand') ?? ''),
     onsetDays,
     presentingCondition: String(formData.get('presentingCondition') ?? '').trim(),
@@ -40,7 +39,6 @@ function readFields(formData: FormData): CaseFields | null {
   // Re-checked here as well as in the browser: a disabled button is a convenience, and a
   // form can always be submitted without one.
   const complete =
-    fields.categoryId &&
     fields.ageBand &&
     onsetRaw !== '' &&
     Number.isInteger(onsetDays) &&

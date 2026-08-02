@@ -46,6 +46,8 @@ Builds on `community.posts`, `community.comments`, `community.tags`/`community.p
 
 ```
 community.categories                  -- fixed, admin-managed, small set (CONTENT TYPE)
+                                      -- post_type: nullable; scopes a category to one
+                                      -- kind of post (null = either). See §3's amendment.
   id           uuid PK
   name         text unique            -- content type, not body area:
                                        -- e.g. "Clinical Case", "Research", "Career",
@@ -110,6 +112,14 @@ community.post_tags   (post_id FK, tag_id FK, primary key(post_id, tag_id))
 Per the PRD's recommendation (Section 15, FD-4, Option D) and now **confirmed with Andrew Renshaw** (2026-07-17): each post has exactly **one category and zero-or-more tags**.
 
 **Categories = content type** (not body area): a small, fixed, admin-managed set — e.g. *Clinical Case, Research, Career, Equipment, General* (final list admin-managed, working set here). Chosen by the author at creation. This is the correction to an earlier ambiguity: body areas are **tags**, not categories.
+
+> **Amended 2026-08-02 — a category may be scoped to one post type.** `community.categories` gains a nullable `post_type`; null means "either kind of post", and the clinical-case category is marked `case_discussion`.
+>
+> This resolves the one place where the category set overlaps `posts.type`. A case discussion **is** a clinical case, so asking its author to pick that category made them restate what choosing "Case discussion" had already said — and offering it on the quick-question composer invited exactly the post that should have travelled EPIC-E's de-identification route. So: a case discussion's category is **resolved server-side, never supplied** (`CreateCaseDto` has no `categoryId`), and `POST /v1/posts` refuses a case-scoped category for a question.
+>
+> Marked as data rather than matched on the string `'Clinical Case'` because EPIC-J lets an administrator rename a category, and a rename must not silently change behaviour.
+>
+> **No CHECK ties `categories.post_type` to `posts.type`.** Questions created before this rule already sit in the clinical-case category; a constraint would either fail the migration or force rewriting members' posts to satisfy a composer rule. The rule is enforced on the way in and history is left alone, so expect to see pre-existing questions in that category on the list.
 
 **Tags = one unified clinical vocabulary** (`community.tags`, §2). The three previously-unreconciled vocabularies (Andrew's body-area list, the research-feed `taxonomy.json`, and the forum's own list) are **collapsed into a single controlled table** — resolving open-questions §1.2. The full decision, rationale, and the agreed seed rows are in `docs/2026-07-17-taxonomy-standards-research.md` (Decision section). In brief:
 

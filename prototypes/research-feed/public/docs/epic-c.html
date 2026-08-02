@@ -86,6 +86,8 @@ defined in the architecture spec, Section 4.2. This spec adds the
 Option D) requires, which the architecture spec named but didn’t fully
 model:</p>
 <pre><code>community.categories                  -- fixed, admin-managed, small set (CONTENT TYPE)
+                                      -- post_type: nullable; scopes a category to one
+                                      -- kind of post (null = either). See §3&#39;s amendment.
   id           uuid PK
   name         text unique            -- content type, not body area:
                                        -- e.g. &quot;Clinical Case&quot;, &quot;Research&quot;, &quot;Career&quot;,
@@ -165,6 +167,32 @@ fixed, admin-managed set — e.g. <em>Clinical Case, Research, Career,
 Equipment, General</em> (final list admin-managed, working set here).
 Chosen by the author at creation. This is the correction to an earlier
 ambiguity: body areas are <strong>tags</strong>, not categories.</p>
+<blockquote>
+<p><strong>Amended 2026-08-02 — a category may be scoped to one post
+type.</strong> <code>community.categories</code> gains a nullable
+<code>post_type</code>; null means “either kind of post”, and the
+clinical-case category is marked <code>case_discussion</code>.</p>
+<p>This resolves the one place where the category set overlaps
+<code>posts.type</code>. A case discussion <strong>is</strong> a
+clinical case, so asking its author to pick that category made them
+restate what choosing “Case discussion” had already said — and offering
+it on the quick-question composer invited exactly the post that should
+have travelled EPIC-E’s de-identification route. So: a case discussion’s
+category is <strong>resolved server-side, never supplied</strong>
+(<code>CreateCaseDto</code> has no <code>categoryId</code>), and
+<code>POST /v1/posts</code> refuses a case-scoped category for a
+question.</p>
+<p>Marked as data rather than matched on the string
+<code>'Clinical Case'</code> because EPIC-J lets an administrator rename
+a category, and a rename must not silently change behaviour.</p>
+<p><strong>No CHECK ties <code>categories.post_type</code> to
+<code>posts.type</code>.</strong> Questions created before this rule
+already sit in the clinical-case category; a constraint would either
+fail the migration or force rewriting members’ posts to satisfy a
+composer rule. The rule is enforced on the way in and history is left
+alone, so expect to see pre-existing questions in that category on the
+list.</p>
+</blockquote>
 <p><strong>Tags = one unified clinical vocabulary</strong>
 (<code>community.tags</code>, §2). The three previously-unreconciled
 vocabularies (Andrew’s body-area list, the research-feed

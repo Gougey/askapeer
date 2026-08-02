@@ -92,6 +92,11 @@ const tsvector = customType<{ data: string; driverData: string }>({
   dataType: () => 'tsvector',
 });
 
+// Declared above `categories` rather than beside `posts`, because the categories table
+// references it — a `const` used before its initialiser is a runtime ReferenceError, not
+// a type error, so the order here is load-bearing.
+export const postType = community.enum('post_type', ['question', 'case_discussion']);
+
 /**
  * Content-type categories (EPIC-C §3) — "Clinical Case", "Research", "Career"… NOT body
  * areas, which are tags. A small admin-managed set; every post has exactly one.
@@ -103,6 +108,22 @@ export const categories = community.table('categories', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(),
   description: text('description'),
+  /**
+   * Which kind of post this category is for, or null for "either".
+   *
+   * "Clinical Case" is the one category that overlaps with `posts.type`: a case discussion
+   * *is* a clinical case, so asking its author to pick that category is asking them to
+   * restate what they already chose on the previous screen, and offering it to a plain
+   * question invites the wrong one. Marking the category instead of matching the string
+   * `'Clinical Case'` matters because EPIC-J lets an administrator rename categories, and
+   * a rename must not quietly change behaviour.
+   *
+   * Deliberately no CHECK tying this to `posts.type`: real questions already sit in the
+   * clinical-case category from before the rule existed, and retro-fitting a constraint
+   * would either fail the migration or force a rewrite of members' posts to satisfy a
+   * composer rule. The rule is enforced on the way in, and history is left alone.
+   */
+  postType: postType('post_type'),
   sortOrder: integer('sort_order').notNull().default(0),
   retiredAt: timestamp('retired_at', { withTimezone: true }),
 });
@@ -152,8 +173,6 @@ export const tags = community.table(
       .where(sql`${t.parentId} is null`),
   ],
 );
-
-export const postType = community.enum('post_type', ['question', 'case_discussion']);
 
 /**
  * `draft` and `needs_correction` are case-discussion-only states (EPIC-E). An ordinary

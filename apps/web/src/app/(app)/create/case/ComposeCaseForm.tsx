@@ -78,23 +78,20 @@ function SaveDraftButton() {
  * of it server-side, so bypassing the button achieves nothing.
  */
 export function ComposeCaseForm({
-  categories,
   tags,
   policy,
   draft,
 }: {
-  categories: Category[];
   tags: Tag[];
   policy: CasePolicy;
   /** Present when resuming a saved draft or a case sent back for correction. */
-  draft?: { postId: string; status: string; detail: CaseDetail; categoryId: string; tagIds: string[] };
+  draft?: { postId: string; status: string; detail: CaseDetail; tagIds: string[] };
 }) {
   const t = useTranslations('caseCompose');
   const [state, formAction] = useActionState<CaseComposeState, FormData>(submitCaseAction, {
     status: 'idle',
   });
 
-  const [categoryId, setCategoryId] = useState(draft?.categoryId ?? '');
   const [ageBand, setAgeBand] = useState(draft?.detail.ageBand ?? '');
   const [onsetDays, setOnsetDays] = useState(
     draft ? String(draft.detail.onsetDays) : '',
@@ -118,7 +115,6 @@ export function ComposeCaseForm({
   const [attested, setAttested] = useState(false);
 
   const detailsComplete =
-    categoryId !== '' &&
     ageBand !== '' &&
     onsetDays.trim() !== '' &&
     Number(onsetDays) >= 0 &&
@@ -154,23 +150,11 @@ export function ComposeCaseForm({
         {t('anonymity')}
       </p>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">{t('category')}</span>
-        <select
-          name="categoryId"
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="border px-3 py-2"
-          style={fieldStyle}
-        >
-          <option value="">{t('categoryPlaceholder')}</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      {/*
+        No category picker. A case discussion is a clinical case by definition, so the
+        category is resolved server-side — asking for it here would make the member restate
+        what choosing "Case discussion" on the previous control already said.
+      */}
 
       {/*
         The structural half of de-identification, kept visually together and labelled as
