@@ -95,49 +95,61 @@ export class SearchService {
   ) {
     const tagFilters = (query.tags ?? []).filter(Boolean);
 
-    const matches = fuzzy
-      ? sql`(
-          similarity(p.title, ${term}) > ${TRGM_THRESHOLD}
-          or exists (
-            select 1 from community.post_tags pt
+    /*
+     * **The candidate set, and why it is a materialised CTE.**
+     *
+     * The first cut wrote this as `(indexable disjunction) AND (expensive re-check)` and
+     * assumed the planner would use the GIN index for the first and filter with the
+     * second. Measured at 50,000 posts, it did no such thing: a sequential scan over every
+     * row with a correlated subquery run 50,065 times, 287ms of database time. `AS
+     * MATERIALIZED` is what forces the cheap, indexable half to run first and produce a
+     * small set for everything after it.
+     *
+     * The category name is deliberately **not** matched here. It cost a second full scan
+     * of `posts` and duplicated the category dropdown sitting next to the search box.
+     */
+    const candidates = fuzzy
+      ? sql`
+          select p.id from community.posts p
+           where p.status = 'published' and p.title % ${term}
+          union
+          select pt.post_id from community.post_tags pt
             join community.tags t on t.id = pt.tag_id
-            where pt.post_id = p.id and similarity(${TAG_TEXT}, ${term}) > ${TRGM_THRESHOLD}
-          )
-        )`
-      : /*
-         * Two predicates doing different jobs.
-         *
-         * The first is the indexable one: a disjunction over `posts.tsv` (GIN), tag names
-         * and the category name. It narrows the corpus to candidates cheaply.
-         *
-         * The second re-checks the query against the *combined* vector — post text plus
-         * its tag and category names as one document. That is what makes negation behave:
-         * with the disjunction alone, `knee -runner` still returned every post tagged
-         * "Knee Joint" whose body said "runner", because the tag branch matched on a name
-         * that contains "knee" and not "runner". The exclusion was silently ignored.
-         *
-         * Only the survivors of the first predicate reach the second, so the unindexable
-         * one runs on a handful of rows rather than the table.
-         */
-        sql`(
-          p.tsv @@ websearch_to_tsquery('english', ${term})
-          or exists (
-            select 1 from community.post_tags pt
+           where ${TAG_TEXT} % ${term}`
+      : sql`
+          select p.id from community.posts p
+           where p.status = 'published'
+             and p.tsv @@ websearch_to_tsquery('english', ${term})
+          union
+          select pt.post_id from community.post_tags pt
             join community.tags t on t.id = pt.tag_id
-            where pt.post_id = p.id
-              and to_tsvector('english', ${TAG_TEXT}) @@ websearch_to_tsquery('english', ${term})
-          )
-          or to_tsvector('english', cat.name) @@ websearch_to_tsquery('english', ${term})
-        ) and (
-          p.tsv
-          || setweight(to_tsvector('english', cat.name), 'C')
-          || setweight(to_tsvector('english', coalesce((
-               select string_agg(${TAG_TEXT}, ' ')
-               from community.post_tags pt
-               join community.tags t on t.id = pt.tag_id
-               where pt.post_id = p.id
-             ), '')), 'C')
-        ) @@ websearch_to_tsquery('english', ${term})`;
+           where to_tsvector('english', ${TAG_TEXT}) @@ websearch_to_tsquery('english', ${term})`;
+
+    /*
+     * The re-check that makes negation behave — applied **only when the query negates**.
+     *
+     * Without it `knee -runner` returned every post tagged "Knee Joint" whose body said
+     * "runner", because the tag branch matched a name containing "knee" and not "runner".
+     * With it applied to every query it cost 258ms against 42ms, because it rebuilds a
+     * tsvector per candidate. Since it can only ever *change* the answer when the query
+     * excludes something, it now runs only then: `websearch_to_tsquery` turns a `-term`
+     * into `!`, and that is exactly the shape this is for.
+     */
+    const negated = /(^|\s)-\S/.test(term);
+    const negationGuard =
+      negated && !fuzzy
+        ? [
+            sql`(
+              p.tsv
+              || setweight(to_tsvector('english', coalesce((
+                   select string_agg(${TAG_TEXT}, ' ')
+                   from community.post_tags pt
+                   join community.tags t on t.id = pt.tag_id
+                   where pt.post_id = p.id
+                 ), '')), 'C')
+            ) @@ websearch_to_tsquery('english', ${term})`,
+          ]
+        : [];
 
     const relevance = fuzzy
       ? sql`similarity(p.title, ${term})`
@@ -170,8 +182,8 @@ export class SearchService {
       sql`p.status = 'published'`,
       // A suspended or expelled member's content leaves the community surfaces (EPIC-F).
       sql`h.status = 'active'`,
-      matches,
       query.category ? sql`p.category_id = ${query.category}` : sql`true`,
+      ...negationGuard,
       ...tagPredicates,
     ];
     const where = conditions.reduce((acc, c, i) => (i === 0 ? c : sql`${acc} and ${c}`));
@@ -191,6 +203,7 @@ export class SearchService {
       created_at: Date;
       edited_at: Date | null;
     }>(sql`
+      with candidates as materialized (${candidates})
       select p.id, p.type, p.title,
              coalesce(cd.community_question, p.body) as snippet,
              cat.id as category_id, cat.name as category_name,
@@ -200,7 +213,8 @@ export class SearchService {
              (select count(*) from community.kudos k
                where k.target_type = 'post' and k.target_id = p.id)::int as kudos_count,
              p.created_at, p.edited_at
-      from community.posts p
+      from candidates cd_ids
+      join community.posts p on p.id = cd_ids.id
       join community.handles h on h.id = p.handle_id
       join community.categories cat on cat.id = p.category_id
       left join community.case_details cd on cd.post_id = p.id

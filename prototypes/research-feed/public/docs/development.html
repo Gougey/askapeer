@@ -218,15 +218,26 @@ composer’s picker drops an ancestor when a descendant is chosen —
 deliberately, so a post never carries both — and that only works if
 broadening happens at query time. It now does, in both the list and
 search.</p></li>
-<li><p><strong>Two predicates, doing different jobs.</strong> An
-indexable disjunction (<code>posts.tsv</code> GIN, tag names, category
-name) narrows to candidates; then the query is re-checked against the
-<em>combined</em> vector. The second exists because negation was being
-silently ignored: <code>knee -runner</code> returned every post tagged
-“Knee Joint” whose body said “runner”, since the tag branch matched a
-name containing “knee” and not “runner”. Only survivors of the first
-predicate reach the second, so the unindexable one runs on a handful of
-rows.</p></li>
+<li><p><strong>A materialised CTE builds the candidate set, and
+<code>AS MATERIALIZED</code> is load-bearing.</strong> The first cut
+wrote <code>(indexable disjunction) AND (expensive re-check)</code> and
+assumed the planner would use the GIN index for the first half. Measured
+at 50,000 posts it did not: a sequential scan of every row with a
+correlated subquery run 50,065 times, <strong>287ms</strong> of database
+time. Forcing the cheap half to run first and produce a small set is
+what makes the index count. Category <em>names</em> are no longer
+matched — that cost a second full scan and duplicated the category
+dropdown next to the search box.</p></li>
+<li><p><strong>The negation re-check runs only when the query
+negates.</strong> Applying it to everything cost <strong>258ms against
+42ms</strong>, because it rebuilds a tsvector per candidate. It can only
+change the answer when something is excluded, so it is gated on the
+query containing a <code>-term</code>. It exists because negation was
+otherwise silently ignored: <code>knee -runner</code> returned every
+post tagged “Knee Joint” whose body said “runner”, since the tag branch
+matched a name containing “knee” and not “runner”. Only survivors of the
+first predicate reach the second, so the unindexable one runs on a
+handful of rows.</p></li>
 <li><p><strong>Trigram fallback, not trigram search.</strong>
 <code>pg_trgm</code> (migration <code>0019</code>) runs only when the
 tsquery matched nothing — “achiles” is a dead end under full-text search
@@ -236,6 +247,13 @@ a fuzzy match as an exact one is worse than the miss.</p></li>
 <li><p><strong>Offset paging, not the keyset cursor the lists
 use.</strong> A keyset cursor needs a stable indexed sort key; this sort
 is a computed relevance score, which is neither.</p></li>
+<li><p><strong>Measured at 50,067 posts</strong> (synthetic bulk, since
+removed): typical queries 5–10ms end-to-end, a term matching 10% of the
+corpus 83ms, the trigram fallback 43ms. Postgres FTS is comfortable well
+past the volume this platform will see for a long time. The next lever,
+if it is ever needed, is a stored tsvector on <code>posts</code>
+covering tags as well as title and body, maintained by trigger — one
+index, one predicate, no per-row rebuild.</p></li>
 <li><p><strong>Synonyms are wired but unpopulated.</strong> A tag
 contributes <code>name || synonyms</code> to every match — same tag,
 more of the words people use for it, not a second mechanism. Proven by
