@@ -233,9 +233,32 @@ G-5 + <code>PUT …/accepted-answer</code>;
 </ul>
 <hr />
 <h2
-id="s7-discovery-follows-personalised-feed-trending-search-parallel-able-should-mustsearch">S7
+id="s7-discovery-follows-personalised-feed-trending-search-parallel-able-should-mustsearch-search-built-2026-08-02">S7
 — Discovery: follows, personalised feed, trending, search
-[parallel-able] [Should + Must(search)]</h2>
+[parallel-able] [Should + Must(search)] — <strong>search built
+2026-08-02</strong></h2>
+<blockquote>
+<p><strong>Status.</strong> The <strong>Must-have half is in</strong>:
+<code>GET /v1/search</code> (EPIC-C §4 — weighted tsvector with tag and
+category names folded in, <code>websearch_to_tsquery</code>,
+<code>pg_trgm</code> typo fallback, <code>ts_rank_cd</code> → recency →
+kudos tiebreak) and screen C3. <strong>Not built</strong>:
+<code>community.follows</code>, the personalised feed, the trending
+fallback — all Should-have and separable, as the note below
+anticipated.</p>
+<p>Fixed on the way: a tag filter did an <strong>exact match</strong>,
+so filtering on any parent region returned 0 posts while its subtree
+held dozens. The composer’s picker drops an ancestor when a descendant
+is chosen precisely because it assumes query-time broadening; that half
+was missing. Both the list and search now expand a tag to its
+subtree.</p>
+<p><strong>Outstanding and needing Andrew, not code:</strong>
+<code>community.tags.synonyms</code> is empty, so “MTSS” and “shin
+splints” both return nothing against a correctly-tagged <em>Medial
+tibial stress syndrome</em> post. §4 calls the clinical synonym
+dictionary the single most important search-quality feature for this
+audience; it is a data top-up on the existing tags.</p>
+</blockquote>
 <ul>
 <li><strong>Delivers</strong>: following a tag/handle shapes the
 Discussions home; an empty feed falls back to trending; full-text search

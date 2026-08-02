@@ -218,7 +218,8 @@
       "child": "Child (0–11)",
       "youth": "Youth (12–17)",
       "adult": "Adult (18+)"
-    }
+    },
+    "searchCta": "Search"
   },
   "report": {
     "report": "Report",
@@ -427,5 +428,20 @@
       "communityQuestion": "The question"
     },
     "attested": "The author has attested that this case is de-identified."
+  },
+  "search": {
+    "heading": "Search",
+    "queryLabel": "Search",
+    "queryPlaceholder": "e.g. hamstring return to run, \"ACL\", achilles -surgery",
+    "categoryLabel": "Category",
+    "anyCategory": "Any category",
+    "tagsLabel": "Narrow by tag",
+    "tagsHint": "Optional. Choosing a region includes everything beneath it.",
+    "submit": "Search",
+    "idle": "Search posts, answers and tags across the community.",
+    "resultCount": "{count, plural, one {1 result} other {# results}}",
+    "didYouMean": "Nothing matched “{query}” exactly. Showing {count, plural, one {1 close match} other {# close matches}}.",
+    "noResults": "No results. Try fewer words, a broader tag, or check the spelling.",
+    "more": "Show more results"
   }
 }

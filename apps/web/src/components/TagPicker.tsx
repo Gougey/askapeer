@@ -75,12 +75,28 @@ export function TagPicker({
   tags,
   max,
   initialSelectedIds,
+  fieldName = 'tagIds',
+  heading,
+  hint,
 }: {
   tags: Tag[];
   max: number;
-  /** Tags already on the post — resuming a case-discussion draft (EPIC-E, S9). Absent
-   *  when composing something new, which is every other caller. */
+  /** Tags already selected — resuming a case-discussion draft (EPIC-E, S9), or a search
+   *  arriving with `?tag=` already in the URL. Absent when starting fresh. */
   initialSelectedIds?: string[];
+  /**
+   * The form field the selection submits as. Defaults to the composer's `tagIds`; search
+   * posts `tag`, matching `GET /v1/search?tag=`.
+   *
+   * Parameterised rather than forked: this control is ~400 lines of bottom sheet, drill-
+   * down, type-ahead and iOS zoom handling, and a second copy would drift on the first fix
+   * that only one of them received.
+   */
+  fieldName?: string;
+  /** Overrides the composer's "Tags" label and hint — search asks a different question of
+   *  the same control ("narrow by tag", not "tag this post"). */
+  heading?: string;
+  hint?: string;
 }) {
   const t = useTranslations('compose');
   const index = useMemo(() => indexTags(tags), [tags]);
@@ -127,7 +143,7 @@ export function TagPicker({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between">
-        <span className="text-sm font-medium">{t('tags')}</span>
+        <span className="text-sm font-medium">{heading ?? t('tags')}</span>
         <span
           className="text-xs tabular-nums"
           style={{ color: capHit ? 'var(--color-bad)' : 'var(--color-muted)' }}
@@ -137,7 +153,7 @@ export function TagPicker({
         </span>
       </div>
       <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
-        {t('tagsHint', { max })}
+        {hint ?? t('tagsHint', { max })}
       </p>
 
       {selected.length > 0 && (
@@ -160,7 +176,7 @@ export function TagPicker({
         already reads — the picker is a control, not a special case.
       */}
       {selected.map((id) => (
-        <input key={id} type="hidden" name="tagIds" value={id} />
+        <input key={id} type="hidden" name={fieldName} value={id} />
       ))}
 
       <button

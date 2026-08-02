@@ -233,10 +233,28 @@ export class PostsService {
           eq(posts.status, 'published'),
           authorHandleId ? eq(posts.handleId, authorHandleId) : undefined,
           query.category ? eq(posts.categoryId, query.category) : undefined,
-          // A tag filter needs the join table; the semi-join keeps one row per post even
-          // though a post can match on several tags.
+          /*
+           * A tag filter matches the tag **and everything beneath it**.
+           *
+           * This was an exact match, and it made every parent region return nothing:
+           * filtering on "Lower Limb" gave 0 posts while 32 sat under it. The composer's
+           * picker drops an ancestor as soon as a descendant is chosen — deliberately, so
+           * a post never carries both — which only works if broadening happens here. It
+           * did not, so the two halves disagreed and the visible half looked broken.
+           *
+           * The semi-join keeps one row per post even when several of its tags match.
+           */
           query.tag
-            ? sql`exists (select 1 from ${postTags} where ${postTags.postId} = ${posts.id} and ${postTags.tagId} = ${query.tag})`
+            ? sql`exists (
+                with recursive subtree as (
+                  select id from ${tags} where id = ${query.tag}
+                  union all
+                  select c.id from ${tags} c join subtree s on c.parent_id = s.id
+                )
+                select 1 from ${postTags}
+                where ${postTags.postId} = ${posts.id}
+                  and ${postTags.tagId} in (select id from subtree)
+              )`
             : undefined,
           cursor
             ? or(

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import type { Category, Tag } from '@/lib/forum';
 import { createPostAction, type ComposeState } from './actions';
 import { ConfirmPostDialog } from './ConfirmPostDialog';
-import { TagPicker } from './TagPicker';
+import { TagPicker } from '@/components/TagPicker';
 
 /** Matches the API's ArrayMaxSize — the limit is explained here, enforced there. */
 const MAX_TAGS = 5;

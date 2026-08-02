@@ -97,6 +97,33 @@ export async function fetchThread(postId: string, token: string): Promise<Thread
   return apiGet<Thread>(`/posts/${postId}`, token);
 }
 
+export type SearchResults = {
+  posts: PostCard[];
+  nextCursor: string | null;
+  /** The tsquery matched nothing and these came from trigram similarity — the screen says
+   *  so rather than presenting a fuzzy match as an exact one. */
+  didYouMean: boolean;
+};
+
+/**
+ * Full-text search (EPIC-C §4, screen C3).
+ *
+ * Every parameter is passed straight through from the URL, which is deliberate: the search
+ * form is a GET form, so the URL *is* the query, and this is the one place that has to
+ * agree with it.
+ */
+export async function fetchSearch(
+  token: string,
+  params: { q: string; category?: string; tags?: string[]; cursor?: string },
+): Promise<SearchResults> {
+  const search = new URLSearchParams({ q: params.q });
+  if (params.category) search.set('category', params.category);
+  for (const tag of params.tags ?? []) search.append('tag', tag);
+  if (params.cursor) search.set('cursor', params.cursor);
+  const res = await apiGet<SearchResults>(`/search?${search.toString()}`, token);
+  return res ?? { posts: [], nextCursor: null, didYouMean: false };
+}
+
 /** The composer's two pickers, fetched together — neither is useful without the other. */
 export async function fetchVocabulary(
   token: string,
