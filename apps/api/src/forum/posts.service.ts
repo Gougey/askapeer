@@ -140,10 +140,18 @@ export class PostsService {
    */
   async create(handleId: string, dto: CreatePostDto): Promise<Thread> {
     const [category] = await this.db
-      .select({ id: categories.id })
+      .select({ id: categories.id, postType: categories.postType })
       .from(categories)
       .where(and(eq(categories.id, dto.categoryId), isNull(categories.retiredAt)));
     if (!category) throw new BadRequestException('That category does not exist.');
+    // The composer already hides this one, but the composer is not the gate: a category
+    // reserved for case discussions must not take a question, or the question sidesteps
+    // the de-identification route the category implies (EPIC-E).
+    if (category.postType === 'case_discussion') {
+      throw new BadRequestException(
+        'That category is for case discussions, which publish through the de-identification checklist.',
+      );
+    }
 
     const tagIds = dto.tagIds ?? [];
     if (tagIds.length > 0) {

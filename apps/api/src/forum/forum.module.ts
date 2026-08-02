@@ -42,6 +42,9 @@ import { VocabularyService } from './vocabulary.service';
   ],
   // EPIC-E (S9) reads a case discussion's thread back through the same reader questions
   // use, so the two post types stay one shape everywhere downstream.
-  exports: [PostsService],
+  // PostsService: EPIC-E reads a case's thread back through the same reader questions use.
+  // VocabularyService: it also resolves the case-discussion category rather than asking
+  // its author to pick one (`categories.post_type`).
+  exports: [PostsService, VocabularyService],
 })
 export class ForumModule {}

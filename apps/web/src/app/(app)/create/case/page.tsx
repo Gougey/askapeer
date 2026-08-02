@@ -15,7 +15,7 @@ import { ComposeCaseForm } from './ComposeCaseForm';
  */
 export default async function CreateCasePage() {
   const token = await requireAccessToken();
-  const [t, { categories, tags }, policy, drafts] = await Promise.all([
+  const [t, { tags }, policy, drafts] = await Promise.all([
     getTranslations('caseCompose'),
     fetchVocabulary(token),
     fetchCasePolicy(token),
@@ -40,7 +40,7 @@ export default async function CreateCasePage() {
         </Link>
       )}
 
-      <ComposeCaseForm categories={categories} tags={tags} policy={policy} />
+      <ComposeCaseForm tags={tags} policy={policy} />
     </main>
   );
 }

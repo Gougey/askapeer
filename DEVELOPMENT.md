@@ -254,6 +254,15 @@ invisible to everyone but its author — moderators included — until its autho
 completed a six-item de-identification checklist and attested, under their **verified
 legal identity**, that it is de-identified.
 
+**A case discussion has no category picker.** Its category is resolved server-side from
+`categories.post_type` — the clinical-case category is marked `case_discussion`, and
+`CreateCaseDto` deliberately has no `categoryId`. The quick-question composer hides
+case-scoped categories, and `POST /v1/posts` refuses one. Marked as data rather than
+matched on the name `'Clinical Case'`, because EPIC-J lets an admin rename categories and a
+rename must not change behaviour. There is **no CHECK** tying the two: questions created
+before the rule already sit in that category, so expect to see them on the list — the rule
+binds new posts, not history.
+
 **The template is six fields, not the PRD's nine** (`community.case_details`). Andrew
 Renshaw's clinical review on 2026-08-01 cut it: `age_band` (Child 0–11 / Youth 12–17 /
 Adult 18+), `onset_days`, and four prose fields — presenting condition, history of

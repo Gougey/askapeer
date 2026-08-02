@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { caseAttestations, caseDetails, categories, posts, postTags, tags } from '../db/schema';
 import { PostsService, type Thread } from '../forum/posts.service';
+import { VocabularyService } from '../forum/vocabulary.service';
 import { ATTESTATION_TEXT, CHECKLIST_ITEMS } from './case-policy';
 import type { AttestCaseDto, CreateCaseDto, SetChecklistDto, UpdateCaseDto } from './cases.dto';
 
@@ -58,6 +59,7 @@ export class CasesService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly postsService: PostsService,
+    private readonly vocabulary: VocabularyService,
   ) {}
 
   /**
@@ -67,7 +69,9 @@ export class CasesService {
    * `case_details`. Nothing about this is visible to anyone but the author until attest.
    */
   async createDraft(handleId: string, dto: CreateCaseDto): Promise<Thread> {
-    await this.assertCategory(dto.categoryId);
+    // Resolved, not chosen — the category of a case discussion is not a decision its
+    // author has to make twice.
+    const categoryId = await this.vocabulary.caseCategoryId();
     const tagIds = dto.tagIds ?? [];
     await this.assertTags(tagIds);
 
@@ -77,7 +81,7 @@ export class CasesService {
         .insert(posts)
         .values({
           handleId,
-          categoryId: dto.categoryId,
+          categoryId,
           type: 'case_discussion',
           status: 'draft',
           title: derivedTitle(fields),
@@ -105,7 +109,6 @@ export class CasesService {
    */
   async updateDraft(postId: string, handleId: string, dto: UpdateCaseDto): Promise<Thread> {
     const current = await this.loadEditable(postId, handleId);
-    if (dto.categoryId) await this.assertCategory(dto.categoryId);
     if (dto.tagIds) await this.assertTags(dto.tagIds);
 
     const fields = trimFields({ ...current.fields, ...stripUndefined(dto) });
@@ -119,7 +122,7 @@ export class CasesService {
       await tx
         .update(posts)
         .set({
-          categoryId: dto.categoryId ?? current.categoryId,
+          // Category is not editable — it was never chosen. Left as set at creation.
           title: derivedTitle(fields),
           body: derivedBody(fields),
           editedAt: new Date(),
@@ -319,14 +322,6 @@ export class CasesService {
         communityQuestion: row.communityQuestion,
       } satisfies CaseFields,
     };
-  }
-
-  private async assertCategory(categoryId: string): Promise<void> {
-    const [category] = await this.db
-      .select({ id: categories.id })
-      .from(categories)
-      .where(and(eq(categories.id, categoryId), isNull(categories.retiredAt)));
-    if (!category) throw new BadRequestException('That category does not exist.');
   }
 
   private async assertTags(tagIds: string[]): Promise<void> {

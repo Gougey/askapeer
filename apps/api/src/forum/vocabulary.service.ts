@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { categories, tags } from '../db/schema';
 
@@ -7,6 +7,13 @@ export type CategoryDto = {
   id: string;
   name: string;
   description: string | null;
+  /**
+   * The kind of post this category is for, or null for either. The question composer hides
+   * the case-only one — a case discussion is a clinical case by definition, so offering it
+   * to a question invites the wrong answer, and asking a case's author to pick it makes
+   * them restate what the previous screen already established.
+   */
+  postType: 'question' | 'case_discussion' | null;
 };
 
 export type TagDto = {
@@ -40,12 +47,44 @@ export type TagDto = {
 export class VocabularyService {
   constructor(@Inject(DRIZZLE) private readonly db: Database) {}
 
+  /**
+   * Every live category, each carrying the post type it is for.
+   *
+   * Unfiltered on purpose: one list serves both composers, and each takes what applies to
+   * it. Filtering here would need a parameter that the case composer — which no longer
+   * offers a category at all — would never pass.
+   */
   async listCategories(): Promise<CategoryDto[]> {
     return this.db
-      .select({ id: categories.id, name: categories.name, description: categories.description })
+      .select({
+        id: categories.id,
+        name: categories.name,
+        description: categories.description,
+        postType: categories.postType,
+      })
       .from(categories)
       .where(isNull(categories.retiredAt))
       .orderBy(asc(categories.sortOrder), asc(categories.name));
+  }
+
+  /**
+   * The category a case discussion belongs to — resolved, never chosen (EPIC-E).
+   *
+   * Throws rather than falling back to some other category if the vocabulary has no
+   * case-discussion category: a case filed under "General" would be wrong in a way nobody
+   * would notice for months, where a loud failure gets the seed fixed.
+   */
+  async caseCategoryId(): Promise<string> {
+    const [row] = await this.db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.postType, 'case_discussion'), isNull(categories.retiredAt)));
+    if (!row) {
+      throw new Error(
+        'No live category is marked for case discussions — the categories vocabulary needs one.',
+      );
+    }
+    return row.id;
   }
 
   /**

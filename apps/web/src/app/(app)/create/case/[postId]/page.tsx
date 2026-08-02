@@ -18,7 +18,7 @@ export default async function EditCasePage({
 }) {
   const { postId } = await params;
   const token = await requireAccessToken();
-  const [t, thread, { categories, tags }, policy] = await Promise.all([
+  const [t, thread, { tags }, policy] = await Promise.all([
     getTranslations('caseCompose'),
     fetchThread(postId, token),
     fetchVocabulary(token),
@@ -36,14 +36,12 @@ export default async function EditCasePage({
         {thread.post.status === 'needs_correction' ? t('headingCorrection') : t('headingResume')}
       </h1>
       <ComposeCaseForm
-        categories={categories}
         tags={tags}
         policy={policy}
         draft={{
           postId,
           status: thread.post.status,
           detail: thread.caseDetail,
-          categoryId: thread.post.category.id,
           tagIds: thread.post.tags.map((tag) => tag.id),
         }}
       />

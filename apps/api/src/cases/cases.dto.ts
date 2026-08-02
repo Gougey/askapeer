@@ -33,9 +33,12 @@ export type AgeBand = (typeof AGE_BANDS)[number];
  * enforced structurally rather than on trust (EPIC-E §4).
  */
 export class CreateCaseDto {
-  @IsUUID()
-  categoryId!: string;
-
+  /*
+   * No `categoryId`. A case discussion *is* a clinical case, so its category is resolved
+   * server-side from the vocabulary (`categories.post_type`) rather than asked for —
+   * asking would make the author restate what choosing "Case discussion" already said, and
+   * accepting the field would let a caller file a case under "Career".
+   */
   @IsIn(AGE_BANDS)
   ageBand!: AgeBand;
 
@@ -79,10 +82,7 @@ export class CreateCaseDto {
  * `draft` or `needs_correction`.
  */
 export class UpdateCaseDto {
-  @IsOptional()
-  @IsUUID()
-  categoryId?: string;
-
+  /* No `categoryId` — see CreateCaseDto. */
   @IsOptional()
   @IsIn(AGE_BANDS)
   ageBand?: AgeBand;

@@ -104,11 +104,19 @@ export function ComposeQuestionForm({
           style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
         >
           <option value="">{t('categoryPlaceholder')}</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
+          {/*
+            Categories reserved for case discussions are not offered here. A clinical case
+            has its own composer and its own de-identification gate, so listing it as a
+            choice for a quick question invites exactly the post that should have gone the
+            other route. The API refuses one too — this only keeps the list honest.
+          */}
+          {categories
+            .filter((category) => category.postType !== 'case_discussion')
+            .map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
         </select>
       </label>
 
