@@ -54,6 +54,44 @@ Open http://localhost:3000 — the home page shows live system health fetched fr
 | `npm run infra:up` / `infra:down` | start / stop Postgres + Redis |
 | `npm run tokens:build` / `tokens:check` | regenerate the CSS token layer from `packages/design-tokens` / fail if it drifted |
 
+## Demo data (`npm run seed:demo -w apps/api`)
+
+Rebuilds the demo corpus: **wipes every post, answer, kudos, report and moderation
+action**, then inserts a fresh one. It does *not* touch `identity.members`,
+`community.handles`, the categories or the 588-node taxonomy — accounts are how people
+sign in, including the admin allowlist, and the vocabulary is seeded by migration.
+
+Point it anywhere with `DATABASE_URL` / `REDIS_URL`. It is deterministic: the same seed
+value gives the same corpus, so a search result that moves between runs is a code change
+rather than fresh dice.
+
+Current shape — **67 posts** (55 questions, 12 case discussions incl. one draft and one
+`needs_correction`), 260 answers and replies, ~930 kudos across 15 handles, 30 distinct
+tags, 3 reports (open / dismissed / actioned).
+
+The corpus is sized and shaped for the **search and filtering** work rather than for
+volume, and each property is there for a reason worth keeping if you edit it:
+
+| Property | Why |
+|---|---|
+| >60 posts | `DEFAULT_PAGE_SIZE` is 20; a keyset cursor that drifts or repeats only shows up past page 2 |
+| Terms in title-only, body-only, and both | `posts.tsv` weights title (A) above body (B) — untestable if every term appears in both |
+| Both "ACL" and "anterior cruciate ligament"; "patellofemoral" and "runner's knee" | EPIC-C §4's planned synonym dictionary has nothing to prove against a corpus using one form |
+| Tags on 7 posts down to 1, and many on none | A filter that silently ignores its argument still looks right against a flat distribution |
+| Uneven categories (General 30 … Equipment 7) | Same reason |
+| One handle well past 50 kudos | `DEFAULT_MIN_KUDOS` is 50 — no top-contributor badge can appear until someone clears it |
+| Unanswered threads, zero-kudos posts | An empty state is a state |
+
+**Tag hints are matched by name against the seeded taxonomy, and a hint that matches
+nothing is skipped rather than failing the run** — Andrew's vocabulary can be re-cut
+without this file being told. That tolerance hides typos, so if a tag you expect is
+missing from the corpus, check the name really exists (`Knee Joint`, not `Knee`;
+`Achilles tendinopathy`, not `Achilles tendon`).
+
+It syncs `handles.kudos_total` **and** the Redis `kudos:leaderboard` ZSET. Skipping the
+second is the dual-store trap: every profile would show the right total while no badge
+ever appeared.
+
 ## Design tokens
 
 `packages/design-tokens` is the source of truth for colour, type **and geometry** values
