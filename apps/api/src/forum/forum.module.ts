@@ -11,6 +11,8 @@ import { KudosService } from './kudos.service';
 import { MeController } from './me.controller';
 import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
+import { SearchController } from './search.controller';
+import { SearchService } from './search.service';
 import { VocabularyController } from './vocabulary.controller';
 import { VocabularyService } from './vocabulary.service';
 
@@ -30,6 +32,7 @@ import { VocabularyService } from './vocabulary.service';
     KudosController,
     VocabularyController,
     MeController,
+    SearchController,
   ],
   providers: [
     PostsService,
@@ -37,6 +40,7 @@ import { VocabularyService } from './vocabulary.service';
     KudosService,
     BadgeService,
     VocabularyService,
+    SearchService,
     JwtAuthGuard,
     AppAccessGuard,
   ],

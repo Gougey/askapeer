@@ -98,7 +98,13 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S7 — Discovery: follows, personalised feed, trending, search  [parallel-able] [Should + Must(search)]
+## S7 — Discovery: follows, personalised feed, trending, search  [parallel-able] [Should + Must(search)] — **search built 2026-08-02**
+
+> **Status.** The **Must-have half is in**: `GET /v1/search` (EPIC-C §4 — weighted tsvector with tag and category names folded in, `websearch_to_tsquery`, `pg_trgm` typo fallback, `ts_rank_cd` → recency → kudos tiebreak) and screen C3. **Not built**: `community.follows`, the personalised feed, the trending fallback — all Should-have and separable, as the note below anticipated.
+>
+> Fixed on the way: a tag filter did an **exact match**, so filtering on any parent region returned 0 posts while its subtree held dozens. The composer's picker drops an ancestor when a descendant is chosen precisely because it assumes query-time broadening; that half was missing. Both the list and search now expand a tag to its subtree.
+>
+> **Outstanding and needing Andrew, not code:** `community.tags.synonyms` is empty, so "MTSS" and "shin splints" both return nothing against a correctly-tagged *Medial tibial stress syndrome* post. §4 calls the clinical synonym dictionary the single most important search-quality feature for this audience; it is a data top-up on the existing tags.
 
 - **Delivers**: following a tag/handle shapes the Discussions home; an empty feed falls back to trending; full-text search returns posts.
 - **Touches**: EPIC-B (`community.follows`, `POST`/`DELETE /v1/follows`); EPIC-C (§8 personalised feed `GET /v1/feed` + adaptive trending fallback; §4 search `GET /v1/search`, Postgres FTS + `pg_trgm` + synonym dictionary seeded from `tags.synonyms`). Screens C2, C3, C1 (personalised).

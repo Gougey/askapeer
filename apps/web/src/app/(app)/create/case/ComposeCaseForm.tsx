@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import type { Category, Tag } from '@/lib/forum';
 import type { CaseDetail, CasePolicy } from '@/lib/cases';
-import { TagPicker } from '../TagPicker';
+import { TagPicker } from '@/components/TagPicker';
 import { submitCaseAction, type CaseComposeState } from './actions';
 
 const MAX_TAGS = 5;

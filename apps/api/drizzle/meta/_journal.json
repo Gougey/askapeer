@@ -134,6 +134,13 @@
       "when": 1785661295000,
       "tag": "0018_rapid_monster_badoon",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785681735612,
+      "tag": "0019_enable_pg_trgm",
+      "breakpoints": true
     }
   ]
 }

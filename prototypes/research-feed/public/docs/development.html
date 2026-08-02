@@ -106,6 +106,68 @@ root)</h2>
 </tr>
 </tbody>
 </table>
+<h2 id="search-and-tag-filtering-s7-part">Search and tag filtering (S7,
+part)</h2>
+<p><code>GET /v1/search?q=&amp;category=&amp;tag=&amp;cursor=</code>
+(EPIC-C §4) plus screen C3 at <code>/search</code>. The personalised
+feed and <code>community.follows</code> — the rest of S7 — are
+<strong>not</strong> built.</p>
+<p><strong>Tags are half the recall, not a filter bolted on the
+side.</strong> The corpus says “knee” in 4 posts while 10 are
+<em>tagged</em> somewhere under the knee; folding tag and category names
+into the match is what closes that gap, and it is where the tag
+vocabulary earns its keep beyond browsing.</p>
+<p>Things worth knowing before changing any of it:</p>
+<ul>
+<li><p><strong>A tag filter expands to the tag’s whole subtree.</strong>
+Filtering on “Lower Limb” must find a post tagged “Achilles
+tendinopathy”. This was the bug that prompted the work:
+<code>GET /v1/posts?tag=</code> did an exact match, so every parent
+region returned <strong>0 posts</strong> while 32 sat beneath it. The
+composer’s picker drops an ancestor when a descendant is chosen —
+deliberately, so a post never carries both — and that only works if
+broadening happens at query time. It now does, in both the list and
+search.</p></li>
+<li><p><strong>Two predicates, doing different jobs.</strong> An
+indexable disjunction (<code>posts.tsv</code> GIN, tag names, category
+name) narrows to candidates; then the query is re-checked against the
+<em>combined</em> vector. The second exists because negation was being
+silently ignored: <code>knee -runner</code> returned every post tagged
+“Knee Joint” whose body said “runner”, since the tag branch matched a
+name containing “knee” and not “runner”. Only survivors of the first
+predicate reach the second, so the unindexable one runs on a handful of
+rows.</p></li>
+<li><p><strong>Trigram fallback, not trigram search.</strong>
+<code>pg_trgm</code> (migration <code>0019</code>) runs only when the
+tsquery matched nothing — “achiles” is a dead end under full-text search
+and an obvious near-match under trigrams. The response says
+<code>didYouMean: true</code> and the screen says so, because presenting
+a fuzzy match as an exact one is worse than the miss.</p></li>
+<li><p><strong>Offset paging, not the keyset cursor the lists
+use.</strong> A keyset cursor needs a stable indexed sort key; this sort
+is a computed relevance score, which is neither.</p></li>
+<li><p><strong>Synonyms are wired but unpopulated.</strong> A tag
+contributes <code>name || synonyms</code> to every match — same tag,
+more of the words people use for it, not a second mechanism. Proven by
+putting <code>{MTSS, shin splints}</code> on one tag: both queries went
+from <strong>0 hits to 2</strong>, and the top hit was a case titled
+<em>“Diffuse medial shin pain in a military recruit”</em>, which
+contains neither phrase and was found entirely through its tag.</p>
+<p>All 588 tags currently have <code>synonyms = '{}'</code>, so today
+those queries still return nothing. <strong>This needs Andrew, not
+code.</strong> Maintenance is screen <strong>G8</strong>
+(<code>/admin/config/tags</code>, S13) where synonyms are a field on the
+tag editor — the screen spec is explicit that this is <em>not</em> a
+separate screen. Until S13 lands, seed them by migration the same way
+Andrew’s taxonomy itself was seeded; don’t block on the admin
+UI.</p></li>
+</ul>
+<p>The search screen is a <strong>GET form</strong>, so a search is a
+URL: bookmarkable, shareable, and working without JavaScript. The tag
+filter is the composer’s <code>TagPicker</code>, moved to
+<code>components/</code> and reused with <code>fieldName="tag"</code> —
+the same type-ahead and drill-down over the same ~600 nodes, so a member
+who has tagged a post already knows how to narrow a search.</p>
 <h2 id="demo-data-npm-run-seeddemo--w-appsapi">Demo data
 (<code>npm run seed:demo -w apps/api</code>)</h2>
 <p>Rebuilds the demo corpus: <strong>wipes every post, answer, kudos,
