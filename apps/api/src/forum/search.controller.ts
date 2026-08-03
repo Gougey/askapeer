@@ -1,15 +1,22 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { Transform } from 'class-transformer';
-import { ArrayMaxSize, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { ArrayMaxSize, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { AppAccessGuard } from '../auth/app-access.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SearchService } from './search.service';
 
 export class SearchDto {
+  /**
+   * Optional — a category or a tag is a search in its own right. Requiring the free text
+   * made the two filters unreachable on their own: a member who wants "everything under
+   * Achilles tendinopathy" has no words to type, and typing some would only narrow what
+   * they asked for. The service rejects the empty search (no text, no filters) rather
+   * than the empty *query*.
+   */
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(200)
-  q!: string;
+  q?: string;
 
   @IsOptional()
   @IsUUID()

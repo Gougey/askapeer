@@ -153,6 +153,19 @@ Things worth knowing before changing any of it:
   `knee -runner` returned every post tagged "Knee Joint" whose body said "runner", since
   the tag branch matched a name containing "knee" and not "runner". Only survivors of the
   first predicate reach the second, so the unindexable one runs on a handful of rows.
+- **Any one of the three controls is a search; `q` is optional.** A category or a tag
+  subtree is a perfectly good thing to ask for, and there are no words that express it
+  better — requiring the free text meant "everything under Achilles tendinopathy" was
+  unreachable, and typing something to satisfy the box could only narrow what was asked
+  for. Only the *empty* search (no text, no filters) returns nothing, because that is the
+  Discussions list. **Browse mode needs its own candidate set** for the reason in the
+  previous point: with no text predicate to lead with, the tag filters are correlated
+  `exists` subqueries and the planner will happily scan every published post to run them.
+  So the most selective filter opens instead — a tag subtree via `post_tags_tag_idx`,
+  otherwise the category via `posts_category_idx` — and the outer `WHERE` still applies
+  every filter, so the CTE only ever has to be a superset. Ordering is recency, not
+  relevance: there is nothing to rank against, and kudos does not lead here for the same
+  reason it only nudges above.
 - **Trigram fallback, not trigram search.** `pg_trgm` (migration `0019`) runs only when the
   tsquery matched nothing — "achiles" is a dead end under full-text search and an obvious
   near-match under trigrams. The response says `didYouMean: true` and the screen says so,
@@ -177,7 +190,8 @@ Things worth knowing before changing any of it:
   migration the same way Andrew's taxonomy itself was seeded; don't block on the admin UI.
 
 **The query stands alone; category and tags live behind "Advanced search".** They are
-*narrowing* controls, and narrowing is not what makes tags valuable here — a tag's name and
+*usually* narrowing controls (though either can search on its own — see above), and
+narrowing is not what makes tags valuable here — a tag's name and
 synonyms are folded into the free-text match already, which is what takes "knee" from 4
 hits to 10. Hiding them costs nothing in recall and stops a member scrolling past a picker
 they rarely want to reach the button they always do (form height 395px → 184px collapsed).

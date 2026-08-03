@@ -28,14 +28,22 @@ export default async function SearchPage({
   // same, so both shapes have to be handled or a single tag filter silently vanishes.
   const tagIds = params.tag === undefined ? [] : Array.isArray(params.tag) ? params.tag : [params.tag];
 
+  // Any one of the three controls counts as a search. Gating on `q` alone left the two
+  // filters unable to act on their own — a category or a tag subtree is a perfectly good
+  // thing to ask for, and there are no words that would express it better.
+  const searched = q !== '' || category !== '' || tagIds.length > 0;
+
   const [t, { categories, tags }, results] = await Promise.all([
     getTranslations('search'),
     fetchVocabulary(token),
-    q ? fetchSearch(token, { q, category, tags: tagIds, cursor: params.cursor }) : Promise.resolve(null),
+    searched
+      ? fetchSearch(token, { q, category, tags: tagIds, cursor: params.cursor })
+      : Promise.resolve(null),
   ]);
 
   const nextHref = () => {
-    const next = new URLSearchParams({ q });
+    const next = new URLSearchParams();
+    if (q) next.set('q', q);
     if (category) next.set('category', category);
     for (const tag of tagIds) next.append('tag', tag);
     if (results?.nextCursor) next.set('cursor', results.nextCursor);
