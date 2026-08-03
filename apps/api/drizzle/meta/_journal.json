@@ -141,6 +141,13 @@
       "when": 1785681735612,
       "tag": "0019_enable_pg_trgm",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785747690518,
+      "tag": "0020_daffy_ego",
+      "breakpoints": true
     }
   ]
 }

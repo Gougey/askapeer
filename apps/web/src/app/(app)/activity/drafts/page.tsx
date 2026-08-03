@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { fetchDrafts, formatOnset } from '@/lib/cases';
 import { requireAccessToken } from '@/lib/session';
+import { categoryColour } from '@/lib/category-colour';
 
 /**
  * The member's unfinished and sent-back cases (gap G-8).
@@ -57,7 +58,7 @@ export default async function DraftsPage() {
                   >
                     {t(`status.${draft.status}`)}
                   </span>
-                  <span className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                  <span className="text-xs" style={{ color: categoryColour(draft.category.colour) }}>
                     {draft.category.name}
                   </span>
                 </div>

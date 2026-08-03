@@ -1,4 +1,5 @@
 import { API_ORIGIN } from './api';
+import type { CategoryRef } from './forum';
 
 /** Mirrors the EPIC-E DTOs. */
 export type AgeBand = 'child' | 'youth' | 'adult';
@@ -36,7 +37,7 @@ export type DraftCard = {
   id: string;
   title: string;
   status: 'draft' | 'needs_correction';
-  category: { id: string; name: string };
+  category: CategoryRef;
   ageBand: AgeBand;
   onsetDays: number;
   checklistRemaining: number;

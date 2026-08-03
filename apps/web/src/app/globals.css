@@ -45,6 +45,29 @@
   --color-bad: var(--color-danger);
 
   /*
+    Category colours — the content-type label on a post card (Clinical Case, Research…).
+
+    Named by hue, not by category, and deliberately so: EPIC-J lets an administrator
+    rename and recolour categories, so a token called --color-category-clinical would
+    start lying the moment someone used it for something else. `categories.colour` holds
+    the key; these hold the values.
+
+    Five cool hues, evenly spaced, with nothing warm in the set. That is the constraint
+    that picked them: kudos gold, spark red and the admin amber all already mean
+    something specific (§2.1), and a category tinted near any of them would make a claim
+    the post has not earned. Verify green is avoided for the same reason.
+
+    Every value is AA as small text on --color-surface in BOTH themes — the light ramp
+    runs 5.5:1 to 7.6:1 on white, the dark ramp 8.4:1 to 11.8:1 on #111a2b. A category is
+    12px text, so 4.5:1 is the floor, not 3:1. Re-check both if you retune these.
+  */
+  --color-category-teal: #0f766e;
+  --color-category-blue: #1d4ed8;
+  --color-category-violet: #6d28d9;
+  --color-category-magenta: #a21667;
+  --color-category-slate: #475569;
+
+  /*
     Functional "needs a human" / attention colour. Like --color-danger, this is a
     *functional* token, not a brand one — deliberately NOT kudos gold, which the style
     guide reserves as the product's single member-facing status colour (§2.1). Used only
@@ -151,6 +174,12 @@
     --color-spark: #ff5a5f;
     --color-warn: #e0a33a;
 
+    --color-category-teal: #5eead4;
+    --color-category-blue: #7dd3fc;
+    --color-category-violet: #c4b5fd;
+    --color-category-magenta: #f9a8d4;
+    --color-category-slate: #a8b6c6;
+
     --shadow-card: 0 1px 2px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.24);
     --shadow-fab: 0 6px 16px rgba(255,90,95,.35);
     --shadow-sheet: 0 -8px 40px rgba(0,0,0,.45);
@@ -163,6 +192,21 @@ body {
   background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-sans);
+}
+
+/*
+  Tells the browser which themes the page supports, so the widgets it draws *itself* —
+  the open list of a <select>, date pickers, scrollbars, spinners — follow the same
+  scheme as everything else.
+
+  Without this the UA assumes light only. On a phone in dark mode that produced a
+  category dropdown rendered white-on-black against a light-styled control, while the
+  same select on desktop came up black-on-grey: the app was themed and its native
+  controls were not. `light dark` (rather than a fixed value) keeps them tracking
+  prefers-color-scheme, which is how the rest of the theme works.
+*/
+:root {
+  color-scheme: light dark;
 }
 
 /* Headings carry the serif — the editorial register (see style guide §3). */

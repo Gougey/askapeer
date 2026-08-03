@@ -46,13 +46,13 @@ borders</a></li>
 <li><a href="#design-principles-applied">Iconography &amp; imagery</a></li>
 <li><a href="#colour">Motion</a></li>
 <li><a href="#brand-palette">Component library</a></li>
-<li><a href="#neutrals">Accessibility</a></li>
-<li><a href="#dark-theme-accents">Voice &amp; tone</a></li>
-<li><a href="#semantic-mapping-what-the-code-references">Anonymity &amp; safety
+<li><a href="#b-category-colours">Accessibility</a></li>
+<li><a href="#neutrals">Voice &amp; tone</a></li>
+<li><a href="#dark-theme-accents">Anonymity &amp; safety
 UX</a></li>
-<li><a href="#colour-usage-rules">Design tokens
+<li><a href="#semantic-mapping-what-the-code-references">Design tokens
 reference</a></li>
-<li><a href="#typography">Governance &amp;
+<li><a href="#colour-usage-rules">Governance &amp;
 changelog</a></li>
 </ol>
 <hr />
@@ -360,6 +360,67 @@ status colour members ever see (§2.1). The light value is darkened to
 badges. Never use <code>--color-warn</code> for kudos, and never use
 kudos gold for a warning.</p>
 </blockquote>
+<h3 id="b-category-colours">2.1b Category colours</h3>
+<p>The content-type label on a post card (Clinical Case, Research,
+Career, Equipment, General) is drawn in its own hue, so a member
+scrolling a list can tell what kind of post each one is without reading
+the label.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Light</th>
+<th>Dark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--color-category-teal</code></td>
+<td><code>#0f766e</code></td>
+<td><code>#5eead4</code></td>
+</tr>
+<tr>
+<td><code>--color-category-blue</code></td>
+<td><code>#1d4ed8</code></td>
+<td><code>#7dd3fc</code></td>
+</tr>
+<tr>
+<td><code>--color-category-violet</code></td>
+<td><code>#6d28d9</code></td>
+<td><code>#c4b5fd</code></td>
+</tr>
+<tr>
+<td><code>--color-category-magenta</code></td>
+<td><code>#a21667</code></td>
+<td><code>#f9a8d4</code></td>
+</tr>
+<tr>
+<td><code>--color-category-slate</code></td>
+<td><code>#475569</code></td>
+<td><code>#a8b6c6</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Named by hue, not by category.</strong> EPIC-J lets an
+administrator rename and recolour categories, so a token called
+<code>--color-category-clinical</code> would start lying the moment
+someone reused it. The <code>categories.colour</code> column holds the
+<em>key</em> (<code>teal</code>); these hold the values. A category with
+no colour, or an unrecognised one, falls back to
+<code>--color-accent</code>.</p>
+<blockquote>
+<p><strong>Why these five and nothing warmer.</strong> Kudos gold, spark
+red and the admin amber all already mean something specific, and verify
+green means “verified” — a category tinted near any of them would make a
+claim the post has not earned. That constraint is what produced an
+all-cool set rather than an evenly spread colour wheel. Do not add a
+warm category colour without first resolving what it would collide
+with.</p>
+</blockquote>
+<p>All ten values are AA as small text on <code>--color-surface</code>
+in their own theme (light 5.5:1–7.6:1, dark 8.4:1–11.8:1). A category
+label is 12px, so <strong>4.5:1 is the floor, not 3:1</strong> —
+re-check both themes if you retune them.</p>
 <h3 id="neutrals">2.2 Neutrals</h3>
 <table>
 <colgroup>

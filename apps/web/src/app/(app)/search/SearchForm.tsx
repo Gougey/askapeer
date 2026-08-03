@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { TagPicker } from '@/components/TagPicker';
+import { categoryColour } from '@/lib/category-colour';
 import type { Category, Tag } from '@/lib/forum';
 
 /** The API caps `?tag=` at three; more than that and a result set is empty by construction. */
@@ -46,6 +48,9 @@ export function SearchForm({
   initialTagIds: string[];
 }) {
   const t = useTranslations('search');
+  // Tracked so the closed control can wear the chosen category's colour; the form is
+  // still a plain GET form and still submits this select by name.
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
 
   // Drives both the open state and the label. Counted here rather than passed in, so the
   // two can never disagree about what "active" means.
@@ -130,13 +135,22 @@ export function SearchForm({
             <span className="text-sm font-medium">{t('categoryLabel')}</span>
             <select
               name="category"
-              defaultValue={initialCategory}
+              value={selectedCategory}
+              onChange={(event) => setSelectedCategory(event.target.value)}
               className="border px-3 py-2"
-              style={field}
+              /*
+               * The closed control takes the chosen category's colour. The `<option>`
+               * colours are progressive enhancement — desktop browsers honour them, iOS
+               * and Android draw the open list themselves and ignore them.
+               */
+              style={{ ...field, color: categoryColour(categories.find((c) => c.id === selectedCategory)?.colour) }}
             >
-              <option value="">{t('anyCategory')}</option>
+              {/* Explicit, or it inherits the colour set on the select above. */}
+              <option value="" style={{ color: 'var(--color-fg)' }}>
+                {t('anyCategory')}
+              </option>
               {categories.map((category) => (
-                <option key={category.id} value={category.id}>
+                <option key={category.id} value={category.id} style={{ color: categoryColour(category.colour) }}>
                   {category.name}
                 </option>
               ))}

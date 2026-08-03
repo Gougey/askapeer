@@ -32,7 +32,7 @@ export type DraftCard = {
   id: string;
   title: string;
   status: 'draft' | 'needs_correction';
-  category: { id: string; name: string };
+  category: { id: string; name: string; colour: string | null };
   ageBand: string;
   onsetDays: number;
   /** Which checklist items are still outstanding — the row can say "2 of 6 left". */
@@ -247,6 +247,7 @@ export class CasesService {
         editedAt: posts.editedAt,
         categoryId: categories.id,
         categoryName: categories.name,
+        categoryColour: categories.colour,
         ageBand: caseDetails.ageBand,
         onsetDays: caseDetails.onsetDays,
         checklistState: caseDetails.checklistState,
@@ -262,7 +263,7 @@ export class CasesService {
         id: row.id,
         title: row.title,
         status: row.status as 'draft' | 'needs_correction',
-        category: { id: row.categoryId, name: row.categoryName },
+        category: { id: row.categoryId, name: row.categoryName, colour: row.categoryColour },
         ageBand: row.ageBand,
         onsetDays: row.onsetDays,
         checklistRemaining: CHECKLIST_ITEMS.filter((i) => row.checklistState?.[i.key] !== true).length,

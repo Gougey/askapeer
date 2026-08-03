@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { AuthorBlock, PostCard as PostCardDto, TagRef } from '@/lib/forum';
+import { categoryColour } from '@/lib/category-colour';
 
 /**
  * The author row (EPIC-C §13.1's author block). Handle and kudos only — there is no
@@ -74,7 +75,7 @@ export async function PostCard({ post }: { post: PostCardDto }) {
           the clinical-case category could also hold questions; now that the category is
           scoped to case discussions it labels them on its own, and the pill said it twice.
         */}
-        <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
+        <span className="text-xs" style={{ color: categoryColour(post.category.colour) }}>
           {post.category.name}
         </span>
         <h2 className="font-medium">{post.title}</h2>

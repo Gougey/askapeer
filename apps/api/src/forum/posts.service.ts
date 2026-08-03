@@ -43,7 +43,7 @@ export type PostCard = {
   type: 'question' | 'case_discussion';
   title: string;
   snippet: string;
-  category: { id: string; name: string };
+  category: { id: string; name: string; colour: string | null };
   tags: TagRef[];
   author: AuthorBlock;
   answerCount: number;
@@ -216,6 +216,7 @@ export class PostsService {
         editedAt: posts.editedAt,
         categoryId: categories.id,
         categoryName: categories.name,
+        categoryColour: categories.colour,
         handleId: handles.id,
         handleName: handles.handleName,
         kudosTotal: handles.kudosTotal,
@@ -286,7 +287,7 @@ export class PostsService {
         // machine phrasing. The author's actual question is the useful other half of the
         // card: what the presentation is, then what they are asking about it.
         snippet: snippet(row.communityQuestion ?? row.body),
-        category: { id: row.categoryId, name: row.categoryName },
+        category: { id: row.categoryId, name: row.categoryName, colour: row.categoryColour },
         tags: tagsByPost.get(row.id) ?? [],
         author: authorBlock(row, badged),
         answerCount: Number(row.answerCount),
@@ -373,6 +374,7 @@ export class PostsService {
         editedAt: posts.editedAt,
         categoryId: categories.id,
         categoryName: categories.name,
+        categoryColour: categories.colour,
         handleId: handles.id,
         handleName: handles.handleName,
         kudosTotal: handles.kudosTotal,
@@ -411,7 +413,7 @@ export class PostsService {
         title: row.title,
         body: row.body,
         status: row.status,
-        category: { id: row.categoryId, name: row.categoryName },
+        category: { id: row.categoryId, name: row.categoryName, colour: row.categoryColour },
         tags: tagsByPost.get(row.id) ?? [],
         author: authorBlock(row, badged),
         answerCount: Number(row.answerCount),
