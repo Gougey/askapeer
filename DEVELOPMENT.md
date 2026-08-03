@@ -850,6 +850,40 @@ verification notice the holding page that explains it); `present()` in `Notifica
 returns a **nullable** `href` for exactly this, and `openNotificationAction` redirects only
 when one is given. Don't "restore" the link.
 
+## Checking the email templates (`/v1/admin/email-test`)
+
+`GET /v1/admin/email-test` lists the thirteen member-facing templates and reports which
+provider is wired — `willActuallySend` is false while `EMAIL_PROVIDER` is unset, which is
+the confusion worth pre-empting, since the logging stub looks exactly like success from the
+caller's side. `POST` with `{ to, template, reason? }` renders one and sends it through the
+real sender.
+
+**Why it exists.** Postmark caps an unapproved account at **100 test emails to your own
+domain**, and several templates cannot be produced by using the app: you cannot see the
+"expelled" email without expelling somebody, or the correction notice without sending a real
+case back. Driving the app would also burn the allowance. This renders each on demand, so
+the full set can be checked in a real client for a fraction of the budget — and afterwards
+it is how you see a template change without staging a moderation action.
+
+It is **not** a general send-mail endpoint: the template is a closed set, the recipient is
+the only free field, and both admin guards plus an hourly rate limit sit in front of it.
+
+**To actually send**, two Fly secrets are needed — neither is set yet:
+
+```bash
+flyctl secrets set POSTMARK_TOKEN=... EMAIL_PROVIDER=postmark -a askapeer-api
+```
+
+`EMAIL_FROM` already defaults to `AskaPeer <no-reply@mail.askapeer.co.uk>`, and that domain
+is verified in Postmark (DKIM + Return-Path confirmed live 2026-08-03). **Note the recipient
+restriction is on the *verified domain*** — `mail.askapeer.co.uk` has no MX, so a mailbox
+there cannot receive. Either add a forwarder on that subdomain or add a Sender Signature on
+`askapeer.co.uk`, which does have Microsoft 365 mail. Worth settling with one send before
+planning around the other ninety-nine.
+
+**This does not unblock turning off `AUTH_DEV_MAGIC_LINK`** — members' addresses are on
+arbitrary domains, so sign-in email cannot work until the account is approved.
+
 ## Admin console (S11a)
 
 An allowlisted **admin** role gets a console at `/admin` (web) backed by
