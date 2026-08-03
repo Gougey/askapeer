@@ -73,9 +73,8 @@ function frame(
 
 export const templates = {
   /**
-   * The sign-in link. The one email that must work before anything else does — turning
-   * off `AUTH_DEV_MAGIC_LINK` depends on it, and until then the token is handed to
-   * whoever asks for it.
+   * The sign-in email. The one that must work before anything else does — since the dev
+   * bypass was removed it is the only route into the platform, for everyone.
    */
   magicLink(ctx: Ctx, token: string, code?: string): Omit<OutboundEmail, 'to'> {
     /*
