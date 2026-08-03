@@ -1205,6 +1205,43 @@ notice the holding page that explains it); <code>present()</code> in
 <code>href</code> for exactly this, and
 <code>openNotificationAction</code> redirects only when one is given.
 Don’t “restore” the link.</p>
+<h2 id="checking-the-email-templates-v1adminemail-test">Checking the
+email templates (<code>/v1/admin/email-test</code>)</h2>
+<p><code>GET /v1/admin/email-test</code> lists the thirteen
+member-facing templates and reports which provider is wired —
+<code>willActuallySend</code> is false while <code>EMAIL_PROVIDER</code>
+is unset, which is the confusion worth pre-empting, since the logging
+stub looks exactly like success from the caller’s side.
+<code>POST</code> with <code>{ to, template, reason? }</code> renders
+one and sends it through the real sender.</p>
+<p><strong>Why it exists.</strong> Postmark caps an unapproved account
+at <strong>100 test emails to your own domain</strong>, and several
+templates cannot be produced by using the app: you cannot see the
+“expelled” email without expelling somebody, or the correction notice
+without sending a real case back. Driving the app would also burn the
+allowance. This renders each on demand, so the full set can be checked
+in a real client for a fraction of the budget — and afterwards it is how
+you see a template change without staging a moderation action.</p>
+<p>It is <strong>not</strong> a general send-mail endpoint: the template
+is a closed set, the recipient is the only free field, and both admin
+guards plus an hourly rate limit sit in front of it.</p>
+<p><strong>To actually send</strong>, two Fly secrets are needed —
+neither is set yet:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> secrets set POSTMARK_TOKEN=... EMAIL_PROVIDER=postmark <span class="at">-a</span> askapeer-api</span></code></pre></div>
+<p><code>EMAIL_FROM</code> already defaults to
+<code>AskaPeer &lt;no-reply@mail.askapeer.co.uk&gt;</code>, and that
+domain is verified in Postmark (DKIM + Return-Path confirmed live
+2026-08-03). <strong>Note the recipient restriction is on the
+<em>verified domain</em></strong> — <code>mail.askapeer.co.uk</code> has
+no MX, so a mailbox there cannot receive. Either add a forwarder on that
+subdomain or add a Sender Signature on <code>askapeer.co.uk</code>,
+which does have Microsoft 365 mail. Worth settling with one send before
+planning around the other ninety-nine.</p>
+<p><strong>This does not unblock turning off
+<code>AUTH_DEV_MAGIC_LINK</code></strong> — members’ addresses are on
+arbitrary domains, so sign-in email cannot work until the account is
+approved.</p>
 <h2 id="admin-console-s11a">Admin console (S11a)</h2>
 <p>An allowlisted <strong>admin</strong> role gets a console at
 <code>/admin</code> (web) backed by <code>GET/POST /v1/admin/*</code>
@@ -1337,8 +1374,8 @@ stretch, and revisit at the AWS migration.</p>
 <p><code>GET /health</code> (unprefixed) probes both dependencies and
 returns <strong>503</strong> if either is down, so a missing one is
 visible rather than silent:</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
 <h2 id="conventions-established-at-s0">Conventions established at
 S0</h2>
 <ul>

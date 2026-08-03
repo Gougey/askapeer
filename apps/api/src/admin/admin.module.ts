@@ -3,6 +3,7 @@ import { JwtConfigModule } from '../auth/jwt-config.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { VerificationModule } from '../verification/verification.module';
 import { AdminAccessModule } from './admin-access.module';
+import { EmailTestController } from './email-test.controller';
 import { AdminController } from './admin.controller';
 import { AdminGuard } from './admin.guard';
 import { AdminService } from './admin.service';
@@ -17,7 +18,7 @@ import { AdminService } from './admin.service';
     AdminAccessModule, // the allowlist check behind AdminGuard
     VerificationModule, // the review decision reuses the verification state machine
   ],
-  controllers: [AdminController],
+  controllers: [AdminController, EmailTestController],
   providers: [AdminService, JwtAuthGuard, AdminGuard],
 })
 export class AdminModule {}
