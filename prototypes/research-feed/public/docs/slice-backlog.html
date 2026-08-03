@@ -277,8 +277,32 @@ share the discovery surface. Follow buttons appear on threads/profiles
 (<code>follows_*</code> DTO fields).</li>
 </ul>
 <hr />
-<h2 id="s8-interests-research-news-feed-parallel-able-must">S8 —
-Interests → research / news feed [parallel-able] [Must]</h2>
+<h2
+id="s8-interests-research-news-feed-parallel-able-must-ingestion-unfiltered-feed-built-2026-08-03">S8
+— Interests → research / news feed [parallel-able] [Must] —
+<strong>ingestion + unfiltered feed built 2026-08-03</strong></h2>
+<blockquote>
+<p><strong>Status.</strong> The pipeline and the Feed tab are in: both
+source adapters, deduplication, classification against all 588 tags,
+intrinsic scoring, a twice-daily repeatable job, and screens B1/B2.
+<strong>Not built: <code>member_interests</code> and the interests
+picker</strong> — so the feed is currently the same for every
+member.</p>
+<p>That is deliberate rather than deferred-by-accident. How a member
+picks interests is genuinely open (reuse the 588-node taxonomy, or offer
+a shorter curated list?), and the unfiltered feed is the instrument that
+answers it: with a real corpus classified, the tags that actually recur
+are visible, and the interest list can be chosen from evidence instead
+of guessed. Design and reasoning:
+<code>docs/2026-08-03-research-feed-ingestion-design.md</code>.</p>
+<p>Two findings worth carrying:
+<strong><code>research.article_tags</code> is a table EPIC-I never
+specified</strong> and the feed cannot work without it (the topic-match
+half of the score has nowhere else to live), and the predicted
+<strong>false-positive risk from 588 tags was real</strong> — requiring
+a title match for single-word tags cut matches from 3,049 to 1,393 with
+no loss of good ones.</p>
+</blockquote>
 <ul>
 <li><strong>Delivers</strong>: the Feed tab shows research/news articles
 scored to the member’s clinical interests, with “recommended because…”

@@ -113,7 +113,24 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S8 — Interests → research / news feed  [parallel-able] [Must]
+## S8 — Interests → research / news feed  [parallel-able] [Must] — **ingestion + unfiltered feed built 2026-08-03**
+
+> **Status.** The pipeline and the Feed tab are in: both source adapters, deduplication,
+> classification against all 588 tags, intrinsic scoring, a twice-daily repeatable job, and
+> screens B1/B2. **Not built: `member_interests` and the interests picker** — so the feed is
+> currently the same for every member.
+>
+> That is deliberate rather than deferred-by-accident. How a member picks interests is
+> genuinely open (reuse the 588-node taxonomy, or offer a shorter curated list?), and the
+> unfiltered feed is the instrument that answers it: with a real corpus classified, the tags
+> that actually recur are visible, and the interest list can be chosen from evidence instead
+> of guessed. Design and reasoning: `docs/2026-08-03-research-feed-ingestion-design.md`.
+>
+> Two findings worth carrying: **`research.article_tags` is a table EPIC-I never specified**
+> and the feed cannot work without it (the topic-match half of the score has nowhere else to
+> live), and the predicted **false-positive risk from 588 tags was real** — requiring a title
+> match for single-word tags cut matches from 3,049 to 1,393 with no loss of good ones.
+
 
 - **Delivers**: the Feed tab shows research/news articles scored to the member's clinical interests, with "recommended because…" explanations; article detail links out.
 - **Touches**: EPIC-I (`member_interests`, `GET`/`PUT /v1/me/interests` G-14; ingestion worker + scoring; `GET /v1/research-feed` + list DTO G-17; `GET /v1/research-feed/:articleId` G-16). Screens B1, B2, F5/A7 interests.

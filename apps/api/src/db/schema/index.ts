@@ -3,3 +3,4 @@
 export * from './community.schema';
 export * from './config.schema';
 export * from './identity.schema';
+export * from './research.schema';

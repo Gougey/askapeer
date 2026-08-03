@@ -148,6 +148,13 @@
       "when": 1785747690518,
       "tag": "0020_daffy_ego",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1785752938417,
+      "tag": "0021_friendly_serpent_society",
+      "breakpoints": true
     }
   ]
 }

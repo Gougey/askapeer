@@ -95,12 +95,6 @@
     "create": "Create",
     "activity": "Activity",
     "profile": "Profile",
-    "comingSoon": {
-      "feed": {
-        "title": "Feed",
-        "body": "Research and news scored to your clinical interests will appear here."
-      }
-    },
     "profileScreen": {
       "kudos": "Kudos",
       "memberSince": "Member since {year}",
@@ -455,5 +449,22 @@
     "newest": "← Back to newest",
     "loading": "Loading more…",
     "failed": "Could not load more. Try the button below."
+  },
+  "feed": {
+    "heading": "Feed",
+    "subheading": "Recent sports medicine and physiotherapy research, newest and best-evidenced first.",
+    "empty": "Nothing here yet. The feed refreshes twice a day.",
+    "abstract": "Abstract",
+    "noAbstract": "No abstract was published with this article.",
+    "readFull": "Read the full article",
+    "openAccess": "Open access",
+    "doi": "DOI: {doi}",
+    "evidence": {
+      "systematic_review": "Systematic review",
+      "randomised_trial": "Randomised trial",
+      "cohort_study": "Cohort study",
+      "case_report": "Case report",
+      "other": "Journal article"
+    }
   }
 }

@@ -12,6 +12,7 @@ import { CasesModule } from './cases/cases.module';
 import { ReportsModule } from './reports/reports.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { AdminModule } from './admin/admin.module';
+import { ResearchFeedModule } from './research-feed/research-feed.module';
 import { SettingsModule } from './settings/settings.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EmailModule } from './notifications/email/email.module';
@@ -37,6 +38,7 @@ import { EmailModule } from './notifications/email/email.module';
     ReportsModule, // EPIC-F reporting (S11b)
     ModerationModule, // EPIC-F moderation queue + remove/warn (S11c)
     AdminModule, // EPIC-A/F read-only admin console (S11a)
+    ResearchFeedModule, // EPIC-I research feed (S8)
     SettingsModule, // EPIC-J, read side only (S3)
   ],
 })
