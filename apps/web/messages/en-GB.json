@@ -338,6 +338,14 @@
         "emailNotYetSending": "Email notifications aren't being sent yet. These settings will apply as soon as they are.",
         "pushComingSoon": "Push notifications are coming soon."
       }
+    },
+    "security": {
+      "heading": "Signed in elsewhere?",
+      "body": "Signing out everywhere ends your session on every device, including any you no longer have. You will need to sign in again here.",
+      "cta": "Sign out everywhere",
+      "confirm": "This signs you out on every device, including this one.",
+      "confirmCta": "Sign out everywhere",
+      "cancel": "Cancel"
     }
   },
   "caseCompose": {

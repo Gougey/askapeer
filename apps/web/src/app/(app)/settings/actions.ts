@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { API_ORIGIN } from '@/lib/api';
 import type { NotificationPreference } from '@/lib/notifications';
-import { getAccessToken } from '@/lib/session';
+import { cookies } from 'next/headers';
+import { ACCESS_COOKIE, getAccessToken, REFRESH_COOKIE } from '@/lib/session';
 
 export type PreferenceUpdate = Pick<NotificationPreference, 'type' | 'inApp' | 'email' | 'push'>;
 
@@ -37,4 +38,33 @@ export async function setNotificationPreferenceAction(update: PreferenceUpdate):
   });
   if (!res.ok) throw new Error(`Could not save that preference (${res.status}).`);
   revalidatePath('/settings/notifications');
+}
+
+/**
+ * Sign out on every device, not just this one.
+ *
+ * The control that was missing while a session slid for 30 days: a lost phone with the app
+ * installed stays signed in indefinitely, and on a network where the handle *is* the
+ * identity, whoever holds it can post as you. The only previous remedy was asking a
+ * moderator to suspend the handle, which punishes the person who was robbed.
+ *
+ * Revoking every refresh token stops sessions being renewed; an access token already in
+ * flight survives until it expires, the same ~15-minute boundary suspension accepts. This
+ * device's cookies are cleared here too, so the member sees it take effect rather than
+ * being told it did.
+ */
+export async function signOutEverywhereAction(): Promise<void> {
+  const token = await getAccessToken();
+  if (!token) redirect('/');
+
+  await fetch(`${API_ORIGIN}/v1/auth/sign-out-all`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+
+  const jar = await cookies();
+  jar.delete(ACCESS_COOKIE);
+  jar.delete(REFRESH_COOKIE);
+  redirect('/');
 }

@@ -88,6 +88,17 @@ export class AuthController {
    * zero-tolerance anonymity rule. Kept on the auth controller because it writes to
    * `identity.members`, which is EPIC-A's table, not EPIC-B's.
    */
+  /**
+   * Sign out everywhere. Needs only a valid token — a member who suspects their device is
+   * compromised should not have to prove anything further to cut it off.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('sign-out-all')
+  @HttpCode(200)
+  signOutAll(@Req() req: Request & { member: AuthedMember }) {
+    return this.auth.signOutEverywhere(req.member.memberId);
+  }
+
   @Post('anonymity-acknowledgement')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard)

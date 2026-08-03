@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { SignOutEverywhere } from './SignOutEverywhere';
 
 /**
  * F3 — the settings hub: chevron rows to each settings screen (style guide §8.14).
@@ -57,6 +58,8 @@ export default async function SettingsPage() {
           </li>
         ))}
       </ul>
+
+      <SignOutEverywhere />
     </main>
   );
 }
