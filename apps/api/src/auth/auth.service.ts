@@ -19,6 +19,24 @@ import type { RegisterDto } from './auth.dto';
 
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (sliding; G-11 makes this tunable later)
+/**
+ * How long a refresh token is reused before it rotates.
+ *
+ * Rotation on *every* refresh looks stricter and is, in a browser, actively harmful:
+ * several requests can present the same token at once — a page load fires a document
+ * request, RSC payloads and a prefetch for every link in the viewport — and rotation means
+ * the first wins and the rest are holding a token that no longer exists. The loser gets
+ * signed out mid-session, which is precisely the bug the refresh exists to prevent.
+ *
+ * The web layer cannot deduplicate this: Next strips its own `RSC` and
+ * `Next-Router-Prefetch` headers before middleware runs, so a prefetch is indistinguishable
+ * from a real navigation there. Measured, not assumed.
+ *
+ * So concurrent refreshes inside this window all return the *same* refresh token and a
+ * fresh access token each. Rotation still happens, just at most once per window, which is
+ * what makes a stolen token's usefulness bounded — the property rotation is actually for.
+ */
+const REFRESH_ROTATE_AFTER_MS = 10 * 60 * 1000;
 
 const hashToken = (raw: string): string => createHash('sha256').update(raw).digest('hex');
 const randomToken = (): string => randomBytes(32).toString('base64url');
@@ -229,9 +247,18 @@ export class AuthService {
         ),
       );
     if (!rt) throw new UnauthorizedException('Invalid refresh token.');
-    // Rotate: revoke the used token, issue a fresh pair.
-    await this.db.update(refreshTokens).set({ revokedAt: new Date() }).where(eq(refreshTokens.id, rt.id));
     const [member] = await this.db.select().from(members).where(eq(members.id, rt.memberId));
+
+    // Young enough to reuse: hand back the same refresh token with a fresh access token, so
+    // requests racing each other cannot invalidate one another. The caller supplied the raw
+    // token, which is the only reason we can return it — only its hash is stored.
+    if (Date.now() - rt.createdAt.getTime() < REFRESH_ROTATE_AFTER_MS) {
+      const { accessToken } = await this.issueAccessToken(member.id, member.verificationStatus);
+      return { accessToken, refreshToken: rawRefresh };
+    }
+
+    // Old enough to rotate: revoke the used token and issue a fresh pair.
+    await this.db.update(refreshTokens).set({ revokedAt: new Date() }).where(eq(refreshTokens.id, rt.id));
     return this.issueSession(member.id, member.verificationStatus);
   }
 
@@ -325,7 +352,17 @@ export class AuthService {
     return this.issueSession(memberId, member.verificationStatus);
   }
 
-  private async issueSession(memberId: string, verificationStatus: string): Promise<SessionTokens> {
+  /**
+   * The access token on its own, re-deriving scope from current state.
+   *
+   * Split out of `issueSession` for the reuse path in `refresh()` — and note it re-reads
+   * the handle every time, which is what makes a suspension take effect at the next
+   * refresh rather than persisting for as long as someone keeps renewing.
+   */
+  private async issueAccessToken(
+    memberId: string,
+    verificationStatus: string,
+  ): Promise<{ accessToken: string }> {
     // A full session needs BOTH gates on the identity side: verification passed, AND a
     // handle that exists and isn't suspended/expelled (EPIC-A §7, screen spec §1.2).
     // Everything else is pending-scoped and reaches a holding page only — including an
@@ -347,6 +384,11 @@ export class AuthService {
       },
       { expiresIn: '15m' },
     );
+    return { accessToken };
+  }
+
+  private async issueSession(memberId: string, verificationStatus: string): Promise<SessionTokens> {
+    const { accessToken } = await this.issueAccessToken(memberId, verificationStatus);
     const raw = randomToken();
     await this.db.insert(refreshTokens).values({
       memberId,
