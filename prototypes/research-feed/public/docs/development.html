@@ -1214,6 +1214,57 @@ notice the holding page that explains it); <code>present()</code> in
 <code>href</code> for exactly this, and
 <code>openNotificationAction</code> redirects only when one is given.
 Don’t “restore” the link.</p>
+<h2 id="sessions-silent-refresh-and-sign-out-everywhere">Sessions:
+silent refresh and sign-out-everywhere</h2>
+<p><strong>The timeouts did not change; a bug did.</strong> The design
+was always a 15-minute access token plus a 30-day rotating refresh, but
+nothing ever called the refresh endpoint —
+<code>app/auth/session/route.ts</code> was its only caller and itself
+had none. So when <code>ap_access</code> expired the guard bounced to
+sign-in while a perfectly good 30-day <code>ap_refresh</code> sat
+unused, and the <em>access token’s</em> lifetime became the whole
+session: 15 minutes regardless of activity.</p>
+<p><code>apps/web/src/middleware.ts</code> now spends that refresh
+token.</p>
+<ul>
+<li><strong>Why middleware.</strong> A server component cannot set
+cookies during render, so rotation cannot live in
+<code>requireAppAccess</code> where the expiry is noticed. Middleware
+runs before render and can.</li>
+<li><strong>Why 15 minutes stays 15 minutes.</strong>
+<code>AppAccessGuard</code> trusts the scope claim in the JWT rather
+than re-reading the database, so the access token’s lifetime <em>is</em>
+how long a suspended or expelled member keeps working (EPIC-B §10
+accepts that boundary). Lengthening it to stop signing people out would
+trade the moderation guarantee for convenience; refreshing silently gets
+both.</li>
+<li><strong>Document navigations only.</strong> The refresh
+<em>rotates</em> — the used token is revoked — so two concurrent
+refreshes mean the loser is signed out. A page load fires several
+requests (RSC payloads, prefetches, actions); gating on
+<code>Accept: text/html</code> keeps that race rare instead of
+routine.</li>
+<li><strong>The request cookie is set as well as the response
+cookie</strong>, or the page being rendered right now still sees no
+token and redirects anyway.</li>
+<li><strong>An unreachable API is not an ended session</strong> — it
+falls through and lets the guard decide, so a cold start cannot sign
+anyone out. A genuinely dead token clears the cookie so the next request
+does not retry it.</li>
+</ul>
+<p><strong><code>POST /v1/auth/sign-out-all</code></strong> revokes
+every refresh token the member holds, surfaced on the settings screen.
+This was missing while sessions slid for 30 days: a lost phone with the
+app installed stayed signed in indefinitely, and on a network where the
+handle <em>is</em> the identity, whoever holds it can post as you — the
+only previous remedy being to ask a moderator to suspend the handle,
+which punishes the victim. An access token already in flight survives
+until it expires, the same ~15-minute boundary suspension accepts.</p>
+<p>Verified: refresh rotates and the old token 401s; sign-out-all
+revoked 67 live tokens and the current one then 401s; a request carrying
+only <code>ap_refresh</code> renders the app and comes back with a fresh
+<code>ap_access</code>; a dead refresh lands on sign-in with the cookie
+cleared and does not loop.</p>
 <h2 id="signing-in-on-an-installed-app-the-six-digit-code">Signing in on
 an installed app (the six-digit code)</h2>
 <p><code>POST /v1/auth/verify-code</code> <code>{ email, code }</code>

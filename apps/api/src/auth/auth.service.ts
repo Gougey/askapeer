@@ -235,6 +235,30 @@ export class AuthService {
     return this.issueSession(member.id, member.verificationStatus);
   }
 
+  /**
+   * Revoke every refresh token this member holds — "sign out everywhere".
+   *
+   * The control that was missing while sessions were effectively indefinite. A sliding
+   * 30-day refresh plus an installed app means a lost phone stays signed in until someone
+   * intervenes, and on a network where the handle *is* the identity, whoever holds that
+   * phone can post as them. Until now the only remedy was asking a moderator to suspend
+   * the handle, which punishes the victim.
+   *
+   * Access tokens are stateless JWTs and cannot be recalled, so a session already in
+   * flight survives until it expires — the same ~15-minute boundary EPIC-B §10 accepts for
+   * suspension taking effect. Revoking the refresh tokens is what stops it being renewed.
+   *
+   * Returns the count so the screen can say what happened rather than "done".
+   */
+  async signOutEverywhere(memberId: string): Promise<{ revoked: number }> {
+    const revoked = await this.db
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(refreshTokens.memberId, memberId), isNull(refreshTokens.revokedAt)))
+      .returning({ id: refreshTokens.id });
+    return { revoked: revoked.length };
+  }
+
   async getVerificationStatus(memberId: string) {
     const [member] = await this.db
       .select({
