@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   inet,
+  integer,
   jsonb,
   pgSchema,
   text,
@@ -141,6 +142,26 @@ export const magicLinks = identity.table('magic_links', {
     .notNull()
     .references(() => members.id, { onDelete: 'cascade' }),
   tokenHash: text('token_hash').notNull(),
+  /**
+   * A six-digit code redeeming the **same** pending sign-in as `token_hash`.
+   *
+   * It exists because a link cannot reach an installed app on iOS: tapping it in Mail
+   * opens the default browser, and a home-screen web app keeps a storage container
+   * separate from that browser — so the session lands somewhere the installed app cannot
+   * see, and the member stays signed out in the app they actually use. A code is typed
+   * *into* whichever context asked for it, which sidesteps the split rather than fighting
+   * it. Confirmed on a real device before building this.
+   *
+   * A second way to redeem one row, not a second mechanism: both paths consume the same
+   * link and issue the same session.
+   */
+  codeHash: text('code_hash'),
+  /**
+   * Failed code attempts. Six digits is a million combinations, so the code is not its own
+   * defence — this is. Past the limit the row is consumed and the guesser has to request a
+   * new code, which is rate-limited in turn.
+   */
+  attempts: integer('attempts').notNull().default(0),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   consumedAt: timestamp('consumed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

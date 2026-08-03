@@ -77,11 +77,24 @@ export const templates = {
    * off `AUTH_DEV_MAGIC_LINK` depends on it, and until then the token is handed to
    * whoever asks for it.
    */
-  magicLink(ctx: Ctx, token: string): Omit<OutboundEmail, 'to'> {
+  magicLink(ctx: Ctx, token: string, code?: string): Omit<OutboundEmail, 'to'> {
+    /*
+     * The code is not a fallback for a broken link — it is the only route into an
+     * *installed* app on iOS, where tapping the link opens the default browser and the
+     * home-screen app keeps a separate storage container. So it is stated plainly and
+     * early rather than buried as a footnote for when something goes wrong.
+     */
+    const codeLines = code
+      ? [
+          `Or enter this code in the app: ${code}`,
+          'Use the code if you opened Askapeer from your home screen — the link signs you in to your browser instead.',
+        ]
+      : [];
     const body = frame(ctx, {
       heading: 'Your AskaPeer sign-in link',
       lines: [
         'Use the button below to sign in. The link works once and expires shortly.',
+        ...codeLines,
         'If you did not ask to sign in, you can ignore this email — nothing has changed.',
       ],
       cta: { label: 'Sign in', path: `/auth/verify?token=${encodeURIComponent(token)}` },

@@ -3,7 +3,12 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { API_ORIGIN } from '@/lib/api';
-import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/session';
+import {
+  ACCESS_COOKIE,
+  ACCESS_MAX_AGE,
+  REFRESH_COOKIE,
+  REFRESH_MAX_AGE,
+} from '@/lib/session';
 
 /**
  * Sign out. A POST-only server action, never a GET route: Next prefetches `<Link>`s that
@@ -22,6 +27,8 @@ export async function signOutAction(): Promise<void> {
 
 export type AuthState = {
   status: 'idle' | 'sent' | 'error';
+  /** Kept so the code form knows which address to redeem against. */
+  email?: string;
   message?: string;
   // In dev the API returns the magic-link token so the flow is testable before
   // real email delivery lands (S10). This surfaces it as a clickable link.
@@ -39,6 +46,7 @@ async function requestLink(email: string): Promise<AuthState> {
   const data = (await res.json()) as { devToken?: string };
   return {
     status: 'sent',
+    email,
     devLink: data.devToken ? `/auth/verify?token=${encodeURIComponent(data.devToken)}` : undefined,
   };
 }
@@ -68,4 +76,46 @@ export async function registerAction(_prev: AuthState, formData: FormData): Prom
   if (!res.ok) return { status: 'error', message: 'Please check your details and try again.' };
   // Registered — send a sign-in link to complete onboarding.
   return requestLink(payload.email);
+}
+
+/**
+ * Sign in with the six-digit code from the email.
+ *
+ * A server action rather than a route handler, because unlike the emailed link this is a
+ * form the member submits *from the page they are already on* — which is the whole point:
+ * on an installed iOS app the emailed link opens the default browser and signs them in
+ * there, where the installed app cannot see the session. Typing the code keeps sign-in in
+ * the context that asked for it.
+ *
+ * Setting cookies from an action is fine; only *render* is forbidden from doing it.
+ */
+export async function verifyCodeAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const email = String(formData.get('email') ?? '').trim();
+  const code = String(formData.get('code') ?? '').replace(/\s/g, '');
+  if (!/^\d{6}$/.test(code)) {
+    return { status: 'sent', email, message: 'Enter the six-digit code from your email.' };
+  }
+
+  const res = await fetch(`${API_ORIGIN}/v1/auth/verify-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    // The API says the same thing for a wrong code, an expired one and an unknown address —
+    // whether an account exists is a disclosure. Repeat it rather than interpreting it.
+    return { status: 'sent', email, message: 'That code is not valid. Ask for a new one.' };
+  }
+
+  const data = (await res.json()) as { accessToken: string; refreshToken: string };
+  const jar = await cookies();
+  const secure = process.env.NODE_ENV === 'production';
+  jar.set(ACCESS_COOKIE, data.accessToken, {
+    httpOnly: true, secure, sameSite: 'lax', path: '/', maxAge: ACCESS_MAX_AGE,
+  });
+  jar.set(REFRESH_COOKIE, data.refreshToken, {
+    httpOnly: true, secure, sameSite: 'lax', path: '/', maxAge: REFRESH_MAX_AGE,
+  });
+  redirect('/status');
 }

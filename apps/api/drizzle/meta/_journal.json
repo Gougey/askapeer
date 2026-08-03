@@ -162,6 +162,13 @@
       "when": 1785755248365,
       "tag": "0022_small_moondragon",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1785774904171,
+      "tag": "0023_shallow_may_parker",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import {
   ConflictException,
   Inject,
@@ -8,7 +8,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { EmailSender } from '../notifications/email/email.sender';
 import { isUniqueViolation } from '../db/pg-errors';
@@ -22,6 +22,20 @@ const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (sliding; G-11 makes
 
 const hashToken = (raw: string): string => createHash('sha256').update(raw).digest('hex');
 const randomToken = (): string => randomBytes(32).toString('base64url');
+/**
+ * A six-digit sign-in code. `randomInt`, not `Math.random`, because this is a credential.
+ * Zero-padded so every code is the same length — a five-digit one invites the member to
+ * wonder whether they mistyped.
+ */
+/** Constant-time compare of two hex digests. Length is checked first — timingSafeEqual throws on a mismatch. */
+const timingSafeEqualHex = (a: string, b: string): boolean => {
+  const left = Buffer.from(a, 'hex');
+  const right = Buffer.from(b, 'hex');
+  return left.length === right.length && timingSafeEqual(left, right);
+};
+const randomCode = (): string => String(randomInt(0, 1_000_000)).padStart(6, '0');
+/** Past this many wrong guesses the pending sign-in is burned rather than kept guessing. */
+const MAX_CODE_ATTEMPTS = 5;
 
 export type SessionTokens = { accessToken: string; refreshToken: string };
 
@@ -105,9 +119,11 @@ export class AuthService {
     const [member] = await this.db.select({ id: members.id }).from(members).where(eq(members.email, email));
     if (!member) return { devToken: null }; // never reveal whether the email exists
     const raw = randomToken();
+    const code = randomCode();
     await this.db.insert(magicLinks).values({
       memberId: member.id,
       tokenHash: hashToken(raw),
+      codeHash: hashToken(code),
       expiresAt: new Date(Date.now() + MAGIC_LINK_TTL_MS),
     });
     // Send it. Whether the token is *also* returned in the response is the controller's
@@ -122,7 +138,7 @@ export class AuthService {
     // underlying provider error is logged, never returned; it can name our own
     // configuration.
     try {
-      await this.email.magicLink(email, raw);
+      await this.email.magicLink(email, raw, code);
     } catch (err) {
       this.log.error(`Could not send a sign-in link: ${(err as Error).message}`);
       throw new ServiceUnavailableException(
@@ -146,6 +162,58 @@ export class AuthService {
     if (!link) throw new UnauthorizedException('Invalid or expired link.');
     await this.db.update(magicLinks).set({ consumedAt: new Date() }).where(eq(magicLinks.id, link.id));
     const [member] = await this.db.select().from(members).where(eq(members.id, link.memberId));
+    const tokens = await this.issueSession(member.id, member.verificationStatus);
+    return { ...tokens, verificationStatus: member.verificationStatus };
+  }
+
+  /**
+   * Redeem the six-digit code instead of the link.
+   *
+   * Exists because a link cannot reach an installed app on iOS — Mail opens the default
+   * browser, and a home-screen web app has its own storage container, so the session lands
+   * where the installed app cannot see it. A code is typed into whichever context asked for
+   * it. Confirmed on a real device: signing in through the emailed link left the installed
+   * app still signed out.
+   *
+   * Redeems the same row as `verifyLink` and issues the same session, so nothing downstream
+   * needs to know which way a member came in.
+   */
+  async verifyCode(email: string, code: string): Promise<SessionTokens & { verificationStatus: string }> {
+    const [member] = await this.db.select().from(members).where(eq(members.email, email));
+    // Deliberately the same error as a wrong code: whether an address has an account is a
+    // disclosure, and `requestLink` already refuses to reveal it.
+    if (!member) throw new UnauthorizedException('That code is not valid. Ask for a new one.');
+
+    // The newest unconsumed, unexpired link for this member. Requesting a second code
+    // before using the first is normal — "did that send?" — so the latest one wins.
+    const [link] = await this.db
+      .select()
+      .from(magicLinks)
+      .where(
+        and(
+          eq(magicLinks.memberId, member.id),
+          isNull(magicLinks.consumedAt),
+          gt(magicLinks.expiresAt, new Date()),
+        ),
+      )
+      .orderBy(desc(magicLinks.createdAt))
+      .limit(1);
+    if (!link?.codeHash) throw new UnauthorizedException('That code is not valid. Ask for a new one.');
+
+    if (!timingSafeEqualHex(link.codeHash, hashToken(code))) {
+      const attempts = link.attempts + 1;
+      // Burn the pending sign-in rather than let a million guesses eventually land. The
+      // member asks for a new code, and that request is itself rate-limited.
+      await this.db
+        .update(magicLinks)
+        .set({ attempts, ...(attempts >= MAX_CODE_ATTEMPTS ? { consumedAt: new Date() } : {}) })
+        .where(eq(magicLinks.id, link.id));
+      throw new UnauthorizedException('That code is not valid. Ask for a new one.');
+    }
+
+    // Single use, exactly like the link — and consuming it also invalidates the emailed
+    // link, since they are two ways into one pending sign-in.
+    await this.db.update(magicLinks).set({ consumedAt: new Date() }).where(eq(magicLinks.id, link.id));
     const tokens = await this.issueSession(member.id, member.verificationStatus);
     return { ...tokens, verificationStatus: member.verificationStatus };
   }
