@@ -753,14 +753,21 @@ mail is therefore untouched, which is the point of using a subdomain.
 
 Two things gate turning `EMAIL_PROVIDER=postmark` on, and getting them the wrong way round
 takes sign-in down: the domain must be **verified**, and the Postmark account must be
-**approved**. While an account is pending approval Postmark refuses any recipient outside
-the From domain, so every send fails — and `POST /v1/auth/request-link` surfaces that as a
-503. Until both are done, live stays on `log`.
+**Both are now done (2026-08-03).** Postmark approved the account, `POSTMARK_TOKEN` and
+`EMAIL_PROVIDER=postmark` are Fly secrets, and `mail.askapeer.co.uk` is verified (DKIM +
+Return-Path). All thirteen member-facing templates were sent and received.
 
-`AUTH_DEV_MAGIC_LINK=true` is the other half of this. It returns the sign-in token in the
-API response, which means **anyone who knows an address can sign in as that member**. It is
-tolerable only because this deployment has no real members, and it cannot come out until
-email sends. Treat it as the gate on letting anyone else near the platform.
+**`AUTH_DEV_MAGIC_LINK` has been removed** — not set to false, removed. While it was set,
+the sign-in token came back in the `request-link` response, so *anyone who knew an address
+could sign in as that member*. That was tolerable only while nothing could send email. It
+came out the same day real delivery landed and the six-digit code covered the installed-app
+case a link cannot reach.
+
+**Consequence worth knowing before you go looking for it:** there is no longer any way to
+mint a session against the live API without receiving an email. Live admin operations —
+the research-feed ingest and reclassify, the email-template check — now need a real
+sign-in. Combined with the 15-minute access token this makes live ops noticeably more
+awkward, which is the strongest argument yet for wiring up the refresh route.
 
 ### Bounces, complaints, and rate limits
 
@@ -914,8 +921,8 @@ there cannot receive. Either add a forwarder on that subdomain or add a Sender S
 `askapeer.co.uk`, which does have Microsoft 365 mail. Worth settling with one send before
 planning around the other ninety-nine.
 
-**This does not unblock turning off `AUTH_DEV_MAGIC_LINK`** — members' addresses are on
-arbitrary domains, so sign-in email cannot work until the account is approved.
+(Written while the account was pending. It was approved on 2026-08-03, the own-domain
+restriction lifted, and `AUTH_DEV_MAGIC_LINK` has since been removed — see above.)
 
 ## Admin console (S11a)
 
@@ -956,7 +963,9 @@ so with Redis absent `POST /v1/auth/register` hangs indefinitely. Current stagin
 |---|---|---|
 | `DATABASE_URL` | Fly secret | `askapeer-db` |
 | `REDIS_URL` | Fly secret | `askapeer-redis` (Upstash, lhr) — secret, not `fly.toml [env]`, as the URL embeds a password |
-| `AUTH_DEV_MAGIC_LINK` | `apps/api/fly.toml [env]` | staging only |
+| `POSTMARK_TOKEN` | Fly secret | the **Server** API token (Servers → your server → API Tokens), not the account token |
+| `EMAIL_PROVIDER` | Fly secret | `postmark`. A secret rather than `[env]` only because that is where it was set; note a secret **does** override a `fly.toml [env]` value of the same name |
+| `POSTMARK_WEBHOOK_SECRET` | Fly secret | **not yet set** — until it is, bounce and complaint callbacks are rejected and nothing reaches the suppression list |
 | `VERIFICATION_SIMULATE` | `apps/api/fly.toml [env]` | staging only |
 | `ADMIN_EMAILS` | Fly secret | comma-separated allowlist for `/admin`; a **secret, not `[env]`**, because this repo is public and the list is the founders' personal email addresses |
 

@@ -1062,17 +1062,26 @@ alignment pass. The root domain’s own Microsoft 365 mail is therefore
 untouched, which is the point of using a subdomain.</p>
 <p>Two things gate turning <code>EMAIL_PROVIDER=postmark</code> on, and
 getting them the wrong way round takes sign-in down: the domain must be
-<strong>verified</strong>, and the Postmark account must be
-<strong>approved</strong>. While an account is pending approval Postmark
-refuses any recipient outside the From domain, so every send fails — and
-<code>POST /v1/auth/request-link</code> surfaces that as a 503. Until
-both are done, live stays on <code>log</code>.</p>
-<p><code>AUTH_DEV_MAGIC_LINK=true</code> is the other half of this. It
-returns the sign-in token in the API response, which means
-<strong>anyone who knows an address can sign in as that member</strong>.
-It is tolerable only because this deployment has no real members, and it
-cannot come out until email sends. Treat it as the gate on letting
-anyone else near the platform.</p>
+<strong>verified</strong>, and the Postmark account must be <strong>Both
+are now done (2026-08-03).</strong> Postmark approved the account,
+<code>POSTMARK_TOKEN</code> and <code>EMAIL_PROVIDER=postmark</code> are
+Fly secrets, and <code>mail.askapeer.co.uk</code> is verified (DKIM +
+Return-Path). All thirteen member-facing templates were sent and
+received.</p>
+<p><strong><code>AUTH_DEV_MAGIC_LINK</code> has been removed</strong> —
+not set to false, removed. While it was set, the sign-in token came back
+in the <code>request-link</code> response, so <em>anyone who knew an
+address could sign in as that member</em>. That was tolerable only while
+nothing could send email. It came out the same day real delivery landed
+and the six-digit code covered the installed-app case a link cannot
+reach.</p>
+<p><strong>Consequence worth knowing before you go looking for
+it:</strong> there is no longer any way to mint a session against the
+live API without receiving an email. Live admin operations — the
+research-feed ingest and reclassify, the email-template check — now need
+a real sign-in. Combined with the 15-minute access token this makes live
+ops noticeably more awkward, which is the strongest argument yet for
+wiring up the refresh route.</p>
 <h3 id="bounces-complaints-and-rate-limits">Bounces, complaints, and
 rate limits</h3>
 <p><strong><code>POST /v1/webhooks/postmark</code></strong> consumes
@@ -1279,10 +1288,10 @@ no MX, so a mailbox there cannot receive. Either add a forwarder on that
 subdomain or add a Sender Signature on <code>askapeer.co.uk</code>,
 which does have Microsoft 365 mail. Worth settling with one send before
 planning around the other ninety-nine.</p>
-<p><strong>This does not unblock turning off
-<code>AUTH_DEV_MAGIC_LINK</code></strong> — members’ addresses are on
-arbitrary domains, so sign-in email cannot work until the account is
-approved.</p>
+<p>(Written while the account was pending. It was approved on
+2026-08-03, the own-domain restriction lifted, and
+<code>AUTH_DEV_MAGIC_LINK</code> has since been removed — see
+above.)</p>
 <h2 id="admin-console-s11a">Admin console (S11a)</h2>
 <p>An allowlisted <strong>admin</strong> role gets a console at
 <code>/admin</code> (web) backed by <code>GET/POST /v1/admin/*</code>
@@ -1352,9 +1361,23 @@ wiring:</p>
 <code>fly.toml [env]</code>, as the URL embeds a password</td>
 </tr>
 <tr>
-<td><code>AUTH_DEV_MAGIC_LINK</code></td>
-<td><code>apps/api/fly.toml [env]</code></td>
-<td>staging only</td>
+<td><code>POSTMARK_TOKEN</code></td>
+<td>Fly secret</td>
+<td>the <strong>Server</strong> API token (Servers → your server → API
+Tokens), not the account token</td>
+</tr>
+<tr>
+<td><code>EMAIL_PROVIDER</code></td>
+<td>Fly secret</td>
+<td><code>postmark</code>. A secret rather than <code>[env]</code> only
+because that is where it was set; note a secret <strong>does</strong>
+override a <code>fly.toml [env]</code> value of the same name</td>
+</tr>
+<tr>
+<td><code>POSTMARK_WEBHOOK_SECRET</code></td>
+<td>Fly secret</td>
+<td><strong>not yet set</strong> — until it is, bounce and complaint
+callbacks are rejected and nothing reaches the suppression list</td>
 </tr>
 <tr>
 <td><code>VERIFICATION_SIMULATE</code></td>

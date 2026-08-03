@@ -35,8 +35,11 @@ export class AuthController {
   async requestLink(@Body() dto: RequestLinkDto) {
     const { devToken } = await this.auth.requestLink(dto.email);
     const body: { sent: true; devToken?: string } = { sent: true };
-    // Surfaced in local dev, or on the Fly staging env (AUTH_DEV_MAGIC_LINK=true) so the
-    // flow is demoable before real email delivery lands (S10). Never in real production.
+    // Local dev only in practice. AUTH_DEV_MAGIC_LINK was removed from the Fly staging
+    // config once real delivery landed — while it was set, anyone who knew an address
+    // could obtain a working sign-in token for it. The env check is kept because the
+    // *mechanism* is still how local dev avoids needing a mailbox; the flag being absent
+    // everywhere deployed is the point.
     const exposeDevLink =
       process.env.NODE_ENV !== 'production' || process.env.AUTH_DEV_MAGIC_LINK === 'true';
     if (exposeDevLink && devToken) body.devToken = devToken;

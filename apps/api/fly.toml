@@ -37,15 +37,20 @@ primary_region = "lhr"
   # Links in emails point here. Not a secret; must match the deployed web app.
   WEB_ORIGIN = "https://askapeer-web.fly.dev"
 
-  # Outbound mail is still LOGGED, NOT SENT. Until this is a real provider,
-  # AUTH_DEV_MAGIC_LINK below cannot be turned off (nobody could sign in) and a suspended
-  # member receives nothing at all. EmailModule warns about this at boot in production.
-  EMAIL_PROVIDER = "log"
-
-  # Staging (prove-phase) only: surface the magic-link token in the request-link
-  # response so the auth flow is demoable before email delivery (S10). The AWS
-  # production target will NOT set this.
-  AUTH_DEV_MAGIC_LINK = "true"
+  # EMAIL_PROVIDER and POSTMARK_TOKEN are **Fly secrets**, not declared here.
+  #
+  # This block used to set EMAIL_PROVIDER = "log" with a comment saying mail was logged
+  # and not sent. Once the secret was set that comment was false, and a secret quietly
+  # overriding a value in the file people read is a bad way to learn what the config is.
+  # One place per setting: the secret is the place.
+  #
+  # AUTH_DEV_MAGIC_LINK is **gone**, not set to false. It exposed the sign-in token in the
+  # request-link response, which meant anyone who knew an address could sign in as that
+  # member — acceptable only while nothing could send email, and unacceptable the moment
+  # something could. Postmark was approved on 2026-08-03, real delivery is live, and the
+  # six-digit code covers the one case a link cannot (an installed app on iOS, where the
+  # link opens the browser and the app keeps separate storage). NODE_ENV=production in the
+  # Dockerfile, so with the flag absent the token is never exposed.
 
   # Staging (prove-phase) only: use the simulated register lookup + identity check,
   # and expose the stand-in Onfido capture screen (S2). Without this the pipeline

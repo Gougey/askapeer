@@ -126,10 +126,9 @@ export class AuthService {
       codeHash: hashToken(code),
       expiresAt: new Date(Date.now() + MAGIC_LINK_TTL_MS),
     });
-    // Send it. Whether the token is *also* returned in the response is the controller's
-    // call (AUTH_DEV_MAGIC_LINK) — and that flag is only safe to leave on because this
-    // deployment has no real members: it hands a working sign-in link to anyone who knows
-    // an address. Turning it off depends on this line working.
+    // Send it. This line is now the only way anyone signs in: AUTH_DEV_MAGIC_LINK was
+    // removed from the staging config on 2026-08-03, once Postmark approved real delivery,
+    // so the token is no longer returned to the caller anywhere but local dev.
     //
     // A send failure must not be swallowed: "we've sent you a link" is a lie if nothing
     // left the building, and the member would wait for mail that is never coming. It is
