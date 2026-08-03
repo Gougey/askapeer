@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Research Feed — Ingestion, Classification & Scoring (S8a) — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">Research Feed — Ingestion, Classification & Scoring (S8a)</span>
+</div>
+<main>
+<h1 id="s8a-research-feed-ingestion-classification-and-scoring">S8a —
+Research feed: ingestion, classification and scoring</h1>
+<p><strong>Status</strong>: <strong>Built 2026-08-03</strong>, except
+where §11 says otherwise. Ingestion, classification, scoring and the
+unfiltered Feed tab are live; member interests are not. Measured results
+from the first real run are in <code>DEVELOPMENT.md</code> under
+“Research feed”. <strong>Date</strong>: 3 August 2026
+<strong>Author</strong>: Adrian Hall (Technical Lead), drafted with
+Claude Code <strong>Scope</strong>: The ingestion half of S8 (EPIC-I).
+Everything that happens before a member sees anything: fetching
+literature, deduplicating it, classifying it against the clinical
+taxonomy, and scoring it. The feed UI, the interests picker and article
+detail (screens B1, B2, F5) are <strong>S8b</strong> and are not
+designed here.</p>
+<p><strong>Companion to</strong>:
+<code>docs/superpowers/specs/2026-07-14-epic-i-research-feed-technical-spec.md</code>
+and the architecture spec’s Section 8, which specify the data model and
+the pipeline in outline. This document is where that outline meets the
+corpus we actually have and the taxonomy Andrew actually delivered — and
+it proposes <strong>two amendments</strong> to the model as specified
+(Section 10).</p>
+<hr />
+<h2 id="contents">Contents</h2>
+<ol type="1">
+<li><a href="#what-changes-from-the-prototype">What changes from the
+prototype</a></li>
+<li><a href="#the-score-has-to-split-in-two">The score has to split in
+two</a></li>
+<li><a href="#building-the-corpus-what-do-we-even-search-for">Building
+the corpus: what do we even search for?</a></li>
+<li><a href="#source-adapters">Source adapters</a></li>
+<li><a href="#cb2">Deduplication</a></li>
+<li><a href="#cb2-1">Classification</a></li>
+<li><a href="#cb2-2">Evidence type and
+the intrinsic score</a></li>
+<li><a href="#cb2-3">Scheduling and
+idempotency</a></li>
+<li><a href="#cb2-4">Failure modes</a></li>
+<li><a href="#deduplication">Data model — the delta</a></li>
+<li><a href="#classification">Out of scope</a></li>
+<li><a href="#evidence-type-and-the-intrinsic-score">Decisions needed</a></li>
+</ol>
+<hr />
+<h2 id="what-changes-from-the-prototype">1. What changes from the
+prototype</h2>
+<p>The prototype in <code>prototypes/research-feed/</code> is genuine
+prior art — the source adapters, the proximity-window classifier and the
+explanation strings all carry over close to intact. But it is built
+inside out relative to production, and the inversion is the single
+biggest thing this slice does.</p>
+<p><strong>The prototype fetches per request, scoped to the member’s
+selected tags.</strong> <code>GET /api/feed?tags=…</code> calls Europe
+PMC and OpenAlex live, with the member’s tags <em>as the query</em>,
+then classifies what comes back. That is exactly right for a demo — no
+storage, no schedule, always fresh — and exactly wrong for
+production:</p>
+<ul>
+<li>Every feed view is two third-party HTTP calls on the request path,
+so p95 latency is somebody else’s infrastructure. The NFR target is
+300ms.</li>
+<li>The corpus is whatever those two calls returned. There is no
+history, so “articles since you last looked” cannot exist, and neither
+can saves, dedupe across runs, or retraction flagging.</li>
+<li>Rate limits are hit by <em>members browsing</em>, which is the least
+controllable possible driver.</li>
+<li>588 tags cannot become 588 queries per member.</li>
+</ul>
+<p><strong>Production ingests a corpus on a schedule that has nothing to
+do with any member, classifies it once, and matches members to it at
+read time.</strong> That is what the architecture spec means by
+“computed once at ingestion time and stored”. Section 2 is the part that
+phrase leaves unresolved.</p>
+<hr />
+<h2 id="the-score-has-to-split-in-two">2. The score has to split in
+two</h2>
+<p>The architecture spec says scoring is “topic match plus evidence-type
+weighting plus recency, computed once at ingestion time and stored”. Two
+of those three can be precomputed. <strong>Topic match cannot</strong> —
+it is a function of <em>this member’s</em> interests, which are not
+known at ingestion time and change whenever they edit them.</p>
+<p>So the score splits, and the split is the load-bearing design
+decision of this slice:</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>Computed</th>
+<th>Depends on</th>
+<th>Stored</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Intrinsic score</strong></td>
+<td>Once, at ingestion</td>
+<td>Evidence type, recency, open access</td>
+<td><code>research.articles.intrinsic_score</code></td>
+</tr>
+<tr>
+<td><strong>Classification</strong></td>
+<td>Once, at ingestion</td>
+<td>Article text × the whole taxonomy</td>
+<td><code>research.article_tags</code> (new — §10)</td>
+</tr>
+<tr>
+<td><strong>Topic match</strong></td>
+<td>Per request</td>
+<td><code>member_interests</code> × <code>article_tags</code></td>
+<td>Never</td>
+</tr>
+</tbody>
+</table>
+<p>The feed query is then a join, not a computation: take the member’s
+weighted interests, join to the articles carrying those tags, sum the
+weights, add the stored intrinsic score, order, paginate. That keeps the
+expensive text work off the request path while leaving the personalised
+half genuinely personal.</p>
+<p>It also means <strong><code>research.article_tags</code> is a table
+the current spec does not have</strong>, and the feed cannot be built
+without it. See §10.</p>
+<p>A worked ordering, for concreteness:</p>
+<pre><code>final = Σ(interest.weight × 1.0 for each matched tag)      -- member-relative
+      + intrinsic_score                                     -- stored</code></pre>
+<p>with <code>intrinsic_score</code> in roughly 0–2 so that topic match
+always dominates. <strong>A better-evidenced article about something you
+do not care about must never outrank a weaker one about something you
+do</strong> — the prototype gets this right by filtering to
+<code>matchedTags.length &gt; 0</code> before ranking, and that filter
+is kept: an article matching none of your interests is not shown,
+however good it is.</p>
+<hr />
+<h2 id="building-the-corpus-what-do-we-even-search-for">3. Building the
+corpus: what do we even search for?</h2>
+<p>The prototype dodges this by using the member’s tags as the query.
+Once ingestion is member-independent, something has to decide what
+enters the corpus. Three options, and the third is the
+recommendation:</p>
+<ol type="1">
+<li><strong>One query per tag</strong> — 588 queries per source per run.
+Wasteful, rate-limit hostile, and it re-does at fetch time the
+classification work that has to happen locally anyway.</li>
+<li><strong>Everything recent, classify locally</strong> — unbounded,
+and the classifier becomes the only thing standing between the feed and
+all of PubMed.</li>
+<li><strong>A small set of broad, domain-bounded corpus queries, then
+classify locally against all 588 tags.</strong> Ten to twenty queries
+per source per run, covering sports medicine, physiotherapy,
+musculoskeletal medicine, rehabilitation and sports injury, plus a
+journal allowlist for the titles this audience actually reads.</li>
+</ol>
+<p>Option 3 gives the classifier a corpus that is already in the right
+domain, which matters more than it sounds — see the false-positive
+discussion in §6.</p>
+<p><strong>Field-scope the queries.</strong> Verified against the live
+API on 3 August 2026: an unscoped Europe PMC search for
+<code>"achilles tendinopathy"</code> returns <strong>4,919</strong>
+hits, and because <code>sort=P_PDATE_D desc</code> discards relevance
+entirely, the newest of them is a paper on <em>chikungunya virus
+differentiation</em> — it merely mentions the phrase somewhere in its
+full text. The same query as
+<code>TITLE_ABS:"achilles tendinopathy"</code> returns
+<strong>1,914</strong> hits and a clean first page. OpenAlex’s
+equivalent is <code>filter=title_and_abstract.search:</code>, also
+verified working.</p>
+<p>Sorting by date rather than relevance is right for an incremental
+ingest — but only once the query itself is scoped, or every run imports
+the newest irrelevant thing in the index.</p>
+<p>The corpus query set is <strong>configuration, not code</strong>
+(<code>config.settings</code>, EPIC-J), so tuning what the feed is
+<em>about</em> does not need a deploy. This is also the natural place
+for Andrew to have an opinion.</p>
+<hr />
+<h2 id="source-adapters">4. Source adapters</h2>
+<p>One provider per source implementing the interface the architecture
+spec already names, matching the <code>PaymentProvider</code> and
+<code>IdentityCheckProvider</code> pattern already in the codebase:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> ArticleSource {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">readonly</span> name<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                                  <span class="co">// &#39;europe-pmc&#39;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fetchSince</span>(cursor<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span>)<span class="op">:</span> <span class="bu">Promise</span><span class="op">&lt;</span>RawArticle[]<span class="op">&gt;;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p><strong>Europe PMC and OpenAlex at MVP</strong>, both free, neither
+needing a key — the two the prototype already proves. Semantic Scholar
+and Crossref are adapters someone can add later without touching the
+pipeline; that is the entire point of the interface.</p>
+<p>Verified specifics as of 3 August 2026:</p>
+<ul>
+<li><strong>Europe PMC</strong> — <code>resultType=core</code> returns
+the abstract, <code>pubTypeList</code> (which drives evidence type),
+<code>isOpenAccess</code>, DOI and PMID in one call. No key, no
+documented hard rate limit; be polite anyway.</li>
+<li><strong>OpenAlex</strong> — abstracts arrive as an <strong>inverted
+index</strong> and must be reconstructed (the prototype’s
+<code>reconstructAbstract</code> does this and carries over unchanged).
+Send a <code>User-Agent</code> with a contact address to enter the
+<strong>polite pool</strong>, which is the difference between
+predictable throughput and being throttled.
+<code>primary_location.source.type === 'repository'</code> and raw types
+containing <em>thesis</em>/<em>dissertation</em> are excluded — the
+prototype learned this the hard way, since OpenAlex’s top-level
+<code>type</code> calls these “article”.</li>
+</ul>
+<p>Both adapters normalise to one <code>RawArticle</code> shape.
+Everything downstream — dedupe, classify, score — is source-agnostic and
+must stay that way.</p>
+<hr />
+<h2 id="deduplication">5. Deduplication</h2>
+<p>The order the architecture spec specifies, applied at upsert:
+<strong>DOI → PMID → other identifiers → normalised title + year → fuzzy
+title match</strong>. In practice DOI catches the overwhelming majority,
+because both sources carry it and both can be normalised to a bare
+lowercase DOI.</p>
+<p>Two rules the prototype already discovered and which are easy to
+lose:</p>
+<ul>
+<li><strong>Lowercase the DOI before comparing.</strong> OpenAlex
+returns it as a <code>https://doi.org/…</code> URL, Europe PMC as a bare
+string, and case varies between them.</li>
+<li><strong>On collision, prefer the record with an abstract.</strong>
+Same article, two sources, one of which has no abstract — take the
+richer one rather than whichever arrived first. Extend this to
+open-access status and evidence type: merge upward rather than
+overwrite.</li>
+</ul>
+<p>Dedupe runs against the stored corpus, not only within a batch. A
+daily job will re-see the same article for as long as it stays in the
+date window, so the upsert has to be genuinely idempotent (§8).</p>
+<hr />
+<h2 id="classification">6. Classification</h2>
+<p><strong>Keep the prototype’s proximity-window matcher.</strong> A tag
+matches when all its significant words appear within a small window of
+each other, in any order, after stemming and stop-word removal. The
+comment in the prototype explains why, and it was learned from a real
+failure: exact-phrase matching is too brittle (abstracts say “ACL
+injuries”, not the tag string), while bare co-occurrence anywhere in the
+document let a <strong>materials-science paper about stress fracture in
+alloys</strong> match the <em>Stress fracture</em> tag.</p>
+<p><strong>The risk is materially larger here than in the
+prototype</strong>, and this is the main quality question of the slice.
+The prototype classified against roughly ten hand-picked tags.
+Production classifies against <strong>588</strong>, many of which are
+short, common English words in other contexts — <em>Foot</em>,
+<em>Hip</em>, <em>Chest</em>, <em>Nerve</em>, <em>Bone</em>. The
+false-positive surface grows with the taxonomy, not with the corpus.</p>
+<p>Three mitigations, in order of how much they buy:</p>
+<ol type="1">
+<li><strong>The domain-bounded corpus (§3) does most of the
+work.</strong> A materials-science paper never enters the corpus in the
+first place, so the classifier never gets the chance to mis-file it.
+This is why option 3 beats “everything recent”.</li>
+<li><strong>Weight by specificity.</strong> A match on <em>Medial tibial
+stress syndrome</em> is worth more than a match on <em>Lower limb</em>:
+the leaf is a claim, the region is a category. Depth in the tag tree is
+already available and is a reasonable proxy.</li>
+<li><strong>Require a title match, or two independent tag matches, for
+the shallowest tags.</strong> A region matching once in a long abstract
+is weak evidence; the same tag in the title is not.</li>
+</ol>
+<p><strong>MeSH is not available yet.</strong>
+<code>community.tags.mesh_id</code> exists, and EPIC-I calls it the
+mechanism by which member interests match MeSH-indexed articles — but it
+is populated on <strong>0 of 588 tags</strong> (verified 3 August 2026).
+So MVP classification is rule-based on title and abstract text, exactly
+as the architecture spec’s “Classification (MVP)” already anticipates.
+MeSH is the precision upgrade, not the starting point, and populating it
+is a data task (fuzzy-match tag names against the NLM vocabulary, then
+have Andrew review) rather than a blocker on this slice.</p>
+<p>Store the matched tags with a confidence score in
+<code>research.article_tags</code> rather than a bare join row, so that
+raising the bar later is a query change and not a re-ingest.</p>
+<hr />
+<h2 id="evidence-type-and-the-intrinsic-score">7. Evidence type and the
+intrinsic score</h2>
+<p>Evidence type is normalised from the source’s publication types into
+the ladder the design conversation specifies: <strong>systematic review
+&gt; randomised controlled trial &gt; cohort study &gt; case report &gt;
+other</strong>. Europe PMC’s <code>pubTypeList</code> is the better
+signal; OpenAlex’s <code>type</code> is coarse and mostly says
+“article”.</p>
+<p>The intrinsic score combines evidence weight, recency and open
+access. The prototype’s recency curve — a linear decay of 0.1 per year,
+floored at zero, so a ten-year-old paper contributes nothing — is a
+reasonable start and visibly wrong at the edges: a 2015 systematic
+review is not worthless. Recommend a gentler decay with a floor, tuned
+once there is a real corpus to look at.</p>
+<p><strong>Every weight in this section belongs in
+<code>config.settings</code>, not in code.</strong> The evidence ladder,
+the recency half-life, the open-access bonus and the specificity
+weighting are all things that will be tuned by looking at output,
+repeatedly, and each tuning cycle should not be a deploy.
+<code>SettingsService</code> already exists and already caches with a
+30-second TTL, so this is free.</p>
+<p>Recompute the intrinsic score when its inputs change — which for
+recency means <em>time itself</em>, so either recompute on a schedule or
+express recency relative to <code>published_date</code> at query time.
+<strong>Recommend the latter</strong>: store the stable part (evidence,
+open access) and apply decay in the query, or the whole corpus silently
+rots between recomputes.</p>
+<hr />
+<h2 id="scheduling-and-idempotency">8. Scheduling and idempotency</h2>
+<p>BullMQ repeatable jobs, one per adapter, on the same worker
+infrastructure as verification and notifications — same
+<code>Queue</code>/<code>Worker</code> pattern, same
+in-process-for-the-prove-phase deployment
+(<code>VerificationQueue</code> is the model to copy, including its
+<code>attempts</code>/backoff defaults).</p>
+<p><strong>Daily is the right cadence to start.</strong> Literature does
+not move hourly, and the whole value of the schedule is that it is not
+on anyone’s request path. <code>research.ingestion_cursors</code>
+carries <code>last_run_at</code> and <code>last_cursor</code> per
+source, so each run asks for what has appeared since the last one.</p>
+<p><strong>Idempotency is the property that matters</strong>, because
+every retry, every overlapping run and every restart will re-present
+articles already stored. The upsert keys on the dedupe identity from §5
+and merges upward. A run that fails halfway must be safe to run again,
+which means no “mark processed” step separate from the write.</p>
+<p>Do not advance the cursor until the batch is committed. Advancing
+first means a failure silently drops a window of literature, and nothing
+downstream would ever notice it was missing.</p>
+<hr />
+<h2 id="failure-modes">9. Failure modes</h2>
+<ul>
+<li><strong>A source is down or rate-limiting.</strong> Fail that
+adapter, not the run. The prototype already has the shape of this: it
+degrades to a cached fallback and reports <code>errors</code> alongside
+<code>mode</code>. Production equivalent is simpler — the corpus is
+already stored, so one source failing means one source’s worth of new
+articles is late, and the feed is unaffected.</li>
+<li><strong>A source changes its response shape.</strong> The adapters
+are the only place that knows a source’s JSON. A contract test per
+adapter — the architecture spec’s NFRs already call for exactly this on
+pluggable interfaces — is what turns this from a silent empty feed into
+a failing build.</li>
+<li><strong>The classifier matches nothing.</strong> A member with
+interests and an empty feed is indistinguishable from a broken feed.
+Worth an explicit signal: if a run classifies a suspiciously low
+proportion of the corpus, that is an alert, not a quiet Tuesday.</li>
+<li><strong>An article is retracted after ingestion.</strong> Not solved
+at MVP — Retraction Watch via Crossref is already on the carried-forward
+list in EPIC-I §7. Worth knowing that the corpus is append-mostly and
+<em>will</em> contain retracted papers until that lands. Given the
+audience is clinicians, this deserves a decision rather than a shrug
+(§12).</li>
+</ul>
+<hr />
+<h2 id="data-model-the-delta">10. Data model — the delta</h2>
+<p>Against <code>research.articles</code> /
+<code>research.ingestion_cursors</code> /
+<code>community.member_interests</code> as specified, this slice
+needs:</p>
+<p><strong>New table — <code>research.article_tags</code></strong> (§2).
+Without it the topic-match half of the score has nowhere to live, and
+the feed query would have to re-run the text classifier per request.</p>
+<pre><code>research.article_tags
+  article_id, tag_id, confidence, matched_in (&#39;title&#39; | &#39;abstract&#39; | &#39;both&#39;), created_at
+  primary key (article_id, tag_id)
+  index on (tag_id)                    -- the feed query enters from the member&#39;s interests</code></pre>
+<p><strong>Amendments to <code>research.articles</code></strong>: add
+<code>intrinsic_score</code> (§2), <code>url</code> (the canonical
+outbound link — B2 needs it and neither source’s identifier is a URL by
+itself), and <code>retracted_at</code> as a nullable placeholder so the
+column exists before Retraction Watch does.</p>
+<p><code>community.member_interests</code> is unchanged and stays
+handle-scoped. Note it is keyed on <code>tag</code> in the current spec
+— that should be a <code>tag_id</code> foreign key to
+<code>community.tags</code>, consistent with everything else since the
+vocabulary reconciliation of 17 July.</p>
+<hr />
+<h2 id="out-of-scope">11. Out of scope</h2>
+<p><strong>S8b</strong> — the feed endpoint, the article list and detail
+screens (B1/B2), and the interests picker (F5). This slice ends at a
+scored, classified corpus in the database, which is exactly the seam to
+hand over on.</p>
+<p>Also out, and already tracked in EPIC-I §7: DOAJ predatory-journal
+checks, Retraction Watch, PEDro (no confirmed public API — worth an
+enquiry, not engineering time), and saves/bookmarks (gap G-22, which is
+a shared posts-and-articles mechanism and does not belong to this
+slice).</p>
+<hr />
+<h2 id="decisions-needed">12. Decisions needed</h2>
+<p>Three for Adrian, one for Andrew, one legal-shaped:</p>
+<ol type="1">
+<li><strong>Corpus scope.</strong> Sports medicine and physiotherapy
+only, or the wider MSK/rehab literature? This sets the query set in §3
+and, more importantly, sets what the feed is <em>for</em>. Narrow reads
+as expert; wide reads as a news feed. FD-1’s professional-scope decision
+leans on the same question.</li>
+<li><strong>Retraction handling before or after launch.</strong> The
+corpus will contain retracted papers until Retraction Watch is
+integrated. For a clinical audience, showing a retracted trial without a
+flag is a different class of problem from showing an irrelevant
+one.</li>
+<li><strong>Interests: reuse <code>community.follows</code> or keep
+<code>member_interests</code> separate?</strong> EPIC-I §4 explicitly
+leaves this open. The vocabulary is already shared; the question is
+whether the <em>weighted</em> research interest and the <em>binary</em>
+forum follow stay two mechanisms. Cheaper to answer now than after both
+have data.</li>
+<li><strong>Andrew — the corpus queries and the journal
+allowlist.</strong> Which journals this audience actually reads is
+domain knowledge, not a technical decision, and it is the
+highest-leverage input available to the feed’s quality. This is the same
+shape of ask as the tag synonyms, and can be done in the same
+sitting.</li>
+<li><strong>Abstract-redistribution licensing</strong> (EPIC-I §7,
+carried forward). This slice <em>stores</em> abstracts and S8b
+<em>displays</em> them. Europe PMC and OpenAlex are the comfortable
+cases, which is why this has not bitten yet — worth confirming before it
+does.</li>
+</ol>
+
+</main>
+</body>
+</html>

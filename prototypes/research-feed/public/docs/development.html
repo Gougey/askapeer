@@ -196,6 +196,80 @@ rather than changing screen.</li>
 <p><strong>Not done:</strong> leaving a composer with text in it
 discards silently. The case composer has “Save as draft”; the question
 composer has nothing. An unsaved-work guard is a follow-up.</p>
+<h2 id="research-feed-s8-ingestion-unfiltered-feed-tab">Research feed
+(S8 — ingestion + unfiltered Feed tab)</h2>
+<p><code>GET /v1/research-feed</code> and
+<code>/v1/research-feed/:articleId</code> (EPIC-I), screens B1 and B2.
+The design and its reasoning are in
+<code>docs/2026-08-03-research-feed-ingestion-design.md</code>; this is
+what exists and what to know before touching it.</p>
+<p><strong>Built</strong>: the <code>research</code> schema, both source
+adapters (Europe PMC, OpenAlex), dedupe, classification against all 588
+tags, intrinsic scoring, a twice-daily BullMQ repeatable job, admin
+run/reclassify/status endpoints, the Feed tab with infinite scroll, and
+article detail. <strong>Not built</strong>:
+<code>member_interests</code> and the interests picker — so the feed is
+the <em>same</em> for everyone. That is deliberate (see below).</p>
+<ul>
+<li><strong>The prototype was inside out and this is not.</strong>
+<code>prototypes/research-feed</code> queries both APIs <em>per
+request</em> using the member’s tags as the query. Production ingests a
+corpus on a schedule that has nothing to do with any member, classifies
+once, and serves from the database — otherwise every feed view is two
+third-party calls against a 300ms p95 target, and there is no corpus to
+save, dedupe or flag retractions against.</li>
+<li><strong>The score splits in two, and that is the load-bearing
+decision.</strong> Evidence type and open access precompute into
+<code>articles.intrinsic_score</code>; the article↔︎tag classification
+precomputes into <code>research.article_tags</code>; only the
+member-relative part is computed per request. <code>article_tags</code>
+is a table EPIC-I did not specify and the feed cannot work without.</li>
+<li><strong>Recency is applied in the query, never stored.</strong> A
+stored recency score describes the world on the day it was written. The
+curve is hyperbolic — full weight today, half at six months, never zero
+— not the prototype’s linear fall to nothing at ten years, which
+declared a 2015 systematic review worthless.</li>
+<li><strong><code>TITLE_ABS</code> scoping on the source queries is not
+optional.</strong> Europe PMC searches full text by default, and an
+incremental ingest sorts by date rather than relevance, so an unscoped
+query returns the newest <em>incidental</em> mention. Measured:
+<code>"achilles tendinopathy"</code> unscoped returns 4,919 hits whose
+newest is a paper on <strong>chikungunya virus</strong> that merely
+contains the phrase. Scoped: 1,914 and a clean first page.</li>
+<li><strong>A single-word tag must match in the title.</strong> The
+predicted false-positive problem was real. On the first 1,290-article
+corpus, grouping nodes that reduce to one common word after stop-word
+removal — <em>Bone</em>, <em>Nerve</em>, <em>Posterior</em>,
+<em>Inflammatory</em>, <em>Knee Other</em> — matched overwhelmingly in
+abstracts and almost never in titles (<em>Bone</em>: 142 abstract-only
+against 2 title). Requiring a title match for those cut total matches
+from <strong>3,049 to 1,393</strong> and the survivors are accurate. A
+title states a subject; an abstract mentions things.</li>
+<li><strong>The ingest window overlaps by a fortnight, on
+purpose.</strong> A paper’s publication date is not when it enters the
+index, which is routinely days later. A cursor with no overlap silently
+drops everything indexed after the run that should have caught it.
+Re-covering is free because the upsert is idempotent — and the cursor
+only advances <em>after</em> the batch commits.</li>
+<li><strong>Tags are deduplicated by name in the feed query.</strong>
+Taxonomy names are only sibling-scoped unique, so <code>Nerve</code> and
+<code>Bone</code> exist under several branches and a plain join renders
+“Nerve, Nerve, Nerve” on a card.</li>
+<li><strong><code>POST /v1/admin/research-feed/reclassify</code> re-tags
+the stored corpus without refetching.</strong> This is the tuning loop:
+classifier rules, the confidence floor and Andrew’s synonyms all change
+what an article should be tagged with, and none of them should mean
+pulling 1,300 papers from two public APIs again.</li>
+<li><strong>Corpus queries live in <code>config.settings</code></strong>
+(<code>research_feed.corpus_queries</code>, comma separated), because
+they decide what the feed is <em>about</em> and will be tuned by looking
+at output. They fall back to a domain-bounded default set in
+<code>ingestion.service.ts</code>.</li>
+</ul>
+<p><strong>Measured on the first real run</strong> (2026-08-03): 1,290
+articles in ~31s across both sources, 123 deduplicated across sources,
+578 (45%) classified into at least one tag, 1,198 with abstracts. The
+45% is the number Andrew’s synonym list would move most.</p>
 <h2 id="category-colours">Category colours</h2>
 <p>The content-type label on a post card is drawn in its own hue, so a
 list is scannable without reading every label. Values and the palette
