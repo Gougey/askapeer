@@ -54,6 +54,67 @@ function significantWords(tagName: string): string[] {
 }
 
 /**
+ * The name forms a tag can be recognised by.
+ *
+ * **A parenthetical is sometimes a gloss and sometimes a disambiguator, and the difference
+ * decides whether it can be dropped.** 47 of the 588 tags carry one. Because every word of
+ * a name had to appear, *Femoroacetabular impingement (FAI)* demanded the literal token
+ * "fai", so a paper titled "…a patient decision aid for Femoroacetabular Impingement
+ * Syndrome" matched nothing. Dropping the parenthetical fixes that.
+ *
+ * But dropping it indiscriminately is worse than the bug. *Rotatores (cervical)*,
+ * *(thoracic)* and *(lumbar)* are three different muscles distinguished only by that
+ * parenthetical — exactly the sibling-collision pattern that also produced *Nerve (elbow)*
+ * and *Nerve (wrist)*. Reduced to bare "Rotatores" all three collapse into one term which,
+ * thanks to the stemmer, matches "rotator" and fired on all 92 rotator-cuff papers in the
+ * corpus.
+ *
+ * The taxonomy itself says which is which: **if more than one tag shares a base name, the
+ * parenthetical is carrying the meaning and must stay.** An abbreviation still gets its own
+ * variant either way — "(FAI)" is a name this literature uses, while "(upper fibres)" would
+ * match half the corpus alone.
+ */
+function nameVariants(tagName: string, ambiguousBases: Set<string>): string[] {
+  const parentheticals = [...tagName.matchAll(/\(([^)]*)\)/g)].map((m) => m[1].trim());
+  const base = tagName.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+  const abbreviations = parentheticals.filter((p) => /^[A-Z]{2,6}$/.test(p));
+  // Keep the full name when the base alone would be ambiguous; otherwise prefer the base,
+  // which is the form real text actually uses.
+  const primary = !base || ambiguousBases.has(base.toLowerCase()) ? tagName : base;
+  return [primary, ...abbreviations];
+}
+
+/** A tag with its match forms worked out once, rather than per article. */
+export type PreparedTag = { id: string; depth: number; variants: string[][] };
+
+/**
+ * Resolve every tag's match forms up front.
+ *
+ * Done once per ingest rather than once per article: the taxonomy is identical for all of
+ * them, and recomputing 588 tags' word lists for each of 1,290 articles is three-quarters
+ * of a million string splits to reach the same answer.
+ */
+export function prepareTaxonomy(tags: ClassifiableTag[]): PreparedTag[] {
+  const baseCounts = new Map<string, number>();
+  for (const tag of tags) {
+    const base = tag.name.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (base) baseCounts.set(base, (baseCounts.get(base) ?? 0) + 1);
+  }
+  const ambiguous = new Set([...baseCounts].filter(([, n]) => n > 1).map(([name]) => name));
+
+  return tags.map((tag) => ({
+    id: tag.id,
+    depth: tag.depth,
+    // A tag matches on its name *or* any synonym — the same tag reached through more of the
+    // words clinicians actually use ("MTSS", "shin splints"). Empty until Andrew's list
+    // lands, at which point recall improves with no code change.
+    variants: [...nameVariants(tag.name, ambiguous), ...tag.synonyms]
+      .map(significantWords)
+      .filter((words) => words.length > 0),
+  }));
+}
+
+/**
  * Does this tag appear in these tokens?
  *
  * **A proximity window, not a phrase match and not bare co-occurrence.** Exact phrases are
@@ -114,17 +175,14 @@ export const MIN_CONFIDENCE = 0.3;
  */
 export function classify(
   article: { title: string; abstract: string | null },
-  tags: ClassifiableTag[],
+  tags: PreparedTag[],
 ): TagMatch[] {
   const titleTokens = tokenise(article.title);
   const abstractTokens = article.abstract ? tokenise(article.abstract) : [];
   const matches: TagMatch[] = [];
 
   for (const tag of tags) {
-    // A tag matches on its own name *or* any of its synonyms — the same tag reached
-    // through more of the words clinicians actually use ("MTSS", "shin splints"). Empty
-    // until Andrew's synonym list lands, at which point this improves with no code change.
-    const variants = [tag.name, ...tag.synonyms].map(significantWords).filter((w) => w.length > 0);
+    const { variants } = tag;
     if (variants.length === 0) continue;
 
     const inTitle = variants.some((words) => matchesIn(words, titleTokens));
@@ -161,7 +219,7 @@ export function classify(
  * A shallow tag matched only in an abstract lands below `MIN_CONFIDENCE` and is dropped —
  * which is the intended behaviour for "this paper says the word 'foot' somewhere".
  */
-function score(tag: ClassifiableTag, matchedIn: TagMatch['matchedIn']): number {
+function score(tag: PreparedTag, matchedIn: TagMatch['matchedIn']): number {
   const position = matchedIn === 'both' ? 1 : matchedIn === 'title' ? 0.9 : 0.6;
   // 0.4 at a root region, approaching 1 at a leaf. Depth is capped so a very deep branch
   // does not out-shout a genuinely specific match higher up.
