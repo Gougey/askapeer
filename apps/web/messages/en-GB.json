@@ -15,13 +15,16 @@
     "createAccount": "Create account",
     "registering": "Creating account…",
     "checkEmailTitle": "Check your email",
-    "checkEmailBody": "We've sent you a secure sign-in link. There is no password.",
+    "checkEmailBody": "We have sent you a sign-in link and a six-digit code. If you opened Askapeer from your home screen, use the code — the link signs you in to your browser instead.",
     "devOpenLink": "Open your sign-in link (dev)",
     "anonymityNotice": "Askapeer is pseudonymous. Your real name and details are never shown to other members. Attempting to identify yourself or anyone else results in immediate, permanent removal — no exceptions.",
     "noAccount": "No account yet?",
     "register": "Register",
     "haveAccount": "Already have an account?",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "codeLabel": "Or enter the six-digit code from the email",
+    "verifyCode": "Sign in with code",
+    "verifying": "Signing in…"
   },
   "holding": {
     "pending": {

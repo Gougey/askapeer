@@ -1205,6 +1205,47 @@ notice the holding page that explains it); <code>present()</code> in
 <code>href</code> for exactly this, and
 <code>openNotificationAction</code> redirects only when one is given.
 Don’t “restore” the link.</p>
+<h2 id="signing-in-on-an-installed-app-the-six-digit-code">Signing in on
+an installed app (the six-digit code)</h2>
+<p><code>POST /v1/auth/verify-code</code> <code>{ email, code }</code>
+redeems the <strong>same</strong> pending sign-in as the emailed link
+and issues the same session.</p>
+<p><strong>It exists because a link structurally cannot reach an
+installed app on iOS.</strong> Tapping it in Mail opens the default
+browser, and a home-screen web app keeps a storage container separate
+from that browser — so the session lands where the installed app cannot
+see it and the member stays signed out in the app they actually use.
+Confirmed on a real device before building: the link signed Adrian in
+via Chrome and the installed app remained signed out. No amount of
+better link handling fixes this; there is no way to route an
+<code>https</code> URL into an installed PWA on iOS.</p>
+<ul>
+<li><strong>Two ways into one row, not two mechanisms.</strong>
+<code>identity.magic_links</code> gains <code>code_hash</code> and
+<code>attempts</code>; redeeming either the link or the code consumes
+the row, so the other dies with it.</li>
+<li><strong>Six digits is a million combinations, so the code is not its
+own defence.</strong> Single use, the existing 15-minute expiry,
+<strong>five wrong attempts burn the row</strong>, and the endpoint is
+rate-limited per IP <em>and</em> per email — otherwise a guesser could
+request a fresh code and try five more, indefinitely.</li>
+<li><strong>Every failure says the same thing</strong> (“That code is
+not valid. Ask for a new one.”), including for an address with no
+account. Whether an account exists is a disclosure, and
+<code>request-link</code> already refuses to reveal it.</li>
+<li><strong>The email leads with the code for home-screen users</strong>
+rather than burying it as a fallback — for an installed member it is the
+only route in, not a contingency.</li>
+<li><code>autocomplete="one-time-code"</code> means iOS and Android
+offer the code straight from the notification, so it is usually one tap.
+<code>inputMode="numeric"</code>, not <code>type="number"</code>, which
+would strip a leading zero and add spinners. 16px minimum or iOS zooms
+on focus.</li>
+</ul>
+<p>Verified end to end: happy path issues a session; replay is refused;
+five wrong guesses burn the pending sign-in so even the correct code
+then fails; redeeming the code kills the emailed link and vice versa; an
+unknown address is indistinguishable from a wrong code.</p>
 <h2 id="checking-the-email-templates-v1adminemail-test">Checking the
 email templates (<code>/v1/admin/email-test</code>)</h2>
 <p><code>GET /v1/admin/email-test</code> lists the thirteen

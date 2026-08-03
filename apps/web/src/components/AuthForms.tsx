@@ -3,7 +3,12 @@
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
-import { registerAction, requestLinkAction, type AuthState } from '@/app/actions';
+import {
+  registerAction,
+  requestLinkAction,
+  verifyCodeAction,
+  type AuthState,
+} from '@/app/actions';
 
 const initial: AuthState = { status: 'idle' };
 
@@ -11,12 +16,54 @@ const field = 'w-full rounded-lg border px-3 py-2 text-sm';
 const button =
   'w-full rounded-lg px-3 py-2 text-sm font-medium text-white disabled:opacity-60';
 
-function SentNotice({ devLink }: { devLink?: string }) {
+/**
+ * After the email is sent: the code form, and the dev link when the API exposes one.
+ *
+ * The code is not a fallback here, it is the primary route for an installed app. Tapping
+ * the emailed link on iOS opens the default browser, and a home-screen web app keeps a
+ * storage container separate from that browser — so the link signs you in somewhere the
+ * installed app cannot see, and it still shows you signed out. Confirmed on a real device.
+ * Typing the code keeps sign-in in the context that asked for it.
+ */
+function SentNotice({ devLink, email }: { devLink?: string; email?: string }) {
   const t = useTranslations('auth');
+  const [state, action, pending] = useActionState(verifyCodeAction, { status: 'sent', email });
+
   return (
     <div className="space-y-3 text-sm">
       <p className="font-medium">{t('checkEmailTitle')}</p>
       <p style={{ color: 'var(--color-muted)' }}>{t('checkEmailBody')}</p>
+
+      <form action={action} className="space-y-3">
+        <input type="hidden" name="email" value={state.email ?? email ?? ''} />
+        <label className="block space-y-1">
+          <span>{t('codeLabel')}</span>
+          <input
+            name="code"
+            /*
+             * `inputMode` rather than `type="number"`: a number input strips a leading zero
+             * and offers spinner arrows, neither of which a six-digit code wants.
+             * `one-time-code` is what makes iOS and Android offer the code straight from
+             * the notification, so this is usually one tap rather than any typing.
+             */
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]*"
+            maxLength={6}
+            required
+            // 16px minimum, or iOS zooms the page on focus — the same trap the tag picker hit.
+            className={`${field} text-center tracking-[0.4em]`}
+            style={{ fontSize: '16px' }}
+          />
+        </label>
+        {state.message && (
+          <p className="text-sm" style={{ color: 'var(--color-bad)' }}>{state.message}</p>
+        )}
+        <button type="submit" disabled={pending} className={button} style={{ background: 'var(--color-accent)' }}>
+          {pending ? t('verifying') : t('verifyCode')}
+        </button>
+      </form>
+
       {devLink && (
         <a
           href={devLink}
@@ -33,7 +80,7 @@ function SentNotice({ devLink }: { devLink?: string }) {
 export function SignInForm() {
   const t = useTranslations('auth');
   const [state, action, pending] = useActionState(requestLinkAction, initial);
-  if (state.status === 'sent') return <SentNotice devLink={state.devLink} />;
+  if (state.status === 'sent') return <SentNotice devLink={state.devLink} email={state.email} />;
   return (
     <form action={action} className="space-y-3">
       <label className="block space-y-1 text-sm">
@@ -75,7 +122,7 @@ export function SignInForm() {
 export function RegisterForm() {
   const t = useTranslations('auth');
   const [state, action, pending] = useActionState(registerAction, initial);
-  if (state.status === 'sent') return <SentNotice devLink={state.devLink} />;
+  if (state.status === 'sent') return <SentNotice devLink={state.devLink} email={state.email} />;
   return (
     <form action={action} className="space-y-3">
       <label className="block space-y-1 text-sm">

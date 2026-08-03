@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export const PROFESSIONAL_BODIES = ['hcpc', 'gmc', 'basrat', 'sst'] as const;
 export type ProfessionalBody = (typeof PROFESSIONAL_BODIES)[number];
@@ -62,6 +62,23 @@ export class VerifyLinkDto {
   @IsString()
   @MinLength(10)
   token!: string;
+}
+
+/**
+ * Sign in with the six-digit code instead of the link.
+ *
+ * The email is needed as well as the code because six digits is only unique to a member,
+ * never globally — and the alternative, looking a code up across every pending sign-in,
+ * would let one guess try its luck against every member at once.
+ */
+export class VerifyCodeDto {
+  @IsEmail()
+  @NormaliseEmail()
+  email!: string;
+
+  @IsString()
+  @Matches(/^\d{6}$/, { message: 'Enter the six-digit code from your email.' })
+  code!: string;
 }
 
 export class RefreshDto {

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
-import { RefreshDto, RegisterDto, RequestLinkDto, VerifyLinkDto } from './auth.dto';
+import { RefreshDto, RegisterDto, RequestLinkDto, VerifyCodeDto, VerifyLinkDto } from './auth.dto';
 import { JwtAuthGuard, type AuthedMember } from './jwt-auth.guard';
 import { RateLimit } from '../common/rate-limit/rate-limit.decorator';
 import { RateLimitGuard } from '../common/rate-limit/rate-limit.guard';
@@ -50,6 +50,20 @@ export class AuthController {
   @HttpCode(200)
   verifyLink(@Body() dto: VerifyLinkDto) {
     return this.auth.verifyLink(dto.token);
+  }
+
+  /**
+   * Sign in with the emailed code.
+   *
+   * Rate-limited harder than the link path, and per email as well as per IP: six digits is
+   * a million combinations, and while five wrong guesses burn the pending sign-in, nothing
+   * else would stop someone requesting a fresh code and trying five more, forever.
+   */
+  @RateLimit({ windowSeconds: 900, limits: { ip: 30, email: 10 } })
+  @Post('verify-code')
+  @HttpCode(200)
+  verifyCode(@Body() dto: VerifyCodeDto) {
+    return this.auth.verifyCode(dto.email, dto.code);
   }
 
   @Post('refresh')

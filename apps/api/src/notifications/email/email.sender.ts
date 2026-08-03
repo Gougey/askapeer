@@ -30,8 +30,8 @@ export class EmailSender {
     return { webOrigin: this.config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000' };
   }
 
-  async magicLink(to: string, token: string): Promise<void> {
-    await this.deliver(to, templates.magicLink(this.ctx, token));
+  async magicLink(to: string, token: string, code?: string): Promise<void> {
+    await this.deliver(to, templates.magicLink(this.ctx, token, code));
   }
 
   async verificationStatus(to: string, status: string, reason: string | null): Promise<void> {

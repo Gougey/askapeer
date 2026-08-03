@@ -850,6 +850,39 @@ verification notice the holding page that explains it); `present()` in `Notifica
 returns a **nullable** `href` for exactly this, and `openNotificationAction` redirects only
 when one is given. Don't "restore" the link.
 
+## Signing in on an installed app (the six-digit code)
+
+`POST /v1/auth/verify-code` `{ email, code }` redeems the **same** pending sign-in as the
+emailed link and issues the same session.
+
+**It exists because a link structurally cannot reach an installed app on iOS.** Tapping it
+in Mail opens the default browser, and a home-screen web app keeps a storage container
+separate from that browser — so the session lands where the installed app cannot see it and
+the member stays signed out in the app they actually use. Confirmed on a real device before
+building: the link signed Adrian in via Chrome and the installed app remained signed out.
+No amount of better link handling fixes this; there is no way to route an `https` URL into
+an installed PWA on iOS.
+
+- **Two ways into one row, not two mechanisms.** `identity.magic_links` gains `code_hash`
+  and `attempts`; redeeming either the link or the code consumes the row, so the other dies
+  with it.
+- **Six digits is a million combinations, so the code is not its own defence.** Single use,
+  the existing 15-minute expiry, **five wrong attempts burn the row**, and the endpoint is
+  rate-limited per IP *and* per email — otherwise a guesser could request a fresh code and
+  try five more, indefinitely.
+- **Every failure says the same thing** ("That code is not valid. Ask for a new one."),
+  including for an address with no account. Whether an account exists is a disclosure, and
+  `request-link` already refuses to reveal it.
+- **The email leads with the code for home-screen users** rather than burying it as a
+  fallback — for an installed member it is the only route in, not a contingency.
+- `autocomplete="one-time-code"` means iOS and Android offer the code straight from the
+  notification, so it is usually one tap. `inputMode="numeric"`, not `type="number"`, which
+  would strip a leading zero and add spinners. 16px minimum or iOS zooms on focus.
+
+Verified end to end: happy path issues a session; replay is refused; five wrong guesses burn
+the pending sign-in so even the correct code then fails; redeeming the code kills the emailed
+link and vice versa; an unknown address is indistinguishable from a wrong code.
+
 ## Checking the email templates (`/v1/admin/email-test`)
 
 `GET /v1/admin/email-test` lists the thirteen member-facing templates and reports which
