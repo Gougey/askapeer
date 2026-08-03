@@ -61,6 +61,14 @@ export const articles = research.table(
     otherIds: jsonb('other_ids').notNull().default({}),
     title: text('title').notNull(),
     abstract: text('abstract'),
+    /**
+     * The abstract split into its structured sections (`[{heading, body}]`), parsed once at
+     * ingestion. Sources return JATS-flavoured markup, and this is what lets the app render
+     * "Purpose / Methods / Results" with its own components instead of either printing the
+     * tags or injecting third-party HTML. `abstract` keeps the flattened plain text, which
+     * is what the classifier and the card snippet use.
+     */
+    abstractSections: jsonb('abstract_sections').notNull().default([]),
     journal: text('journal'),
     publishedDate: timestamp('published_date', { withTimezone: true }),
     /** Kept alongside the date because some sources give only a year. */

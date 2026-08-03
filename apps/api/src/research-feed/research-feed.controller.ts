@@ -61,6 +61,12 @@ export class ResearchFeedAdminController {
     return this.ingestion.runAll();
   }
 
+  /** Re-parse stored abstracts after a markup-handling change — no refetch. */
+  @Post('normalise-abstracts')
+  normaliseAbstracts() {
+    return this.ingestion.normaliseAbstracts();
+  }
+
   /** Re-tag the stored corpus after a classifier or synonym change — no refetch. */
   @Post('reclassify')
   reclassify() {
