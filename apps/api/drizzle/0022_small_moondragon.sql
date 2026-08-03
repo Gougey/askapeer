@@ -1,0 +1,1 @@
+ALTER TABLE "research"."articles" ADD COLUMN "abstract_sections" jsonb DEFAULT '[]'::jsonb NOT NULL;

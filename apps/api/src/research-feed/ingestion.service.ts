@@ -3,6 +3,7 @@ import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { articleTags, articles, ingestionCursors } from '../db/schema';
 import { SettingsService } from '../settings/settings.service';
+import { parseAbstract, stripInline } from './abstract';
 import { classify, type ClassifiableTag } from './classifier';
 import { intrinsicScore, normaliseEvidenceType } from './scoring';
 import { ARTICLE_SOURCES, type ArticleSource, type RawArticle } from './sources/article-source';
@@ -135,9 +136,14 @@ export class IngestionService {
    * Taking whichever arrived last would lose information at random.
    */
   private async upsert(
-    raw: RawArticle,
+    input: RawArticle,
     taxonomy: ClassifiableTag[],
   ): Promise<{ stored: boolean; tagsWritten: number }> {
+    // Markup is stripped here rather than in each adapter: both sources emit it, the rule
+    // is identical, and one place means a third adapter inherits the fix for free.
+    const parsed = parseAbstract(input.abstract);
+    const raw: RawArticle = { ...input, title: stripInline(input.title), abstract: parsed.text };
+    const sections = parsed.sections;
     const existing = await this.findExisting(raw);
     const evidenceType = normaliseEvidenceType(raw.pubTypes, raw.title);
     const openAccess = raw.openAccess || (existing?.openAccess ?? false);
@@ -157,6 +163,7 @@ export class IngestionService {
         .update(articles)
         .set({
           abstract,
+          ...(existing.abstract ? {} : { abstractSections: sections }),
           doi: existing.doi ?? raw.doi,
           pmid: existing.pmid ?? raw.pmid,
           url: existing.url ?? raw.url,
@@ -182,6 +189,7 @@ export class IngestionService {
         otherIds: raw.otherIds,
         title: raw.title,
         abstract: raw.abstract,
+        abstractSections: sections,
         journal: raw.journal,
         publishedDate: raw.publishedDate,
         publishedYear: raw.publishedYear ?? raw.publishedDate?.getFullYear() ?? null,
@@ -322,6 +330,38 @@ export class IngestionService {
     }
     this.log.log(`Reclassified ${rows.length} articles → ${matches} tag matches`);
     return { articles: rows.length, matches };
+  }
+
+  /**
+   * Re-parse stored abstracts into clean text plus sections.
+   *
+   * The corpus ingested before markup handling existed has JATS tags sitting in `abstract`,
+   * where they render as literal `<h4>` on the card. `parseAbstract` is idempotent — clean
+   * text comes back as one unheaded section — so this is safe to run repeatedly and safe to
+   * run on rows that never needed it.
+   *
+   * Reclassification is deliberately *not* chained on: the flattened text differs from the
+   * marked-up original only by tags the tokeniser was already discarding, so tag matches do
+   * not move. Run reclassify separately if that ever stops being true.
+   */
+  async normaliseAbstracts(): Promise<{ scanned: number; rewritten: number }> {
+    const rows = await this.db
+      .select({ id: articles.id, title: articles.title, abstract: articles.abstract })
+      .from(articles);
+
+    let rewritten = 0;
+    for (const row of rows) {
+      const parsed = parseAbstract(row.abstract);
+      const title = stripInline(row.title);
+      if (parsed.text === row.abstract && title === row.title) continue;
+      await this.db
+        .update(articles)
+        .set({ title, abstract: parsed.text, abstractSections: parsed.sections })
+        .where(eq(articles.id, row.id));
+      rewritten += 1;
+    }
+    this.log.log(`Normalised ${rewritten} of ${rows.length} abstracts`);
+    return { scanned: rows.length, rewritten };
   }
 
   /** How much corpus exists — used by the admin read and the "is it working" check. */

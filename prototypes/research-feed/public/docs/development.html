@@ -251,6 +251,35 @@ index, which is routinely days later. A cursor with no overlap silently
 drops everything indexed after the run that should have caught it.
 Re-covering is free because the upsert is idempotent — and the cursor
 only advances <em>after</em> the batch commits.</li>
+<li><strong>Source abstracts are markup, not text, and are parsed at
+ingestion.</strong> Europe PMC returns JATS-flavoured HTML in
+<code>abstractText</code>: 507 of the first 1,198 abstracts carried
+tags, mostly <code>&lt;h4&gt;</code> section headings (2,075 of them).
+Rendered as text those print literally; rendered as HTML they would be
+third-party markup injected into the page. <code>abstract.ts</code>
+parses them <strong>once, at ingestion</strong>, into
+<code>abstract_sections</code> (<code>[{heading, body}]</code>) which
+the app renders with its own components — so
+<code>dangerouslySetInnerHTML</code> stays absent from the codebase and
+the Purpose/Methods/Results structure a clinician scans survives.
+<code>abstract</code> keeps the flattened plain text for the classifier
+and the card snippet.
+<ul>
+<li><strong>Decode entities <em>before</em> stripping tags.</strong>
+Sources sometimes double-encode, so a title arrives as
+<code>Nestin&amp;lt;sup&amp;gt;+&amp;lt;/sup&amp;gt;</code>.
+Strip-then-decode finds no tags and then <em>produces</em>
+<code>&lt;sup&gt;</code> in supposedly clean text — which is how six
+titles survived the first backfill with their markup intact.</li>
+<li><strong>The tag pattern requires a letter after
+<code>&lt;</code></strong> (<code>&lt;\/?[a-zA-Z]</code>), so
+<code>P&lt;0.001</code> and <code>n&gt;30</code> survive. A laxer
+pattern eats everything between a statistic and the next
+<code>&gt;</code>.</li>
+<li><code>POST /v1/admin/research-feed/normalise-abstracts</code>
+re-parses stored rows; idempotent, so it is safe to re-run and safe on
+rows that never needed it.</li>
+</ul></li>
 <li><strong>Tags are deduplicated by name in the feed query.</strong>
 Taxonomy names are only sibling-scoped unique, so <code>Nerve</code> and
 <code>Bone</code> exist under several branches and a plain join renders

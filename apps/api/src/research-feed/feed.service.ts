@@ -21,7 +21,14 @@ export type FeedArticle = {
   tags: { id: string; name: string }[];
 };
 
-export type ArticleDetail = FeedArticle & { abstract: string | null; doi: string | null };
+/** One block of a structured abstract — see `abstract.ts` for why these are parsed. */
+export type AbstractSection = { heading: string | null; body: string };
+
+export type ArticleDetail = FeedArticle & {
+  abstract: string | null;
+  abstractSections: AbstractSection[];
+  doi: string | null;
+};
 
 export type FeedPage = { articles: FeedArticle[]; nextCursor: string | null };
 
@@ -99,9 +106,11 @@ export class FeedService {
 
   /** Screen B2. The abstract is the point — see the design note on why we do not frame. */
   async detail(articleId: string): Promise<ArticleDetail> {
-    const { rows } = await this.db.execute<FeedRow & { doi: string | null }>(sql`
-      select a.id, a.title, a.abstract, a.journal, a.published_date, a.evidence_type,
-             a.open_access, a.url, a.doi,
+    const { rows } = await this.db.execute<
+      FeedRow & { doi: string | null; abstract_sections: AbstractSection[] }
+    >(sql`
+      select a.id, a.title, a.abstract, a.abstract_sections, a.journal, a.published_date,
+             a.evidence_type, a.open_access, a.url, a.doi,
              (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name)
                                        order by m.confidence desc, m.name), '[]')
                 from (
@@ -121,7 +130,18 @@ export class FeedService {
     `);
     const row = rows[0];
     if (!row) throw new NotFoundException('That article is not in the feed.');
-    return { ...toArticle(row), abstract: row.abstract, doi: row.doi };
+    return {
+      ...toArticle(row),
+      abstract: row.abstract,
+      // Older rows predate section parsing; fall back so the screen always has something.
+      abstractSections:
+        row.abstract_sections?.length > 0
+          ? row.abstract_sections
+          : row.abstract
+            ? [{ heading: null, body: row.abstract }]
+            : [],
+      doi: row.doi,
+    };
   }
 }
 

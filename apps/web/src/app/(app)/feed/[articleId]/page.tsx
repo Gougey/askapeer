@@ -89,12 +89,35 @@ export default async function ArticlePage({
           </ul>
         )}
 
-        {article.abstract ? (
-          <div className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
+        {article.abstractSections.length > 0 ? (
+          <div className="flex flex-col" style={{ gap: 'var(--space-3)' }}>
             <h2 className="text-sm font-semibold">{t('abstract')}</h2>
-            <p className="text-sm" style={{ color: 'var(--color-fg)', lineHeight: 1.6 }}>
-              {article.abstract}
-            </p>
+            {/*
+              Rendered from parsed sections, not from the source's markup. Europe PMC returns
+              JATS-flavoured HTML in the abstract, so this either prints `<h4>` at the member
+              or injects third-party HTML into the page; parsing it server-side into
+              {heading, body} avoids both, and keeps the Purpose/Methods/Results structure a
+              clinician actually scans.
+            */}
+            {article.abstractSections.map((section, index) => (
+              <div
+                key={`${section.heading ?? 'body'}-${index}`}
+                className="flex flex-col"
+                style={{ gap: 'var(--space-1)' }}
+              >
+                {section.heading && (
+                  <h3
+                    className="text-xs font-semibold uppercase"
+                    style={{ color: 'var(--color-muted)', letterSpacing: '0.06em' }}
+                  >
+                    {section.heading}
+                  </h3>
+                )}
+                <p className="text-sm" style={{ color: 'var(--color-fg)', lineHeight: 1.6 }}>
+                  {section.body}
+                </p>
+              </div>
+            ))}
           </div>
         ) : (
           <p className="text-sm" style={{ color: 'var(--color-muted)' }}>

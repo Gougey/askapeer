@@ -21,7 +21,14 @@ export type FeedArticle = {
   tags: { id: string; name: string }[];
 };
 
-export type ArticleDetail = FeedArticle & { abstract: string | null; doi: string | null };
+/** A structured abstract's blocks. Parsed server-side — never markup. */
+export type AbstractSection = { heading: string | null; body: string };
+
+export type ArticleDetail = FeedArticle & {
+  abstract: string | null;
+  abstractSections: AbstractSection[];
+  doi: string | null;
+};
 
 export type FeedPage = { articles: FeedArticle[]; nextCursor: string | null };
 
