@@ -238,6 +238,24 @@ post tagged “Knee Joint” whose body said “runner”, since the tag branch
 matched a name containing “knee” and not “runner”. Only survivors of the
 first predicate reach the second, so the unindexable one runs on a
 handful of rows.</p></li>
+<li><p><strong>Any one of the three controls is a search; <code>q</code>
+is optional.</strong> A category or a tag subtree is a perfectly good
+thing to ask for, and there are no words that express it better —
+requiring the free text meant “everything under Achilles tendinopathy”
+was unreachable, and typing something to satisfy the box could only
+narrow what was asked for. Only the <em>empty</em> search (no text, no
+filters) returns nothing, because that is the Discussions list.
+<strong>Browse mode needs its own candidate set</strong> for the reason
+in the previous point: with no text predicate to lead with, the tag
+filters are correlated <code>exists</code> subqueries and the planner
+will happily scan every published post to run them. So the most
+selective filter opens instead — a tag subtree via
+<code>post_tags_tag_idx</code>, otherwise the category via
+<code>posts_category_idx</code> — and the outer <code>WHERE</code> still
+applies every filter, so the CTE only ever has to be a superset.
+Ordering is recency, not relevance: there is nothing to rank against,
+and kudos does not lead here for the same reason it only nudges
+above.</p></li>
 <li><p><strong>Trigram fallback, not trigram search.</strong>
 <code>pg_trgm</code> (migration <code>0019</code>) runs only when the
 tsquery matched nothing — “achiles” is a dead end under full-text search
@@ -271,12 +289,13 @@ Andrew’s taxonomy itself was seeded; don’t block on the admin
 UI.</p></li>
 </ul>
 <p><strong>The query stands alone; category and tags live behind
-“Advanced search”.</strong> They are <em>narrowing</em> controls, and
-narrowing is not what makes tags valuable here — a tag’s name and
-synonyms are folded into the free-text match already, which is what
-takes “knee” from 4 hits to 10. Hiding them costs nothing in recall and
-stops a member scrolling past a picker they rarely want to reach the
-button they always do (form height 395px → 184px collapsed).</p>
+“Advanced search”.</strong> They are <em>usually</em> narrowing controls
+(though either can search on its own — see above), and narrowing is not
+what makes tags valuable here — a tag’s name and synonyms are folded
+into the free-text match already, which is what takes “knee” from 4 hits
+to 10. Hiding them costs nothing in recall and stops a member scrolling
+past a picker they rarely want to reach the button they always do (form
+height 395px → 184px collapsed).</p>
 <p>It is a native <code>&lt;details&gt;</code>, so keyboard support and
 no-JS behaviour are free and <code>open</code> is decided on the server.
 <strong>A search arriving with filters in the URL opens

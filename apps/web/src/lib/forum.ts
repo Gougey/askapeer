@@ -118,9 +118,12 @@ export type SearchResults = {
  */
 export async function fetchSearch(
   token: string,
-  params: { q: string; category?: string; tags?: string[]; cursor?: string },
+  params: { q?: string; category?: string; tags?: string[]; cursor?: string },
 ): Promise<SearchResults> {
-  const search = new URLSearchParams({ q: params.q });
+  const search = new URLSearchParams();
+  // Omitted rather than sent empty: a category or tag search carries no query, and
+  // `?q=` on the wire only invites something downstream to treat "" as a term.
+  if (params.q) search.set('q', params.q);
   if (params.category) search.set('category', params.category);
   for (const tag of params.tags ?? []) search.append('tag', tag);
   if (params.cursor) search.set('cursor', params.cursor);

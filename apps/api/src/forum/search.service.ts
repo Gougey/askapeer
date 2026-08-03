@@ -30,7 +30,8 @@ export type SearchResults = {
 };
 
 export type SearchQuery = {
-  q: string;
+  /** Absent or empty when the member searched on filters alone — see `search()`. */
+  q?: string;
   category?: string;
   /** Tag ids. Each is expanded to its subtree; several are ANDed. */
   tags?: string[];
@@ -60,8 +61,18 @@ export class SearchService {
   async search(query: SearchQuery): Promise<SearchResults> {
     const limit = query.limit ?? DEFAULT_PAGE_SIZE;
     const offset = Number.parseInt(query.cursor ?? '0', 10) || 0;
-    const term = query.q.trim();
-    if (!term) return { posts: [], nextCursor: null, didYouMean: false };
+    const term = (query.q ?? '').trim();
+    // Any one of the three controls is a search. Only *none* of them is not: an empty
+    // search would be "the whole corpus, newest first", which is the Discussions list.
+    if (!term && !hasFilters(query)) return { posts: [], nextCursor: null, didYouMean: false };
+
+    // Browse mode — filters with no words to rank against. There is no relevance to
+    // compute and nothing to spell wrong, so it is one pass ordered by recency, and the
+    // trigram fallback below would have nothing to compare.
+    if (!term) {
+      const browsed = await this.run(term, query, limit, offset, false);
+      return this.toResults(browsed.rows, limit, offset, false);
+    }
 
     const exact = await this.run(term, query, limit, offset, false);
     if (exact.rows.length > 0 || offset > 0) {
@@ -108,7 +119,32 @@ export class SearchService {
      * The category name is deliberately **not** matched here. It cost a second full scan
      * of `posts` and duplicated the category dropdown sitting next to the search box.
      */
-    const candidates = fuzzy
+    /*
+     * **Browse mode has to narrow the candidate set too.** With no term there is no
+     * indexable text predicate to open with, and the tag filters below are correlated
+     * `exists` subqueries — a planner given nothing else will scan every published post
+     * and run them per row, which is the exact shape that measured at 287ms before the
+     * materialised CTE was introduced. So the most selective filter leads: a tag subtree
+     * via `post_tags_tag_idx`, otherwise the category via `posts_category_idx`. The outer
+     * WHERE still applies every filter, so this only ever has to be a superset.
+     */
+    const browse =
+      tagFilters.length > 0
+        ? sql`
+          with recursive subtree as (
+            select id from community.tags where id = ${tagFilters[0]}
+            union all
+            select c.id from community.tags c join subtree s on c.parent_id = s.id
+          )
+          select pt.post_id as id from community.post_tags pt
+           where pt.tag_id in (select id from subtree)`
+        : sql`
+          select p.id from community.posts p
+           where p.status = 'published' and p.category_id = ${query.category}`;
+
+    const candidates = !term
+      ? browse
+      : fuzzy
       ? sql`
           select p.id from community.posts p
            where p.status = 'published' and p.title % ${term}
@@ -151,8 +187,13 @@ export class SearchService {
           ]
         : [];
 
-    const relevance = fuzzy
-      ? sql`similarity(p.title, ${term})`
+    // Newest first when there is no text to rank by — the only honest order for "show me
+    // everything tagged X". Kudos deliberately does not lead here either, for the same
+    // reason it only nudges above: it would turn a filter into a popularity chart.
+    const ordering = !term
+      ? sql`p.created_at desc, p.id desc`
+      : fuzzy
+      ? sql`similarity(p.title, ${term}) desc, p.created_at desc, h.kudos_total desc, p.id desc`
       : sql`(
           ts_rank_cd(p.tsv, websearch_to_tsquery('english', ${term}))
           + case when exists (
@@ -219,7 +260,7 @@ export class SearchService {
       join community.categories cat on cat.id = p.category_id
       left join community.case_details cd on cd.post_id = p.id
       where ${where}
-      order by ${relevance} desc, p.created_at desc, h.kudos_total desc, p.id desc
+      order by ${ordering}
       limit ${limit + 1} offset ${offset}
     `);
   }
@@ -283,6 +324,11 @@ export class SearchService {
     }
     return grouped;
   }
+}
+
+/** A category or at least one tag — either makes a search that needs no words. */
+function hasFilters(query: SearchQuery): boolean {
+  return Boolean(query.category) || (query.tags ?? []).filter(Boolean).length > 0;
 }
 
 /** Enough of the text to judge a result by, not enough to replace opening it. */
