@@ -346,14 +346,24 @@ export class IngestionService {
    */
   async normaliseAbstracts(): Promise<{ scanned: number; rewritten: number }> {
     const rows = await this.db
-      .select({ id: articles.id, title: articles.title, abstract: articles.abstract })
+      .select({
+        id: articles.id,
+        title: articles.title,
+        abstract: articles.abstract,
+        sections: articles.abstractSections,
+      })
       .from(articles);
 
     let rewritten = 0;
     for (const row of rows) {
       const parsed = parseAbstract(row.abstract);
       const title = stripInline(row.title);
-      if (parsed.text === row.abstract && title === row.title) continue;
+      // An abstract that was already clean parses to identical text, so a text-only check
+      // skips it — and leaves `abstract_sections` at its empty default, making the
+      // single-section fallback in FeedService load-bearing for half the corpus rather than
+      // the edge case it is meant to be. Fill it whenever it is missing.
+      const sectionsMissing = !Array.isArray(row.sections) || row.sections.length === 0;
+      if (parsed.text === row.abstract && title === row.title && !sectionsMissing) continue;
       await this.db
         .update(articles)
         .set({ title, abstract: parsed.text, abstractSections: parsed.sections })
