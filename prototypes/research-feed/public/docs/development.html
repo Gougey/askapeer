@@ -1238,19 +1238,39 @@ how long a suspended or expelled member keeps working (EPIC-B §10
 accepts that boundary). Lengthening it to stop signing people out would
 trade the moderation guarantee for convenience; refreshing silently gets
 both.</li>
-<li><strong>Document navigations only.</strong> The refresh
-<em>rotates</em> — the used token is revoked — so two concurrent
-refreshes mean the loser is signed out. A page load fires several
-requests (RSC payloads, prefetches, actions); gating on
-<code>Accept: text/html</code> keeps that race rare instead of
-routine.</li>
+<li><strong>Every request, not just document loads — and the race is
+solved in the API instead.</strong> This was gated on
+<code>Accept: text/html</code>, which was wrong in a way only a phone
+reveals: <strong>reopening an installed app does not load a
+document.</strong> The client router issues an RSC request, which was
+skipped, so the guard saw no token and bounced the member to sign-in
+after fifteen idle minutes. Invisible on a desktop, where you usually
+arrive by typing a URL.
+<ul>
+<li>The obvious repair — refresh on navigations but not prefetches —
+<strong>is not available</strong>: Next strips its own <code>RSC</code>
+and <code>Next-Router-Prefetch</code> headers before middleware runs.
+Verified by dumping every header that actually arrives; only
+<code>Accept</code> survives. A prefetch and a real navigation are
+indistinguishable at this layer.</li>
+<li>So <code>AuthService.refresh</code> <strong>reuses a refresh token
+for its first ten minutes</strong> rather than rotating on every call
+(<code>REFRESH_ROTATE_AFTER_MS</code>). Concurrent refreshes all get the
+same refresh token back with a fresh access token each, so they can no
+longer invalidate one another. Rotation still happens, just at most once
+per window — which preserves the property rotation is actually for:
+bounding how long a stolen token is useful. Measured: 8 simultaneous
+refreshes of one token now all return 200.</li>
+</ul></li>
 <li><strong>The request cookie is set as well as the response
 cookie</strong>, or the page being rendered right now still sees no
 token and redirects anyway.</li>
 <li><strong>An unreachable API is not an ended session</strong> — it
 falls through and lets the guard decide, so a cold start cannot sign
-anyone out. A genuinely dead token clears the cookie so the next request
-does not retry it.</li>
+anyone out. A 401 deliberately does <strong>not</strong> clear the
+cookie either: it may mean a request lost a rotation race, and deleting
+the cookie the winner just set would sign out a member whose session is
+fine.</li>
 </ul>
 <p><strong><code>POST /v1/auth/sign-out-all</code></strong> revokes
 every refresh token the member holds, surfaced on the settings screen.

@@ -29,17 +29,24 @@ export async function middleware(req: NextRequest) {
   if (hasAccess || !refreshToken) return NextResponse.next();
 
   /*
-   * Document navigations only.
+   * Every request, not just document loads.
    *
-   * The refresh rotates — the used token is revoked and a new pair issued — so two
-   * requests refreshing at once means the second presents a token that no longer exists
-   * and gets signed out. A page load fires several requests (RSC payloads, prefetches,
-   * server actions), and refreshing on all of them would make that race routine rather
-   * than rare. Only the document request refreshes; everything else on that page then
-   * travels with the cookie it set.
+   * This was gated on `Accept: text/html`, reasoning that the refresh rotates and two
+   * concurrent refreshes sign the loser out. True, and still wrong: **reopening an
+   * installed app does not load a document** — the client router issues an RSC request,
+   * which was skipped, so the guard saw no access token and bounced the member to sign-in.
+   * That is the phone-after-fifteen-idle-minutes symptom, invisible on a desktop where you
+   * usually arrive by typing a URL.
+   *
+   * The obvious repair — refresh on navigations but not prefetches — is not available:
+   * **Next strips its own `RSC` and `Next-Router-Prefetch` headers before middleware
+   * runs** (verified by dumping the headers that actually arrive; only `Accept` survives),
+   * so a prefetch and a real navigation are indistinguishable here.
+   *
+   * So the race is solved where it lives instead — `AuthService.refresh` reuses a refresh
+   * token for its first ten minutes rather than rotating on every call, and concurrent
+   * refreshes can no longer invalidate one another. This layer just asks.
    */
-  if (!req.headers.get('accept')?.includes('text/html')) return NextResponse.next();
-
   let res: Response;
   try {
     res = await fetch(`${API_ORIGIN}/v1/auth/refresh`, {
@@ -55,11 +62,16 @@ export async function middleware(req: NextRequest) {
   }
 
   if (!res.ok) {
-    // A genuinely dead refresh token (expired, revoked, or already rotated by a racing
-    // request). Clear it so the next request does not retry a token that cannot work.
-    const response = NextResponse.next();
-    response.cookies.delete(REFRESH_COOKIE);
-    return response;
+    /*
+     * Deliberately does **not** clear the cookie.
+     *
+     * A 401 here means expired, revoked — or already rotated by a request that raced this
+     * one. In that last case the winner has just set a fresh cookie, and deleting it would
+     * sign out a member whose session is perfectly good, turning a harmless race into the
+     * exact bug this middleware exists to prevent. Leaving a dead cookie costs one API call
+     * per navigation while the member sits at sign-in, and signing in overwrites it.
+     */
+    return NextResponse.next();
   }
 
   const data = (await res.json()) as { accessToken: string; refreshToken: string };
