@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import type { Category, Tag } from '@/lib/forum';
+import { categoryColour } from '@/lib/category-colour';
 import { createPostAction, type ComposeState } from './actions';
 import { ConfirmPostDialog } from './ConfirmPostDialog';
 import { TagPicker } from '@/components/TagPicker';
@@ -101,9 +102,23 @@ export function ComposeQuestionForm({
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
           className="rounded-lg border px-3 py-2"
-          style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
+          /*
+           * The closed control carries the chosen category's colour, which is the part
+           * that works everywhere. The `<option>` colours below are progressive
+           * enhancement: desktop browsers honour them, but iOS and Android draw the open
+           * list with their own native picker and ignore them entirely.
+           */
+          style={{
+            background: 'var(--color-surface)',
+            borderColor: 'var(--color-muted)',
+            color: categoryColour(categories.find((c) => c.id === categoryId)?.colour),
+          }}
         >
-          <option value="">{t('categoryPlaceholder')}</option>
+          {/* Explicit, because an option otherwise inherits the colour set on the select
+              above and the placeholder would take the chosen category's hue. */}
+          <option value="" style={{ color: 'var(--color-fg)' }}>
+            {t('categoryPlaceholder')}
+          </option>
           {/*
             Categories reserved for case discussions are not offered here. A clinical case
             has its own composer and its own de-identification gate, so listing it as a
@@ -113,7 +128,7 @@ export function ComposeQuestionForm({
           {categories
             .filter((category) => category.postType !== 'case_discussion')
             .map((category) => (
-              <option key={category.id} value={category.id}>
+              <option key={category.id} value={category.id} style={{ color: categoryColour(category.colour) }}>
                 {category.name}
               </option>
             ))}

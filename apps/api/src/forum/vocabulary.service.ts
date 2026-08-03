@@ -14,6 +14,12 @@ export type CategoryDto = {
    * them restate what the previous screen already established.
    */
   postType: 'question' | 'case_discussion' | null;
+  /**
+   * Design-token key for the category's colour (`teal`, `blue`…), or null to inherit the
+   * default accent. The value lives in `--color-category-*` per theme; see the column
+   * comment on `categories.colour`.
+   */
+  colour: string | null;
 };
 
 export type TagDto = {
@@ -61,6 +67,7 @@ export class VocabularyService {
         name: categories.name,
         description: categories.description,
         postType: categories.postType,
+        colour: categories.colour,
       })
       .from(categories)
       .where(isNull(categories.retiredAt))

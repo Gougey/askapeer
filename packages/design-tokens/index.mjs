@@ -72,6 +72,32 @@ export const lightGroups = [
     ],
   },
   {
+    comment: [
+      'Category colours — the content-type label on a post card (Clinical Case, Research…).',
+      '',
+      'Named by hue, not by category, and deliberately so: EPIC-J lets an administrator',
+      'rename and recolour categories, so a token called --color-category-clinical would',
+      'start lying the moment someone used it for something else. `categories.colour` holds',
+      'the key; these hold the values.',
+      '',
+      'Five cool hues, evenly spaced, with nothing warm in the set. That is the constraint',
+      'that picked them: kudos gold, spark red and the admin amber all already mean',
+      'something specific (§2.1), and a category tinted near any of them would make a claim',
+      'the post has not earned. Verify green is avoided for the same reason.',
+      '',
+      'Every value is AA as small text on --color-surface in BOTH themes — the light ramp',
+      'runs 5.5:1 to 7.6:1 on white, the dark ramp 8.4:1 to 11.8:1 on #111a2b. A category is',
+      '12px text, so 4.5:1 is the floor, not 3:1. Re-check both if you retune these.',
+    ].join('\n'),
+    tokens: [
+      { name: 'color-category-teal', value: '#0f766e' },
+      { name: 'color-category-blue', value: '#1d4ed8' },
+      { name: 'color-category-violet', value: '#6d28d9' },
+      { name: 'color-category-magenta', value: '#a21667' },
+      { name: 'color-category-slate', value: '#475569' },
+    ],
+  },
+  {
     tokens: [
       {
         name: 'color-warn',
@@ -251,6 +277,18 @@ export const darkGroups = [
       { name: 'color-verify-text', value: '#4bbf98' },
       { name: 'color-spark', value: '#ff5a5f' },
       { name: 'color-warn', value: '#e0a33a' },
+    ],
+  },
+  {
+    // Category hues re-pitched for a dark ground: the light ramp is mid-to-dark and
+    // disappears on #111a2b, so dark takes the light end of the same hues. Same order,
+    // same hue relationships, so the two themes stay recognisably one palette.
+    tokens: [
+      { name: 'color-category-teal', value: '#5eead4' },
+      { name: 'color-category-blue', value: '#7dd3fc' },
+      { name: 'color-category-violet', value: '#c4b5fd' },
+      { name: 'color-category-magenta', value: '#f9a8d4' },
+      { name: 'color-category-slate', value: '#a8b6c6' },
     ],
   },
 ];

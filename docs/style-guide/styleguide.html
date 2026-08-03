@@ -23,6 +23,9 @@
   --color-verify:#2e8b6f; --color-verify-text:#256f59; --color-verify-tint:#e4f2eb;
   --color-danger:#c0492f;
   --color-warn:#9a5f0a; /* functional, admin console only — not kudos gold */
+  /* Category label hues (§2.1b) — all cool, so none can be read as kudos, spark or warn. */
+  --color-category-teal:#0f766e; --color-category-blue:#1d4ed8; --color-category-violet:#6d28d9;
+  --color-category-magenta:#a21667; --color-category-slate:#475569;
   --color-bg:#eef1f4; --color-surface:#ffffff; --color-fg:#14212b; --color-muted:#64757f;
   --color-faint:#93a1a9; --color-border:#e5ebee; --color-border-strong:#d7e0e4;
   --color-accent:var(--color-navy); --color-ok:var(--color-verify); --color-bad:var(--color-danger);
@@ -34,6 +37,8 @@
   --color-faint:#5f7183; --color-border:#1e2c40; --color-border-strong:#2a3a52;
   --color-accent:#6f9bff; --color-kudos:#e2a53f; --color-kudos-text:#e2a53f;
   --color-verify:#4bbf98; --color-verify-text:#4bbf98; --color-spark:#ff5a5f; --color-warn:#e0a33a;
+  --color-category-teal:#5eead4; --color-category-blue:#7dd3fc; --color-category-violet:#c4b5fd;
+  --color-category-magenta:#f9a8d4; --color-category-slate:#a8b6c6;
   --color-navy-tint:#16233b; --color-navy-tint-2:#141f33; --color-verify-tint:#14332a;
   --color-kudos-tint:#2e2413; --color-spark-tint:#331416;
   --shadow-card:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.32);
@@ -663,6 +668,9 @@ a.doclink{ color:var(--color-accent); font-weight:600; text-decoration:none; }
     ['Kudos · status','#d98a1f','#3a2708'], ['Kudos tint','#fbf0dc','#8a5a12'],
     ['Verify · trust','#2e8b6f','#fff'], ['Verify tint','#e4f2eb','#256f59'], ['Danger','#c0492f','#fff'],
     ['Kudos text','#8a5a12','#fff'],
+    ['Category · teal','#0f766e','#fff'], ['Category · blue','#1d4ed8','#fff'],
+    ['Category · violet','#6d28d9','#fff'], ['Category · magenta','#a21667','#fff'],
+    ['Category · slate','#475569','#fff'],
   ];
   const neutral = [
     ['Background','#eef1f4','#14212b'], ['Surface','#ffffff','#14212b'], ['Text','#14212b','#fff'],
@@ -676,6 +684,8 @@ a.doclink{ color:var(--color-accent); font-weight:600; text-decoration:none; }
     ['Text','#14212b'], ['Muted','#64757f'], ['Faint','#93a1a9'],
     ['Kudos text','#8a5a12'], ['Kudos (raw)','#d98a1f'], ['Verify text','#256f59'],
     ['Verify (raw)','#2e8b6f'], ['Navy','#001f52'], ['Spark','#ed1b24'],
+    ['Category teal','#0f766e'], ['Category blue','#1d4ed8'], ['Category violet','#6d28d9'],
+    ['Category magenta','#a21667'], ['Category slate','#475569'],
   ];
   document.getElementById('contrastCards').innerHTML = textColours.map(([nm,hex])=>{
     const r = ratio(hex,'#ffffff'); const rr = r.toFixed(2)+':1';

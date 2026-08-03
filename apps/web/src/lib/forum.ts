@@ -11,12 +11,18 @@ export type AuthorBlock = {
 
 export type TagRef = { id: string; name: string };
 
+/**
+ * A category as it appears attached to a post. `colour` is a design-token key
+ * (`teal`, `blue`…), never a colour value — resolve it with `categoryColour()`.
+ */
+export type CategoryRef = { id: string; name: string; colour: string | null };
+
 export type PostCard = {
   id: string;
   type: 'question' | 'case_discussion';
   title: string;
   snippet: string;
-  category: { id: string; name: string };
+  category: CategoryRef;
   tags: TagRef[];
   author: AuthorBlock;
   answerCount: number;
@@ -54,6 +60,8 @@ export type Category = {
   /** The post type this category is for, or null for either. The question composer hides
    *  the case-discussion one; a case's category is resolved server-side, never picked. */
   postType: 'question' | 'case_discussion' | null;
+  /** Design-token key for the category's colour — see `categoryColour()`. */
+  colour: string | null;
 };
 
 /**

@@ -121,6 +121,37 @@ with no explicit exit strands the member.
 **Not done:** leaving a composer with text in it discards silently. The case composer has
 "Save as draft"; the question composer has nothing. An unsaved-work guard is a follow-up.
 
+## Category colours
+
+The content-type label on a post card is drawn in its own hue, so a list is scannable
+without reading every label. Values and the palette rationale are in the style guide
+(§2.1b); the mechanics worth knowing here:
+
+- **`categories.colour` stores a token key (`teal`), never a colour.** The value differs per
+  theme, so a stored hex would freeze every category to whichever theme it was picked in —
+  and would put a raw colour outside `globals.css`, which the design-token guard exists to
+  prevent. `categoryColour()` in `apps/web/src/lib/category-colour.ts` is the only place a
+  key becomes a `var()`, and it allowlists the five: an unrecognised key from the database
+  can never reach the DOM as a colour, so a typo in the admin console (S13) cannot inject
+  CSS into a `style` attribute.
+- **Not keyed on name or id.** Name is out because EPIC-J lets an administrator rename a
+  category and "a rename must not quietly change behaviour" — the rule the `post_type`
+  column already exists to honour. Id is out because `categories.id` is `defaultRandom()`,
+  so local and live have genuinely different ids for the same category. Migration `0020`
+  backfills by name once, pinned to the seeded vocabulary, the same way `0018` did.
+- **Null falls back to `--color-accent`**, which is what every category looked like before
+  this, so a category added through EPIC-J before anyone picks a colour renders correctly
+  rather than invisibly.
+- **`<option>` colours are progressive enhancement.** Desktop browsers honour them; iOS and
+  Android draw the open list with their own native picker and ignore them entirely. What
+  works everywhere is the colour on the *closed* control, which both category selects set.
+  Colouring the open list would mean replacing the `<select>` with a custom listbox, and the
+  search form is deliberately a no-JS GET form — not a trade worth making for this.
+- **`:root { color-scheme: light dark }` is why the native picker now matches the app.**
+  Without it the browser assumes a light-only page and draws its own widgets to suit: on a
+  phone in dark mode the category dropdown came up white-on-black against a light-styled
+  control, while desktop showed black-on-grey. It governs scrollbars and date pickers too.
+
 ## Search and tag filtering (S7, part)
 
 `GET /v1/search?q=&category=&tag=&cursor=` (EPIC-C §4) plus screen C3 at `/search`. The

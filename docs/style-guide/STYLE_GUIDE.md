@@ -183,6 +183,37 @@ kudos gold — is never drowned out**.
 > the console's 15%-tint badges. Never use `--color-warn` for kudos, and never
 > use kudos gold for a warning.
 
+### 2.1b Category colours
+
+The content-type label on a post card (Clinical Case, Research, Career,
+Equipment, General) is drawn in its own hue, so a member scrolling a list can
+tell what kind of post each one is without reading the label.
+
+| Token | Light | Dark |
+|---|---|---|
+| `--color-category-teal` | `#0f766e` | `#5eead4` |
+| `--color-category-blue` | `#1d4ed8` | `#7dd3fc` |
+| `--color-category-violet` | `#6d28d9` | `#c4b5fd` |
+| `--color-category-magenta` | `#a21667` | `#f9a8d4` |
+| `--color-category-slate` | `#475569` | `#a8b6c6` |
+
+**Named by hue, not by category.** EPIC-J lets an administrator rename and
+recolour categories, so a token called `--color-category-clinical` would start
+lying the moment someone reused it. The `categories.colour` column holds the
+*key* (`teal`); these hold the values. A category with no colour, or an
+unrecognised one, falls back to `--color-accent`.
+
+> **Why these five and nothing warmer.** Kudos gold, spark red and the admin
+> amber all already mean something specific, and verify green means "verified" —
+> a category tinted near any of them would make a claim the post has not earned.
+> That constraint is what produced an all-cool set rather than an evenly spread
+> colour wheel. Do not add a warm category colour without first resolving what it
+> would collide with.
+
+All ten values are AA as small text on `--color-surface` in their own theme
+(light 5.5:1–7.6:1, dark 8.4:1–11.8:1). A category label is 12px, so **4.5:1 is
+the floor, not 3:1** — re-check both themes if you retune them.
+
 ### 2.2 Neutrals
 
 | Role | Token | Light | Dark |

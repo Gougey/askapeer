@@ -124,6 +124,21 @@ export const categories = community.table('categories', {
    * composer rule. The rule is enforced on the way in, and history is left alone.
    */
   postType: postType('post_type'),
+  /**
+   * Which colour the category label is drawn in — a design-token key (`teal`, `blue`,
+   * `violet`, `magenta`, `slate`), not a colour value. Storing `#0f766e` here would put a
+   * raw hex outside `globals.css` and, worse, freeze one theme: every category would keep
+   * its light-mode colour on a dark ground. The key indirects through
+   * `--color-category-*`, which is defined per theme.
+   *
+   * Nullable, and unknown keys fall back to `--color-accent` — a category added through
+   * EPIC-J before anyone picks a colour renders exactly as it does today rather than
+   * breaking. Deliberately not an enum: extending a pg enum needs a migration, and the
+   * palette is a design decision that should not.
+   *
+   * Not derived from the name for the same reason `post_type` is not (see above).
+   */
+  colour: text('colour'),
   sortOrder: integer('sort_order').notNull().default(0),
   retiredAt: timestamp('retired_at', { withTimezone: true }),
 });

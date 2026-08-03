@@ -3,6 +3,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { fetchThread, type ThreadComment } from '@/lib/forum';
 import { fetchCasePolicy, formatOnset } from '@/lib/cases';
 import { requireAccessToken } from '@/lib/session';
+import { categoryColour } from '@/lib/category-colour';
 import { AuthorLine, TagList } from '@/components/PostCard';
 import { CaseBody } from './CaseBody';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
@@ -45,7 +46,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
   return (
     <main className="flex flex-col gap-4 px-4 py-6">
       <article className="flex flex-col gap-3">
-        <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
+        <span className="text-xs" style={{ color: categoryColour(post.category.colour) }}>
           {post.category.name}
         </span>
         {/*

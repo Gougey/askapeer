@@ -196,6 +196,50 @@ rather than changing screen.</li>
 <p><strong>Not done:</strong> leaving a composer with text in it
 discards silently. The case composer has “Save as draft”; the question
 composer has nothing. An unsaved-work guard is a follow-up.</p>
+<h2 id="category-colours">Category colours</h2>
+<p>The content-type label on a post card is drawn in its own hue, so a
+list is scannable without reading every label. Values and the palette
+rationale are in the style guide (§2.1b); the mechanics worth knowing
+here:</p>
+<ul>
+<li><strong><code>categories.colour</code> stores a token key
+(<code>teal</code>), never a colour.</strong> The value differs per
+theme, so a stored hex would freeze every category to whichever theme it
+was picked in — and would put a raw colour outside
+<code>globals.css</code>, which the design-token guard exists to
+prevent. <code>categoryColour()</code> in
+<code>apps/web/src/lib/category-colour.ts</code> is the only place a key
+becomes a <code>var()</code>, and it allowlists the five: an
+unrecognised key from the database can never reach the DOM as a colour,
+so a typo in the admin console (S13) cannot inject CSS into a
+<code>style</code> attribute.</li>
+<li><strong>Not keyed on name or id.</strong> Name is out because EPIC-J
+lets an administrator rename a category and “a rename must not quietly
+change behaviour” — the rule the <code>post_type</code> column already
+exists to honour. Id is out because <code>categories.id</code> is
+<code>defaultRandom()</code>, so local and live have genuinely different
+ids for the same category. Migration <code>0020</code> backfills by name
+once, pinned to the seeded vocabulary, the same way <code>0018</code>
+did.</li>
+<li><strong>Null falls back to <code>--color-accent</code></strong>,
+which is what every category looked like before this, so a category
+added through EPIC-J before anyone picks a colour renders correctly
+rather than invisibly.</li>
+<li><strong><code>&lt;option&gt;</code> colours are progressive
+enhancement.</strong> Desktop browsers honour them; iOS and Android draw
+the open list with their own native picker and ignore them entirely.
+What works everywhere is the colour on the <em>closed</em> control,
+which both category selects set. Colouring the open list would mean
+replacing the <code>&lt;select&gt;</code> with a custom listbox, and the
+search form is deliberately a no-JS GET form — not a trade worth making
+for this.</li>
+<li><strong><code>:root { color-scheme: light dark }</code> is why the
+native picker now matches the app.</strong> Without it the browser
+assumes a light-only page and draws its own widgets to suit: on a phone
+in dark mode the category dropdown came up white-on-black against a
+light-styled control, while desktop showed black-on-grey. It governs
+scrollbars and date pickers too.</li>
+</ul>
 <h2 id="search-and-tag-filtering-s7-part">Search and tag filtering (S7,
 part)</h2>
 <p><code>GET /v1/search?q=&amp;category=&amp;tag=&amp;cursor=</code>

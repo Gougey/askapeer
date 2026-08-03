@@ -236,6 +236,7 @@ export class SearchService {
       snippet: string;
       category_id: string;
       category_name: string;
+      category_colour: string | null;
       handle_id: string;
       handle_name: string;
       kudos_total: number;
@@ -247,7 +248,7 @@ export class SearchService {
       with candidates as materialized (${candidates})
       select p.id, p.type, p.title,
              coalesce(cd.community_question, p.body) as snippet,
-             cat.id as category_id, cat.name as category_name,
+             cat.id as category_id, cat.name as category_name, cat.colour as category_colour,
              h.id as handle_id, h.handle_name, h.kudos_total,
              (select count(*) from community.comments c
                where c.post_id = p.id and c.status = 'published')::int as answer_count,
@@ -289,7 +290,7 @@ export class SearchService {
         type: row.type,
         title: row.title,
         snippet: snippet(row.snippet),
-        category: { id: row.category_id, name: row.category_name },
+        category: { id: row.category_id, name: row.category_name, colour: row.category_colour },
         tags: tagsByPost.get(row.id) ?? [],
         author: {
           handleId: row.handle_id,
