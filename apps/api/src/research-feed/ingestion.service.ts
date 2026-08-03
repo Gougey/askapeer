@@ -4,7 +4,7 @@ import { DRIZZLE, type Database } from '../db/db.module';
 import { articleTags, articles, ingestionCursors } from '../db/schema';
 import { SettingsService } from '../settings/settings.service';
 import { parseAbstract, stripInline } from './abstract';
-import { classify, type ClassifiableTag } from './classifier';
+import { classify, prepareTaxonomy, type PreparedTag } from './classifier';
 import { intrinsicScore, normaliseEvidenceType } from './scoring';
 import { ARTICLE_SOURCES, type ArticleSource, type RawArticle } from './sources/article-source';
 
@@ -78,7 +78,7 @@ export class IngestionService {
   private async runSource(
     source: ArticleSource,
     queries: string[],
-    taxonomy: ClassifiableTag[],
+    taxonomy: PreparedTag[],
   ): Promise<IngestionReport> {
     const [cursorRow] = await this.db
       .select()
@@ -137,7 +137,7 @@ export class IngestionService {
    */
   private async upsert(
     input: RawArticle,
-    taxonomy: ClassifiableTag[],
+    taxonomy: PreparedTag[],
   ): Promise<{ stored: boolean; tagsWritten: number }> {
     // Markup is stripped here rather than in each adapter: both sources emit it, the rule
     // is identical, and one place means a third adapter inherits the fix for free.
@@ -236,7 +236,7 @@ export class IngestionService {
   private async writeTags(
     articleId: string,
     article: { title: string; abstract: string | null },
-    taxonomy: ClassifiableTag[],
+    taxonomy: PreparedTag[],
   ): Promise<number> {
     const matches = classify(article, taxonomy);
     if (matches.length === 0) return 0;
@@ -261,7 +261,7 @@ export class IngestionService {
    * be the pipeline's whole cost. Depth comes from a recursive walk of `parent_id`, the
    * same shape the tag picker and search subtree expansion already use.
    */
-  private async taxonomy(): Promise<ClassifiableTag[]> {
+  private async taxonomy(): Promise<PreparedTag[]> {
     const { rows } = await this.db.execute<{
       id: string;
       name: string;
@@ -277,12 +277,16 @@ export class IngestionService {
       )
       select id, name, synonyms, depth from walk
     `);
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      synonyms: r.synonyms ?? [],
-      depth: Number(r.depth),
-    }));
+    // Prepared here so each tag's match forms are resolved once per run rather than once
+    // per article — and so the ambiguous-base check sees the whole taxonomy at once.
+    return prepareTaxonomy(
+      rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        synonyms: r.synonyms ?? [],
+        depth: Number(r.depth),
+      })),
+    );
   }
 
   private async corpusQueries(): Promise<string[]> {

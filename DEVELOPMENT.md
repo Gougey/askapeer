@@ -158,6 +158,20 @@ everyone. That is deliberate (see below).
   against 2 title). Requiring a title match for those cut total matches from **3,049 to
   1,393** and the survivors are accurate. A title states a subject; an abstract mentions
   things.
+- **A parenthetical in a tag name is sometimes a gloss and sometimes a disambiguator.** 47
+  of the 588 tags carry one, and requiring every word meant `Femoroacetabular impingement
+  (FAI)` demanded the literal token "fai" — so a paper titled "…decision aid for
+  Femoroacetabular Impingement Syndrome" matched nothing. Dropping them naively is worse:
+  `Rotatores (cervical/thoracic/lumbar)` collapse to bare "Rotatores", which the stemmer
+  reduces to "rotator", firing on all 92 rotator-cuff papers three times each. **The
+  taxonomy decides: if several tags share a base name, the parenthetical carries the
+  meaning and stays** — the same sibling-collision pattern that produced `Nerve (elbow)` /
+  `Nerve (wrist)`. An all-caps two-to-six-letter parenthetical also gets its own variant,
+  because "(FAI)" is a name the literature uses.
+- **Tag match-forms are resolved once per run, not once per article** (`prepareTaxonomy`).
+  588 tags × 1,290 articles was three-quarters of a million string splits reaching the same
+  answer; reclassify went from ~30s to 7s. It is also what lets the ambiguous-base check
+  above see the whole taxonomy at once.
 - **The ingest window overlaps by a fortnight, on purpose.** A paper's publication date is
   not when it enters the index, which is routinely days later. A cursor with no overlap
   silently drops everything indexed after the run that should have caught it. Re-covering is
@@ -191,8 +205,21 @@ everyone. That is deliberate (see below).
   output. They fall back to a domain-bounded default set in `ingestion.service.ts`.
 
 **Measured on the first real run** (2026-08-03): 1,290 articles in ~31s across both sources,
-123 deduplicated across sources, 578 (45%) classified into at least one tag, 1,198 with
-abstracts. The 45% is the number Andrew's synonym list would move most.
+123 deduplicated across sources, 1,198 with abstracts, **603 (47%) classified** into at least
+one tag.
+
+**That 47% is coverage, not accuracy**, and most of the remainder is correctly untagged: the
+taxonomy is anatomy and pathology, so literature with no body part in it — physiotherapy
+education, mental health in sport, respiratory physio, menstrual health, ML injury
+prediction — has no tag it could take. There is no *topic* facet (return to play, load
+management, psychology); whether there should be is a question for Andrew.
+
+Sampling the untagged remainder also found gaps that are **synonyms, not code**:
+`"Rotator Cuff Augmentation"` matches nothing because every tag adds a qualifier
+(`Shoulder Rotator Cuff`, `Rotator cuff tendinopathy`, `…tear`); `"Anterior Cruciate
+Ligament Reconstruction"` matches nothing because the only ACL tag is `ACL rupture`; and
+`"chronic low back pain"` matches nothing because the tag is `Lumbar Spine`. Three measured
+examples for the synonym ask — and `reclassify` turns his list into results in seconds.
 
 ## Category colours
 
