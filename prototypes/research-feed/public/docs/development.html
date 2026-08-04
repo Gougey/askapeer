@@ -1326,6 +1326,36 @@ on focus.</li>
 five wrong guesses burn the pending sign-in so even the correct code
 then fails; redeeming the code kills the emailed link and vice versa; an
 unknown address is indistinguishable from a wrong code.</p>
+<h2 id="replies-email_reply_to">Replies
+(<code>EMAIL_REPLY_TO</code>)</h2>
+<p>The From is <code>no-reply@mail.askapeer.co.uk</code> — a
+<strong>send-only subdomain with no MX</strong>, so every reply to it
+was silently discarded. That mattered most where it was least visible:
+the suspended and expelled notices invite a reply, and for a member who
+cannot open the app that email is their only route to appeal. The
+product was promising an appeal channel that threw the appeals away.</p>
+<p><code>EMAIL_REPLY_TO</code> (an alias on <code>askapeer.co.uk</code>,
+which has real mail) is set as <code>Reply-To</code> on
+<strong>every</strong> outbound message — people reply to email
+regardless of what it says.</p>
+<p>The copy <strong>names the address</strong> rather than relying on
+the header: the plain-text part is what some clients render and what a
+forwarded message keeps, and “reply to this email” is worthless in
+either if the header did not survive. When <code>EMAIL_REPLY_TO</code>
+is unset the invitation is omitted entirely — offering no appeal route
+is better than offering one that discards replies. Both branches are
+exercised in <code>templates.accountNotice</code>.</p>
+<blockquote>
+<p><strong>That inbox is identity-tier data.</strong> A suspended member
+replying hands over their real email address next to handle-specific
+detail — a handle↔︎identity link arriving <strong>outside</strong> the
+immutable identity-access log that moderator lookups are required to go
+through. There is no clean alternative: the reason appeals go by email
+is that a suspended member cannot reach an in-app form. So restrict the
+mailbox to whoever moderates rather than sharing it, and treat it as a
+policy question for the PRD’s moderation section, not a technical
+one.</p>
+</blockquote>
 <h2 id="checking-the-email-templates-v1adminemail-test">Checking the
 email templates (<code>/v1/admin/email-test</code>)</h2>
 <p><code>GET /v1/admin/email-test</code> lists the thirteen

@@ -32,12 +32,20 @@ export class PostmarkEmailProvider implements EmailProvider {
   private readonly log = new Logger(PostmarkEmailProvider.name);
   private readonly token: string;
   private readonly from: string;
+  private readonly replyTo: string | null;
 
   constructor(config: ConfigService) {
     // getOrThrow: a missing token must fail at boot, not at the first send. The
     // alternative is an app that looks healthy and quietly cannot let anyone sign in.
     this.token = config.getOrThrow<string>('POSTMARK_TOKEN');
     this.from = config.get<string>('EMAIL_FROM') ?? 'AskaPeer <no-reply@mail.askapeer.co.uk>';
+    /*
+     * Where a reply goes. The From is on `mail.askapeer.co.uk`, a send-only subdomain with
+     * no MX, so without this every reply is discarded silently — including the ones from
+     * the two emails that invite one, where a suspended or expelled member has no other
+     * route to appeal because they cannot open the app.
+     */
+    this.replyTo = config.get<string>('EMAIL_REPLY_TO') ?? null;
   }
 
   async send(email: OutboundEmail): Promise<void> {
@@ -52,6 +60,7 @@ export class PostmarkEmailProvider implements EmailProvider {
         },
         body: JSON.stringify({
           From: this.from,
+          ...(this.replyTo ? { ReplyTo: this.replyTo } : {}),
           To: email.to,
           Subject: email.subject,
           TextBody: email.text,

@@ -37,6 +37,16 @@ primary_region = "lhr"
   # Links in emails point here. Not a secret; must match the deployed web app.
   WEB_ORIGIN = "https://askapeer-web.fly.dev"
 
+  # Where replies go. The From is on mail.askapeer.co.uk, a send-only subdomain with no MX,
+  # so without this every reply is silently discarded — including from the suspended and
+  # expelled notices, which invite one and are the only route a member who cannot open the
+  # app has to appeal. An alias on askapeer.co.uk, which has real mail.
+  #
+  # Note that inbox will contain real identity next to handle-specific detail, arriving
+  # outside the immutable identity-access log that moderator lookups go through. It is
+  # identity-tier data and should be restricted to whoever moderates, not shared.
+  EMAIL_REPLY_TO = "support@askapeer.co.uk"
+
   # EMAIL_PROVIDER and POSTMARK_TOKEN are **Fly secrets**, not declared here.
   #
   # This block used to set EMAIL_PROVIDER = "log" with a comment saying mail was logged
