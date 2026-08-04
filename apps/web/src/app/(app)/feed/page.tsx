@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArticleCard } from '@/components/ArticleCard';
 import { InfiniteList } from '@/components/InfiniteList';
@@ -22,7 +23,7 @@ export default async function FeedPage({
 }) {
   const { cursor } = await searchParams;
   const token = await requireAccessToken();
-  const [t, { articles, nextCursor }] = await Promise.all([
+  const [t, { articles, nextCursor, mode }] = await Promise.all([
     getTranslations('feed'),
     fetchFeed(token, cursor),
   ]);
@@ -35,6 +36,36 @@ export default async function FeedPage({
           {t('subheading')}
         </p>
       </div>
+
+      {/*
+        Say which feed this is, and only when it is not the one the member chose. A
+        personalised feed needs no explanation; a general or fallback one does, or it looks
+        like the interests were ignored. The link is here rather than only in settings
+        because this is the moment someone wants it.
+      */}
+      {mode !== 'personalised' && (
+        <div
+          className="flex flex-col border"
+          style={{
+            gap: 'var(--space-2)',
+            padding: 'var(--space-3)',
+            borderColor: 'var(--color-border)',
+            borderRadius: 'var(--radius)',
+            background: 'var(--color-navy-tint-2)',
+          }}
+        >
+          <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+            {mode === 'fallback' ? t('fallbackNote') : t('generalNote')}
+          </p>
+          <Link
+            href="/settings/interests"
+            className="self-start text-sm font-medium"
+            style={{ color: 'var(--color-accent)' }}
+          >
+            {t('personalise')}
+          </Link>
+        </div>
+      )}
 
       {articles.length === 0 ? (
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>

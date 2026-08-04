@@ -335,6 +335,51 @@ because the only ACL tag is <code>ACL rupture</code>; and
 <code>"chronic low back pain"</code> matches nothing because the tag is
 <code>Lumbar Spine</code>. Three measured examples for the synonym ask —
 and <code>reclassify</code> turns his list into results in seconds.</p>
+<h2 id="clinical-interests-and-the-personalised-feed-s8b">Clinical
+interests and the personalised feed (S8b)</h2>
+<p><code>community.member_interests</code> (handle-scoped, weighted)
+plus <code>GET/PUT /v1/research-feed/interests</code>,
+<code>GET /v1/research-feed/interest-options</code>, and screen F5 at
+<code>/settings/interests</code>.</p>
+<ul>
+<li><strong>The picker is built from the corpus, not the taxonomy — this
+is the point of the slice.</strong> Only <strong>227 of the 588 tags
+have ever matched an article</strong>; 361 are unreachable in practice.
+Offering the raw tree would ask a member to hunt through hundreds of
+terms that return nothing however carefully chosen, and teach them the
+feed is broken. So <code>interest-options</code> reads
+<code>research.article_tags</code>, orders by real article count, and
+the chip shows it — <em>Achilles tendinopathy 32</em> rather than a bare
+label. Deliberately <strong>not</strong> the composer’s
+<code>TagPicker</code>, whose drill-down is right for labelling a case
+and wrong here.</li>
+<li><strong>The feed’s ranking swapped one term.</strong> With interests
+it sums <code>member_interests.weight × article_tags.confidence</code>
+over matches and restricts to them; without, it keeps the flat “is it
+placeable at all” nudge. That swap is exactly the seam S8a was built
+around — the classification was already stored, so this is a join, not a
+text match.</li>
+<li><strong>Three modes, and the screen says which.</strong>
+<code>personalised</code>, <code>general</code> (no interests), and
+<code>fallback</code> — interests set but nothing in the corpus matches
+them yet, which falls back to the general ranking rather than showing an
+empty screen that looks broken. The Feed explains itself only when it is
+<em>not</em> personalised, and links to the picker there, because that
+is the moment a member wants it.</li>
+<li><strong>Weight is stored but not exposed.</strong> The picker sets
+everything to 1; the scoring already multiplies by it, so degrees of
+interest become a UI change rather than a migration.</li>
+<li><strong>The set is replaced whole, not upserted per tag.</strong>
+The picker always knows every selection; a partial update would make “I
+deselected that” a second kind of call. Capped at 30 — selecting most of
+the taxonomy expresses the same thing as selecting none.</li>
+</ul>
+<p>Verified end to end: with no interests the feed is
+<code>general</code>; setting <em>Achilles tendinopathy</em> turns the
+whole first page into Achilles articles and reports
+<code>personalised</code>; an interest with no articles behind it
+reports <code>fallback</code> with 20 articles rather than none;
+clearing returns to <code>general</code>.</p>
 <h2 id="category-colours">Category colours</h2>
 <p>The content-type label on a post card is drawn in its own hue, so a
 list is scannable without reading every label. Values and the palette

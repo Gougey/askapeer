@@ -10,6 +10,7 @@ import {
   jsonb,
   pgSchema,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -613,5 +614,40 @@ export const notificationPreferences = community.table(
       'notification_preferences_verification_email_locked',
       sql`not (type = 'verification_status_change' and email_enabled = false)`,
     ),
+  ],
+);
+
+/**
+ * A member's clinical interests, which shape their research feed (EPIC-I §3).
+ *
+ * **In `community`, not `research`**, and handle-scoped: this is a professional-interest
+ * profile attached to a pseudonym, under the same access rules as everything else a handle
+ * owns. Nothing in `identity` is involved (architecture spec §8).
+ *
+ * Distinct from `community.follows` on purpose. A follow is binary and shapes *internal*
+ * content — the forum feed and the weekly digest. An interest is **weighted** and scores
+ * *external* articles. EPIC-I §4 leaves open whether the two mechanisms should eventually
+ * collapse; the vocabulary underneath is already shared, which is the part that mattered.
+ *
+ * `weight` is stored but not yet exposed: the picker sets everything to 1. It exists
+ * because the scoring already multiplies by it, so degrees of interest become a UI change
+ * rather than a migration.
+ */
+export const memberInterests = community.table(
+  'member_interests',
+  {
+    handleId: uuid('handle_id')
+      .notNull()
+      .references(() => handles.id, { onDelete: 'cascade' }),
+    tagId: uuid('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
+    weight: real('weight').notNull().default(1),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.handleId, t.tagId] }),
+    // The feed enters from the member and lands on their tags.
+    index('member_interests_handle_idx').on(t.handleId),
   ],
 );

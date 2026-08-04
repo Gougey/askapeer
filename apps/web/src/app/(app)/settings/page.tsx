@@ -17,7 +17,10 @@ import { SignOutEverywhere } from './SignOutEverywhere';
 export default async function SettingsPage() {
   const t = await getTranslations('settings');
 
-  const rows = [{ href: '/settings/notifications', label: t('rows.notifications') }];
+  const rows = [
+    { href: '/settings/interests', label: t('rows.interests') },
+    { href: '/settings/notifications', label: t('rows.notifications') },
+  ];
 
   return (
     <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
