@@ -944,6 +944,30 @@ Verified end to end: happy path issues a session; replay is refused; five wrong 
 the pending sign-in so even the correct code then fails; redeeming the code kills the emailed
 link and vice versa; an unknown address is indistinguishable from a wrong code.
 
+## Replies (`EMAIL_REPLY_TO`)
+
+The From is `no-reply@mail.askapeer.co.uk` — a **send-only subdomain with no MX**, so every
+reply to it was silently discarded. That mattered most where it was least visible: the
+suspended and expelled notices invite a reply, and for a member who cannot open the app that
+email is their only route to appeal. The product was promising an appeal channel that threw
+the appeals away.
+
+`EMAIL_REPLY_TO` (an alias on `askapeer.co.uk`, which has real mail) is set as `Reply-To` on
+**every** outbound message — people reply to email regardless of what it says.
+
+The copy **names the address** rather than relying on the header: the plain-text part is
+what some clients render and what a forwarded message keeps, and "reply to this email" is
+worthless in either if the header did not survive. When `EMAIL_REPLY_TO` is unset the
+invitation is omitted entirely — offering no appeal route is better than offering one that
+discards replies. Both branches are exercised in `templates.accountNotice`.
+
+> **That inbox is identity-tier data.** A suspended member replying hands over their real
+> email address next to handle-specific detail — a handle↔identity link arriving **outside**
+> the immutable identity-access log that moderator lookups are required to go through. There
+> is no clean alternative: the reason appeals go by email is that a suspended member cannot
+> reach an in-app form. So restrict the mailbox to whoever moderates rather than sharing it,
+> and treat it as a policy question for the PRD's moderation section, not a technical one.
+
 ## Checking the email templates (`/v1/admin/email-test`)
 
 `GET /v1/admin/email-test` lists the thirteen member-facing templates and reports which

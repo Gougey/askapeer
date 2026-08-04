@@ -28,6 +28,16 @@ import type { OutboundEmail } from './email-provider';
 type Ctx = {
   /** Absolute base URL of the web app, e.g. https://askapeer-web.fly.dev */
   webOrigin: string;
+  /**
+   * The address replies reach, or null when none is configured.
+   *
+   * Named in the copy rather than left to the `Reply-To` header alone: the plain-text part
+   * is what some clients render and what a forwarded message keeps, and "reply to this
+   * email" is worthless in either if the header did not survive. When it is null the
+   * invitation is omitted entirely — promising an appeal route that discards replies is
+   * worse than offering none.
+   */
+  replyTo: string | null;
 };
 
 const SIGN_OFF = 'AskaPeer — the no-ego sports medicine network';
@@ -176,6 +186,10 @@ export const templates = {
     extra: { newHandleName?: string; actionId?: string; status?: string },
   ): Omit<OutboundEmail, 'to'> {
     const because = reason ? [`Reason given: ${reason}`] : [];
+    // Only offered when something can actually receive it.
+    const appeal = ctx.replyTo
+      ? [`If you believe this is a mistake, reply to this email — it reaches ${ctx.replyTo}.`]
+      : [];
     const openNotice = extra.actionId
       ? { label: 'See the details', path: `/activity/notices/${extra.actionId}` }
       : undefined;
@@ -199,7 +213,7 @@ export const templates = {
         lines: [
           'Your handle has been suspended, and you will not be able to use the community while it is.',
           ...because,
-          'If you believe this is a mistake, reply to this email.',
+          ...appeal,
         ],
       },
       expelled: {
@@ -208,7 +222,7 @@ export const templates = {
         lines: [
           'Your handle has been permanently removed from AskaPeer.',
           ...because,
-          'If you believe this is a mistake, reply to this email.',
+          ...appeal,
         ],
       },
       correction_requested: {

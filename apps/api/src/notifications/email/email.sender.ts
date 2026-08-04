@@ -26,8 +26,11 @@ export class EmailSender {
    * Where links in emails point. Defaults to local dev; every deployed environment must
    * set it, or members receive links to a machine that is not theirs.
    */
-  private get ctx(): { webOrigin: string } {
-    return { webOrigin: this.config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000' };
+  private get ctx(): { webOrigin: string; replyTo: string | null } {
+    return {
+      webOrigin: this.config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000',
+      replyTo: this.config.get<string>('EMAIL_REPLY_TO') ?? null,
+    };
   }
 
   async magicLink(to: string, token: string, code?: string): Promise<void> {
