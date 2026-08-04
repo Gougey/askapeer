@@ -169,6 +169,13 @@
       "when": 1785774904171,
       "tag": "0023_shallow_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1785872976585,
+      "tag": "0024_huge_wallop",
+      "breakpoints": true
     }
   ]
 }

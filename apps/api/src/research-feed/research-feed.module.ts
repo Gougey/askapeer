@@ -5,6 +5,7 @@ import { SettingsModule } from '../settings/settings.module';
 import { FeedService } from './feed.service';
 import { IngestionQueueModule } from './ingestion.queue';
 import { IngestionService } from './ingestion.service';
+import { InterestsService } from './interests.service';
 import { IngestionWorker } from './ingestion.worker';
 import { ResearchFeedAdminController, ResearchFeedController } from './research-feed.controller';
 import { ARTICLE_SOURCES } from './sources/article-source';
@@ -29,6 +30,7 @@ import { OpenAlexSource } from './sources/open-alex.source';
   providers: [
     FeedService,
     IngestionService,
+    InterestsService,
     IngestionWorker,
     EuropePmcSource,
     OpenAlexSource,

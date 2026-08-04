@@ -278,23 +278,22 @@ share the discovery surface. Follow buttons appear on threads/profiles
 </ul>
 <hr />
 <h2
-id="s8-interests-research-news-feed-parallel-able-must-ingestion-unfiltered-feed-built-2026-08-03">S8
+id="s8-interests-research-news-feed-parallel-able-must-complete-2026-08-04">S8
 — Interests → research / news feed [parallel-able] [Must] —
-<strong>ingestion + unfiltered feed built 2026-08-03</strong></h2>
+<strong>COMPLETE 2026-08-04</strong></h2>
 <blockquote>
-<p><strong>Status.</strong> The pipeline and the Feed tab are in: both
-source adapters, deduplication, classification against all 588 tags,
-intrinsic scoring, a twice-daily repeatable job, and screens B1/B2.
-<strong>Not built: <code>member_interests</code> and the interests
-picker</strong> — so the feed is currently the same for every
-member.</p>
-<p>That is deliberate rather than deferred-by-accident. How a member
-picks interests is genuinely open (reuse the 588-node taxonomy, or offer
-a shorter curated list?), and the unfiltered feed is the instrument that
-answers it: with a real corpus classified, the tags that actually recur
-are visible, and the interest list can be chosen from evidence instead
-of guessed. Design and reasoning:
-<code>docs/2026-08-03-research-feed-ingestion-design.md</code>.</p>
+<p><strong>Status.</strong> Complete. S8a (ingestion, classification,
+scoring, screens B1/B2) landed 2026-08-03; S8b
+(<code>member_interests</code>, the picker at F5, the personalised
+ranking) on 2026-08-04.</p>
+<p><strong>The deferral paid off.</strong> The interests picker was held
+back deliberately so the shape could be chosen from evidence rather than
+guessed — and the evidence was decisive: only <strong>227 of 588 tags
+have ever matched an article</strong>. The picker is therefore built
+from <code>research.article_tags</code> ordered by real article count,
+showing the count on each chip, rather than being a second drill-down
+through a tree that is two-thirds unreachable. Guessing would have
+produced the wrong screen.</p>
 <p>Two findings worth carrying:
 <strong><code>research.article_tags</code> is a table EPIC-I never
 specified</strong> and the feed cannot work without it (the topic-match

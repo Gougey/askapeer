@@ -1,11 +1,27 @@
-import { Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import type { Request } from 'express';
+import type { AuthedMember } from '../auth/jwt-auth.guard';
+import { InterestsService } from './interests.service';
 import { AdminAccessModule } from '../admin/admin-access.module';
 import { AdminGuard } from '../admin/admin.guard';
 import { AppAccessGuard } from '../auth/app-access.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FeedService } from './feed.service';
 import { IngestionService } from './ingestion.service';
+
+/**
+ * The whole interest set, replaced in one call.
+ *
+ * Capped because a member selecting most of the taxonomy is not expressing an interest —
+ * it is the same as expressing none, and it would make the feed query scan everything.
+ */
+export class InterestsDto {
+  @IsArray()
+  @ArrayMaxSize(30)
+  @IsUUID('all', { each: true })
+  tagIds!: string[];
+}
 
 export class FeedQueryDto {
   @IsOptional()
@@ -25,11 +41,37 @@ export class FeedQueryDto {
 @Controller('research-feed')
 @UseGuards(JwtAuthGuard, AppAccessGuard)
 export class ResearchFeedController {
-  constructor(private readonly feed: FeedService) {}
+  constructor(
+    private readonly feed: FeedService,
+    private readonly interests: InterestsService,
+  ) {}
 
   @Get()
-  list(@Query() query: FeedQueryDto) {
-    return this.feed.list(query.cursor);
+  async list(@Query() query: FeedQueryDto, @Req() req: Request & { member: AuthedMember }) {
+    const tagIds = await this.interests.tagIdsFor(req.member.handleId!);
+    return this.feed.list(query.cursor, undefined, tagIds);
+  }
+
+  /** What a member can choose from — ordered by what the corpus actually contains. */
+  @Get('interest-options')
+  interestOptions() {
+    return this.interests.options();
+  }
+
+  @Get('interests')
+  myInterests(@Req() req: Request & { member: AuthedMember }) {
+    return this.interests.list(req.member.handleId!);
+  }
+
+  @Put('interests')
+  async setInterests(
+    @Body() dto: InterestsDto,
+    @Req() req: Request & { member: AuthedMember },
+  ) {
+    // Filter to tags that exist rather than letting a stale id take the request down on a
+    // foreign key — a picker held open while an administrator retires a tag is ordinary.
+    const valid = await this.interests.existingTagIds(dto.tagIds);
+    return this.interests.replace(req.member.handleId!, valid);
   }
 
   @Get(':articleId')

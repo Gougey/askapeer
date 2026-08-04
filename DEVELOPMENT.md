@@ -221,6 +221,39 @@ Ligament Reconstruction"` matches nothing because the only ACL tag is `ACL ruptu
 `"chronic low back pain"` matches nothing because the tag is `Lumbar Spine`. Three measured
 examples for the synonym ask — and `reclassify` turns his list into results in seconds.
 
+## Clinical interests and the personalised feed (S8b)
+
+`community.member_interests` (handle-scoped, weighted) plus `GET/PUT /v1/research-feed/interests`,
+`GET /v1/research-feed/interest-options`, and screen F5 at `/settings/interests`.
+
+- **The picker is built from the corpus, not the taxonomy — this is the point of the
+  slice.** Only **227 of the 588 tags have ever matched an article**; 361 are unreachable in
+  practice. Offering the raw tree would ask a member to hunt through hundreds of terms that
+  return nothing however carefully chosen, and teach them the feed is broken. So
+  `interest-options` reads `research.article_tags`, orders by real article count, and the
+  chip shows it — *Achilles tendinopathy 32* rather than a bare label. Deliberately **not**
+  the composer's `TagPicker`, whose drill-down is right for labelling a case and wrong here.
+- **The feed's ranking swapped one term.** With interests it sums
+  `member_interests.weight × article_tags.confidence` over matches and restricts to them;
+  without, it keeps the flat "is it placeable at all" nudge. That swap is exactly the seam
+  S8a was built around — the classification was already stored, so this is a join, not a
+  text match.
+- **Three modes, and the screen says which.** `personalised`, `general` (no interests), and
+  `fallback` — interests set but nothing in the corpus matches them yet, which falls back to
+  the general ranking rather than showing an empty screen that looks broken. The Feed
+  explains itself only when it is *not* personalised, and links to the picker there, because
+  that is the moment a member wants it.
+- **Weight is stored but not exposed.** The picker sets everything to 1; the scoring already
+  multiplies by it, so degrees of interest become a UI change rather than a migration.
+- **The set is replaced whole, not upserted per tag.** The picker always knows every
+  selection; a partial update would make "I deselected that" a second kind of call. Capped
+  at 30 — selecting most of the taxonomy expresses the same thing as selecting none.
+
+Verified end to end: with no interests the feed is `general`; setting *Achilles
+tendinopathy* turns the whole first page into Achilles articles and reports `personalised`;
+an interest with no articles behind it reports `fallback` with 20 articles rather than none;
+clearing returns to `general`.
+
 ## Category colours
 
 The content-type label on a post card is drawn in its own hue, so a list is scannable

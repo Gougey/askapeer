@@ -318,7 +318,8 @@
   "settings": {
     "heading": "Settings",
     "rows": {
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "interests": "Clinical interests"
     },
     "notifications": {
       "heading": "Notifications",
@@ -476,6 +477,21 @@
       "cohort_study": "Cohort study",
       "case_report": "Case report",
       "other": "Journal article"
-    }
+    },
+    "personalise": "Choose your interests",
+    "generalNote": "Showing everything. Choose your clinical interests to make this feed yours.",
+    "fallbackNote": "Nothing matches your interests yet, so this is the general feed. New articles arrive twice a day."
+  },
+  "interests": {
+    "heading": "Your clinical interests",
+    "body": "Pick the areas you want in your feed. The number on each is how many articles currently carry it.",
+    "searchLabel": "Search interests",
+    "searchPlaceholder": "Search areas, e.g. Achilles, shoulder",
+    "count": "{count, plural, =0 {Nothing selected — your feed shows everything} one {1 selected} other {# selected}}",
+    "limitReached": "That is the maximum ({max}). Deselect one to add another.",
+    "noMatches": "Nothing matches that. Try a broader word.",
+    "save": "Save interests",
+    "saving": "Saving…",
+    "saved": "Saved. Your feed has been updated."
   }
 }

@@ -30,7 +30,16 @@ export type ArticleDetail = FeedArticle & {
   doi: string | null;
 };
 
-export type FeedPage = { articles: FeedArticle[]; nextCursor: string | null };
+export type FeedPage = {
+  articles: FeedArticle[];
+  nextCursor: string | null;
+  /**
+   * How this page was ranked, so the screen can be honest about it: `personalised` when it
+   * matched the member's interests, `general` when they have none, and `fallback` when they
+   * have interests but nothing in the corpus matched them yet.
+   */
+  mode: 'personalised' | 'general' | 'fallback';
+};
 
 /**
  * The read side of the research feed (EPIC-I §6, screens B1 and B2).
@@ -53,8 +62,32 @@ export class FeedService {
    * never quite zero — rather than the prototype's linear fall to nothing at ten years,
    * which declared a 2015 systematic review worthless.
    */
-  async list(cursor?: string, limit = DEFAULT_PAGE_SIZE): Promise<FeedPage> {
+  async list(
+    cursor?: string,
+    limit = DEFAULT_PAGE_SIZE,
+    interestTagIds: string[] = [],
+  ): Promise<FeedPage> {
     const offset = Number.parseInt(cursor ?? '0', 10) || 0;
+
+    if (interestTagIds.length > 0) {
+      const personalised = await this.rank(offset, limit, interestTagIds);
+      // A member with narrow interests and a young corpus would otherwise get an empty
+      // screen that looks broken. Falling back to the general ranking is better than
+      // nothing, and `mode` lets the screen say which it is rather than pretend.
+      if (personalised.articles.length > 0) return { ...personalised, mode: 'personalised' };
+      const general = await this.rank(offset, limit, []);
+      return { ...general, mode: 'fallback' };
+    }
+
+    const general = await this.rank(offset, limit, []);
+    return { ...general, mode: 'general' };
+  }
+
+  private async rank(
+    offset: number,
+    limit: number,
+    interestTagIds: string[],
+  ): Promise<Omit<FeedPage, 'mode'>> {
 
     const { rows } = await this.db.execute<FeedRow>(sql`
       select a.id, a.title, a.abstract, a.journal, a.published_date, a.evidence_type,
@@ -75,6 +108,15 @@ export class FeedService {
              ) as tags
         from research.articles a
        where a.retracted_at is null
+         ${
+           interestTagIds.length > 0
+             ? sql`and exists (
+                 select 1 from research.article_tags m
+                  where m.article_id = a.id
+                    and m.tag_id in (${sql.join(interestTagIds.map((id) => sql`${id}`), sql`, `)})
+               )`
+             : sql``
+         }
        order by (
          a.intrinsic_score
          + 1.0 / (1.0 + (extract(epoch from (now() - coalesce(a.published_date, a.created_at)))
@@ -91,8 +133,27 @@ export class FeedService {
           * This is also the seam the personalised feed replaces: when interests exist, this
           * term becomes the weighted member-interest match instead of a flat count.
           */
-         + least(0.45, 0.15 * (select count(*) from research.article_tags at
-                                where at.article_id = a.id))
+         ${
+           interestTagIds.length > 0
+             ? /*
+                * The member-relative half of the score, and the reason the classification is
+                * precomputed: this is a join and a sum, not a text match. Weight comes from
+                * `member_interests`, so degrees of interest are already wired even though the
+                * picker currently sets everything to 1. Confidence multiplies in, so a tag
+                * found in a title counts for more than one mentioned in an abstract.
+                */
+               sql`+ coalesce((
+                   select sum(mi.weight * at.confidence)
+                     from research.article_tags at
+                     join community.member_interests mi on mi.tag_id = at.tag_id
+                    where at.article_id = a.id
+                      and mi.tag_id in (${sql.join(interestTagIds.map((id) => sql`${id}`), sql`, `)})
+                 ), 0)`
+             : // No interests: a flat nudge for being placeable in the taxonomy at all,
+               // which is what keeps unclassifiable articles off the first page.
+               sql`+ least(0.45, 0.15 * (select count(*) from research.article_tags at
+                                          where at.article_id = a.id))`
+         }
        ) desc, a.published_date desc nulls last, a.id desc
        limit ${limit + 1} offset ${offset}
     `);

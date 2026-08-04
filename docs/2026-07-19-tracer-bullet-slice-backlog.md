@@ -113,18 +113,18 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S8 — Interests → research / news feed  [parallel-able] [Must] — **ingestion + unfiltered feed built 2026-08-03**
+## S8 — Interests → research / news feed  [parallel-able] [Must] — **COMPLETE 2026-08-04**
 
-> **Status.** The pipeline and the Feed tab are in: both source adapters, deduplication,
-> classification against all 588 tags, intrinsic scoring, a twice-daily repeatable job, and
-> screens B1/B2. **Not built: `member_interests` and the interests picker** — so the feed is
-> currently the same for every member.
+> **Status.** Complete. S8a (ingestion, classification, scoring, screens B1/B2) landed
+> 2026-08-03; S8b (`member_interests`, the picker at F5, the personalised ranking) on
+> 2026-08-04.
 >
-> That is deliberate rather than deferred-by-accident. How a member picks interests is
-> genuinely open (reuse the 588-node taxonomy, or offer a shorter curated list?), and the
-> unfiltered feed is the instrument that answers it: with a real corpus classified, the tags
-> that actually recur are visible, and the interest list can be chosen from evidence instead
-> of guessed. Design and reasoning: `docs/2026-08-03-research-feed-ingestion-design.md`.
+> **The deferral paid off.** The interests picker was held back deliberately so the shape
+> could be chosen from evidence rather than guessed — and the evidence was decisive: only
+> **227 of 588 tags have ever matched an article**. The picker is therefore built from
+> `research.article_tags` ordered by real article count, showing the count on each chip,
+> rather than being a second drill-down through a tree that is two-thirds unreachable.
+> Guessing would have produced the wrong screen.
 >
 > Two findings worth carrying: **`research.article_tags` is a table EPIC-I never specified**
 > and the feed cannot work without it (the topic-match half of the score has nowhere else to
