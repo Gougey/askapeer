@@ -226,26 +226,19 @@ examples for the synonym ask — and `reclassify` turns his list into results in
 `community.member_interests` (handle-scoped, weighted) plus `GET/PUT /v1/research-feed/interests`,
 `GET /v1/research-feed/interest-options`, and screen F5 at `/settings/interests`.
 
-- **Frequency chooses what is offered; the alphabet chooses the order.** Those are
-  different jobs and were conflated at first — ordering the screen by article count put the
-  useful tags first and *read as random while scrolling*, because a member scanning a list
-  has no idea it is sorted by something invisible. Now the top 120 by frequency are offered
-  (that is what keeps dead tags out) and displayed A–Z with letter headings and a sticky
-  jump rail. The count stays on every chip, so the information frequency-ordering carried
-  survives without dictating the order.
-- **Region grouping would suit clinicians better than A–Z, and is not yet safe.** The data
-  is there (`InterestOption.region`), but the taxonomy parks generic condition groups under
-  one specific region: *Tendon Disorders* (93 articles), *Ligament Injuries* (77) and
-  *Osteoarthritis* (52) all sit under **Cervical Spine (Neck)** while matching mostly knee,
-  Achilles and rotator-cuff content. Region headings would actively mislead. Raised with
-  Andrew; revisit when resolved.
-- **The picker is built from the corpus, not the taxonomy — this is the point of the
-  slice.** Only **227 of the 588 tags have ever matched an article**; 361 are unreachable in
-  practice. Offering the raw tree would ask a member to hunt through hundreds of terms that
-  return nothing however carefully chosen, and teach them the feed is broken. So
-  `interest-options` reads `research.article_tags`, orders by real article count, and the
-  chip shows it — *Achilles tendinopathy 32* rather than a bare label. Deliberately **not**
-  the composer's `TagPicker`, whose drill-down is right for labelling a case and wrong here.
+- **The picker offers the whole taxonomy, through the composer's `TagPicker`.** Two earlier
+  versions offered only the ~120 tags with the most articles behind them — first ordered by
+  frequency, then alphabetically — on the reasoning that a tag matching nothing is a dead
+  end. **That inverts how a member thinks.** Someone specialising in hand therapy or
+  paediatric sport picks *their area*, not whatever happens to be common, and the frequency
+  cut silently removed their specialty from the screen. The corpus is also a four-month
+  snapshot, so the cut baked a transient state into what a member was permitted to care
+  about. Reusing the composer's control also deleted ~200 lines of bespoke picker that had
+  already drifted twice.
+- **Article counts are deliberately absent from the picker.** "Nothing matches yet" is a
+  fact about today's corpus, and the feed's `fallback` mode is where it is true — choosing
+  *Wrist sprain* with zero articles gives the general ranking and an explanation, rather
+  than a number quietly discouraging someone from their own specialty.
 - **The feed's ranking swapped one term.** With interests it sums
   `member_interests.weight × article_tags.confidence` over matches and restricts to them;
   without, it keeps the flat "is it placeable at all" nudge. That swap is exactly the seam
