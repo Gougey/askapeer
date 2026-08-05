@@ -6,8 +6,14 @@ import { TagPicker } from '@/components/TagPicker';
 import type { Tag } from '@/lib/forum';
 import { saveInterestsAction, type InterestsState } from './actions';
 
-/** Generous next to the composer's five: this is a standing profile, not one post's labels. */
-const MAX_INTERESTS = 30;
+/**
+ * Generous next to the composer's five: this is a standing profile, not one post's labels.
+ *
+ * Was 30, which bit on first real use — Andrew's criteria needed eight chips for
+ * "quadriceps" alone, because the taxonomy has no node meaning that. Subtree expansion has
+ * since made broad areas cost one selection, but the cap was arbitrary either way.
+ */
+const MAX_INTERESTS = 100;
 
 /**
  * Choosing what the research feed is about (screen F5).

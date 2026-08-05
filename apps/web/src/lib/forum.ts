@@ -77,6 +77,8 @@ export type Tag = {
   parentId: string | null;
   region: string;
   hasChildren: boolean;
+  /** Other words this tag is known by — searched as well as matched by the classifier. */
+  synonyms: string[];
 };
 
 export async function fetchPosts(

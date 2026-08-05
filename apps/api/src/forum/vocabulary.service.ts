@@ -36,6 +36,15 @@ export type TagDto = {
   region: string;
   /** Drives the drill-down affordance: a node with no children is a leaf. */
   hasChildren: boolean;
+  /**
+   * The other words this tag is known by.
+   *
+   * Surfaced so a picker can *search* them, not just so the classifier can match them. If
+   * an administrator groups a scattered concept by putting "quadriceps" on all eight of the
+   * relevant tags, typing "quadriceps" into a picker has to find all eight — otherwise the
+   * approach looks like it failed when it worked, and they conclude the tool is broken.
+   */
+  synonyms: string[];
 };
 
 /**
@@ -126,7 +135,8 @@ export class VocabularyService {
              exists (
                select 1 from ${tags} as kid
                where kid.parent_id = tree.id and kid.retired_at is null
-             ) as "hasChildren"
+             ) as "hasChildren",
+             coalesce((select synonyms from ${tags} as self where self.id = tree.id), '{}') as synonyms
       from tree
       order by tree.sort_order asc, tree.name asc
     `);

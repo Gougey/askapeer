@@ -360,6 +360,24 @@ and the feed’s <code>fallback</code> mode is where it is true — choosing
 <em>Wrist sprain</em> with zero articles gives the general ranking and
 an explanation, rather than a number quietly discouraging someone from
 their own specialty.</li>
+<li><strong>An interest covers its whole subtree</strong>, the same as a
+tag filter in search. This was a plain <code>tag_id in (…)</code>, so
+following <em>Ankle</em> matched only articles tagged literally “Ankle”
+— 17 of the 24 in its 13-node subtree, missing Lateral ankle sprain and
+Chronic ankle instability. Inconsistent with search, and with the
+composer’s picker, which drops an ancestor when a descendant is chosen
+<em>because</em> it assumes query-time broadening. Weight propagates
+down from the tag actually chosen.</li>
+<li><strong>The picker searches synonyms, not just names.</strong> Where
+the taxonomy scatters a concept — “quadriceps” lives under three
+different parents and has no node meaning it — an administrator can
+group it by putting the word on each tag. If picker search ignored
+synonyms that would look like it had failed when it had worked, and the
+wrong conclusion would be drawn about the tool.</li>
+<li><strong>The interest cap is 100, not 30.</strong> The old number was
+arbitrary and bit on first real use: Andrew’s own criteria needed eight
+chips for “quadriceps” alone. Subtree expansion has since made broad
+areas cost one selection.</li>
 <li><strong>The feed’s ranking swapped one term.</strong> With interests
 it sums <code>member_interests.weight × article_tags.confidence</code>
 over matches and restricts to them; without, it keeps the flat “is it

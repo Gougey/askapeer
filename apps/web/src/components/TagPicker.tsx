@@ -339,7 +339,15 @@ function TagSheet({
     const needle = trimmed.toLowerCase();
     const hits: Tag[] = [];
     for (const tag of index.byId.values()) {
-      if (tag.name.toLowerCase().includes(needle)) hits.push(tag);
+      // Synonyms are searched as well as names. An administrator can group a concept the
+      // taxonomy scatters — "quadriceps" lives under three different parents — by putting
+      // the word on each tag; if search ignored synonyms, that would appear not to work.
+      if (
+        tag.name.toLowerCase().includes(needle) ||
+        tag.synonyms.some((synonym) => synonym.toLowerCase().includes(needle))
+      ) {
+        hits.push(tag);
+      }
     }
     hits.sort((a, b) => {
       // Prefix matches first (what you typed is what you meant), then leaves over

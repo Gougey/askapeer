@@ -66,11 +66,12 @@ export class FeedService {
     cursor?: string,
     limit = DEFAULT_PAGE_SIZE,
     interestTagIds: string[] = [],
+    handleId?: string,
   ): Promise<FeedPage> {
     const offset = Number.parseInt(cursor ?? '0', 10) || 0;
 
     if (interestTagIds.length > 0) {
-      const personalised = await this.rank(offset, limit, interestTagIds);
+      const personalised = await this.rank(offset, limit, interestTagIds, handleId);
       // A member with narrow interests and a young corpus would otherwise get an empty
       // screen that looks broken. Falling back to the general ranking is better than
       // nothing, and `mode` lets the screen say which it is rather than pretend.
@@ -87,9 +88,32 @@ export class FeedService {
     offset: number,
     limit: number,
     interestTagIds: string[],
+    handleId?: string,
   ): Promise<Omit<FeedPage, 'mode'>> {
+    /*
+     * **An interest covers its whole subtree**, the same way a tag filter does in search.
+     *
+     * This was a plain `tag_id in (…)`, so following *Ankle* matched only articles tagged
+     * literally "Ankle" — 17 of the 24 in its 13-node subtree, missing Lateral ankle sprain
+     * and Chronic ankle instability. Inconsistent with search, and inconsistent with the
+     * composer's picker, which drops an ancestor when a descendant is chosen *precisely
+     * because* it assumes broadening happens at query time.
+     *
+     * Weight propagates down from the interest that was actually chosen, so a future
+     * weighting UI keeps working without the member having to weight every leaf.
+     */
+    const expanded = sql`
+      with recursive expanded as (
+        select mi.tag_id as id, mi.weight
+          from community.member_interests mi
+         where mi.handle_id = ${handleId ?? null}
+        union all
+        select c.id, e.weight
+          from community.tags c join expanded e on c.parent_id = e.id
+      )`;
 
     const { rows } = await this.db.execute<FeedRow>(sql`
+      ${interestTagIds.length > 0 ? expanded : sql``}
       select a.id, a.title, a.abstract, a.journal, a.published_date, a.evidence_type,
              a.open_access, a.url,
              (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name)
@@ -112,8 +136,8 @@ export class FeedService {
            interestTagIds.length > 0
              ? sql`and exists (
                  select 1 from research.article_tags m
+                   join expanded x on x.id = m.tag_id
                   where m.article_id = a.id
-                    and m.tag_id in (${sql.join(interestTagIds.map((id) => sql`${id}`), sql`, `)})
                )`
              : sql``
          }
@@ -143,11 +167,10 @@ export class FeedService {
                 * found in a title counts for more than one mentioned in an abstract.
                 */
                sql`+ coalesce((
-                   select sum(mi.weight * at.confidence)
+                   select sum(x.weight * at.confidence)
                      from research.article_tags at
-                     join community.member_interests mi on mi.tag_id = at.tag_id
+                     join expanded x on x.id = at.tag_id
                     where at.article_id = a.id
-                      and mi.tag_id in (${sql.join(interestTagIds.map((id) => sql`${id}`), sql`, `)})
                  ), 0)`
              : // No interests: a flat nudge for being placeable in the taxonomy at all,
                // which is what keeps unclassifiable articles off the first page.
