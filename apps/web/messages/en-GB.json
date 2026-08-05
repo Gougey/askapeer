@@ -492,6 +492,7 @@
     "noMatches": "Nothing matches that. Try a broader word.",
     "save": "Save interests",
     "saving": "Saving…",
-    "saved": "Saved. Your feed has been updated."
+    "saved": "Saved. Your feed has been updated.",
+    "jumpToLetter": "Jump to letter"
   }
 }

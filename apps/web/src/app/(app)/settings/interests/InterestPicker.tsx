@@ -16,10 +16,18 @@ const MAX_INTERESTS = 30;
  * matched an article**, so most of that tree returns nothing however carefully a member
  * navigates it, and hunting through it to find out is a bad way to learn that.
  *
- * So this offers what the corpus actually contains, commonest first, with the article count
- * on each chip. Picking *Achilles tendinopathy* shows there are 32 articles behind it
- * rather than leaving the member to guess — and the ordering means the first screenful is
- * the useful part of the taxonomy rather than its alphabetical beginning.
+ * So the *offered set* is chosen by corpus frequency — only tags with real articles behind
+ * them — while the *display* is alphabetical. Those are different jobs and were conflated
+ * at first: ordering the screen by frequency put the useful tags first but read as random
+ * while scrolling, because a member scanning a list has no idea it is sorted by something
+ * invisible. The article count stays on every chip, so the information frequency-ordering
+ * carried is still there without dictating the order.
+ *
+ * Grouping by anatomical region would suit clinicians better than A–Z, and the data is
+ * already available — but not yet: the taxonomy parks generic condition groups under one
+ * specific region (*Tendon Disorders*, *Ligament Injuries* and *Osteoarthritis* all sit
+ * under Cervical Spine while matching mostly knee, Achilles and rotator-cuff articles), so
+ * region headings would actively mislead. Raised with Andrew; revisit when resolved.
  */
 export function InterestPicker({
   options,
@@ -37,11 +45,23 @@ export function InterestPicker({
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return options;
-    return options.filter(
-      (o) => o.name.toLowerCase().includes(needle) || o.region.toLowerCase().includes(needle),
-    );
+    const matched = needle
+      ? options.filter((o) => o.name.toLowerCase().includes(needle))
+      : options;
+    return [...matched].sort((a, b) => a.name.localeCompare(b.name, 'en-GB'));
   }, [options, query]);
+
+  /** Alphabetical sections. Only letters that actually have entries get a heading or a rail
+   *  key — offering a member a letter that jumps nowhere is worse than omitting it. */
+  const groups = useMemo(() => {
+    const byLetter = new Map<string, InterestOption[]>();
+    for (const option of visible) {
+      const letter = option.name[0]?.toUpperCase() ?? '#';
+      const key = /[A-Z]/.test(letter) ? letter : '#';
+      byLetter.set(key, [...(byLetter.get(key) ?? []), option]);
+    }
+    return [...byLetter.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [visible]);
 
   const atLimit = selected.length >= MAX_INTERESTS;
 
@@ -85,36 +105,77 @@ export function InterestPicker({
         {atLimit ? t('limitReached', { max: MAX_INTERESTS }) : t('count', { count: selected.length })}
       </p>
 
-      <ul className="flex flex-wrap" style={{ gap: 'var(--space-2)' }}>
-        {visible.map((option) => {
-          const on = selected.includes(option.id);
-          return (
-            <li key={option.id}>
-              <button
-                type="button"
-                onClick={() => toggle(option.id)}
-                aria-pressed={on}
-                // Disabled only when adding would exceed the cap — never when deselecting,
-                // or a member who hit the limit could not get back under it.
-                disabled={!on && atLimit}
-                className="border px-3 py-2 text-sm disabled:opacity-40"
-                style={{
-                  borderRadius: 'var(--radius-pill)',
-                  borderColor: on ? 'var(--color-accent)' : 'var(--color-border-strong)',
-                  background: on ? 'var(--color-navy-tint)' : 'transparent',
-                  color: on ? 'var(--color-accent)' : 'var(--color-fg)',
-                  fontWeight: on ? 600 : 400,
-                }}
+      <div className="flex" style={{ gap: 'var(--space-2)' }}>
+        <div className="min-w-0 flex-1 flex flex-col" style={{ gap: 'var(--space-4)' }}>
+          {groups.map(([letter, items]) => (
+            <section key={letter} id={`letter-${letter}`} style={{ scrollMarginTop: 'var(--space-4)' }}>
+              <h2
+                className="text-xs font-semibold uppercase"
+                style={{ color: 'var(--color-faint)', letterSpacing: '0.08em', marginBottom: 'var(--space-2)' }}
               >
-                {option.name}{' '}
-                <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>
-                  {option.articleCount}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                {letter}
+              </h2>
+              <ul className="flex flex-wrap" style={{ gap: 'var(--space-2)' }}>
+                {items.map((option) => {
+                  const on = selected.includes(option.id);
+                  return (
+                    <li key={option.id}>
+                      <button
+                        type="button"
+                        onClick={() => toggle(option.id)}
+                        aria-pressed={on}
+                        // Disabled only when adding would exceed the cap — never when
+                        // deselecting, or a member who hit the limit could not get back under it.
+                        disabled={!on && atLimit}
+                        className="border px-3 py-2 text-sm disabled:opacity-40"
+                        style={{
+                          borderRadius: 'var(--radius-pill)',
+                          borderColor: on ? 'var(--color-accent)' : 'var(--color-border-strong)',
+                          background: on ? 'var(--color-navy-tint)' : 'transparent',
+                          color: on ? 'var(--color-accent)' : 'var(--color-fg)',
+                          fontWeight: on ? 600 : 400,
+                        }}
+                      >
+                        {option.name}{' '}
+                        <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>
+                          {option.articleCount}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+
+        {/*
+          The A–Z rail. Sticky rather than fixed, so it travels with the list instead of
+          floating over unrelated screen, and hidden while searching — a filtered result set
+          is short, and a rail whose letters mostly jump nowhere is worse than no rail.
+
+          Only letters present are rendered, and they are anchors rather than scroll maths:
+          `scrollIntoView` on the section keeps it correct however the layout changes.
+        */}
+        {!query.trim() && groups.length > 1 && (
+          <nav
+            aria-label={t('jumpToLetter')}
+            className="sticky flex shrink-0 flex-col items-center self-start"
+            style={{ top: 'var(--space-4)', gap: '1px' }}
+          >
+            {groups.map(([letter]) => (
+              <a
+                key={letter}
+                href={`#letter-${letter}`}
+                className="px-2 text-[11px] font-semibold leading-[1.35]"
+                style={{ color: 'var(--color-accent)' }}
+              >
+                {letter}
+              </a>
+            ))}
+          </nav>
+        )}
+      </div>
 
       {visible.length === 0 && (
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>

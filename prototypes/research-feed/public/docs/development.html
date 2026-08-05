@@ -342,6 +342,24 @@ plus <code>GET/PUT /v1/research-feed/interests</code>,
 <code>GET /v1/research-feed/interest-options</code>, and screen F5 at
 <code>/settings/interests</code>.</p>
 <ul>
+<li><strong>Frequency chooses what is offered; the alphabet chooses the
+order.</strong> Those are different jobs and were conflated at first —
+ordering the screen by article count put the useful tags first and
+<em>read as random while scrolling</em>, because a member scanning a
+list has no idea it is sorted by something invisible. Now the top 120 by
+frequency are offered (that is what keeps dead tags out) and displayed
+A–Z with letter headings and a sticky jump rail. The count stays on
+every chip, so the information frequency-ordering carried survives
+without dictating the order.</li>
+<li><strong>Region grouping would suit clinicians better than A–Z, and
+is not yet safe.</strong> The data is there
+(<code>InterestOption.region</code>), but the taxonomy parks generic
+condition groups under one specific region: <em>Tendon Disorders</em>
+(93 articles), <em>Ligament Injuries</em> (77) and
+<em>Osteoarthritis</em> (52) all sit under <strong>Cervical Spine
+(Neck)</strong> while matching mostly knee, Achilles and rotator-cuff
+content. Region headings would actively mislead. Raised with Andrew;
+revisit when resolved.</li>
 <li><strong>The picker is built from the corpus, not the taxonomy — this
 is the point of the slice.</strong> Only <strong>227 of the 588 tags
 have ever matched an article</strong>; 361 are unreachable in practice.
