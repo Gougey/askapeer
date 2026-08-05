@@ -484,15 +484,11 @@
   },
   "interests": {
     "heading": "Your clinical interests",
-    "body": "Pick the areas you want in your feed. The number on each is how many articles currently carry it.",
-    "searchLabel": "Search interests",
-    "searchPlaceholder": "Search areas, e.g. Achilles, shoulder",
-    "count": "{count, plural, =0 {Nothing selected — your feed shows everything} one {1 selected} other {# selected}}",
-    "limitReached": "That is the maximum ({max}). Deselect one to add another.",
-    "noMatches": "Nothing matches that. Try a broader word.",
+    "body": "Choose the areas you work in. Your feed is ranked around them.",
     "save": "Save interests",
     "saving": "Saving…",
     "saved": "Saved. Your feed has been updated.",
-    "jumpToLetter": "Jump to letter"
+    "pickerHeading": "Your areas",
+    "pickerHint": "Search or browse the full clinical list. Choosing a region includes everything beneath it."
   }
 }

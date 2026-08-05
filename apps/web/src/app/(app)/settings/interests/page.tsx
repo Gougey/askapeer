@@ -1,20 +1,21 @@
 import { getTranslations } from 'next-intl/server';
-import { fetchInterestOptions, fetchMyInterests } from '@/lib/research-feed';
+import { fetchVocabulary } from '@/lib/forum';
+import { fetchMyInterests } from '@/lib/research-feed';
 import { requireAccessToken } from '@/lib/session';
 import { InterestPicker } from './InterestPicker';
 
 /**
  * F5 — the clinical interests that shape the research feed.
  *
- * Under settings rather than on the Feed tab: it is configuration you set occasionally,
- * not something you do while reading. The Feed links here when it has nothing personalised
- * to show, which is the moment a member actually wants it.
+ * Under settings rather than on the Feed tab: it is configuration you set occasionally, not
+ * something you do while reading. The Feed links here when it has nothing personalised to
+ * show, which is the moment a member actually wants it.
  */
 export default async function InterestsPage() {
   const token = await requireAccessToken();
-  const [t, options, selected] = await Promise.all([
+  const [t, { tags }, selected] = await Promise.all([
     getTranslations('interests'),
-    fetchInterestOptions(token),
+    fetchVocabulary(token),
     fetchMyInterests(token),
   ]);
 
@@ -27,7 +28,7 @@ export default async function InterestsPage() {
         </p>
       </div>
 
-      <InterestPicker options={options} initialSelected={selected} />
+      <InterestPicker tags={tags} initialSelected={selected} />
     </main>
   );
 }

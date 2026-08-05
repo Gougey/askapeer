@@ -52,12 +52,6 @@ export class ResearchFeedController {
     return this.feed.list(query.cursor, undefined, tagIds);
   }
 
-  /** What a member can choose from — ordered by what the corpus actually contains. */
-  @Get('interest-options')
-  interestOptions() {
-    return this.interests.options();
-  }
-
   @Get('interests')
   myInterests(@Req() req: Request & { member: AuthedMember }) {
     return this.interests.list(req.member.handleId!);

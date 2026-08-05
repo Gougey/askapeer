@@ -35,13 +35,6 @@ export type FeedMode = 'personalised' | 'general' | 'fallback';
 
 export type FeedPage = { articles: FeedArticle[]; nextCursor: string | null; mode: FeedMode };
 
-/** A tag a member can follow, with how many articles currently carry it. */
-export type InterestOption = {
-  id: string;
-  name: string;
-  region: string;
-  articleCount: number;
-};
 
 export async function fetchFeed(token: string, cursor?: string): Promise<FeedPage> {
   const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
@@ -51,10 +44,6 @@ export async function fetchFeed(token: string, cursor?: string): Promise<FeedPag
 
 export async function fetchArticle(token: string, articleId: string): Promise<ArticleDetail | null> {
   return apiGet<ArticleDetail>(`/research-feed/${articleId}`, token);
-}
-
-export async function fetchInterestOptions(token: string): Promise<InterestOption[]> {
-  return (await apiGet<InterestOption[]>('/research-feed/interest-options', token)) ?? [];
 }
 
 export async function fetchMyInterests(token: string): Promise<string[]> {

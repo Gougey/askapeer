@@ -1,187 +1,59 @@
 'use client';
 
-import { useActionState, useMemo, useState } from 'react';
+import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { InterestOption } from '@/lib/research-feed';
+import { TagPicker } from '@/components/TagPicker';
+import type { Tag } from '@/lib/forum';
 import { saveInterestsAction, type InterestsState } from './actions';
 
+/** Generous next to the composer's five: this is a standing profile, not one post's labels. */
 const MAX_INTERESTS = 30;
 
 /**
  * Choosing what the research feed is about (screen F5).
  *
- * **Not the composer's tag picker, deliberately.** That one drills through the 588-node
- * taxonomy, which is right when you are labelling a case — precision matters and you know
- * what you are looking for. Here it would be wrong: only **227 of those 588 tags have ever
- * matched an article**, so most of that tree returns nothing however carefully a member
- * navigates it, and hunting through it to find out is a bad way to learn that.
+ * **The whole taxonomy, through the composer's picker.** Two earlier attempts got this
+ * wrong the same way: they offered only the ~120 tags with the most articles behind them,
+ * reasoning that a tag matching nothing is a dead end. That inverts how a member thinks.
+ * Somebody specialising in hand therapy or paediatric sport does not pick from what happens
+ * to be common — they pick *their area* — and a frequency cut silently removes it from the
+ * screen. Worse, the corpus is a four-month snapshot, so the cut would bake a transient
+ * state into what a member is permitted to care about.
  *
- * So the *offered set* is chosen by corpus frequency — only tags with real articles behind
- * them — while the *display* is alphabetical. Those are different jobs and were conflated
- * at first: ordering the screen by frequency put the useful tags first but read as random
- * while scrolling, because a member scanning a list has no idea it is sorted by something
- * invisible. The article count stays on every chip, so the information frequency-ordering
- * carried is still there without dictating the order.
+ * So every node is offered, reached by the same drill-down and type-ahead as the composer.
+ * Reused rather than reimplemented for the reason `TagPicker` already documents: it is ~400
+ * lines of bottom sheet, drill-down and iOS zoom handling, and a second copy would drift on
+ * the first fix only one of them received. This screen's copy was bespoke, and did drift —
+ * twice, before being deleted.
  *
- * Grouping by anatomical region would suit clinicians better than A–Z, and the data is
- * already available — but not yet: the taxonomy parks generic condition groups under one
- * specific region (*Tendon Disorders*, *Ligament Injuries* and *Osteoarthritis* all sit
- * under Cervical Spine while matching mostly knee, Achilles and rotator-cuff articles), so
- * region headings would actively mislead. Raised with Andrew; revisit when resolved.
+ * **Article counts are deliberately absent.** "Nothing matches yet" is a fact about the
+ * corpus on a given day, and the honest place to say it is the feed, which already does:
+ * choosing an area with no articles yields the `fallback` mode and an explanation, rather
+ * than a number in a picker quietly discouraging someone from their own specialty.
  */
 export function InterestPicker({
-  options,
+  tags,
   initialSelected,
 }: {
-  options: InterestOption[];
+  tags: Tag[];
   initialSelected: string[];
 }) {
   const t = useTranslations('interests');
   const [state, action, pending] = useActionState<InterestsState, FormData>(saveInterestsAction, {
     status: 'idle',
   });
-  const [selected, setSelected] = useState<string[]>(initialSelected);
-  const [query, setQuery] = useState('');
-
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    const matched = needle
-      ? options.filter((o) => o.name.toLowerCase().includes(needle))
-      : options;
-    return [...matched].sort((a, b) => a.name.localeCompare(b.name, 'en-GB'));
-  }, [options, query]);
-
-  /** Alphabetical sections. Only letters that actually have entries get a heading or a rail
-   *  key — offering a member a letter that jumps nowhere is worse than omitting it. */
-  const groups = useMemo(() => {
-    const byLetter = new Map<string, InterestOption[]>();
-    for (const option of visible) {
-      const letter = option.name[0]?.toUpperCase() ?? '#';
-      const key = /[A-Z]/.test(letter) ? letter : '#';
-      byLetter.set(key, [...(byLetter.get(key) ?? []), option]);
-    }
-    return [...byLetter.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [visible]);
-
-  const atLimit = selected.length >= MAX_INTERESTS;
-
-  function toggle(id: string) {
-    setSelected((current) =>
-      current.includes(id)
-        ? current.filter((x) => x !== id)
-        : atLimit
-          ? current
-          : [...current, id],
-    );
-  }
 
   return (
     <form action={action} className="flex flex-col" style={{ gap: 'var(--space-4)' }}>
-      {selected.map((id) => (
-        <input key={id} type="hidden" name="tag" value={id} />
-      ))}
-
-      <label className="flex flex-col gap-1">
-        <span className="sr-only">{t('searchLabel')}</span>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t('searchPlaceholder')}
-          autoCapitalize="none"
-          autoCorrect="off"
-          className="border px-3 py-2"
-          // 16px minimum or iOS zooms the page on focus.
-          style={{
-            background: 'var(--color-surface)',
-            borderColor: 'var(--color-border)',
-            borderRadius: 'var(--radius)',
-            fontSize: '16px',
-          }}
-        />
-      </label>
-
-      <p className="text-sm" style={{ color: atLimit ? 'var(--color-bad)' : 'var(--color-muted)' }}>
-        {atLimit ? t('limitReached', { max: MAX_INTERESTS }) : t('count', { count: selected.length })}
-      </p>
-
-      <div className="flex" style={{ gap: 'var(--space-2)' }}>
-        <div className="min-w-0 flex-1 flex flex-col" style={{ gap: 'var(--space-4)' }}>
-          {groups.map(([letter, items]) => (
-            <section key={letter} id={`letter-${letter}`} style={{ scrollMarginTop: 'var(--space-4)' }}>
-              <h2
-                className="text-xs font-semibold uppercase"
-                style={{ color: 'var(--color-faint)', letterSpacing: '0.08em', marginBottom: 'var(--space-2)' }}
-              >
-                {letter}
-              </h2>
-              <ul className="flex flex-wrap" style={{ gap: 'var(--space-2)' }}>
-                {items.map((option) => {
-                  const on = selected.includes(option.id);
-                  return (
-                    <li key={option.id}>
-                      <button
-                        type="button"
-                        onClick={() => toggle(option.id)}
-                        aria-pressed={on}
-                        // Disabled only when adding would exceed the cap — never when
-                        // deselecting, or a member who hit the limit could not get back under it.
-                        disabled={!on && atLimit}
-                        className="border px-3 py-2 text-sm disabled:opacity-40"
-                        style={{
-                          borderRadius: 'var(--radius-pill)',
-                          borderColor: on ? 'var(--color-accent)' : 'var(--color-border-strong)',
-                          background: on ? 'var(--color-navy-tint)' : 'transparent',
-                          color: on ? 'var(--color-accent)' : 'var(--color-fg)',
-                          fontWeight: on ? 600 : 400,
-                        }}
-                      >
-                        {option.name}{' '}
-                        <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>
-                          {option.articleCount}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
-        </div>
-
-        {/*
-          The A–Z rail. Sticky rather than fixed, so it travels with the list instead of
-          floating over unrelated screen, and hidden while searching — a filtered result set
-          is short, and a rail whose letters mostly jump nowhere is worse than no rail.
-
-          Only letters present are rendered, and they are anchors rather than scroll maths:
-          `scrollIntoView` on the section keeps it correct however the layout changes.
-        */}
-        {!query.trim() && groups.length > 1 && (
-          <nav
-            aria-label={t('jumpToLetter')}
-            className="sticky flex shrink-0 flex-col items-center self-start"
-            style={{ top: 'var(--space-4)', gap: '1px' }}
-          >
-            {groups.map(([letter]) => (
-              <a
-                key={letter}
-                href={`#letter-${letter}`}
-                className="px-2 text-[11px] font-semibold leading-[1.35]"
-                style={{ color: 'var(--color-accent)' }}
-              >
-                {letter}
-              </a>
-            ))}
-          </nav>
-        )}
-      </div>
-
-      {visible.length === 0 && (
-        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-          {t('noMatches')}
-        </p>
-      )}
+      {/* `fieldName="tag"` matches what the save action reads, and what search already posts. */}
+      <TagPicker
+        tags={tags}
+        max={MAX_INTERESTS}
+        fieldName="tag"
+        initialSelectedIds={initialSelected}
+        heading={t('pickerHeading')}
+        hint={t('pickerHint')}
+      />
 
       {state.status === 'error' && (
         <p className="text-sm" role="alert" style={{ color: 'var(--color-bad)' }}>
