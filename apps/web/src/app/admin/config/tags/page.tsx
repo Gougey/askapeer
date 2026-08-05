@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { fetchAdminTags, requireAdmin } from '@/lib/admin';
 import { Table } from '../../ui';
+import { AddTagForm } from './AddTagForm';
 
 /**
  * G8 — the tag vocabulary. Phase one: browse, search, and edit synonyms.
@@ -26,6 +27,8 @@ export default async function TagAdminPage({
 
   return (
     <div className="flex flex-col gap-3">
+      <AddTagForm />
+
       <form method="get" className="flex gap-2">
         <input
           name="q"
@@ -47,7 +50,7 @@ export default async function TagAdminPage({
         {q ? ` matching “${q}”` : ' in the vocabulary'} · articles = research feed, posts = forum
       </p>
 
-      <Table head={['Tag', 'Parent', 'Region', 'Synonyms', 'Articles', 'Posts']}>
+      <Table head={['Tag', 'Id', 'Parent', 'Region', 'Synonyms', 'Articles', 'Posts']}>
         {tags.map((tag) => (
           <tr key={tag.id} className="align-top">
             <td className="border-b px-2 py-2" style={{ borderColor: 'var(--color-border)' }}>
@@ -55,6 +58,11 @@ export default async function TagAdminPage({
                 {tag.name}
               </Link>
               {tag.retired && <span className="ml-1 text-xs" style={{ color: 'var(--color-warn)' }}>retired</span>}
+            </td>
+            {/* Shown because the add, move and merge fields take an id — copying it from
+                here is the whole workflow, and hiding it would make those forms unusable. */}
+            <td className="border-b px-2 py-2 font-mono text-[11px]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-faint)' }}>
+              {tag.id}
             </td>
             <td className="border-b px-2 py-2 text-xs" style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
               {tag.parentName ?? '—'}

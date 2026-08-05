@@ -80,14 +80,6 @@ export async function mergeTagAction(tagId: string, intoTagId: string) {
   return guard(() => adminPost(`taxonomy/tags/${tagId}/merge`, { intoTagId }), tagId);
 }
 
-export async function addTagAction(input: {
-  name: string;
-  parentId: string | null;
-  facet: string;
-}) {
-  return guard(() => adminPost('taxonomy/tags', input), null);
-}
-
 /**
  * Structural edits fail for *good* reasons an administrator needs to read — a name already
  * used under that parent, a move that would loop the tree, a merge that would strand
