@@ -18,18 +18,31 @@ import { ARTICLE_SOURCES, type ArticleSource, type RawArticle } from './sources/
  * and a query per tag would be 588 requests a run for no gain.
  */
 const DEFAULT_QUERIES = [
+  // General shape of the domain.
   'sports medicine',
   'sports injury',
   'sports physiotherapy',
   'musculoskeletal rehabilitation',
   'return to play',
+  'exercise therapy',
+  'physiotherapy',
+  // Conditions and structures. Extended 2026-08-05 to cover Andrew Renshaw's news-feed
+  // criteria, which were checked against the corpus one by one. Most of his list was
+  // already well fed — 211 articles mentioned the anterior cruciate ligament — so the
+  // real fix was synonyms (migration 0025), not queries. Only the genuinely thin areas
+  // are added here: groin had 8 articles and calf 7, against 41 for quadriceps.
   'tendinopathy',
   'muscle strain injury',
   'anterior cruciate ligament',
   'rotator cuff',
-  'low back pain rehabilitation',
-  'exercise therapy',
-  'physiotherapy',
+  'low back pain',
+  'groin pain athlete',
+  'adductor injury',
+  'calf muscle injury',
+  'hamstring injury',
+  'ankle sprain',
+  'patellofemoral pain',
+  'osteochondral lesion',
 ];
 
 export const CORPUS_QUERIES_KEY = 'research_feed.corpus_queries';

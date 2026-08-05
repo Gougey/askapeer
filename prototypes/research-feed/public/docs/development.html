@@ -507,9 +507,54 @@ putting <code>{MTSS, shin splints}</code> on one tag: both queries went
 from <strong>0 hits to 2</strong>, and the top hit was a case titled
 <em>“Diffuse medial shin pain in a military recruit”</em>, which
 contains neither phrase and was found entirely through its tag.</p>
-<p>All 588 tags currently have <code>synonyms = '{}'</code>, so today
-those queries still return nothing. <strong>This needs Andrew, not
-code.</strong> Maintenance is screen <strong>G8</strong>
+<p><strong>Seeded 2026-08-05</strong> (migration <code>0025</code>),
+from Andrew Renshaw’s news-feed criteria checked against the live corpus
+one term at a time. The gap was overwhelmingly <strong>naming, not
+coverage</strong> — the articles were already ingested and the
+classifier could not see them because the tag names are not the words
+clinicians write:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Articles containing it</th>
+<th>Tagged before</th>
+<th>Tagged after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“anterior cruciate”</td>
+<td>211</td>
+<td>17</td>
+<td><strong>216</strong></td>
+</tr>
+<tr>
+<td>“rotator cuff”</td>
+<td>—</td>
+<td>20</td>
+<td><strong>167</strong></td>
+</tr>
+<tr>
+<td>“low back”</td>
+<td>77</td>
+<td>1</td>
+<td><strong>50</strong></td>
+</tr>
+<tr>
+<td>“quadriceps”</td>
+<td>41</td>
+<td>2</td>
+<td><strong>18</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Corpus coverage went <strong>653 → 797 of 1,441 articles (45% →
+55%)</strong> and matches 1,587 → 2,055, from about forty lines of SQL
+and no refetch. Precision held: every one of the 50 Lumbar Spine and 216
+ACL articles genuinely contains the term.</p>
+<p>Most tags still have <code>synonyms = '{}'</code>. <strong>This needs
+Andrew, not code.</strong> Maintenance is screen <strong>G8</strong>
 (<code>/admin/config/tags</code>, S13) where synonyms are a field on the
 tag editor — the screen spec is explicit that this is <em>not</em> a
 separate screen. Until S13 lands, seed them by migration the same way
