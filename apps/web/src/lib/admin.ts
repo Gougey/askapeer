@@ -148,3 +148,25 @@ export const fetchReports = (token: string, status = 'open') =>
 
 export const fetchReport = (token: string, id: string) =>
   adminGet<ReportQueueItem>(`reports/${id}`, token);
+
+/** A tag as the vocabulary admin sees it (EPIC-J, screen G8). */
+export type AdminTag = {
+  id: string;
+  name: string;
+  region: string;
+  facet: string;
+  parentName: string | null;
+  synonyms: string[];
+  articleCount: number;
+  postCount: number;
+  retired: boolean;
+};
+
+export async function fetchAdminTags(token: string, q?: string): Promise<AdminTag[]> {
+  const query = q ? `?q=${encodeURIComponent(q)}` : '';
+  return adminGet<AdminTag[]>(`taxonomy/tags${query}`, token);
+}
+
+export async function fetchAdminTag(token: string, tagId: string): Promise<AdminTag> {
+  return adminGet<AdminTag>(`taxonomy/tags/${tagId}`, token);
+}

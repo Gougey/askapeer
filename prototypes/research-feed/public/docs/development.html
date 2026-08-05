@@ -1508,6 +1508,56 @@ planning around the other ninety-nine.</p>
 2026-08-03, the own-domain restriction lifted, and
 <code>AUTH_DEV_MAGIC_LINK</code> has since been removed — see
 above.)</p>
+<h2 id="tag-vocabulary-admin-s13-phase-1-screen-g8">Tag vocabulary admin
+(S13 phase 1, screen G8)</h2>
+<p><code>/admin/config/tags</code> — browse and search the 588-node
+vocabulary, and edit synonyms per tag.
+<code>GET/PUT /v1/admin/taxonomy/tags…</code>,
+<code>POST …/preview</code>, <code>GET …/audit</code>.</p>
+<ul>
+<li><strong>Synonyms only, deliberately.</strong> They change what
+<em>matches</em> and move nothing: a bad synonym over-tags some articles
+and is undone by deleting it. Structural edits — re-parenting, merging,
+retiring — change subtree expansion for search, feed classification and
+post filtering simultaneously, and get their own slice rather than
+riding along with the easy half.</li>
+<li><strong>The dry run is the feature.</strong>
+<code>POST …/preview</code> runs the real classifier over the stored
+corpus with proposed synonyms and <strong>writes nothing</strong>,
+returning the before/after counts <em>and the titles that would newly
+match</em>. Without it, editing a synonym means saving, reclassifying
+the whole corpus and only then finding out — a loop slow enough that
+nobody experiments, which is the behaviour the screen exists to
+encourage. The count says how much changed; the titles say whether it
+changed the <em>right way</em>, which is the only way to catch a synonym
+that over-matches.</li>
+<li><strong>Save and apply are separate.</strong> Saving is instant and
+reversible; applying rewrites every article’s tags. Several edits, one
+apply — and a wrong save never silently rewrites the corpus on the way
+past.</li>
+<li><strong>Search matches synonyms as well as names</strong>, because
+that is how an administrator checks their own work: having put
+“quadriceps” on eight scattered tags, searching it must find all
+eight.</li>
+<li><strong>Saves are audited.</strong>
+<code>config.admin_audit_log</code> is required by EPIC-J §3 and had
+never been created, because nothing was editable — the vocabulary
+arrived by migration. Taxonomy edits are exactly what needs a record: a
+synonym alters what every member can find, in search and in their feed,
+without changing a single visible screen. Actor, before and after are
+all recorded; append-only, like <code>identity_access_log</code> and
+<code>moderation_actions</code>.</li>
+<li>Synonyms are normalised on save (trimmed, lowercased, deduped,
+one-character entries dropped) so the same word typed twice cannot
+become two.</li>
+</ul>
+<p><strong>Not built, and known:</strong> add/merge/retire (phase 2 —
+note EPIC-J’s merge spec predates two tables that now reference tags, so
+a merge must repoint <code>post_tags</code>,
+<code>research.article_tags</code> <strong>and</strong>
+<code>community.member_interests</code>), and the “which tags never
+match anything” report that would turn synonym work into a worklist
+ranked by real demand.</p>
 <h2 id="admin-console-s11a">Admin console (S11a)</h2>
 <p>An allowlisted <strong>admin</strong> role gets a console at
 <code>/admin</code> (web) backed by <code>GET/POST /v1/admin/*</code>
