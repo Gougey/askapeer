@@ -31,7 +31,10 @@ export default async function TagAdminPage({
           name="q"
           defaultValue={q ?? ''}
           placeholder="Search names and synonyms, e.g. quadriceps"
-          className="flex-1 rounded-lg border px-3 py-2 text-sm"
+          // No `text-sm`: iOS zooms a focused control under 16px. The inline size would
+          // have won at runtime, but carrying both is how the next edit reintroduces the
+          // bug — and the guard is right to refuse the ambiguity.
+          className="flex-1 rounded-lg border px-3 py-2"
           style={{ borderColor: 'var(--color-muted)', background: 'var(--color-surface)', fontSize: '16px' }}
         />
         <button type="submit" className="rounded-lg px-3 py-2 text-sm font-medium text-white" style={{ background: 'var(--color-accent)' }}>
