@@ -1,5 +1,5 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { eq, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { adminAuditLog, tags } from '../db/schema';
 import { classify, prepareTaxonomy } from '../research-feed/classifier';
@@ -44,6 +44,19 @@ export class TaxonomyService {
    */
   async search(query?: string): Promise<AdminTag[]> {
     const needle = (query ?? '').trim().toLowerCase();
+    return this.rows(
+      needle === ''
+        ? sql`true`
+        : sql`(
+            lower(w.name) like ${'%' + needle + '%'}
+            or exists (select 1 from unnest(w.synonyms) s where lower(s) like ${'%' + needle + '%'})
+          )`,
+      300,
+    );
+  }
+
+  /** The one shape both the list and the single read return. */
+  private async rows(where: SQL, limit: number): Promise<AdminTag[]> {
     const { rows } = await this.db.execute<{
       id: string;
       name: string;
@@ -70,12 +83,9 @@ export class TaxonomyService {
              (w.retired_at is not null) as retired
         from walk w
         left join community.tags p on p.id = w.parent_id
-       where ${needle === '' ? sql`true` : sql`(
-               lower(w.name) like ${'%' + needle + '%'}
-               or exists (select 1 from unnest(w.synonyms) s where lower(s) like ${'%' + needle + '%'})
-             )`}
+       where ${where}
        order by w.name
-       limit 300
+       limit ${limit}
     `);
     return rows.map((r) => ({
       id: r.id,
@@ -90,8 +100,17 @@ export class TaxonomyService {
     }));
   }
 
+  /**
+   * One tag by id.
+   *
+   * Queried directly rather than filtered out of `search()`, which caps at 300 rows: with
+   * 588 tags that quietly 404'd anything alphabetically past the cap, including every tag
+   * an administrator had just created. The list needs a limit; a lookup by primary key must
+   * not inherit it.
+   */
   async get(tagId: string): Promise<AdminTag> {
-    const tag = (await this.search()).find((t) => t.id === tagId);
+    const rows = await this.rows(sql`w.id = ${tagId}`, 1);
+    const tag = rows[0];
     if (!tag) throw new NotFoundException('No such tag.');
     return tag;
   }
@@ -185,5 +204,240 @@ export class TaxonomyService {
       select max(depth)::int as depth from up
     `);
     return Number(rows[0]?.depth ?? 0);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Structural edits (phase two). Unlike synonyms, these move things: a re-parent
+  // changes subtree expansion for search, for feed interests and for post filtering at
+  // once, and a merge rewrites rows in three tables. Hence the guards below, each of
+  // which exists because the operation can corrupt something that is hard to notice.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Add a tag — the operation Pelvis needs.
+   *
+   * Names are only **sibling-scoped** unique (`unique(parent_id, lower(name))`, plus a
+   * partial unique on root names), which is what lets "Nerve" exist under several branches.
+   * So a clash is checked against the chosen parent, not globally, and the message says
+   * where the clash is or an administrator cannot act on it.
+   */
+  async addTag(
+    input: { name: string; parentId: string | null; facet: string; synonyms?: string[] },
+    actorMemberId: string,
+  ): Promise<AdminTag> {
+    const name = input.name.trim();
+    if (!name) throw new BadRequestException('A tag needs a name.');
+
+    if (input.parentId) {
+      const [parent] = await this.db.select().from(tags).where(eq(tags.id, input.parentId));
+      if (!parent) throw new BadRequestException('That parent does not exist.');
+    }
+    await this.assertNameFree(name, input.parentId);
+
+    const [created] = await this.db
+      .insert(tags)
+      .values({
+        name,
+        parentId: input.parentId,
+        facet: input.facet as 'region' | 'muscle' | 'structure' | 'pathology',
+        synonyms: (input.synonyms ?? []).map((x) => x.trim().toLowerCase()).filter((x) => x.length > 1),
+      })
+      .returning({ id: tags.id });
+
+    await this.audit(actorMemberId, 'tag.added', created.id, {
+      name,
+      parentId: input.parentId,
+      facet: input.facet,
+    });
+    return this.get(created.id);
+  }
+
+  /**
+   * Rename, and/or move to a different parent — what the mis-parented generic groups need
+   * (*Tendon Disorders* sits under Cervical Spine while matching knee and Achilles content).
+   *
+   * **The cycle check is the important one.** Re-parenting a node beneath its own descendant
+   * produces a loop, and every read of this table is a recursive CTE — the tag picker, search
+   * subtree expansion, feed interest expansion. A cycle would not corrupt a row; it would
+   * hang each of those queries, in production, with no obvious cause.
+   */
+  async updateTag(
+    tagId: string,
+    changes: { name?: string; parentId?: string | null },
+    actorMemberId: string,
+  ): Promise<AdminTag> {
+    const [tag] = await this.db.select().from(tags).where(eq(tags.id, tagId));
+    if (!tag) throw new NotFoundException('No such tag.');
+
+    const name = changes.name?.trim() || tag.name;
+    const parentId = changes.parentId === undefined ? tag.parentId : changes.parentId;
+
+    if (parentId === tagId) throw new BadRequestException('A tag cannot be its own parent.');
+    if (parentId && (await this.isDescendant(parentId, tagId))) {
+      throw new BadRequestException(
+        'That would put the tag underneath itself, which would loop every taxonomy query.',
+      );
+    }
+    if (name !== tag.name || parentId !== tag.parentId) {
+      await this.assertNameFree(name, parentId, tagId);
+    }
+
+    await this.db.update(tags).set({ name, parentId }).where(eq(tags.id, tagId));
+    await this.audit(actorMemberId, 'tag.updated', tagId, {
+      before: { name: tag.name, parentId: tag.parentId },
+      after: { name, parentId },
+    });
+    return this.get(tagId);
+  }
+
+  /**
+   * Retire, never delete (EPIC-J §4).
+   *
+   * A tag that posts already carry cannot be removed without orphaning or rewriting member
+   * content. Retiring hides it from the composer and the pickers while leaving every
+   * existing association intact and still filterable — the same "content is an archive"
+   * rule applied to expelled handles and removed posts. Reversible, because a retire made
+   * in error should not need a developer.
+   */
+  async setRetired(tagId: string, retired: boolean, actorMemberId: string): Promise<AdminTag> {
+    const [tag] = await this.db.select().from(tags).where(eq(tags.id, tagId));
+    if (!tag) throw new NotFoundException('No such tag.');
+    await this.db
+      .update(tags)
+      .set({ retiredAt: retired ? new Date() : null })
+      .where(eq(tags.id, tagId));
+    await this.audit(actorMemberId, retired ? 'tag.retired' : 'tag.restored', tagId, {
+      name: tag.name,
+    });
+    return this.get(tagId);
+  }
+
+  /**
+   * Fold one tag into another: repoint everything that references the loser, then retire it.
+   *
+   * **Three tables, not one.** EPIC-J specifies merge as repointing `post_tags` — written
+   * before `research.article_tags` and `community.member_interests` existed. Missing the
+   * last would silently delete members' interests, which is the kind of loss nobody reports
+   * because nobody can see it happen.
+   *
+   * Each repoint is `on conflict do nothing` followed by a delete, because the winner may
+   * already hold the same row: an article tagged with both, a member interested in both. A
+   * bare update would violate the composite primary key and fail the whole merge.
+   */
+  async mergeTags(loserId: string, winnerId: string, actorMemberId: string) {
+    if (loserId === winnerId) throw new BadRequestException('A tag cannot merge into itself.');
+    const [loser] = await this.db.select().from(tags).where(eq(tags.id, loserId));
+    const [winner] = await this.db.select().from(tags).where(eq(tags.id, winnerId));
+    if (!loser || !winner) throw new NotFoundException('No such tag.');
+    if (await this.hasChildren(loserId)) {
+      throw new BadRequestException(
+        'Move or merge its children first — merging a parent would strand them.',
+      );
+    }
+
+    const moved = await this.db.transaction(async (tx) => {
+      /*
+       * Three explicit blocks rather than one loop over table names. They are nearly
+       * identical, and a loop would have to switch the owning column per table
+       * (`post_id` / `article_id` / `handle_id`) through string interpolation — clever,
+       * unreadable, and exactly the kind of thing that silently repoints the wrong column.
+       *
+       * Each moves what it can, then deletes the rest: the winner may already hold the same
+       * row (an article carrying both tags, a member interested in both), and a bare update
+       * would violate the composite primary key and fail the whole merge.
+       */
+      const posts = await tx.execute<{ moved: number }>(sql`
+        with moved as (
+          update community.post_tags pt set tag_id = ${winnerId}
+           where pt.tag_id = ${loserId}
+             and not exists (select 1 from community.post_tags w
+                              where w.tag_id = ${winnerId} and w.post_id = pt.post_id)
+          returning 1)
+        select count(*)::int as moved from moved`);
+      await tx.execute(sql`delete from community.post_tags where tag_id = ${loserId}`);
+
+      const articles = await tx.execute<{ moved: number }>(sql`
+        with moved as (
+          update research.article_tags at set tag_id = ${winnerId}
+           where at.tag_id = ${loserId}
+             and not exists (select 1 from research.article_tags w
+                              where w.tag_id = ${winnerId} and w.article_id = at.article_id)
+          returning 1)
+        select count(*)::int as moved from moved`);
+      await tx.execute(sql`delete from research.article_tags where tag_id = ${loserId}`);
+
+      const interests = await tx.execute<{ moved: number }>(sql`
+        with moved as (
+          update community.member_interests mi set tag_id = ${winnerId}
+           where mi.tag_id = ${loserId}
+             and not exists (select 1 from community.member_interests w
+                              where w.tag_id = ${winnerId} and w.handle_id = mi.handle_id)
+          returning 1)
+        select count(*)::int as moved from moved`);
+      await tx.execute(sql`delete from community.member_interests where tag_id = ${loserId}`);
+
+      await tx.update(tags).set({ retiredAt: new Date() }).where(eq(tags.id, loserId));
+      return {
+        posts: Number(posts.rows[0]?.moved ?? 0),
+        articles: Number(articles.rows[0]?.moved ?? 0),
+        interests: Number(interests.rows[0]?.moved ?? 0),
+      };
+    });
+
+    await this.audit(actorMemberId, 'tag.merged', loserId, {
+      loser: loser.name,
+      winner: winner.name,
+      winnerId,
+      moved,
+    });
+    return { loser: loser.name, winner: winner.name, moved };
+  }
+
+  /** Sibling-scoped, matching the database's own unique indexes. */
+  private async assertNameFree(name: string, parentId: string | null, exceptId?: string) {
+    const { rows } = await this.db.execute<{ id: string }>(sql`
+      select id from community.tags
+       where lower(name) = ${name.toLowerCase()}
+         and parent_id is not distinct from ${parentId}
+         ${exceptId ? sql`and id <> ${exceptId}` : sql``}
+       limit 1
+    `);
+    if (rows.length > 0) {
+      throw new BadRequestException(
+        parentId
+          ? 'A tag with that name already exists under that parent.'
+          : 'A region with that name already exists.',
+      );
+    }
+  }
+
+  private async isDescendant(candidateId: string, ancestorId: string): Promise<boolean> {
+    const { rows } = await this.db.execute<{ hit: number }>(sql`
+      with recursive down as (
+        select id from community.tags where id = ${ancestorId}
+        union all
+        select c.id from community.tags c join down d on c.parent_id = d.id
+      )
+      select 1 as hit from down where id = ${candidateId} limit 1
+    `);
+    return rows.length > 0;
+  }
+
+  private async hasChildren(tagId: string): Promise<boolean> {
+    const { rows } = await this.db.execute(sql`
+      select 1 from community.tags where parent_id = ${tagId} limit 1
+    `);
+    return rows.length > 0;
+  }
+
+  private async audit(
+    actorMemberId: string,
+    action: string,
+    targetId: string,
+    detail: Record<string, unknown>,
+  ) {
+    await this.db
+      .insert(adminAuditLog)
+      .values({ actorMemberId, action, targetType: 'tag', targetId, detail });
   }
 }

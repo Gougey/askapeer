@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { fetchAdminTag, requireAdmin } from '@/lib/admin';
+import { StructureEditor } from './StructureEditor';
 import { SynonymEditor } from './SynonymEditor';
 
 /** One tag: where it sits, what it carries, and its synonyms (EPIC-J, screen G8). */
@@ -23,7 +24,10 @@ export default async function TagDetailPage({ params }: { params: Promise<{ tagI
         </p>
       </div>
 
+      <p className="text-xs" style={{ color: 'var(--color-faint)' }}>id {tag.id}</p>
+
       <SynonymEditor tag={tag} />
+      <StructureEditor tag={tag} />
     </div>
   );
 }
