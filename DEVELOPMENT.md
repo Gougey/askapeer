@@ -239,6 +239,20 @@ examples for the synonym ask — and `reclassify` turns his list into results in
   fact about today's corpus, and the feed's `fallback` mode is where it is true — choosing
   *Wrist sprain* with zero articles gives the general ranking and an explanation, rather
   than a number quietly discouraging someone from their own specialty.
+- **An interest covers its whole subtree**, the same as a tag filter in search. This was a
+  plain `tag_id in (…)`, so following *Ankle* matched only articles tagged literally "Ankle"
+  — 17 of the 24 in its 13-node subtree, missing Lateral ankle sprain and Chronic ankle
+  instability. Inconsistent with search, and with the composer's picker, which drops an
+  ancestor when a descendant is chosen *because* it assumes query-time broadening. Weight
+  propagates down from the tag actually chosen.
+- **The picker searches synonyms, not just names.** Where the taxonomy scatters a concept —
+  "quadriceps" lives under three different parents and has no node meaning it — an
+  administrator can group it by putting the word on each tag. If picker search ignored
+  synonyms that would look like it had failed when it had worked, and the wrong conclusion
+  would be drawn about the tool.
+- **The interest cap is 100, not 30.** The old number was arbitrary and bit on first real
+  use: Andrew's own criteria needed eight chips for "quadriceps" alone. Subtree expansion
+  has since made broad areas cost one selection.
 - **The feed's ranking swapped one term.** With interests it sums
   `member_interests.weight × article_tags.confidence` over matches and restricts to them;
   without, it keeps the flat "is it placeable at all" nudge. That swap is exactly the seam

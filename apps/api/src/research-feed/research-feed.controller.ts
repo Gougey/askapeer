@@ -13,12 +13,17 @@ import { IngestionService } from './ingestion.service';
 /**
  * The whole interest set, replaced in one call.
  *
- * Capped because a member selecting most of the taxonomy is not expressing an interest —
- * it is the same as expressing none, and it would make the feed query scan everything.
+ * The cap was 30 and that was arbitrary — it only ever existed to stop someone selecting
+ * the entire taxonomy, which expresses the same thing as selecting nothing. In practice it
+ * bit immediately: Andrew's own criteria needed eight separate chips for "quadriceps",
+ * because the taxonomy has no node meaning that, and the limit was reached before the list
+ * was finished. Raised to 100, which is still far short of "everything" and no longer
+ * something a real member meets. Subtree expansion also means broad areas now cost one
+ * selection rather than a dozen.
  */
 export class InterestsDto {
   @IsArray()
-  @ArrayMaxSize(30)
+  @ArrayMaxSize(100)
   @IsUUID('all', { each: true })
   tagIds!: string[];
 }
@@ -49,7 +54,7 @@ export class ResearchFeedController {
   @Get()
   async list(@Query() query: FeedQueryDto, @Req() req: Request & { member: AuthedMember }) {
     const tagIds = await this.interests.tagIdsFor(req.member.handleId!);
-    return this.feed.list(query.cursor, undefined, tagIds);
+    return this.feed.list(query.cursor, undefined, tagIds, req.member.handleId!);
   }
 
   @Get('interests')
