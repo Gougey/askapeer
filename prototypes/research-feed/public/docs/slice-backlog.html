@@ -457,8 +457,36 @@ FD-2 sets real pricing before wiring <code>StripeProvider</code> to live
 numbers.</li>
 </ul>
 <hr />
-<h2 id="s13-admin-configuration-surfaces-should-operationally">S13 —
-Admin configuration surfaces [Should-operationally]</h2>
+<h2
+id="s13-admin-configuration-surfaces-should-operationally-tag-vocabulary-built-2026-08-05">S13
+— Admin configuration surfaces [Should-operationally] — <strong>tag
+vocabulary built 2026-08-05</strong></h2>
+<blockquote>
+<p><strong>Status.</strong> Screen <strong>G8 (tag vocabulary) is
+in</strong>, in two phases: synonyms with a dry-run preview (#96) and
+the structural operations — add, rename, re-parent, retire, merge (#98,
+#99). <code>config.admin_audit_log</code> was created alongside it;
+EPIC-J had required it from the start and nothing had made it, because
+nothing was editable until now.</p>
+<p>Built because three taxonomy problems surfaced in one week and every
+one needed a developer and a migration: Pelvis has no region, the
+generic condition groups are mis-parented under Cervical Spine, and most
+tags still match nothing. The synonym loop was the worst of it — Andrew
+sends terms, someone writes SQL, deploys, reclassifies.</p>
+<p><strong>Two spec corrections found while building.</strong> Merge
+must repoint <strong>three</strong> tables — <code>post_tags</code>,
+<code>research.article_tags</code> and
+<code>community.member_interests</code> — where EPIC-J names only the
+first, written before the other two existed; missing the last silently
+deletes members’ interests. And re-parenting must refuse cycles: every
+read of <code>tags</code> is a recursive CTE, so a loop hangs the
+picker, search and the feed rather than corrupting a row.</p>
+<p><strong>Not built</strong>: G7 (categories), G9 (handle blocklist),
+G10 (platform settings), and the
+<code>administrator</code>/<code>moderator</code> claim split — with
+three founders on an email allowlist that is ceremony without
+benefit.</p>
+</blockquote>
 <ul>
 <li><strong>Delivers</strong>: an Administrator manages categories, the
 tag vocabulary (facet/grouping/synonyms/merge/retire — where Andrew’s
