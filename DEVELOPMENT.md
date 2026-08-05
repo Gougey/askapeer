@@ -1101,6 +1101,16 @@ restriction lifted, and `AUTH_DEV_MAGIC_LINK` has since been removed — see abo
 - Synonyms are normalised on save (trimmed, lowercased, deduped, one-character entries
   dropped) so the same word typed twice cannot become two.
 
+### Adding a tag
+
+"+ Add a tag" on `/admin/config/tags`: name, facet, optional parent id, optional synonyms.
+**A blank parent means a new top-level region** — which is what Pelvis is — and the field
+says so, because "leave blank" is otherwise ambiguous between "top level" and "I have not
+decided yet", and those produce very different taxonomies.
+
+The list shows each tag's **id**, because the add, move and merge fields all take one.
+Copying it from the row is the whole workflow; hiding it would make those forms unusable.
+
 ### Structural edits (phase 2)
 
 `POST /tags` (add), `PATCH /tags/:id` (rename and/or re-parent), `POST /tags/:id/retire`,

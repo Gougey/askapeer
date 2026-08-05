@@ -1551,6 +1551,16 @@ all recorded; append-only, like <code>identity_access_log</code> and
 one-character entries dropped) so the same word typed twice cannot
 become two.</li>
 </ul>
+<h3 id="adding-a-tag">Adding a tag</h3>
+<p>“+ Add a tag” on <code>/admin/config/tags</code>: name, facet,
+optional parent id, optional synonyms. <strong>A blank parent means a
+new top-level region</strong> — which is what Pelvis is — and the field
+says so, because “leave blank” is otherwise ambiguous between “top
+level” and “I have not decided yet”, and those produce very different
+taxonomies.</p>
+<p>The list shows each tag’s <strong>id</strong>, because the add, move
+and merge fields all take one. Copying it from the row is the whole
+workflow; hiding it would make those forms unusable.</p>
 <h3 id="structural-edits-phase-2">Structural edits (phase 2)</h3>
 <p><code>POST /tags</code> (add), <code>PATCH /tags/:id</code> (rename
 and/or re-parent), <code>POST /tags/:id/retire</code>,
