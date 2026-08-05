@@ -1101,10 +1101,32 @@ restriction lifted, and `AUTH_DEV_MAGIC_LINK` has since been removed — see abo
 - Synonyms are normalised on save (trimmed, lowercased, deduped, one-character entries
   dropped) so the same word typed twice cannot become two.
 
-**Not built, and known:** add/merge/retire (phase 2 — note EPIC-J's merge spec predates two
-tables that now reference tags, so a merge must repoint `post_tags`, `research.article_tags`
-**and** `community.member_interests`), and the "which tags never match anything" report that
-would turn synonym work into a worklist ranked by real demand.
+### Structural edits (phase 2)
+
+`POST /tags` (add), `PATCH /tags/:id` (rename and/or re-parent), `POST /tags/:id/retire`,
+`POST /tags/:id/merge`. All audited. Three guards exist because each failure is one nobody
+would notice for a while:
+
+- **Cycles.** Re-parenting a node beneath its own descendant does not corrupt a row — it
+  makes every read of the table hang, because they are all recursive CTEs (the tag picker,
+  search subtree expansion, feed interest expansion). Refused, with a message saying why.
+- **Sibling-scoped names.** `unique(parent_id, lower(name))` plus a partial unique on roots
+  is what lets "Nerve" exist under several branches, so a clash is checked against the
+  chosen parent and the message says where the clash is.
+- **Merge touches three tables.** EPIC-J specifies merge as repointing `post_tags` — written
+  before `research.article_tags` and `community.member_interests` existed. Each repoint is
+  "move what can move, then delete the rest", because the winner may already hold the same
+  row (an article carrying both tags, a member interested in both) and a bare update would
+  violate the composite primary key and fail the whole merge. Merging a tag with children is
+  refused rather than stranding them. Verified end to end: 2 posts, 3 articles and 2
+  interests all moved, loser retired, one audit row.
+
+**Re-parenting changes match confidence**, because `classify()` weights by depth — so a move
+warrants an apply, and the UI says so.
+
+**Still not built:** the "which tags never match anything, and which interests members pick
+that stay silent" report, which would turn synonym work into a worklist ranked by real
+demand rather than by sampling.
 
 ## Admin console (S11a)
 
