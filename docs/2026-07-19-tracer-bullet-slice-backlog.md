@@ -183,7 +183,28 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S13 — Admin configuration surfaces  [Should-operationally]
+## S13 — Admin configuration surfaces  [Should-operationally] — **tag vocabulary built 2026-08-05**
+
+> **Status.** Screen **G8 (tag vocabulary) is in**, in two phases: synonyms with a dry-run
+> preview (#96) and the structural operations — add, rename, re-parent, retire, merge (#98,
+> #99). `config.admin_audit_log` was created alongside it; EPIC-J had required it from the
+> start and nothing had made it, because nothing was editable until now.
+>
+> Built because three taxonomy problems surfaced in one week and every one needed a
+> developer and a migration: Pelvis has no region, the generic condition groups are
+> mis-parented under Cervical Spine, and most tags still match nothing. The synonym loop was
+> the worst of it — Andrew sends terms, someone writes SQL, deploys, reclassifies.
+>
+> **Two spec corrections found while building.** Merge must repoint **three** tables —
+> `post_tags`, `research.article_tags` and `community.member_interests` — where EPIC-J names
+> only the first, written before the other two existed; missing the last silently deletes
+> members' interests. And re-parenting must refuse cycles: every read of `tags` is a
+> recursive CTE, so a loop hangs the picker, search and the feed rather than corrupting a row.
+>
+> **Not built**: G7 (categories), G9 (handle blocklist), G10 (platform settings), and the
+> `administrator`/`moderator` claim split — with three founders on an email allowlist that is
+> ceremony without benefit.
+
 
 - **Delivers**: an Administrator manages categories, the tag vocabulary (facet/grouping/synonyms/merge/retire — where Andrew's muscle list loads), the handle blocklist, and tunable settings — instead of migration-seeding.
 - **Touches**: EPIC-J (`config` schema, `config.settings`/`handle_blocklist`/`admin_audit_log`; management endpoints; the **administrator** JWT claim, split from moderator). Screens G7–G10.
