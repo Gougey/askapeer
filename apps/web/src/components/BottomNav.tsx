@@ -16,7 +16,17 @@ const ICON = {
     'M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 21l1.9-4.5A8.4 8.4 0 0 1 3 11.5a8.5 8.5 0 0 1 9-8.4 8.5 8.5 0 0 1 9 8.4z',
   create: 'M12 5v14M5 12h14',
   activity: 'M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0',
-  profile: 'M12 8a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7',
+  /*
+   * The head sits at cy=7, not cy=4.
+   *
+   * It used to span y=0–8, touching the very top of the 24×24 viewBox — so with
+   * `strokeWidth={2}` the outer half of the stroke fell outside the box and was clipped,
+   * flattening the top of the head. Every other glyph here keeps 2–3px of clearance, which
+   * is why this was the only one that showed it. Moving the circle down to y=3–11 restores
+   * the clearance and also closes the oddly large gap that had the head floating above the
+   * shoulders.
+   */
+  profile: 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7',
 } as const;
 
 const TABS = [
