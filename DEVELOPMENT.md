@@ -347,8 +347,23 @@ Things worth knowing before changing any of it:
   the top hit was a case titled *"Diffuse medial shin pain in a military recruit"*, which
   contains neither phrase and was found entirely through its tag.
 
-  All 588 tags currently have `synonyms = '{}'`, so today those queries still return
-  nothing. **This needs Andrew, not code.** Maintenance is screen **G8**
+  **Seeded 2026-08-05** (migration `0025`), from Andrew Renshaw's news-feed criteria checked
+  against the live corpus one term at a time. The gap was overwhelmingly **naming, not
+  coverage** — the articles were already ingested and the classifier could not see them
+  because the tag names are not the words clinicians write:
+
+  | | Articles containing it | Tagged before | Tagged after |
+  |---|---|---|---|
+  | "anterior cruciate" | 211 | 17 | **216** |
+  | "rotator cuff" | — | 20 | **167** |
+  | "low back" | 77 | 1 | **50** |
+  | "quadriceps" | 41 | 2 | **18** |
+
+  Corpus coverage went **653 → 797 of 1,441 articles (45% → 55%)** and matches 1,587 → 2,055,
+  from about forty lines of SQL and no refetch. Precision held: every one of the 50 Lumbar
+  Spine and 216 ACL articles genuinely contains the term.
+
+  Most tags still have `synonyms = '{}'`. **This needs Andrew, not code.** Maintenance is screen **G8**
   (`/admin/config/tags`, S13) where synonyms are a field on the tag editor — the screen
   spec is explicit that this is *not* a separate screen. Until S13 lands, seed them by
   migration the same way Andrew's taxonomy itself was seeded; don't block on the admin UI.
