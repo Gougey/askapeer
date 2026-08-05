@@ -31,6 +31,7 @@ const TABS = [
   { href: '/admin/review', label: 'Review queue' },
   { href: '/admin/reports', label: 'Reports' },
   { href: '/admin/audit', label: 'Audit log' },
+  { href: '/admin/config/tags', label: 'Tags' },
 ];
 
 export function AdminNav() {

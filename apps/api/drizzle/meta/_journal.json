@@ -183,6 +183,13 @@
       "when": 1785917117882,
       "tag": "0025_seed_clinical_synonyms",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1785924649150,
+      "tag": "0026_dapper_manta",
+      "breakpoints": true
     }
   ]
 }

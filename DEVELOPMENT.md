@@ -1070,6 +1070,42 @@ planning around the other ninety-nine.
 (Written while the account was pending. It was approved on 2026-08-03, the own-domain
 restriction lifted, and `AUTH_DEV_MAGIC_LINK` has since been removed — see above.)
 
+## Tag vocabulary admin (S13 phase 1, screen G8)
+
+`/admin/config/tags` — browse and search the 588-node vocabulary, and edit synonyms per tag.
+`GET/PUT /v1/admin/taxonomy/tags…`, `POST …/preview`, `GET …/audit`.
+
+- **Synonyms only, deliberately.** They change what *matches* and move nothing: a bad
+  synonym over-tags some articles and is undone by deleting it. Structural edits —
+  re-parenting, merging, retiring — change subtree expansion for search, feed classification
+  and post filtering simultaneously, and get their own slice rather than riding along with
+  the easy half.
+- **The dry run is the feature.** `POST …/preview` runs the real classifier over the stored
+  corpus with proposed synonyms and **writes nothing**, returning the before/after counts
+  *and the titles that would newly match*. Without it, editing a synonym means saving,
+  reclassifying the whole corpus and only then finding out — a loop slow enough that nobody
+  experiments, which is the behaviour the screen exists to encourage. The count says how much
+  changed; the titles say whether it changed the *right way*, which is the only way to catch
+  a synonym that over-matches.
+- **Save and apply are separate.** Saving is instant and reversible; applying rewrites every
+  article's tags. Several edits, one apply — and a wrong save never silently rewrites the
+  corpus on the way past.
+- **Search matches synonyms as well as names**, because that is how an administrator checks
+  their own work: having put "quadriceps" on eight scattered tags, searching it must find all
+  eight.
+- **Saves are audited.** `config.admin_audit_log` is required by EPIC-J §3 and had never been
+  created, because nothing was editable — the vocabulary arrived by migration. Taxonomy edits
+  are exactly what needs a record: a synonym alters what every member can find, in search and
+  in their feed, without changing a single visible screen. Actor, before and after are all
+  recorded; append-only, like `identity_access_log` and `moderation_actions`.
+- Synonyms are normalised on save (trimmed, lowercased, deduped, one-character entries
+  dropped) so the same word typed twice cannot become two.
+
+**Not built, and known:** add/merge/retire (phase 2 — note EPIC-J's merge spec predates two
+tables that now reference tags, so a merge must repoint `post_tags`, `research.article_tags`
+**and** `community.member_interests`), and the "which tags never match anything" report that
+would turn synonym work into a worklist ranked by real demand.
+
 ## Admin console (S11a)
 
 An allowlisted **admin** role gets a console at `/admin` (web) backed by

@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { pgSchema, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgSchema, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 /**
  * The `config` schema (EPIC-J) — operational configuration. Introduced first
@@ -52,3 +52,33 @@ export const settings = config.table('settings', {
   description: text('description'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Every configuration change an administrator makes (EPIC-J §3).
+ *
+ * Required by EPIC-J from the start and never created until now, because nothing had been
+ * editable — the vocabulary arrived by migration. The taxonomy admin changes that, and
+ * taxonomy edits are exactly what needs a record: a synonym alters what every member can
+ * find, in search and in their feed, without changing a single visible screen. "Why did
+ * this article start appearing?" needs an answer that is not archaeology through git.
+ *
+ * Append-only by convention, like `identity_access_log` and `moderation_actions`: no update
+ * or delete path exists in the application. `detail` holds the before and after, because a
+ * record that says only "synonyms changed" answers nothing.
+ */
+export const adminAuditLog = config.table(
+  'admin_audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** The administrator's *member* id — this is identity-side accountability, not a handle. */
+    actorMemberId: uuid('actor_member_id').notNull(),
+    /** e.g. `tag.synonyms_updated`. Dotted, so a target's actions group by prefix. */
+    action: text('action').notNull(),
+    targetType: text('target_type').notNull(),
+    targetId: uuid('target_id'),
+    /** Before and after. Free-shaped on purpose: each action records what it needs. */
+    detail: jsonb('detail').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('admin_audit_created_idx').on(t.createdAt.desc())],
+);
