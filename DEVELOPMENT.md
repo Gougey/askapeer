@@ -226,6 +226,19 @@ examples for the synonym ask — and `reclassify` turns his list into results in
 `community.member_interests` (handle-scoped, weighted) plus `GET/PUT /v1/research-feed/interests`,
 `GET /v1/research-feed/interest-options`, and screen F5 at `/settings/interests`.
 
+- **Frequency chooses what is offered; the alphabet chooses the order.** Those are
+  different jobs and were conflated at first — ordering the screen by article count put the
+  useful tags first and *read as random while scrolling*, because a member scanning a list
+  has no idea it is sorted by something invisible. Now the top 120 by frequency are offered
+  (that is what keeps dead tags out) and displayed A–Z with letter headings and a sticky
+  jump rail. The count stays on every chip, so the information frequency-ordering carried
+  survives without dictating the order.
+- **Region grouping would suit clinicians better than A–Z, and is not yet safe.** The data
+  is there (`InterestOption.region`), but the taxonomy parks generic condition groups under
+  one specific region: *Tendon Disorders* (93 articles), *Ligament Injuries* (77) and
+  *Osteoarthritis* (52) all sit under **Cervical Spine (Neck)** while matching mostly knee,
+  Achilles and rotator-cuff content. Region headings would actively mislead. Raised with
+  Andrew; revisit when resolved.
 - **The picker is built from the corpus, not the taxonomy — this is the point of the
   slice.** Only **227 of the 588 tags have ever matched an article**; 361 are unreachable in
   practice. Offering the raw tree would ask a member to hunt through hundreds of terms that
