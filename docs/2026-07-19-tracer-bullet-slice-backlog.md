@@ -224,9 +224,11 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S15 — Follow a discussion  [parallel-able] [Should] — **designed 2026-08-06, not built**
+## S15 — Follow a discussion  [parallel-able] [Should] — **BUILT 2026-08-06**
 
-> **Status.** Designed in `docs/2026-08-06-post-follow-design.md`, which is the specification; this entry is the summary. Taken out of S7 and built ahead of it because it is the piece with the best value-to-cost ratio and the only one that needs nothing else first.
+> **Status.** Built and deployed 2026-08-06 (PR #104, migrations `0027` + `0028`). Designed in `docs/2026-08-06-post-follow-design.md`, which remains the specification; this entry is the summary. Taken out of S7 and built ahead of it because it is the piece with the best value-to-cost ratio and the only one that needs nothing else first.
+>
+> **Two things worth carrying** (both in `DEVELOPMENT.md`): the collapsing upsert's retry guard compares `lastCommentId`, without which a BullMQ retry double-counts; and `RETURNING` reports the *new* row, so the email cap reads the returned `count` rather than `read_at` — a count of 1 after an update is the only signal that the member had read the previous batch.
 >
 > **It fixes a defect, not just a gap.** `notifications.service.ts` resolves exactly one recipient per comment — the parent comment's author, else the post author. So answering a question tells you nothing when *someone else* answers it too: the member who contributed is the last to know the discussion moved on. Auto-following on authoring closes that.
 >
