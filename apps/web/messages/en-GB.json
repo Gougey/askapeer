@@ -219,8 +219,8 @@
     },
     "searchCta": "Search",
     "following": {
-      "on": "Following",
-      "off": "Follow",
+      "on": "Following discussion",
+      "off": "Follow discussion",
       "ariaOn": "Following this discussion — tap to stop being notified of new replies",
       "ariaOff": "Follow this discussion to be notified of new replies"
     }
