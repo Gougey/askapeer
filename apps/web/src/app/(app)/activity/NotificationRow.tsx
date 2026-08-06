@@ -41,7 +41,10 @@ function present(n: Notification): {
       filled: true,
     };
   }
-  if (n.type === 'reply') {
+  if (n.type === 'reply' || n.type === 'thread_activity') {
+    // Same glyph and the same destination for both: a reply to you and movement on a
+    // thread you follow are the same kind of event to a reader — the copy is what says
+    // which, and the urgency difference lives in the preferences, not the icon.
     return {
       href: `/discussions/${n.payload.postId}`,
       glyph: GLYPH.reply,
@@ -145,6 +148,11 @@ export async function NotificationRow({ notification }: { notification: Notifica
                   {t('replied')}
                 </>
               )}
+              {notification.type === 'thread_activity' &&
+                t('threadActivity', {
+                  count: notification.payload.count,
+                  title: notification.payload.postTitle,
+                })}
               {notification.type === 'kudos_received' &&
                 t(notification.payload.targetType === 'post' ? 'kudosOnPost' : 'kudosOnComment')}
               {notification.type === 'verification_status_change' &&
@@ -153,7 +161,10 @@ export async function NotificationRow({ notification }: { notification: Notifica
                 })}
             </span>
 
-            {notification.type !== 'verification_status_change' && (
+            {/* The thread this concerns, under the headline. `thread_activity` is excluded
+                because its own copy already names the thread — carrying it here as well
+                printed the title twice, once in full and once truncated. */}
+            {(notification.type === 'reply' || notification.type === 'kudos_received') && (
               <span className="truncate text-sm" style={{ color: 'var(--color-muted)' }}>
                 {notification.payload.postTitle}
               </span>

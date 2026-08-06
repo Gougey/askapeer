@@ -153,6 +153,31 @@ export const templates = {
     };
   },
 
+  /**
+   * New replies on a thread the member follows (S15). One mail per thread per read, not
+   * per reply — the cap is in `recordThreadActivity`, and this copy assumes it: the count
+   * is plural-safe because a burst arrives as one message.
+   */
+  threadActivity(
+    ctx: Ctx,
+    postTitle: string,
+    postId: string,
+    count: number,
+  ): Omit<OutboundEmail, 'to'> {
+    const replies = count === 1 ? 'a new reply' : `${count} new replies`;
+    return {
+      subject: `New replies on “${postTitle}”`,
+      // No preview of the replies themselves — same rule as `reply` above, and more
+      // pointed here: a collapsed count has nothing worth previewing anyway.
+      ...frame(ctx, {
+        heading: 'A discussion you follow has moved on',
+        lines: [`There is ${replies} on “${postTitle}”.`],
+        cta: { label: 'Open the thread', path: `/discussions/${postId}` },
+        settingsLink: true,
+      }),
+    };
+  },
+
   kudosReceived(
     ctx: Ctx,
     targetType: 'post' | 'comment',

@@ -6,6 +6,8 @@ import { SettingsModule } from '../settings/settings.module';
 import { BadgeService } from './badge.service';
 import { CommentsController } from './comments.controller';
 import { CommentsService } from './comments.service';
+import { FollowsController } from './follows.controller';
+import { FollowsService } from './follows.service';
 import { KudosController } from './kudos.controller';
 import { KudosService } from './kudos.service';
 import { MeController } from './me.controller';
@@ -18,8 +20,12 @@ import { VocabularyService } from './vocabulary.service';
 
 /**
  * EPIC-C forum + EPIC-D kudos (S4 + S5). Posting, listing and threads (S4); answering,
- * kudos, ranking and the top-contributor badge (S5). RedisModule is global, so the
- * badge leaderboard needs no explicit import here.
+ * kudos and ranking (S5). RedisModule is global, so the kudos leaderboard needs no
+ * explicit import here.
+ *
+ * Follows (S15) live here rather than in a module of their own: the write path is
+ * EPIC-B's by ownership, but every read joins `posts` and returns the forum's card DTO,
+ * and a separate module would import this one for both.
  */
 @Module({
   imports: [
@@ -33,6 +39,7 @@ import { VocabularyService } from './vocabulary.service';
     VocabularyController,
     MeController,
     SearchController,
+    FollowsController,
   ],
   providers: [
     PostsService,
@@ -41,6 +48,7 @@ import { VocabularyService } from './vocabulary.service';
     BadgeService,
     VocabularyService,
     SearchService,
+    FollowsService,
     JwtAuthGuard,
     AppAccessGuard,
   ],

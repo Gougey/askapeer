@@ -217,7 +217,13 @@
       "youth": "Youth (12–17)",
       "adult": "Adult (18+)"
     },
-    "searchCta": "Search"
+    "searchCta": "Search",
+    "following": {
+      "on": "Following",
+      "off": "Follow",
+      "ariaOn": "Following this discussion — tap to stop being notified of new replies",
+      "ariaOff": "Follow this discussion to be notified of new replies"
+    }
   },
   "report": {
     "report": "Report",
@@ -244,9 +250,10 @@
   "activity": {
     "heading": "Activity",
     "tabs": {
-      "notifications": "Notifications",
+      "notifications": "Inbox",
       "mine": "My Q&A",
-      "drafts": "Drafts"
+      "drafts": "Drafts",
+      "following": "Following"
     },
     "markAllRead": "Mark all as read",
     "rows": {
@@ -261,13 +268,16 @@
       "handleRenamed": "A moderator changed your handle to {handle}",
       "reason": "Reason given: {reason}",
       "contentRemoved": "A moderator removed your content",
-      "correctionRequested": "Your case discussion needs a correction"
+      "correctionRequested": "Your case discussion needs a correction",
+      "threadActivity": "{count, plural, one {# new reply} other {# new replies}} on “{title}”"
     },
     "empty": {
       "notifications": "You're all caught up. Replies to your posts and kudos you receive will appear here.",
       "mine": "You haven't posted yet. Your questions and answers will appear here.",
       "mineCta": "Ask a question",
-      "noMore": "Nothing older to show."
+      "noMore": "Nothing older to show.",
+      "following": "You're not following any discussions yet. Open one you want to keep up with and tap Follow.",
+      "followingCta": "Browse discussions"
     },
     "mine": {
       "questions": "Questions",
@@ -330,6 +340,7 @@
       },
       "types": {
         "reply": "Replies to your posts and answers",
+        "thread_activity": "New replies on discussions you follow",
         "kudos_received": "Kudos on your contributions",
         "verification_status_change": "Your account status"
       },

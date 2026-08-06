@@ -45,6 +45,10 @@ export class EmailSender {
     await this.deliver(to, templates.reply(this.ctx, actorHandleName, postTitle, postId));
   }
 
+  async threadActivity(to: string, postTitle: string, postId: string, count: number): Promise<void> {
+    await this.deliver(to, templates.threadActivity(this.ctx, postTitle, postId, count));
+  }
+
   async kudosReceived(
     to: string,
     targetType: 'post' | 'comment',

@@ -9,6 +9,7 @@ import { CaseBody } from './CaseBody';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
 import { DeleteCommentButton } from './DeleteCommentButton';
 import { KudosButton } from './KudosButton';
+import { FollowButton } from './FollowButton';
 import { ExclusivePanels } from './ExclusivePanels';
 import { ReportButton } from './ReportButton';
 
@@ -90,6 +91,12 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
             {format.relativeTime(new Date(post.createdAt))}
             {post.editedAt && ` · ${t('edited')}`}
           </span>
+        </div>
+        {/* The subscription control (S15). Sits on its own row rather than beside kudos:
+            the two mean different things — one is a judgement about the content, the
+            other is about your own inbox — and at 390px they would wrap into each other. */}
+        <div className="flex items-center">
+          <FollowButton postId={post.id} initialFollowing={viewerContext.isFollowing} />
         </div>
         {/* Reporting the question and — for the anonymity/off-platform case that may not
             attach to any one post — its author's handle (EPIC-F §2, screen X1). Not shown

@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { comments, posts } from '../db/schema';
+import { comments, follows, posts } from '../db/schema';
 import { NotificationEvents } from '../notifications/notifications.queue';
 import type { CreateCommentDto } from './forum.dto';
 
@@ -47,6 +47,20 @@ export class CommentsService {
         body: dto.body.trim(),
       })
       .returning({ id: comments.id });
+
+    /*
+     * Answering subscribes you to the thread (S15 §4) — which is what closes the hole this
+     * slice exists for: before it, answering a question told you nothing when *someone
+     * else* answered it too, because recipient resolution only ever picked one member.
+     *
+     * `onConflictDoNothing` covers the ordinary case of answering the same thread twice,
+     * and re-follows anyone who muted it and then chose to write in it again. That is the
+     * deliberate simplification in §4: an unfollow is not remembered as a tombstone.
+     */
+    await this.db
+      .insert(follows)
+      .values({ followerHandleId: handleId, targetType: 'post', targetId: postId })
+      .onConflictDoNothing();
 
     // Announce the event; who hears about it is EPIC-G's business, not this service's
     // (it resolves the post or parent-comment author itself). Enqueued after the insert

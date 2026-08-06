@@ -506,12 +506,60 @@ export const moderationActions = community.table(
 );
 
 /**
- * All five notification types (EPIC-G §5) ship in the enum from the start, though S10
- * only fires three: `reply`, `kudos_received`, and post-handle
- * `verification_status_change`. `mention` waits on EPIC-C's @mention parser and
- * `weekly_digest` on `community.follows` (EPIC-B §8) — neither is schema work, and
- * adding an enum value later costs a migration where carrying two unused labels costs
- * nothing. Same reasoning as `moderation_action_type` shipping all six values at S11c.
+ * What a member can subscribe to (EPIC-B §8, as amended by the S15 design doc).
+ *
+ * The spec's original `enum(handle, tag)` became `enum(handle, post)`: tags are already
+ * covered by `member_interests` — weighted, subtree-expanded, with a picker over the
+ * whole taxonomy — and a second binary copy of the same choice would drift from it. Both
+ * remaining values mean the same thing to a member: *tell me when there is more*.
+ *
+ * `handle` ships unused. S15 implements post-follows only; the personalised Discussions
+ * list that consumes handle-follows is S7. Carrying the label costs nothing and adding
+ * it later costs a migration — the same trade the notification enum below makes.
+ */
+export const followTargetType = community.enum('follow_target_type', ['handle', 'post']);
+
+/**
+ * A member's subscription to a discussion, or (later) to another handle.
+ *
+ * **This is the thread's one subscription record**, and both notification types consult
+ * it — `thread_activity` for ambient replies, and `reply` for a direct one. That is what
+ * makes unfollowing a real mute rather than a partial one: silencing the ambient half
+ * while direct replies kept arriving would make the control a lie.
+ *
+ * `target_id` is polymorphic and therefore carries **no foreign key**, the same pattern
+ * `kudos` and `reports` already use. A deleted post leaves a dangling row; every read
+ * joins through `posts`, so it is invisible rather than wrong.
+ */
+export const follows = community.table(
+  'follows',
+  {
+    followerHandleId: uuid('follower_handle_id')
+      .notNull()
+      .references(() => handles.id, { onDelete: 'cascade' }),
+    targetType: followTargetType('target_type').notNull(),
+    targetId: uuid('target_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.followerHandleId, t.targetType, t.targetId] }),
+    // The fan-out asks "who follows this post", which is the opposite direction from the
+    // primary key. Without this index every reply on every thread scans the table.
+    index('follows_target_idx').on(t.targetType, t.targetId),
+    // "What am I following", newest first — the Activity › Following pane and its cursor.
+    index('follows_follower_idx').on(t.followerHandleId, t.targetType, t.createdAt),
+  ],
+);
+
+/**
+ * The notification types (EPIC-G §5). Five shipped in the enum at S10 though only three
+ * fired: `reply`, `kudos_received`, and post-handle `verification_status_change`.
+ * `mention` waits on EPIC-C's @mention parser and `weekly_digest` on `community.follows`.
+ *
+ * `thread_activity` was added at S15 — the migration the comment below anticipated as the
+ * price of a sixth type. It is deliberately **not** folded into `reply`: a direct reply is
+ * addressed to you, activity on a thread you follow is ambient, and the per-type
+ * preference matrix (F4) exists precisely so a member can want one and not the other.
  */
 export const notificationType = community.enum('notification_type', [
   'reply',
@@ -519,6 +567,7 @@ export const notificationType = community.enum('notification_type', [
   'kudos_received',
   'verification_status_change',
   'weekly_digest',
+  'thread_activity',
 ]);
 
 /**
