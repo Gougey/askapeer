@@ -6,7 +6,6 @@ export type AuthorBlock = {
   handleId: string;
   handleName: string;
   kudosTotal: number;
-  isTopContributor: boolean;
 };
 
 export type TagRef = { id: string; name: string };

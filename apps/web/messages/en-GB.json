@@ -190,7 +190,6 @@
     "empty": "No questions yet. Be the first to ask one.",
     "emptyCta": "Ask a question",
     "kudos": "{count, plural, one {# kudos} other {# kudos}}",
-    "topContributor": "Top contributor",
     "answers": "{count, plural, =0 {No answers} one {# answer} other {# answers}}",
     "noAnswers": "No answers yet.",
     "edited": "edited",

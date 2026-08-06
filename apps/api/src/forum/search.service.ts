@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { BadgeService } from './badge.service';
 import type { PostCard } from './posts.service';
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -53,10 +52,7 @@ export type SearchQuery = {
  */
 @Injectable()
 export class SearchService {
-  constructor(
-    @Inject(DRIZZLE) private readonly db: Database,
-    private readonly badge: BadgeService,
-  ) {}
+  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
 
   async search(query: SearchQuery): Promise<SearchResults> {
     const limit = query.limit ?? DEFAULT_PAGE_SIZE;
@@ -281,7 +277,6 @@ export class SearchService {
     didYouMean: boolean,
   ): Promise<SearchResults> {
     const page = rows.slice(0, limit);
-    const badged = await this.badge.qualifying(page.map((r) => r.handle_id));
     const tagsByPost = await this.tagsFor(page.map((r) => r.id));
 
     return {
@@ -296,7 +291,6 @@ export class SearchService {
           handleId: row.handle_id,
           handleName: row.handle_name,
           kudosTotal: Number(row.kudos_total),
-          isTopContributor: badged.has(row.handle_id),
         },
         answerCount: Number(row.answer_count),
         kudosCount: Number(row.kudos_count),
