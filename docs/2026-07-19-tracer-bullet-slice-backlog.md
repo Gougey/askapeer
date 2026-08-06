@@ -100,16 +100,18 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ## S7 — Discovery: follows, personalised feed, trending, search  [parallel-able] [Should + Must(search)] — **search built 2026-08-02**
 
-> **Status.** The **Must-have half is in**: `GET /v1/search` (EPIC-C §4 — weighted tsvector with tag and category names folded in, `websearch_to_tsquery`, `pg_trgm` typo fallback, `ts_rank_cd` → recency → kudos tiebreak) and screen C3. **Not built**: `community.follows`, the personalised feed, the trending fallback — all Should-have and separable, as the note below anticipated.
+> **Status.** The **Must-have half is in**: `GET /v1/search` (EPIC-C §4 — weighted tsvector with tag and category names folded in, `websearch_to_tsquery`, `pg_trgm` typo fallback, `ts_rank_cd` → recency → kudos tiebreak) and screen C3. **Not built**: the personalised feed and the trending fallback — both Should-have and separable, as the note below anticipated.
+>
+> **Scope narrowed 2026-08-06.** `community.follows` now lands in **S15** (post-follows), which creates the table; S7 adds the `handle` target type and the personalised list that consumes it. **Tag-following is retired** — that half is `community.member_interests`, built in S8b. See `docs/2026-08-06-post-follow-design.md` §2–3 for the reasoning and the EPIC-B §8 amendment it proposes.
 >
 > Fixed on the way: a tag filter did an **exact match**, so filtering on any parent region returned 0 posts while its subtree held dozens. The composer's picker drops an ancestor when a descendant is chosen precisely because it assumes query-time broadening; that half was missing. Both the list and search now expand a tag to its subtree.
 >
-> **Outstanding and needing Andrew, not code:** `community.tags.synonyms` is empty, so "MTSS" and "shin splints" both return nothing against a correctly-tagged *Medial tibial stress syndrome* post. §4 calls the clinical synonym dictionary the single most important search-quality feature for this audience; it is a data top-up on the existing tags.
+> **Outstanding and needing Andrew, not code:** `community.tags.synonyms` was seeded for 11 tags on 2026-08-05 (#92), taking feed classification coverage 45% → 55%; **most of the 588 remain empty**. §4 calls the clinical synonym dictionary the single most important search-quality feature for this audience; it is a data top-up on the existing tags.
 
-- **Delivers**: following a tag/handle shapes the Discussions home; an empty feed falls back to trending; full-text search returns posts.
-- **Touches**: EPIC-B (`community.follows`, `POST`/`DELETE /v1/follows`); EPIC-C (§8 personalised feed `GET /v1/feed` + adaptive trending fallback; §4 search `GET /v1/search`, Postgres FTS + `pg_trgm` + synonym dictionary seeded from `tags.synonyms`). Screens C2, C3, C1 (personalised).
-- **Depends on**: S4 (posts to follow/search), S3 (handles).
-- **Notes**: **search is Must-have**, the personalised feed is Should-have — separable in priority though they share the discovery surface. Follow buttons appear on threads/profiles (`follows_*` DTO fields).
+- **Delivers**: following a handle shapes the Discussions home; an empty feed falls back to trending; full-text search returns posts.
+- **Touches**: EPIC-B (`follows.target_type = handle` — the table itself comes from S15; `POST`/`DELETE /v1/follows`); EPIC-C (§8 personalised feed `GET /v1/feed` + adaptive trending fallback; §4 search `GET /v1/search`, Postgres FTS + `pg_trgm` + synonym dictionary seeded from `tags.synonyms`). Screens C2, C3, C1 (personalised).
+- **Depends on**: S4 (posts to follow/search), S3 (handles), S15 (`community.follows`).
+- **Notes**: **search is Must-have**, the personalised feed is Should-have — separable in priority though they share the discovery surface. Follow buttons appear on threads/profiles (`follows_*` DTO fields). The tag half of the original personalisation idea is `member_interests` (S8b), not a follow.
 
 ---
 
@@ -219,6 +221,23 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 - **Touches**: architecture §5.2 (WebAuthn register/assert, `identity.webauthn_credentials`); screens A9, F8.
 - **Depends on**: S1 (auth).
 - **Notes**: **fast-follow, not initial release** (resolved) — magic-link + persistent session ship first. App-lock offered opt-in/off.
+
+---
+
+## S15 — Follow a discussion  [parallel-able] [Should] — **designed 2026-08-06, not built**
+
+> **Status.** Designed in `docs/2026-08-06-post-follow-design.md`, which is the specification; this entry is the summary. Taken out of S7 and built ahead of it because it is the piece with the best value-to-cost ratio and the only one that needs nothing else first.
+>
+> **It fixes a defect, not just a gap.** `notifications.service.ts` resolves exactly one recipient per comment — the parent comment's author, else the post author. So answering a question tells you nothing when *someone else* answers it too: the member who contributed is the last to know the discussion moved on. Auto-following on authoring closes that.
+>
+> **And it delivers the off-switch the product has never had.** The follow row becomes the thread's one subscription record, which `reply` consults too — so unfollowing genuinely silences a thread, and a member can mute one noisy question without turning off reply notifications everywhere. With rows backfilled for existing content it is additive: nobody's current notifications change.
+>
+> **Retires "tag follow".** EPIC-B §8's `target_type enum(handle, tag)` becomes `enum(handle, post)`; the tag half is already owned by `community.member_interests` (S8b), with a picker over the full taxonomy already in front of members. Three acts, two verbs: follow a discussion, follow a handle, choose your interests.
+
+- **Delivers**: a Follow control on a thread; authoring a post or comment auto-follows it; unfollow mutes the thread outright; later replies arrive as one collapsing notification per thread ("3 new replies on …"); a fourth Activity pane listing followed discussions the member did **not** write in (My Q&A keeps the ones they did).
+- **Touches**: EPIC-B (`community.follows` — this slice creates it; `POST`/`DELETE /v1/follows`, `GET /v1/follows/me`); EPIC-G (new `thread_activity` notification type — a migration, per `community.schema.ts:507`'s stated price; sixth row in the F4 matrix); EPIC-C (`viewerContext.isFollowing` on the thread DTO). Screens C4, E1, new E3 (Activity › Following).
+- **Depends on**: S4 (posts), S10 (the notification pipeline it reuses wholesale).
+- **Notes**: the collapsing upsert in §6 of the design doc is the load-bearing part — without it a busy thread puts one notification per reply into every follower's inbox and the feature gets switched off. Three decisions open (design doc §12), of which the EPIC-B amendment is the only one that changes an existing spec.
 
 ---
 

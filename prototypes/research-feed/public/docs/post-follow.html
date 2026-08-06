@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Follow a Discussion (S15) — Askapeer</title>
+<link rel="stylesheet" href="/docs/assets/docs.css" />
+</head>
+<body>
+<div class="topbar">
+  <a href="/docs/">&larr; Askapeer docs</a>
+  <span class="doc-label">Follow a Discussion (S15)</span>
+</div>
+<main>
+<h1 id="s15-follow-a-discussion">S15 — Follow a discussion</h1>
+<p><strong>Status</strong>: <strong>Proposed</strong>, not built.
+Section 12 lists what needs deciding before it is.
+<strong>Date</strong>: 6 August 2026 <strong>Author</strong>: Adrian
+Hall (Technical Lead), drafted with Claude Code <strong>Scope</strong>:
+Following a <em>post</em> — subscribing to a discussion so that later
+replies reach you, whether or not you wrote anything in it. Following a
+<strong>handle</strong> and the personalised Discussions list remain S7
+and are not designed here. Tag-following is <strong>withdrawn</strong>
+as a concept; Section 2 explains why.</p>
+<p><strong>Companion to</strong>:
+<code>docs/superpowers/specs/2026-07-14-epic-b-handles-profile-technical-spec.md</code>
+§8, which owns <code>community.follows</code>, and EPIC-G §5–6, which
+owns notification types and channels. This document proposes <strong>one
+amendment</strong> to EPIC-B §8 (Section 3) and <strong>one new
+notification type</strong> (Section 5).</p>
+<hr />
+<h2 id="contents">Contents</h2>
+<ol type="1">
+<li><a href="#why-this-before-the-rest-of-s7">Why this before the rest
+of S7</a></li>
+<li><a href="#three-verbs-not-one">Three verbs, not one</a></li>
+<li><a href="#data-model-the-delta">Data model — the delta</a></li>
+<li><a href="#who-is-subscribed-and-when">Who is subscribed, and
+when</a></li>
+<li><a href="#a-new-notification-type-not-a-reuse-of-reply">A new
+notification type, not a reuse of <code>reply</code></a></li>
+<li><a href="#cb2">Collapsing, or the inbox
+floods</a></li>
+<li><a href="#cb2-1">API surface</a></li>
+<li><a href="#cb2-2">Screens</a></li>
+<li><a href="#cb2-3">Anonymity and status
+constraints</a></li>
+<li><a href="#cb2-4">Failure modes</a></li>
+<li><a href="#cb2-5">Out of scope</a></li>
+<li><a href="#cb2-6">Decisions needed</a></li>
+</ol>
+<hr />
+<h2 id="why-this-before-the-rest-of-s7">1. Why this before the rest of
+S7</h2>
+<p>S7 bundles four things — follows, the personalised feed, trending,
+and search — on the reasoning that they share a discovery surface.
+Search shipped on its own on 2026-08-02, which already demonstrated the
+bundle was separable. This slice takes a second piece out, and it is the
+piece with the best ratio of member value to build cost.</p>
+<p><strong>There is a hole in the current behaviour, and it is bigger
+than “I can’t follow a thread”.</strong>
+<code>notifications.service.ts:74-122</code> resolves exactly one
+recipient per comment: the parent comment’s author for a nested reply,
+otherwise the post’s author. Everything else follows from that single
+line. So today:</p>
+<ul>
+<li>You read a question, don’t reply, and want to know how it turns out.
+Nothing tells you. You have to remember to come back.</li>
+<li>You <em>answer</em> a question, and someone else posts a different
+answer. <strong>You are told nothing.</strong> Only a direct reply to
+your own comment reaches you. The member who contributed to a discussion
+is the last to know it moved on.</li>
+</ul>
+<p>The second case is the one worth dwelling on. It is not a missing
+feature so much as a defect in what “reply” notifications currently
+mean, and it works against the whole proposition: a network where ideas
+win on merit needs the people with ideas to still be in the room when
+the discussion develops.</p>
+<p><strong>It is also the cheapest of the three follow types.</strong>
+It needs no personalised-feed query, no adaptive trending window, no
+subtree expansion of the taxonomy. It is a table, a fan-out in one
+recipient-resolution function, a toggle on the thread, and a list. It
+reuses the notification pipeline that has been live since S10 — the
+queue, the worker, the dedupe key, the per-type preference matrix, the
+email sender, all of it.</p>
+<p>Handle-follow, by contrast, delivers nothing at all until the entire
+personalised Discussions list exists behind it. That is the right order
+to build them in.</p>
+<hr />
+<h2 id="three-verbs-not-one">2. Three verbs, not one</h2>
+<p>EPIC-B §8 generalised an earlier handle-only design into one
+<code>follows</code> table covering handles <em>and</em> tags, on the
+reasoning that the PRD “already treats following a person and following
+a topic as one verb applied to two target types”. That was a sound
+reading of the PRD. It is the wrong model for the product that has since
+been built, for two reasons.</p>
+<p><strong>First, the tag half now has an owner.</strong>
+<code>community.member_interests</code> shipped with S8b: handle-scoped,
+tag-scoped, weighted, expanded to the subtree at query time, with a
+picker over the full 588-node taxonomy already built and in front of
+members. A tag-follow would be a second, binary, parallel answer to a
+question a member has already been asked — <em>which parts of the body
+do I care about</em> — stored in a second table, edited on a second
+screen, and guaranteed to drift from the first. It would also mean
+building the tag picker a third time (composer, interests, follows).</p>
+<p><strong>Second, following a tag and following a post are not the same
+act.</strong> A tag-follow shapes <em>what appears in a list</em>. A
+post-follow shapes <em>what pings you</em>. They have different
+consumers (a query vs. the notification pipeline), different failure
+modes, and — as Section 9 of this document argues and the filter
+discussion behind it showed — different UI consequences.</p>
+<p>So the product has three distinct acts, and they should have distinct
+names:</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Act</th>
+<th>Object</th>
+<th>Means</th>
+<th>Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Follow</strong></td>
+<td>a discussion</td>
+<td>tell me when there’s more</td>
+<td><code>community.follows</code>, <code>target_type = post</code></td>
+</tr>
+<tr>
+<td><strong>Follow</strong></td>
+<td>a handle</td>
+<td>tell me when they post</td>
+<td><code>community.follows</code>, <code>target_type = handle</code>
+(S7)</td>
+</tr>
+<tr>
+<td><strong>Interests</strong></td>
+<td>tags</td>
+<td>this is my clinical area</td>
+<td><code>community.member_interests</code> (built)</td>
+</tr>
+</tbody>
+</table>
+<p>“Follow” carries both a handle and a post because in both cases it
+means the same thing to a member — <em>tell me when there’s more</em> —
+and the object makes the difference obvious in context. Tags never meant
+that; they mean <em>this is my area</em>, which is why they read badly
+as a follow and read naturally as an interest. <strong>“Tag follow” is
+retired as a term.</strong></p>
+<hr />
+<h2 id="data-model-the-delta">3. Data model — the delta</h2>
+<p><code>community.follows</code> does not exist yet — it is specified
+in EPIC-B §8 and referenced in two schema comments, but no migration
+creates it. This slice creates it, with one amendment to the specified
+shape.</p>
+<pre><code>community.follows
+  follower_handle_id   uuid  FK -&gt; community.handles (on delete cascade)
+  target_type          enum(handle, post)     -- AMENDED: was enum(handle, tag)
+  target_id            uuid                   -- a handle_id or a posts.id
+  created_at           timestamptz
+  primary key (follower_handle_id, target_type, target_id)
+
+  index follows_target_idx on (target_type, target_id)   -- the fan-out read</code></pre>
+<p><strong>The amendment</strong>: <code>target_type</code> becomes
+<code>enum(handle, post)</code>; tag-following is dropped in favour of
+<code>member_interests</code> (Section 2). Everything else in EPIC-B §8
+survives intact — the <code>target_type</code>/<code>target_id</code>
+discriminator, EPIC-B’s ownership of the write path, other epics as
+read-only consumers. If anything the table fits its own description
+better now, since both remaining target types genuinely mean the same
+thing.</p>
+<p><strong>This slice only implements <code>post</code>.</strong> The
+<code>handle</code> value ships in the enum from the start for the same
+reason EPIC-G shipped all five notification types up front
+(<code>community.schema.ts:507</code>): carrying an unused enum label
+costs nothing, and adding one later costs a migration.</p>
+<p>Two consequences of the polymorphic <code>target_id</code> worth
+naming, both shared with <code>community.kudos</code> and
+<code>community.reports</code>, which already use this pattern:</p>
+<ul>
+<li><strong>No foreign key on <code>target_id</code>.</strong> A deleted
+post leaves dangling follow rows. Harmless — every read joins through
+<code>posts</code>, so a dangling row is invisible — but it means a
+periodic tidy-up, not a cascade, is what keeps the table honest. Not
+worth building at this size.</li>
+<li><strong><code>follows_target_idx</code> is the load-bearing
+index.</strong> The fan-out asks “who follows post X”, which is the
+opposite direction from the primary key. Without it, every reply on
+every thread scans.</li>
+</ul>
+<hr />
+<h2 id="who-is-subscribed-and-when">4. Who is subscribed, and when</h2>
+<p><strong>Authoring subscribes you.</strong> Posting a question or
+writing a comment inserts a follow on that post.</p>
+<p>It is worth being precise about what that adds, because the obvious
+reading — <em>so that you hear about your own posts</em> — is wrong. You
+already do. As the author of a post you are the direct recipient of
+every top-level answer, and as the author of a comment you are the
+direct recipient of every reply to it. Both already fire today. The
+genuine delta is two cases:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Today</th>
+<th>With auto-follow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Someone answers your question</td>
+<td><code>reply</code></td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td>Someone replies under <em>another</em> answer in your thread</td>
+<td>nothing</td>
+<td><code>thread_activity</code></td>
+</tr>
+<tr>
+<td>Someone replies directly to your answer</td>
+<td><code>reply</code></td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td>Someone posts a <em>different</em> answer to the same question</td>
+<td>nothing</td>
+<td><code>thread_activity</code></td>
+</tr>
+</tbody>
+</table>
+<p>Only the last of those is a strong motivation on its own, and it is
+the defect described in Section 1.</p>
+<p><strong>The real work auto-follow does is create the
+off-switch.</strong> There is currently no way to mute a thread. Your
+own question gets busy and you receive a notification for every answer,
+indefinitely, with no control short of turning off <code>reply</code>
+notifications for the whole product. Auto-following on authoring creates
+the row that an unfollow control deletes — an affordance members do not
+have today and will want on the first genuinely busy thread.</p>
+<p>That only works if unfollow actually silences the thread, which
+requires the change in Section 5: <strong>the follow row is the
+subscription record, and <code>reply</code> consults it too.</strong>
+Otherwise a member unfollows a thread, keeps receiving reply
+notifications from it, and the control is a lie.</p>
+<p><strong>Kudos does not subscribe you.</strong> Awarding kudos is a
+cheap, one-tap gesture of approval. Treating it as a subscription would
+sign people up to threads they merely nodded at, and the resulting noise
+would teach them not to award kudos — which would damage the one signal
+the platform actually runs on.</p>
+<p><strong>Explicit follow covers the rest</strong>: read it, said
+nothing, want to know how it turns out.</p>
+<p><strong>Unfollow always wins, until you write again.</strong> An
+explicit unfollow deletes the row; a subsequent comment by the same
+member re-follows them. A deliberate and slightly lossy simplification —
+someone who mutes a thread and then replies to it is re-subscribed — but
+the alternative is a tombstone that suppresses future auto-follows,
+which is more state for a case that is rare and self-correcting.</p>
+<p><strong>For existing members this preserves current behaviour rather
+than changing it.</strong> Backfilling a follow row for every post and
+comment already authored reproduces exactly what people receive today,
+then adds the two rows in the table above and — for the first time — a
+way to turn any of it off. That is a materially easier thing to ship
+than the behaviour change an earlier draft of this section
+described.</p>
+<hr />
+<h2 id="a-new-notification-type-not-a-reuse-of-reply">5. A new
+notification type, not a reuse of <code>reply</code></h2>
+<p>A direct reply is <em>addressed to you</em>. Activity on a thread you
+follow is <em>ambient</em>. They warrant different urgency, and the
+per-type preference matrix (screen F4) already exists to let a member
+say so. Folding thread activity into <code>reply</code> would make that
+impossible: a member wanting “answers to my question, yes; every message
+in a busy thread, no” would have no way to express it, and would turn
+both off.</p>
+<p>So: a sixth value on <code>community.notification_type</code> —
+<strong><code>thread_activity</code></strong> — and a sixth row in the
+F4 matrix. This costs a migration, which
+<code>community.schema.ts:507</code> explicitly anticipated as the price
+of adding a type after the fact. It is a small, known cost, paid
+once.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">export type</span> ThreadActivityPayload <span class="op">=</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  postId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  postTitle<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">/** How many unseen replies this row currently stands for (Section 6). */</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  count<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">/** The most recent replier — attributed in the thread already, so no disclosure. */</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  actorHandleName<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">/** Guards the collapse against a BullMQ retry double-counting (Section 6). */</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  lastCommentId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<p>The payload obeys the two rules in
+<code>notification-payloads.ts</code>: handle-attributed only, and no
+quoted text that could reach a lock screen when push is switched on.
+Note it carries <strong>no snippet</strong>, unlike
+<code>ReplyPayload</code>. A direct reply is addressed to you and
+previewing it helps you triage; a collapsed count of ambient activity
+has nothing useful to preview, and leaving the field out keeps
+de-identified case text out of one more place.</p>
+<p><code>LIVE_NOTIFICATION_TYPES</code> gains
+<code>thread_activity</code>, which is what surfaces the toggle on
+F4.</p>
+<p><strong>One subscription, two types.</strong> The follow row is the
+thread’s subscription record and <strong>both</strong> types honour it —
+including <code>reply</code>, which today consults nothing. Without
+that, unfollowing a thread would stop the ambient notifications and
+leave the direct ones arriving, which is not what the word means and not
+what the control appears to promise.</p>
+<p>So, for each new comment:</p>
+<ol type="1">
+<li>Resolve the direct recipient exactly as today — the parent comment’s
+author, else the post author — and send them <code>reply</code>,
+<strong>if they still follow the post</strong>.</li>
+<li>Fan out <code>thread_activity</code> to every other follower,
+excluding the actor and the direct recipient.</li>
+</ol>
+<p>Step 2’s exclusions matter: without them the post author,
+auto-followed by definition, gets two notifications for every answer to
+their own question.</p>
+<p>The two types then differ only in urgency and in which preference row
+governs them, over a single subscription a member can revoke in one
+place. Note what this makes possible that nothing in the product
+currently offers — muting one noisy thread without muting the category
+of notification it belongs to.</p>
+<p><strong>A mute is a thread-level silence, and <code>mention</code> is
+what pierces it.</strong> Someone addressing you directly in a thread
+you have muted will not reach you through <code>reply</code>, which is
+the correct reading of an explicit unfollow but is worth stating rather
+than discovering. <code>mention</code> is already in the notification
+enum, waiting on EPIC-C’s parser; this gives it a second job and makes
+it load-bearing rather than a nicety. Whoever builds the parser should
+know that.</p>
+<hr />
+<h2 id="collapsing-or-the-inbox-floods">6. Collapsing, or the inbox
+floods</h2>
+<p>This is the part that decides whether the feature survives contact
+with a real thread. <code>record()</code> dedupes on
+<code>(handle_id, dedupe_key)</code> with
+<code>onConflictDoNothing</code>, and today’s key is
+<code>reply:&lt;commentId&gt;</code> — one row per comment. Applied
+unchanged to a fan-out, a lively thread puts one notification per reply
+into every follower’s inbox. Follow three of those and the inbox is
+nothing else. Members would turn it off within a week and never turn it
+back on.</p>
+<p><strong>One row per followed thread, collapsed while unread.</strong>
+The dedupe key becomes <code>thread:&lt;postId&gt;</code>, and the
+insert becomes a conditional upsert:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">insert</span> <span class="kw">into</span> community.notifications (handle_id, <span class="kw">type</span>, payload, dedupe_key)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">values</span> (<span class="ch">:handleId</span>, <span class="st">&#39;thread_activity&#39;</span>, <span class="ch">:payload</span>, <span class="st">&#39;thread:&#39;</span> <span class="op">||</span> <span class="ch">:postId</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">on</span> conflict (handle_id, dedupe_key) <span class="kw">where</span> dedupe_key <span class="kw">is</span> <span class="kw">not</span> <span class="kw">null</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>do <span class="kw">update</span> <span class="kw">set</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  payload <span class="op">=</span> jsonb_build_object(</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;postId&#39;</span>,          excluded.payload<span class="op">-&gt;</span><span class="st">&#39;postId&#39;</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;postTitle&#39;</span>,       excluded.payload<span class="op">-&gt;</span><span class="st">&#39;postTitle&#39;</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;actorHandleName&#39;</span>, excluded.payload<span class="op">-&gt;</span><span class="st">&#39;actorHandleName&#39;</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;lastCommentId&#39;</span>,   excluded.payload<span class="op">-&gt;</span><span class="st">&#39;lastCommentId&#39;</span>,</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- Reset to 1 once the member has seen the previous batch.</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;count&#39;</span>, <span class="cf">case</span> <span class="cf">when</span> notifications.read_at <span class="kw">is</span> <span class="kw">null</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>                  <span class="cf">then</span> <span class="fu">coalesce</span>((notifications.payload<span class="op">-&gt;&gt;</span><span class="st">&#39;count&#39;</span>):<span class="ch">:int</span>, <span class="dv">1</span>) <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>                  <span class="cf">else</span> <span class="dv">1</span> <span class="cf">end</span>),</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  read_at    <span class="op">=</span> <span class="kw">null</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  created_at <span class="op">=</span> now()</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="kw">where</span> notifications.payload<span class="op">-&gt;&gt;</span><span class="st">&#39;lastCommentId&#39;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>      <span class="kw">is</span> <span class="kw">distinct</span> <span class="kw">from</span> excluded.payload<span class="op">-&gt;&gt;</span><span class="st">&#39;lastCommentId&#39;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="kw">returning</span> (xmax <span class="op">=</span> <span class="dv">0</span>) <span class="kw">as</span> inserted, read_at;</span></code></pre></div>
+<p>Which gives, in order of importance:</p>
+<ul>
+<li><strong>“3 new replies on <em>ACL graft choice</em>”</strong> rather
+than three rows.</li>
+<li><strong>It resurfaces.</strong> <code>read_at = null</code> and
+<code>created_at = now()</code> push the thread back to the top of the
+inbox and back into the unread count when it moves again, so a thread
+you have already read still reaches you on the next reply.</li>
+<li><strong>The count resets after reading</strong>, because the
+<code>case</code> distinguishes a still-unread row from one already
+seen. No extra state, no second table, one statement.</li>
+<li><strong>A BullMQ retry is a no-op.</strong> The trailing
+<code>where</code> clause compares <code>lastCommentId</code>, so a
+replayed job updates nothing and cannot double-count. This preserves the
+idempotency property the existing dedupe key was built for — the reason
+<code>record()</code> uses <code>onConflictDoNothing</code> in the first
+place.</li>
+</ul>
+<p><strong>Email collapses harder.</strong> An email per reply on a
+followed thread is worse than an in-app notification per reply, because
+there is no inbox of ours to absorb it. The <code>returning</code>
+clause above is what makes the rule cheap: <strong>enqueue the email
+only when the row was inserted, or when the update flipped
+<code>read_at</code> from set to null.</strong> In other words, at most
+one email per thread per read — activity while you already have an
+unread notice for that thread adds to the count silently. A member who
+reads their notifications gets one email per burst; a member who does
+not read them gets one email, ever, until they do.</p>
+<hr />
+<h2 id="api-surface">7. API surface</h2>
+<p>Per EPIC-B §8, with <code>target_type</code> narrowed to
+<code>post</code> for this slice:</p>
+<pre><code>POST   /v1/follows                       { target_type: &#39;post&#39;, target_id }
+DELETE /v1/follows/post/:postId
+GET    /v1/follows/me?target_type=post   -&gt; the followed-discussions list</code></pre>
+<ul>
+<li><code>POST</code> is idempotent
+(<code>on conflict do nothing</code>) — a double tap is not an
+error.</li>
+<li><code>POST</code> on an unpublished, removed or non-existent post is
+a 404, resolved through the same visibility rules the thread read uses.
+Following something you cannot see must not be a way to learn that it
+exists.</li>
+<li>Self-follow has no meaning for a post (you are auto-followed as the
+author anyway), so the EPIC-B rejection rule applies to handles
+only.</li>
+<li><code>GET /v1/follows/me?target_type=post</code> returns
+<strong><code>PostCard[]</code></strong>, not bare ids — the pane needs
+titles, categories, tags and answer counts, and search already
+established that this DTO is what every list surface renders
+(<code>search.service.ts</code>). Keyset-paginated on the follow’s
+<code>created_at</code>, consistent with every other list. <strong>It
+excludes threads the caller authored a post or comment in</strong>
+(§8.1) — those belong to My Q&amp;A, and the exclusion belongs here
+rather than in the client so both stay disjoint by construction.</li>
+<li><strong>The thread DTO’s <code>viewerContext</code> gains
+<code>isFollowing</code></strong>, alongside <code>isAuthor</code> and
+<code>hasKudosedPost</code>. EPIC-C §13.1’s stated reason for bundling
+viewer context — every control state in one round-trip rather than N, a
+deliberate choice for mobile latency — applies exactly.</li>
+</ul>
+<p>The write endpoints go behind the existing rate-limit guard.
+Follow/unfollow is cheap to spam and there is no reason for a member to
+do it fifty times a minute.</p>
+<hr />
+<h2 id="screens">8. Screens</h2>
+<p><strong>C4, the thread.</strong> A follow control in the thread
+header, below the title with the other post-level affordances. Secondary
+pill button (<code>--radius-pill</code>), line icon plus label,
+<code>--color-accent</code> when active and muted when not. It must
+<strong>not</strong> use <code>--color-kudos</code> in any state: gold
+is the product’s one status colour and this is not kudos.</p>
+<p>The icon is a <strong>bell</strong>, matching the Activity tab’s,
+because that is what this control does — route later activity to that
+tab. Reusing the glyph makes the connection without a word of
+explanation. Label: <code>Following</code> when on, <code>Follow</code>
+when off, with the accessible name carrying the fuller meaning
+(<code>Get notified of new replies</code>) since the visible label has
+to survive a 390px screen.</p>
+<p>Authored threads open already-following, which is correct and also
+gives the affordance an obvious first meaning: it is how you turn the
+notifications <em>off</em> for your own noisy question.</p>
+<p><strong>Activity gains a fourth pane.</strong>
+<code>activity/layout.tsx</code> already renders a
+<code>SegmentedControl</code> over addressable routes
+(<code>/activity</code>, <code>/activity/mine</code>,
+<code>/activity/drafts</code>) — its own comment explains the reasoning:
+“separate routes rather than one screen with state, so each is
+addressable, a refresh keeps you where you were, and a notification
+deep-link can return you to the inbox”. <code>/activity/following</code>
+joins them, listing followed discussions as <code>PostCard</code>s,
+newest-followed first. Four labels fit at 390px (checked on device,
+Adrian, 2026-08-06).</p>
+<p>The pane is not decoration: without it a member can only reach a
+followed thread through a notification, and once that notification is
+read there is no way to find the thread again or to unfollow it. A
+subscription you cannot enumerate is a subscription you cannot
+revoke.</p>
+<h3 id="following-and-my-qa-must-not-both-list-the-same-thread">8.1
+Following and My Q&amp;A must not both list the same thread</h3>
+<p>Auto-following on authoring means every thread in <strong>My
+Q&amp;A</strong> is also a followed thread. Listed in both panes,
+Following fills up with the member’s own content — which is the content
+they least need a watch-list for, since it already has a pane of its own
+— and the distinction between the two collapses.</p>
+<p>The line to draw is <strong>authorship, not
+subscription</strong>:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Pane</th>
+<th>Contains</th>
+<th>Answers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Mine</strong></td>
+<td>threads I wrote a question or an answer in</td>
+<td><em>how did my contributions land?</em></td>
+</tr>
+<tr>
+<td><strong>Following</strong></td>
+<td>threads I follow but did <strong>not</strong> write in</td>
+<td><em>what am I watching?</em></td>
+</tr>
+</tbody>
+</table>
+<p>So a member’s own posts stay in My Q&amp;A and do not appear under
+Following. The panes stay disjoint, each keeps a single clear question,
+and Following stays small enough to be worth opening.</p>
+<p>Two consequences to accept deliberately:</p>
+<ul>
+<li><strong>A thread migrates when you join it.</strong> Follow a
+discussion, then answer it, and it moves from Following to Mine.
+Defensible — it <em>is</em> yours now, and the move happens at a moment
+the member caused — but it will look like a disappearance to anyone who
+does not connect the two, so Mine is where the notification deep-link
+should land after you reply.</li>
+<li><strong>You unfollow your own thread from the thread, not from a
+list.</strong> Since your own posts never appear under Following, the
+mute control for a noisy question of your own lives on C4. My Q&amp;A
+rows should therefore carry a small muted indicator when the member has
+unfollowed, or the state is invisible from the only pane that lists the
+thread.</li>
+</ul>
+<hr />
+<h2 id="anonymity-and-status-constraints">9. Anonymity and status
+constraints</h2>
+<p><strong>No watcher counts.</strong> No “12 people are following this”
+on a thread, no follower counts anywhere, no notification when someone
+follows you (which will matter more when S7 adds handle-follows). The
+style guide is unambiguous that kudos-derived standing is the only
+ranked signal a member may see about another (§1.3), and an attention
+count is a ranking signal wearing different clothes. It also buys
+nothing: the member gets no decision from it.</p>
+<p><strong>Nothing new is disclosed.</strong> A follow is a
+<code>handle_id</code>-to-<code>post_id</code> row; the payload names
+the replying handle, who is already publicly attributed in the thread.
+No path to <code>identity</code> is involved, and the existing
+disclosure guard (<code>npm run lint:disclosure -w apps/api</code>)
+covers the new payload file for free.</p>
+<p><strong>Follows are private to the follower.</strong> No member can
+see who follows a post, and no admin surface should list it either
+without a stated reason — it is a low-value read that would create a
+“who is interested in this case” query nobody has asked for.</p>
+<hr />
+<h2 id="failure-modes">10. Failure modes</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Post unpublished, removed, or sent back for correction (S11f)
+between the reply and the job</td>
+<td>The handler returns early, exactly as <code>handleReplyEvent</code>
+does today. A follower is never notified about a thread they can no
+longer open.</td>
+</tr>
+<tr>
+<td>Comment deleted between event and job</td>
+<td>Same early return on <code>status !== 'published'</code>.</td>
+</tr>
+<tr>
+<td>Comment removed by a moderator <em>after</em> the notification</td>
+<td>The row survives with a stale count. Consistent with today’s
+<code>reply</code> behaviour, which has the same gap; the notification
+deep-links to the thread, which shows the correct current state.</td>
+</tr>
+<tr>
+<td>Redis unreachable when the reply is posted</td>
+<td>The reply still succeeds and no notification is sent —
+<code>enqueue()</code> swallows deliberately, and its comment explains
+why: “a missed notification is a smaller loss than a duplicated
+contribution.”</td>
+</tr>
+<tr>
+<td>A thread with many followers</td>
+<td>The fan-out is one insert per follower. At MVP scale this is fine
+inline in the worker; if a thread ever has hundreds of followers it
+becomes a batched insert, not an architecture change.</td>
+</tr>
+<tr>
+<td>Follower suspended or expelled between the follow and the reply</td>
+<td>Notification is written but the member cannot sign in to see it.
+Consistent with the rest of EPIC-G; not worth a special case.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="out-of-scope">11. Out of scope</h2>
+<ul>
+<li><strong>Handle-follows</strong> and the personalised Discussions
+list — S7, and the reason the enum ships with a <code>handle</code>
+value it does not yet use.</li>
+<li><strong>The trending fallback</strong> — S7.</li>
+<li><strong>The weekly digest</strong> — EPIC-G, deferred at S10 pending
+<code>community.follows</code>. This slice creates the table the digest
+was waiting for, but the digest itself needs the tag half of a member’s
+interests (now <code>member_interests</code>) and is a separate piece of
+work.</li>
+<li><strong>A separate mute-versus-unfollow distinction</strong> — one
+control, one row. Unfollowing silences the thread completely (Section
+5), which is what members mean by muting.</li>
+<li><strong><code>mention</code></strong> — the parser is EPIC-C’s and
+unchanged by this slice. But Section 5 gives it a second job: it is the
+channel that reaches someone in a thread they have muted, which makes it
+more load-bearing than it looked when it was deferred at S10.</li>
+<li><strong>Following a category.</strong> Plausible, and cheap once the
+table exists, but it overlaps with interests and should wait until the
+interests-versus-discovery boundary has been through the same discussion
+tags just went through.</li>
+</ul>
+<hr />
+<h2 id="decisions-needed">12. Decisions needed</h2>
+<ol type="1">
+<li><p><strong>Confirm the EPIC-B §8 amendment</strong> —
+<code>target_type</code> becomes <code>enum(handle, post)</code>,
+tag-following is retired, tags live in <code>member_interests</code>.
+This is the one item here that changes a spec rather than adding to it,
+and everything else assumes it.</p></li>
+<li><p><strong>Confirm the backfill in Section 4.</strong>
+Auto-following on authoring, with a follow row backfilled for every post
+and comment already written, keeps existing members’ notifications
+exactly as they are today and adds a mute they have never had. The two
+new notifications it introduces — sibling answers, and replies under
+someone else’s answer in your own thread — are additive. Worth a
+conscious yes, but a much smaller ask than an earlier draft of this
+document implied.</p></li>
+<li><p><strong>Default channels for
+<code>thread_activity</code>.</strong> The recommendation is
+<strong>in-app on, email on</strong> — but only under Section 6’s
+collapsing rule, which caps it at one email per thread per read. The
+conservative alternative is email off by default, at the cost of the
+feature being invisible to anyone who does not go looking in
+settings.</p></li>
+<li><p><strong>Slice number.</strong> Filed here as S15 because it is a
+new deliverable rather than a split of S7, and because it is being built
+ahead of the rest of S7. If it reads better as S7a, that is a naming
+preference and nothing in this document depends on it.</p></li>
+</ol>
+
+</main>
+</body>
+</html>
