@@ -16,14 +16,6 @@ export async function AuthorLine({ author }: { author: AuthorBlock }) {
         {author.handleName}
       </span>
       <span>{t('kudos', { count: author.kudosTotal })}</span>
-      {author.isTopContributor && (
-        <span
-          className="rounded-full px-1.5 py-0.5"
-          style={{ background: 'var(--color-accent)', color: '#fff' }}
-        >
-          {t('topContributor')}
-        </span>
-      )}
     </span>
   );
 }

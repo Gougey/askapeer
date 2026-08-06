@@ -46,6 +46,11 @@ export class BadgeService {
   }
 
   /**
+   * Currently unread: the top-contributor badge was withdrawn from the API and the UI
+   * pending a product decision on whether standing is shown at all, and in what form.
+   * Kept — with the leaderboard still maintained above — so reinstating it is a matter of
+   * calling this again rather than rebuilding the machinery.
+   *
    * Which of these handles currently qualify for the top-contributor badge. Batched
    * because a thread or list renders several authors at once, and the threshold (rank +
    * floor) only needs one `ZCARD` for the whole set.

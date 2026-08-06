@@ -432,7 +432,7 @@ volume, and each property is there for a reason worth keeping if you edit it:
 | Both "ACL" and "anterior cruciate ligament"; "patellofemoral" and "runner's knee" | EPIC-C §4's planned synonym dictionary has nothing to prove against a corpus using one form |
 | Tags on 7 posts down to 1, and many on none | A filter that silently ignores its argument still looks right against a flat distribution |
 | Uneven categories (General 30 … Equipment 7) | Same reason |
-| One handle well past 50 kudos | `DEFAULT_MIN_KUDOS` is 50 — no top-contributor badge can appear until someone clears it |
+| One handle well past 50 kudos | `DEFAULT_MIN_KUDOS` is 50 — the leaderboard's badge threshold, kept meaningful in the corpus even though the badge itself is currently withdrawn from the UI |
 | Unanswered threads, zero-kudos posts | An empty state is a state |
 
 **Every active handle takes part, real ones first** — the founders included. They had
@@ -452,8 +452,8 @@ missing from the corpus, check the name really exists (`Knee Joint`, not `Knee`;
 `Achilles tendinopathy`, not `Achilles tendon`).
 
 It syncs `handles.kudos_total` **and** the Redis `kudos:leaderboard` ZSET. Skipping the
-second is the dual-store trap: every profile would show the right total while no badge
-ever appeared.
+second is the dual-store trap: every profile would show the right total while everything
+derived from the ranking — the top-contributor badge, when it returns — stayed empty.
 
 ## Design tokens
 

@@ -14,7 +14,6 @@ import {
   tags,
 } from '../db/schema';
 import { CHECKLIST_ITEMS } from '../cases/case-policy';
-import { BadgeService } from './badge.service';
 import type { CreatePostDto, ListPostsDto } from './forum.dto';
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -30,9 +29,6 @@ export type AuthorBlock = {
   handleId: string;
   handleName: string;
   kudosTotal: number;
-  /** Top ~1% of active handles by kudos, above a floor (EPIC-D §6) — merit the community
-   *  awarded, never rank or seniority. Computed from the Redis leaderboard at read time. */
-  isTopContributor: boolean;
 };
 
 export type TagRef = { id: string; name: string };
@@ -127,10 +123,7 @@ type RankableComment = ThreadComment & { createdAtMs: number };
 
 @Injectable()
 export class PostsService {
-  constructor(
-    @Inject(DRIZZLE) private readonly db: Database,
-    private readonly badge: BadgeService,
-  ) {}
+  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
 
   /**
    * Compose a question (screens D1/D2). Case discussions are *not* creatable here — they
@@ -270,10 +263,7 @@ export class PostsService {
       .limit(limit + 1);
 
     const page = rows.slice(0, limit);
-    const [tagsByPost, badged] = await Promise.all([
-      this.tagsFor(page.map((r) => r.id)),
-      this.badge.qualifying(page.map((r) => r.handleId)),
-    ]);
+    const tagsByPost = await this.tagsFor(page.map((r) => r.id));
     const last = page.at(-1);
 
     return {
@@ -289,7 +279,7 @@ export class PostsService {
         snippet: snippet(row.communityQuestion ?? row.body),
         category: { id: row.categoryId, name: row.categoryName, colour: row.categoryColour },
         tags: tagsByPost.get(row.id) ?? [],
-        author: authorBlock(row, badged),
+        author: authorBlock(row),
         answerCount: Number(row.answerCount),
         kudosCount: Number(row.kudosCount),
         createdAt: row.createdAt.toISOString(),
@@ -400,12 +390,6 @@ export class PostsService {
       row.type === 'case_discussion' ? this.caseDetailFor(row.id) : Promise.resolve(undefined),
     ]);
 
-    // One badge lookup covers the post author and every commenter shown.
-    const badged = await this.badge.qualifying([
-      row.handleId,
-      ...ranked.map((c) => c.author.handleId),
-    ]);
-
     return {
       post: {
         id: row.id,
@@ -415,17 +399,14 @@ export class PostsService {
         status: row.status,
         category: { id: row.categoryId, name: row.categoryName, colour: row.categoryColour },
         tags: tagsByPost.get(row.id) ?? [],
-        author: authorBlock(row, badged),
+        author: authorBlock(row),
         answerCount: Number(row.answerCount),
         kudosCount: Number(row.kudosCount),
         createdAt: row.createdAt.toISOString(),
         editedAt: row.editedAt?.toISOString() ?? null,
       },
       ...(caseDetail ? { caseDetail } : {}),
-      comments: ranked.map((c) => ({
-        ...c,
-        author: { ...c.author, isTopContributor: badged.has(c.author.handleId) },
-      })),
+      comments: ranked,
       viewerContext: { isAuthor, hasKudosedPost },
     };
   }
@@ -531,7 +512,7 @@ export class PostsService {
 
     const enriched: RankableComment[] = rows.map((row) => ({
       id: row.id,
-      author: authorBlock(row, EMPTY_BADGE_SET), // badge filled in by the caller
+      author: authorBlock(row),
       body: row.body,
       parentCommentId: row.parentCommentId,
       kudosCount: counts.get(row.id)?.count ?? 0,
@@ -599,8 +580,6 @@ export class PostsService {
   }
 }
 
-const EMPTY_BADGE_SET: ReadonlySet<string> = new Set();
-
 /**
  * Top-level answers only (published). Nested replies are conversation, not answers, so
  * they don't inflate the count — the same distinction the kudos ranking draws (§4).
@@ -650,15 +629,15 @@ function rankAndFlatten(all: RankableComment[]): ThreadComment[] {
   return out;
 }
 
-function authorBlock(
-  row: { handleId: string; handleName: string; kudosTotal: number },
-  badged: ReadonlySet<string>,
-): AuthorBlock {
+function authorBlock(row: {
+  handleId: string;
+  handleName: string;
+  kudosTotal: number;
+}): AuthorBlock {
   return {
     handleId: row.handleId,
     handleName: row.handleName,
     kudosTotal: row.kudosTotal,
-    isTopContributor: badged.has(row.handleId),
   };
 }
 

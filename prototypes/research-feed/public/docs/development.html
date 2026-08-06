@@ -665,8 +665,9 @@ against a flat distribution</td>
 </tr>
 <tr>
 <td>One handle well past 50 kudos</td>
-<td><code>DEFAULT_MIN_KUDOS</code> is 50 — no top-contributor badge can
-appear until someone clears it</td>
+<td><code>DEFAULT_MIN_KUDOS</code> is 50 — the leaderboard’s badge
+threshold, kept meaningful in the corpus even though the badge itself is
+currently withdrawn from the UI</td>
 </tr>
 <tr>
 <td>Unanswered threads, zero-kudos posts</td>
@@ -695,8 +696,9 @@ the corpus, check the name really exists (<code>Knee Joint</code>, not
 <code>Achilles tendon</code>).</p>
 <p>It syncs <code>handles.kudos_total</code> <strong>and</strong> the
 Redis <code>kudos:leaderboard</code> ZSET. Skipping the second is the
-dual-store trap: every profile would show the right total while no badge
-ever appeared.</p>
+dual-store trap: every profile would show the right total while
+everything derived from the ranking — the top-contributor badge, when it
+returns — stayed empty.</p>
 <h2 id="design-tokens">Design tokens</h2>
 <p><code>packages/design-tokens</code> is the source of truth for
 colour, type <strong>and geometry</strong> values (spacing, layout,
