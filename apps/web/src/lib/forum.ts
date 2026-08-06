@@ -49,7 +49,7 @@ export type Thread = {
    *  index and is never shown. */
   caseDetail?: CaseDetail;
   comments: ThreadComment[];
-  viewerContext: { isAuthor: boolean; hasKudosedPost: boolean };
+  viewerContext: { isAuthor: boolean; hasKudosedPost: boolean; isFollowing: boolean };
 };
 
 export type Category = {
@@ -92,6 +92,20 @@ export async function fetchPosts(
 
 export async function fetchThread(postId: string, token: string): Promise<Thread | null> {
   return apiGet<Thread>(`/posts/${postId}`, token);
+}
+
+/**
+ * Discussions the member follows but did not write in (Activity › Following, S15 §8.1).
+ *
+ * The "did not write in" half is the API's, not this client's — the two Activity panes stay
+ * disjoint by construction rather than by two screens agreeing to filter the same way.
+ */
+export async function fetchFollowedPosts(
+  token: string,
+  cursor?: string,
+): Promise<{ posts: PostCard[]; nextCursor: string | null }> {
+  const path = cursor ? `/me/following?cursor=${encodeURIComponent(cursor)}` : '/me/following';
+  return (await apiGet(path, token)) ?? { posts: [], nextCursor: null };
 }
 
 export type SearchResults = {

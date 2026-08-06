@@ -5,6 +5,7 @@ import { encodeCursor, decodeCursor } from '../common/cursor';
 import { DRIZZLE, type Database } from '../db/db.module';
 import {
   comments,
+  follows,
   handles,
   memberEmails,
   notificationPreferences,
@@ -19,6 +20,7 @@ import {
   type LiveNotificationType,
   type NotificationPayload,
   type ReplyPayload,
+  type ThreadActivityPayload,
   toSnippet,
 } from './notification-payloads';
 import type { ListNotificationsDto, UpdateNotificationPreferenceDto } from './notifications.dto';
@@ -70,8 +72,20 @@ export class NotificationsService {
   ) {}
 
   /**
-   * A comment was posted (EPIC-C). The recipient is the parent comment's author for a
-   * nested reply, otherwise the post's author.
+   * A comment was posted (EPIC-C, extended by S15).
+   *
+   * Two notifications come out of one comment, and the difference between them is who the
+   * comment was *for*:
+   *
+   * 1. **`reply`** to the one member it answers — the parent comment's author for a nested
+   *    reply, otherwise the post's author. Unchanged, except that it now requires them to
+   *    still follow the thread (§5). Without that check an unfollow would silence the
+   *    ambient half and leave the direct half arriving, and the control would be a lie.
+   * 2. **`thread_activity`** to everyone else following the thread, collapsed one row per
+   *    thread (§6).
+   *
+   * The exclusions in step 2 matter: the post's author is auto-followed by definition, so
+   * without them they would get two notifications for every answer to their own question.
    */
   async handleReplyEvent(commentId: string): Promise<void> {
     const [comment] = await this.db
@@ -103,23 +117,139 @@ export class NotificationsService {
       recipientHandleId = parent.authorHandleId;
     }
 
-    // Answering your own question, or replying to your own answer, is not news.
-    if (recipientHandleId === comment.actorHandleId) return;
-
     const [actor] = await this.db
       .select({ handleName: handles.handleName })
       .from(handles)
       .where(eq(handles.id, comment.actorHandleId));
     if (!actor) return;
 
-    const payload: ReplyPayload = {
-      postId: comment.postId,
-      postTitle: post.title,
-      commentId,
-      actorHandleName: actor.handleName,
-      snippet: toSnippet(comment.body),
-    };
-    await this.record(recipientHandleId, 'reply', payload, `reply:${commentId}`);
+    // Answering your own question, or replying to your own answer, is not news — but the
+    // thread's other followers still hear about it, so this is a skip, not a return.
+    const directRecipient =
+      recipientHandleId === comment.actorHandleId ? null : recipientHandleId;
+
+    if (directRecipient && (await this.follows(directRecipient, comment.postId))) {
+      const payload: ReplyPayload = {
+        postId: comment.postId,
+        postTitle: post.title,
+        commentId,
+        actorHandleName: actor.handleName,
+        snippet: toSnippet(comment.body),
+      };
+      await this.record(directRecipient, 'reply', payload, `reply:${commentId}`);
+    }
+
+    const followers = await this.db
+      .select({ handleId: follows.followerHandleId })
+      .from(follows)
+      .where(and(eq(follows.targetType, 'post'), eq(follows.targetId, comment.postId)));
+
+    for (const { handleId } of followers) {
+      if (handleId === comment.actorHandleId || handleId === directRecipient) continue;
+      await this.recordThreadActivity(handleId, {
+        postId: comment.postId,
+        postTitle: post.title,
+        count: 1,
+        actorHandleName: actor.handleName,
+        lastCommentId: commentId,
+      });
+    }
+  }
+
+  /** Does this handle still follow the thread? The single subscription check both
+   *  notification types run through (S15 §5). */
+  private async follows(handleId: string, postId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ targetId: follows.targetId })
+      .from(follows)
+      .where(
+        and(
+          eq(follows.followerHandleId, handleId),
+          eq(follows.targetType, 'post'),
+          eq(follows.targetId, postId),
+        ),
+      );
+    return row !== undefined;
+  }
+
+  /**
+   * One `thread_activity` row per followed thread, collapsed while unread (S15 §6).
+   *
+   * `record()` cannot serve this: its `onConflictDoNothing` is exactly right for an event
+   * that happens once, and exactly wrong for one that recurs — a lively thread would put a
+   * row in the inbox per reply, and members would switch the whole type off within a week.
+   * So the dedupe key is the *thread*, and the conflict is an update rather than a skip:
+   *
+   * - **`count`** increments while the row is unread and resets to 1 once it has been read,
+   *   so the copy reads "3 new replies" and starts again after you have caught up. The
+   *   `case` is the whole of that state — no second table, no read-tracking column.
+   * - **`read_at = null` and `created_at = now()`** resurface the thread: a discussion you
+   *   have already read still reaches you when it moves again.
+   * - **The `where` on `lastCommentId`** is the idempotency guard. BullMQ retries a failed
+   *   job, and without this an update-on-conflict would count the same reply twice — which
+   *   is precisely the failure `record()`'s dedupe key was introduced to prevent.
+   *
+   * Email is capped harder than the in-app row. It goes out only when the row was inserted,
+   * or when the update actually flipped `read_at` from set to null — so a burst of replies
+   * on a thread you have not caught up with adds to the count silently instead of sending
+   * one mail per reply.
+   */
+  private async recordThreadActivity(
+    handleId: string,
+    payload: ThreadActivityPayload,
+  ): Promise<void> {
+    const channels = await this.resolveChannels(handleId, 'thread_activity');
+    const dedupeKey = `thread:${payload.postId}`;
+
+    // With the in-app channel off there is no row to collapse into, and no read state to
+    // key the email off — so the email cap becomes one per event, which is the best this
+    // can do for a member who has turned the inbox off but left mail on.
+    let shouldEmail = channels.inApp === false;
+
+    if (channels.inApp) {
+      /*
+       * `as n` is load-bearing: inside ON CONFLICT the target has to be referred to by an
+       * unqualified relation name, and Drizzle renders `${notifications}` schema-qualified.
+       *
+       * The returned `count` is how the email cap reads the *pre-update* state, which
+       * RETURNING cannot otherwise see — it reports the new row, where `read_at` has just
+       * been set to null regardless. A count of 1 after an update can only mean the `case`
+       * reset it, which only happens when the member had already read the previous batch.
+       */
+      const { rows } = await this.db.execute<{ inserted: boolean; count: number }>(sql`
+        insert into ${notifications} as n (handle_id, type, payload, dedupe_key)
+        values (${handleId}, 'thread_activity', ${JSON.stringify(payload)}::jsonb, ${dedupeKey})
+        on conflict (handle_id, dedupe_key) where dedupe_key is not null
+        do update set
+          payload = jsonb_build_object(
+            'postId', excluded.payload->'postId',
+            'postTitle', excluded.payload->'postTitle',
+            'actorHandleName', excluded.payload->'actorHandleName',
+            'lastCommentId', excluded.payload->'lastCommentId',
+            'count', case when n.read_at is null
+                          then coalesce((n.payload->>'count')::int, 1) + 1
+                          else 1 end),
+          read_at = null,
+          created_at = now()
+        where n.payload->>'lastCommentId'
+              is distinct from excluded.payload->>'lastCommentId'
+        returning (n.xmax = 0) as inserted, (n.payload->>'count')::int as count
+      `);
+      // No row: the retry guard fired, and this comment is already accounted for.
+      if (rows.length === 0) return;
+      // A fresh row, or one whose count just reset — either way this is the first activity
+      // the member has not already seen, so it is the one that earns an email.
+      shouldEmail = rows[0].inserted || Number(rows[0].count) === 1;
+    }
+
+    if (channels.email && shouldEmail) {
+      await this.queue.add(
+        'email',
+        { handleId, type: 'thread_activity', payload },
+        // One in-flight email job per (member, thread) — the same collapse as the row.
+        { jobId: `email-thread-${payload.postId}-${handleId}` },
+      );
+    }
   }
 
   /** Kudos was awarded to a post or comment (EPIC-D). */
@@ -403,6 +533,11 @@ export class NotificationsService {
     if (type === 'reply') {
       const p = payload as ReplyPayload;
       await this.email.reply(row.email, p.actorHandleName, p.postTitle, p.postId);
+      return;
+    }
+    if (type === 'thread_activity') {
+      const p = payload as ThreadActivityPayload;
+      await this.email.threadActivity(row.email, p.postTitle, p.postId, p.count);
       return;
     }
     if (type === 'kudos_received') {

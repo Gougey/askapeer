@@ -7,6 +7,7 @@ import {
   caseDetails,
   categories,
   comments,
+  follows,
   handles,
   kudos,
   postTags,
@@ -115,7 +116,13 @@ export type Thread = {
   /** Present only for `type = case_discussion` (EPIC-E §2). */
   caseDetail?: CaseDetail;
   comments: ThreadComment[];
-  viewerContext: { isAuthor: boolean; hasKudosedPost: boolean };
+  viewerContext: {
+    isAuthor: boolean;
+    hasKudosedPost: boolean;
+    /** Whether the caller is subscribed to this thread (S15). Drives the Follow control,
+     *  and is the same row that decides whether they are notified about it at all. */
+    isFollowing: boolean;
+  };
 };
 
 /** A comment row plus its kudos figures, before ranking flattens it into the thread. */
@@ -173,6 +180,13 @@ export class PostsService {
       if (tagIds.length > 0) {
         await tx.insert(postTags).values(tagIds.map((tagId) => ({ postId: row.id, tagId })));
       }
+      // Authoring subscribes you (S15 §4). Inside the transaction, so a post can never
+      // exist without its author's follow — which is what `reply` now consults to decide
+      // whether to notify them at all. FollowsService owns the *explicit* write path; this
+      // one is a property of authorship and belongs with the insert that creates it.
+      await tx
+        .insert(follows)
+        .values({ followerHandleId: handleId, targetType: 'post', targetId: row.id });
       return row.id;
     });
 
@@ -199,29 +213,7 @@ export class PostsService {
     const limit = query.limit ?? DEFAULT_PAGE_SIZE;
     const cursor = decodeCursor(query.cursor);
 
-    const rows = await this.db
-      .select({
-        id: posts.id,
-        type: posts.type,
-        title: posts.title,
-        body: posts.body,
-        createdAt: posts.createdAt,
-        editedAt: posts.editedAt,
-        categoryId: categories.id,
-        categoryName: categories.name,
-        categoryColour: categories.colour,
-        handleId: handles.id,
-        handleName: handles.handleName,
-        kudosTotal: handles.kudosTotal,
-        answerCount: answerCountSql,
-        kudosCount: postKudosCountSql,
-        // Null for a question — the join only matches case discussions (EPIC-E §2).
-        communityQuestion: caseDetails.communityQuestion,
-      })
-      .from(posts)
-      .innerJoin(handles, eq(posts.handleId, handles.id))
-      .innerJoin(categories, eq(posts.categoryId, categories.id))
-      .leftJoin(caseDetails, eq(caseDetails.postId, posts.id))
+    const rows = await this.cardQuery()
       .where(
         and(
           eq(posts.status, 'published'),
@@ -267,26 +259,61 @@ export class PostsService {
     const last = page.at(-1);
 
     return {
-      posts: page.map((row) => ({
-        id: row.id,
-        type: row.type,
-        title: row.title,
-        // A case discussion's `body` is the labelled projection built for the search index,
-        // and its title is already the presenting condition — so snippeting the body would
-        // print "Presenting condition: …" back to the reader, repeating the title in
-        // machine phrasing. The author's actual question is the useful other half of the
-        // card: what the presentation is, then what they are asking about it.
-        snippet: snippet(row.communityQuestion ?? row.body),
-        category: { id: row.categoryId, name: row.categoryName, colour: row.categoryColour },
-        tags: tagsByPost.get(row.id) ?? [],
-        author: authorBlock(row),
-        answerCount: Number(row.answerCount),
-        kudosCount: Number(row.kudosCount),
-        createdAt: row.createdAt.toISOString(),
-        editedAt: row.editedAt?.toISOString() ?? null,
-      })),
+      posts: page.map((row) => toCard(row, tagsByPost)),
       nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null,
     };
+  }
+
+  /**
+   * The same cards, for an explicit set of ids and **in the order given**.
+   *
+   * The Activity › Following pane pages over `community.follows`, not over `posts`, so its
+   * ordering is the follow's — which no `posts` query can express. Rather than let that
+   * surface grow a second, subtly different card, it resolves its ids here.
+   *
+   * Unpublished posts drop out silently: a followed thread that has since been removed or
+   * sent back for correction should vanish from the list, not appear as a dead row.
+   */
+  async cardsByIds(postIds: string[]): Promise<PostCard[]> {
+    if (postIds.length === 0) return [];
+    const rows = await this.cardQuery().where(
+      and(eq(posts.status, 'published'), inArray(posts.id, postIds)),
+    );
+    const tagsByPost = await this.tagsFor(rows.map((r) => r.id));
+    const byId = new Map(rows.map((row) => [row.id, toCard(row, tagsByPost)]));
+    return postIds.map((id) => byId.get(id)).filter((card): card is PostCard => card !== undefined);
+  }
+
+  /**
+   * The card DTO's one query shape (EPIC-C §13.2 — "shared by every list surface"), built
+   * once so the list, the followed-posts pane and anything after them cannot drift apart in
+   * what a card contains.
+   */
+  private cardQuery() {
+    return this.db
+      .select({
+        id: posts.id,
+        type: posts.type,
+        title: posts.title,
+        body: posts.body,
+        createdAt: posts.createdAt,
+        editedAt: posts.editedAt,
+        categoryId: categories.id,
+        categoryName: categories.name,
+        categoryColour: categories.colour,
+        handleId: handles.id,
+        handleName: handles.handleName,
+        kudosTotal: handles.kudosTotal,
+        answerCount: answerCountSql,
+        kudosCount: postKudosCountSql,
+        // Null for a question — the join only matches case discussions (EPIC-E §2).
+        communityQuestion: caseDetails.communityQuestion,
+      })
+      .from(posts)
+      .innerJoin(handles, eq(posts.handleId, handles.id))
+      .innerJoin(categories, eq(posts.categoryId, categories.id))
+      .leftJoin(caseDetails, eq(caseDetails.postId, posts.id))
+      .$dynamic();
   }
 
   /**
@@ -383,10 +410,11 @@ export class PostsService {
       throw new NotFoundException('No such post.');
     }
 
-    const [tagsByPost, ranked, hasKudosedPost, caseDetail] = await Promise.all([
+    const [tagsByPost, ranked, hasKudosedPost, isFollowing, caseDetail] = await Promise.all([
       this.tagsFor([row.id]),
       this.rankedComments(row.id, viewerHandleId),
       this.viewerKudosedPost(row.id, viewerHandleId),
+      this.viewerFollowsPost(row.id, viewerHandleId),
       row.type === 'case_discussion' ? this.caseDetailFor(row.id) : Promise.resolve(undefined),
     ]);
 
@@ -407,7 +435,7 @@ export class PostsService {
       },
       ...(caseDetail ? { caseDetail } : {}),
       comments: ranked,
-      viewerContext: { isAuthor, hasKudosedPost },
+      viewerContext: { isAuthor, hasKudosedPost, isFollowing },
     };
   }
 
@@ -578,6 +606,22 @@ export class PostsService {
       );
     return row !== undefined;
   }
+
+  /** Is the caller subscribed to this thread (S15 §7)? Bundled into `viewerContext` with
+   *  the kudos state, for the same one-round-trip reason. */
+  private async viewerFollowsPost(postId: string, viewerHandleId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ targetId: follows.targetId })
+      .from(follows)
+      .where(
+        and(
+          eq(follows.followerHandleId, viewerHandleId),
+          eq(follows.targetType, 'post'),
+          eq(follows.targetId, postId),
+        ),
+      );
+    return row !== undefined;
+  }
 }
 
 /**
@@ -627,6 +671,47 @@ function rankAndFlatten(all: RankableComment[]): ThreadComment[] {
 
   for (const root of (childrenOf.get(null) ?? []).sort(byKudosThenAge)) emit(root);
   return out;
+}
+
+/** One row of `cardQuery()` as the shared list DTO (EPIC-C §13.2). */
+function toCard(
+  row: {
+    id: string;
+    type: 'question' | 'case_discussion';
+    title: string;
+    body: string;
+    createdAt: Date;
+    editedAt: Date | null;
+    categoryId: string;
+    categoryName: string;
+    categoryColour: string | null;
+    handleId: string;
+    handleName: string;
+    kudosTotal: number;
+    answerCount: number;
+    kudosCount: number;
+    communityQuestion: string | null;
+  },
+  tagsByPost: Map<string, TagRef[]>,
+): PostCard {
+  return {
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    // A case discussion's `body` is the labelled projection built for the search index,
+    // and its title is already the presenting condition — so snippeting the body would
+    // print "Presenting condition: …" back to the reader, repeating the title in machine
+    // phrasing. The author's actual question is the useful other half of the card: what
+    // the presentation is, then what they are asking about it.
+    snippet: snippet(row.communityQuestion ?? row.body),
+    category: { id: row.categoryId, name: row.categoryName, colour: row.categoryColour },
+    tags: tagsByPost.get(row.id) ?? [],
+    author: authorBlock(row),
+    answerCount: Number(row.answerCount),
+    kudosCount: Number(row.kudosCount),
+    createdAt: row.createdAt.toISOString(),
+    editedAt: row.editedAt?.toISOString() ?? null,
+  };
 }
 
 function authorBlock(row: {

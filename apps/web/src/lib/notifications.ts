@@ -62,8 +62,25 @@ export type ModerationNotice = {
   } | null;
 };
 
+/** New replies on a followed thread, collapsed one row per thread (S15 §6) — `count` is
+ *  how many this row currently stands for, reset once the member has read it. */
+export type ThreadActivityPayload = {
+  postId: string;
+  postTitle: string;
+  count: number;
+  actorHandleName: string;
+  lastCommentId: string;
+};
+
 export type Notification =
   | { id: string; type: 'reply'; payload: ReplyPayload; readAt: string | null; createdAt: string }
+  | {
+      id: string;
+      type: 'thread_activity';
+      payload: ThreadActivityPayload;
+      readAt: string | null;
+      createdAt: string;
+    }
   | {
       id: string;
       type: 'kudos_received';
@@ -96,7 +113,7 @@ export type MyCommentCard = {
 
 /** One row of the F4 matrix (EPIC-G §8). */
 export type NotificationPreference = {
-  type: 'reply' | 'kudos_received' | 'verification_status_change';
+  type: 'reply' | 'thread_activity' | 'kudos_received' | 'verification_status_change';
   inApp: boolean;
   email: boolean;
   push: boolean;

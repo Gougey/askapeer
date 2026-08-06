@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayUnique,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -86,4 +87,20 @@ export class ListPostsDto {
   @Min(1)
   @Max(50)
   limit?: number;
+}
+
+/**
+ * Follow a target (EPIC-B §8, S15).
+ *
+ * `targetType` is validated against `post` alone even though the column and the enum both
+ * carry `handle`. S7 owns handle-follows and the personalised list that consumes them; until
+ * that exists, accepting the value would let a client create rows nothing reads and no
+ * screen can undo.
+ */
+export class CreateFollowDto {
+  @IsIn(['post'])
+  targetType!: 'post';
+
+  @IsUUID()
+  targetId!: string;
 }

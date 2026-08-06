@@ -109,3 +109,30 @@ export async function deleteCommentAction(postId: string, commentId: string): Pr
   if (!res.ok) throw new Error(`Delete failed (${res.status}).`);
   revalidatePath(`/discussions/${postId}`);
 }
+
+/**
+ * Follow or unfollow this discussion (S15). Like the kudos toggle, the caller passes the
+ * *current* state and this flips it; both directions are idempotent server-side, so a
+ * double tap or a stale toggle cannot wedge it.
+ *
+ * No `revalidatePath` — the control owns its own state and nothing else on the thread
+ * changes. Revalidating would re-render the whole thread to move one pill.
+ */
+export async function toggleFollowAction(
+  postId: string,
+  currentlyFollowing: boolean,
+): Promise<void> {
+  const token = await authedToken();
+  const res = await fetch(
+    currentlyFollowing
+      ? `${API_ORIGIN}/v1/follows/post/${postId}`
+      : `${API_ORIGIN}/v1/follows`,
+    {
+      method: currentlyFollowing ? 'DELETE' : 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: currentlyFollowing ? undefined : JSON.stringify({ targetType: 'post', targetId: postId }),
+      cache: 'no-store',
+    },
+  );
+  if (!res.ok) throw new Error(`Could not update follow (${res.status}).`);
+}

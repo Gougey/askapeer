@@ -16,13 +16,18 @@
  */
 
 /**
- * The types S10 actually fires, and therefore the only ones the preferences screen
- * offers. `mention` and `weekly_digest` exist in the database enum but wait on EPIC-C's
- * parser and `community.follows` respectively — a toggle for a notification that cannot
- * arrive is worse than no toggle. Adding one later is adding it to this array.
+ * The types actually fired, and therefore the only ones the preferences screen offers.
+ * `mention` and `weekly_digest` exist in the database enum but wait on EPIC-C's parser and
+ * on the digest itself — a toggle for a notification that cannot arrive is worse than no
+ * toggle. Adding one later is adding it to this array.
+ *
+ * `thread_activity` (S15) sits next to `reply` deliberately: a member will want to keep
+ * direct replies and quieten ambient thread noise, or the reverse, and separating them is
+ * the whole reason it is not folded into `reply`.
  */
 export const LIVE_NOTIFICATION_TYPES = [
   'reply',
+  'thread_activity',
   'kudos_received',
   'verification_status_change',
 ] as const;
@@ -101,7 +106,37 @@ export type AccountNoticePayload = {
   actionId?: string;
 };
 
-export type NotificationPayload = ReplyPayload | KudosReceivedPayload | AccountNoticePayload;
+/**
+ * New activity on a thread the member follows but was not directly addressed by (S15 §5).
+ *
+ * **One row per thread, collapsed while unread** — `count` is how many replies this row
+ * currently stands for, reset once the member has read it. See §6 and the upsert in
+ * `NotificationsService.recordThreadActivity`.
+ *
+ * Note the absence of a snippet, unlike `ReplyPayload`. A direct reply is addressed to you
+ * and previewing it helps you triage; a collapsed count of ambient activity has nothing
+ * useful to preview, and leaving the field out keeps de-identified case text out of one
+ * more place before the push channel is ever switched on.
+ */
+export type ThreadActivityPayload = {
+  postId: string;
+  postTitle: string;
+  count: number;
+  /** The most recent replier — already publicly attributed in the thread. */
+  actorHandleName: string;
+  /**
+   * The comment that caused the most recent bump. It is the retry guard: the upsert only
+   * fires when this differs from the stored value, so a replayed BullMQ job updates
+   * nothing and cannot double-count.
+   */
+  lastCommentId: string;
+};
+
+export type NotificationPayload =
+  | ReplyPayload
+  | ThreadActivityPayload
+  | KudosReceivedPayload
+  | AccountNoticePayload;
 
 /** Trim a body to a preview without slicing a word in half. */
 export function toSnippet(body: string): string {

@@ -22,9 +22,14 @@ export default async function ActivityLayout({ children }: { children: ReactNode
     <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
       <h1 className="text-xl font-semibold">{t('heading')}</h1>
       <SegmentedControl
+        // Four segments fit at 390px (checked on device, 2026-08-06) — but only with the
+        // short labels below. "Notifications" was already shortened to "Inbox" when the
+        // fourth arrived; a wrapping segmented control is the same failure the
+        // top-contributor badge was withdrawn for.
         segments={[
           { href: '/activity', label: t('tabs.notifications') },
           { href: '/activity/mine', label: t('tabs.mine') },
+          { href: '/activity/following', label: t('tabs.following') },
           { href: '/activity/drafts', label: t('tabs.drafts') },
         ]}
       />
