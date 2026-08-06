@@ -1,6 +1,6 @@
 # Development
 
-The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), and case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts)**.
+The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off)**.
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
@@ -924,6 +924,49 @@ that *do* navigate (a reply has a reply to read, a moderation notice its detail 
 verification notice the holding page that explains it); `present()` in `NotificationRow.tsx`
 returns a **nullable** `href` for exactly this, and `openNotificationAction` redirects only
 when one is given. Don't "restore" the link.
+
+## Following a discussion (S15)
+
+Design doc: `docs/2026-08-06-post-follow-design.md`. Four things about it are easy to
+break by accident.
+
+**A follow row is the thread's one subscription record, and `reply` consults it too.** Not
+just `thread_activity`. If you "optimise" the direct-reply path by skipping the follow
+check, unfollow silently stops meaning what it says: the ambient notifications go quiet
+and the direct ones keep arriving. The mute is the reason auto-follow-on-authoring exists
+at all — before this slice there was no way to quieten your own busy question short of
+turning off reply notifications everywhere.
+
+**The collapsing upsert is not a normal insert.** Every other notification uses
+`record()`, whose `onConflictDoNothing` is right for an event that happens once and wrong
+for one that recurs. `recordThreadActivity` keys the dedupe on the *thread* and updates on
+conflict, and three parts of that statement are load-bearing:
+
+| Part | Why |
+|---|---|
+| `insert … as n` | inside `ON CONFLICT` the target must be referred to by an unqualified name, and Drizzle renders `${notifications}` schema-qualified |
+| `case when n.read_at is null … else 1` | the count climbs while unread and resets after a read — the whole of that state, with no extra column |
+| `where n.payload->>'lastCommentId' is distinct from excluded…` | the retry guard. BullMQ retries failed jobs; without it an update-on-conflict double-counts, which is the exact failure the per-comment dedupe key was introduced to prevent |
+
+`RETURNING` reports the **new** row, so it cannot see the old `read_at` — which is why the
+email cap reads the returned `count` instead. A count of 1 after an update can only mean
+the `case` reset it, i.e. the member had read the previous batch. That is what caps email
+at one per thread per read rather than one per reply.
+
+**Auto-follow lives with the authorship, not in `FollowsService`.** `PostsService.create`
+inserts it inside the post's transaction, so a post cannot exist without its author's
+follow; `CommentsService.create` does the same with `onConflictDoNothing`. `FollowsService`
+owns only the explicit, member-driven half.
+
+**Activity › Following excludes threads the member wrote in**, and the exclusion is in the
+API (`listFollowedPosts`), not the client. Authoring auto-follows, so without it every
+thread in My Q&A would be listed twice over and the two panes would stop answering
+different questions (Mine: *how did my contributions land*; Following: *what am I
+watching*). A thread therefore **moves** from Following to Mine the moment you answer it.
+
+Migration `0028` backfilled a follow row for every post and comment authored before the
+slice shipped. That is what made it additive — without it every existing thread would have
+gone silent overnight, which is the opposite of the intended effect.
 
 ## Sessions: silent refresh and sign-out-everywhere
 

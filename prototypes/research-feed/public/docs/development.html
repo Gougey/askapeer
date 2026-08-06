@@ -23,9 +23,11 @@ read-only admin console (S11a) with verification actions, member
 reporting (S11b — report content or a handle), the moderation queue
 (S11c — remove content with kudos clawback / warn / dismiss), handle
 enforcement (S11d — suspend / expel / rename), the audited
-reveal-identity action (S11e), and case discussions (S9 — the
-de-identified template, the checklist-and-attestation publish gate, and
-private drafts)</strong>.</p>
+reveal-identity action (S11e), case discussions (S9 — the de-identified
+template, the checklist-and-attestation publish gate, and private
+drafts), and following a discussion (S15 — subscribe to a thread,
+collapsed notifications when it moves, and the mute that turns them
+off)</strong>.</p>
 <p><strong>Build approach:</strong> <em>prove-then-migrate</em> —
 develop locally + deploy to Fly.io (London) for the early slices;
 migrate to AWS <code>eu-west-2</code> before real practitioners. See the
@@ -1331,6 +1333,78 @@ notice the holding page that explains it); <code>present()</code> in
 <code>href</code> for exactly this, and
 <code>openNotificationAction</code> redirects only when one is given.
 Don’t “restore” the link.</p>
+<h2 id="following-a-discussion-s15">Following a discussion (S15)</h2>
+<p>Design doc: <code>docs/2026-08-06-post-follow-design.md</code>. Four
+things about it are easy to break by accident.</p>
+<p><strong>A follow row is the thread’s one subscription record, and
+<code>reply</code> consults it too.</strong> Not just
+<code>thread_activity</code>. If you “optimise” the direct-reply path by
+skipping the follow check, unfollow silently stops meaning what it says:
+the ambient notifications go quiet and the direct ones keep arriving.
+The mute is the reason auto-follow-on-authoring exists at all — before
+this slice there was no way to quieten your own busy question short of
+turning off reply notifications everywhere.</p>
+<p><strong>The collapsing upsert is not a normal insert.</strong> Every
+other notification uses <code>record()</code>, whose
+<code>onConflictDoNothing</code> is right for an event that happens once
+and wrong for one that recurs. <code>recordThreadActivity</code> keys
+the dedupe on the <em>thread</em> and updates on conflict, and three
+parts of that statement are load-bearing:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Part</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>insert … as n</code></td>
+<td>inside <code>ON CONFLICT</code> the target must be referred to by an
+unqualified name, and Drizzle renders <code>${notifications}</code>
+schema-qualified</td>
+</tr>
+<tr>
+<td><code>case when n.read_at is null … else 1</code></td>
+<td>the count climbs while unread and resets after a read — the whole of
+that state, with no extra column</td>
+</tr>
+<tr>
+<td><code>where n.payload-&gt;&gt;'lastCommentId' is distinct from excluded…</code></td>
+<td>the retry guard. BullMQ retries failed jobs; without it an
+update-on-conflict double-counts, which is the exact failure the
+per-comment dedupe key was introduced to prevent</td>
+</tr>
+</tbody>
+</table>
+<p><code>RETURNING</code> reports the <strong>new</strong> row, so it
+cannot see the old <code>read_at</code> — which is why the email cap
+reads the returned <code>count</code> instead. A count of 1 after an
+update can only mean the <code>case</code> reset it, i.e. the member had
+read the previous batch. That is what caps email at one per thread per
+read rather than one per reply.</p>
+<p><strong>Auto-follow lives with the authorship, not in
+<code>FollowsService</code>.</strong> <code>PostsService.create</code>
+inserts it inside the post’s transaction, so a post cannot exist without
+its author’s follow; <code>CommentsService.create</code> does the same
+with <code>onConflictDoNothing</code>. <code>FollowsService</code> owns
+only the explicit, member-driven half.</p>
+<p><strong>Activity › Following excludes threads the member wrote
+in</strong>, and the exclusion is in the API
+(<code>listFollowedPosts</code>), not the client. Authoring
+auto-follows, so without it every thread in My Q&amp;A would be listed
+twice over and the two panes would stop answering different questions
+(Mine: <em>how did my contributions land</em>; Following: <em>what am I
+watching</em>). A thread therefore <strong>moves</strong> from Following
+to Mine the moment you answer it.</p>
+<p>Migration <code>0028</code> backfilled a follow row for every post
+and comment authored before the slice shipped. That is what made it
+additive — without it every existing thread would have gone silent
+overnight, which is the opposite of the intended effect.</p>
 <h2 id="sessions-silent-refresh-and-sign-out-everywhere">Sessions:
 silent refresh and sign-out-everywhere</h2>
 <p><strong>The timeouts did not change; a bug did.</strong> The design
