@@ -513,9 +513,10 @@ export const moderationActions = community.table(
  * whole taxonomy — and a second binary copy of the same choice would drift from it. Both
  * remaining values mean the same thing to a member: *tell me when there is more*.
  *
- * `handle` ships unused. S15 implements post-follows only; the personalised Discussions
- * list that consumes handle-follows is S7. Carrying the label costs nothing and adding
- * it later costs a migration — the same trade the notification enum below makes.
+ * `handle` ships unused, and as of 2026-08-08 is **not planned**: following a handle was
+ * judged not required on review. The label stays rather than being removed — dropping an
+ * enum value costs a migration now and another one if the decision is revisited, so an
+ * unused label is the cheapest way to hold the door open.
  */
 export const followTargetType = community.enum('follow_target_type', ['handle', 'post']);
 

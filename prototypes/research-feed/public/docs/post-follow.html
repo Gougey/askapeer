@@ -13,21 +13,45 @@
 </div>
 <main>
 <h1 id="s15-follow-a-discussion">S15 — Follow a discussion</h1>
-<p><strong>Status</strong>: <strong>Proposed</strong>, not built.
-Section 12 lists what needs deciding before it is.
-<strong>Date</strong>: 6 August 2026 <strong>Author</strong>: Adrian
-Hall (Technical Lead), drafted with Claude Code <strong>Scope</strong>:
-Following a <em>post</em> — subscribing to a discussion so that later
-replies reach you, whether or not you wrote anything in it. Following a
-<strong>handle</strong> and the personalised Discussions list remain S7
-and are not designed here. Tag-following is <strong>withdrawn</strong>
-as a concept; Section 2 explains why.</p>
+<p><strong>Status</strong>: <strong>Built and deployed
+2026-08-06</strong> (PRs #104–#107, migrations <code>0027</code> +
+<code>0028</code>). Build notes are in <code>DEVELOPMENT.md</code>; this
+document remains the design rationale. <strong>Date</strong>: 6 August
+2026 · <strong>amended 8 August 2026</strong> (handle-following dropped
+— see the box below) <strong>Author</strong>: Adrian Hall (Technical
+Lead), drafted with Claude Code <strong>Scope</strong>: Following a
+<em>post</em> — subscribing to a discussion so that later replies reach
+you, whether or not you wrote anything in it. Tag-following is
+<strong>withdrawn</strong> as a concept; Section 2 explains why.</p>
 <p><strong>Companion to</strong>:
 <code>docs/superpowers/specs/2026-07-14-epic-b-handles-profile-technical-spec.md</code>
 §8, which owns <code>community.follows</code>, and EPIC-G §5–6, which
 owns notification types and channels. This document proposes <strong>one
 amendment</strong> to EPIC-B §8 (Section 3) and <strong>one new
 notification type</strong> (Section 5).</p>
+<blockquote>
+<h3
+id="amendment-8-august-2026-following-a-handle-is-not-required">Amendment,
+8 August 2026 — following a <strong>handle</strong> is not required</h3>
+<p>Following a review, handle-following is <strong>not required for the
+time being</strong>. It is deferred, not deleted: the reasoning in
+Section 2 still holds if it ever returns, and
+<code>follow_target_type</code> keeps its unused <code>handle</code>
+value rather than paying for a migration to remove and later re-add
+it.</p>
+<p><strong>The consequence is larger than this document.</strong> Two of
+the three follow targets are now gone — tags to
+<code>member_interests</code> on 6 August, handles today — and
+<em>both</em> were the inputs to EPIC-C §8’s personalised Discussions
+feed. That feature is therefore not deferred but <strong>hollowed
+out</strong>: it has nothing left to select on. What survives from that
+section is the <strong>trending view</strong>, which stops being a
+<em>fallback</em> (there is nothing left to fall back from) and becomes
+simply an alternative ordering, if it is wanted at all. See the S7 entry
+in the slice backlog.</p>
+<p>Following a discussion — everything else in this document — is
+unaffected and live.</p>
+</blockquote>
 <hr />
 <h2 id="contents">Contents</h2>
 <ol type="1">
@@ -131,14 +155,15 @@ names:</p>
 <td><strong>Follow</strong></td>
 <td>a discussion</td>
 <td>tell me when there’s more</td>
-<td><code>community.follows</code>, <code>target_type = post</code></td>
+<td><code>community.follows</code>, <code>target_type = post</code> —
+<strong>built</strong></td>
 </tr>
 <tr>
-<td><strong>Follow</strong></td>
-<td>a handle</td>
-<td>tell me when they post</td>
-<td><code>community.follows</code>, <code>target_type = handle</code>
-(S7)</td>
+<td><del><strong>Follow</strong></del></td>
+<td><del>a handle</del></td>
+<td><del>tell me when they post</del></td>
+<td><strong>not required</strong> (8 Aug 2026); the enum value survives,
+unused</td>
 </tr>
 <tr>
 <td><strong>Interests</strong></td>
@@ -148,18 +173,23 @@ names:</p>
 </tr>
 </tbody>
 </table>
-<p>“Follow” carries both a handle and a post because in both cases it
-means the same thing to a member — <em>tell me when there’s more</em> —
-and the object makes the difference obvious in context. Tags never meant
-that; they mean <em>this is my area</em>, which is why they read badly
-as a follow and read naturally as an interest. <strong>“Tag follow” is
-retired as a term.</strong></p>
+<p>“Follow” was to carry both a handle and a post because in both cases
+it means the same thing to a member — <em>tell me when there’s more</em>
+— and the object makes the difference obvious in context. Tags never
+meant that; they mean <em>this is my area</em>, which is why they read
+badly as a follow and read naturally as an interest. <strong>“Tag
+follow” is retired as a term.</strong></p>
+<p>With handle-following dropped (8 Aug), one target remains — which is
+why the shipped control reads <strong>“Follow discussion”</strong>
+rather than a bare “Follow”. Naming the object cost two words and
+stopped the label from having to be renamed if a second target ever
+arrives.</p>
 <hr />
 <h2 id="data-model-the-delta">3. Data model — the delta</h2>
-<p><code>community.follows</code> does not exist yet — it is specified
-in EPIC-B §8 and referenced in two schema comments, but no migration
-creates it. This slice creates it, with one amendment to the specified
-shape.</p>
+<p><code>community.follows</code> did not exist when this was written —
+it was specified in EPIC-B §8 and referenced in two schema comments, but
+no migration created it. This slice created it (migration
+<code>0027</code>), with one amendment to the specified shape.</p>
 <pre><code>community.follows
   follower_handle_id   uuid  FK -&gt; community.handles (on delete cascade)
   target_type          enum(handle, post)     -- AMENDED: was enum(handle, tag)
@@ -176,11 +206,14 @@ discriminator, EPIC-B’s ownership of the write path, other epics as
 read-only consumers. If anything the table fits its own description
 better now, since both remaining target types genuinely mean the same
 thing.</p>
-<p><strong>This slice only implements <code>post</code>.</strong> The
-<code>handle</code> value ships in the enum from the start for the same
-reason EPIC-G shipped all five notification types up front
-(<code>community.schema.ts:507</code>): carrying an unused enum label
-costs nothing, and adding one later costs a migration.</p>
+<p><strong>Only <code>post</code> is implemented, and — as of 8 August —
+only <code>post</code> is planned.</strong> The <code>handle</code>
+value shipped in the enum on the reasoning that carrying an unused label
+costs nothing while adding one later costs a migration. That reasoning
+now works in the other direction and is why it <strong>stays</strong>:
+removing it would cost a migration today, and re-adding it another one
+if the decision is revisited. An unused enum label is the cheapest
+possible way to hold a door open.</p>
 <p>Two consequences of the polymorphic <code>target_id</code> worth
 naming, both shared with <code>community.kudos</code> and
 <code>community.reports</code>, which already use this pattern:</p>
@@ -532,11 +565,13 @@ thread.</li>
 constraints</h2>
 <p><strong>No watcher counts.</strong> No “12 people are following this”
 on a thread, no follower counts anywhere, no notification when someone
-follows you (which will matter more when S7 adds handle-follows). The
-style guide is unambiguous that kudos-derived standing is the only
-ranked signal a member may see about another (§1.3), and an attention
-count is a ranking signal wearing different clothes. It also buys
-nothing: the member gets no decision from it.</p>
+follows you. (This mattered most for handle-follows, now dropped — but
+it is stated as a standing rule rather than a property of one feature,
+because the argument is about status signalling, not about which object
+is followed.) The style guide is unambiguous that kudos-derived standing
+is the only ranked signal a member may see about another (§1.3), and an
+attention count is a ranking signal wearing different clothes. It also
+buys nothing: the member gets no decision from it.</p>
 <p><strong>Nothing new is disclosed.</strong> A follow is a
 <code>handle_id</code>-to-<code>post_id</code> row; the payload names
 the replying handle, who is already publicly attributed in the thread.
@@ -601,10 +636,16 @@ Consistent with the rest of EPIC-G; not worth a special case.</td>
 <hr />
 <h2 id="out-of-scope">11. Out of scope</h2>
 <ul>
-<li><strong>Handle-follows</strong> and the personalised Discussions
-list — S7, and the reason the enum ships with a <code>handle</code>
-value it does not yet use.</li>
-<li><strong>The trending fallback</strong> — S7.</li>
+<li><del><strong>Handle-follows</strong> and the personalised
+Discussions list</del> — <strong>not required</strong> as of 8 August
+2026. The enum keeps its unused <code>handle</code> value (§3), but
+nothing is planned against it, and EPIC-C §8’s personalised feed has
+lost both of its inputs rather than one.</li>
+<li><strong>The trending view</strong> — still S7, and now the only part
+of §8 with anything behind it. Note it is no longer a <em>fallback</em>:
+there is nothing left for it to be a fallback from, so if it is built it
+is a view in its own right, and the adaptive-window design that exists
+to stop a cold-start feed looking empty applies to it directly.</li>
 <li><strong>The weekly digest</strong> — EPIC-G, deferred at S10 pending
 <code>community.follows</code>. This slice creates the table the digest
 was waiting for, but the digest itself needs the tag half of a member’s
@@ -625,30 +666,33 @@ tags just went through.</li>
 <hr />
 <h2 id="decisions-needed">12. Decisions needed</h2>
 <ol type="1">
-<li><p><strong>Confirm the EPIC-B §8 amendment</strong> —
-<code>target_type</code> becomes <code>enum(handle, post)</code>,
-tag-following is retired, tags live in <code>member_interests</code>.
-This is the one item here that changes a spec rather than adding to it,
-and everything else assumes it.</p></li>
-<li><p><strong>Confirm the backfill in Section 4.</strong>
-Auto-following on authoring, with a follow row backfilled for every post
-and comment already written, keeps existing members’ notifications
-exactly as they are today and adds a mute they have never had. The two
-new notifications it introduces — sibling answers, and replies under
-someone else’s answer in your own thread — are additive. Worth a
-conscious yes, but a much smaller ask than an earlier draft of this
-document implied.</p></li>
+<li><p><del><strong>Confirm the EPIC-B §8 amendment</strong></del> —
+<strong>settled.</strong> <code>target_type</code> is
+<code>enum(handle, post)</code>, tag-following retired to
+<code>member_interests</code>, and as of 8 August the
+<code>handle</code> half is not required either. In practice one live
+target remains: <code>post</code>.</p></li>
+<li><p><del><strong>Confirm the backfill in Section 4.</strong></del> —
+<strong>done</strong>; it ran on live with 0 posts and 0 commenters left
+unsubscribed. Auto-following on authoring, with a follow row backfilled
+for every post and comment already written, keeps existing members’
+notifications exactly as they are today and adds a mute they have never
+had. The two new notifications it introduces — sibling answers, and
+replies under someone else’s answer in your own thread — are additive.
+Worth a conscious yes, but a much smaller ask than an earlier draft of
+this document implied.</p></li>
 <li><p><strong>Default channels for
-<code>thread_activity</code>.</strong> The recommendation is
-<strong>in-app on, email on</strong> — but only under Section 6’s
-collapsing rule, which caps it at one email per thread per read. The
-conservative alternative is email off by default, at the cost of the
-feature being invisible to anyone who does not go looking in
-settings.</p></li>
-<li><p><strong>Slice number.</strong> Filed here as S15 because it is a
-new deliverable rather than a split of S7, and because it is being built
-ahead of the rest of S7. If it reads better as S7a, that is a naming
-preference and nothing in this document depends on it.</p></li>
+<code>thread_activity</code></strong> — <em>still open.</em> Shipped as
+recommended, but not ratified. The recommendation was <strong>in-app on,
+email on</strong> — but only under Section 6’s collapsing rule, which
+caps it at one email per thread per read. The conservative alternative
+is email off by default, at the cost of the feature being invisible to
+anyone who does not go looking in settings.</p></li>
+<li><p><del><strong>Slice number.</strong></del> — <strong>S15.</strong>
+Filed as S15 because it is a new deliverable rather than a split of S7,
+and because it is being built ahead of the rest of S7. If it reads
+better as S7a, that is a naming preference and nothing in this document
+depends on it.</p></li>
 </ol>
 
 </main>

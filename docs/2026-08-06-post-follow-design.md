@@ -1,11 +1,19 @@
 # S15 — Follow a discussion
 
-**Status**: **Proposed**, not built. Section 12 lists what needs deciding before it is.
-**Date**: 6 August 2026
+**Status**: **Built and deployed 2026-08-06** (PRs #104–#107, migrations `0027` + `0028`). Build notes are in `DEVELOPMENT.md`; this document remains the design rationale.
+**Date**: 6 August 2026 · **amended 8 August 2026** (handle-following dropped — see the box below)
 **Author**: Adrian Hall (Technical Lead), drafted with Claude Code
-**Scope**: Following a *post* — subscribing to a discussion so that later replies reach you, whether or not you wrote anything in it. Following a **handle** and the personalised Discussions list remain S7 and are not designed here. Tag-following is **withdrawn** as a concept; Section 2 explains why.
+**Scope**: Following a *post* — subscribing to a discussion so that later replies reach you, whether or not you wrote anything in it. Tag-following is **withdrawn** as a concept; Section 2 explains why.
 
 **Companion to**: `docs/superpowers/specs/2026-07-14-epic-b-handles-profile-technical-spec.md` §8, which owns `community.follows`, and EPIC-G §5–6, which owns notification types and channels. This document proposes **one amendment** to EPIC-B §8 (Section 3) and **one new notification type** (Section 5).
+
+> ### Amendment, 8 August 2026 — following a **handle** is not required
+>
+> Following a review, handle-following is **not required for the time being**. It is deferred, not deleted: the reasoning in Section 2 still holds if it ever returns, and `follow_target_type` keeps its unused `handle` value rather than paying for a migration to remove and later re-add it.
+>
+> **The consequence is larger than this document.** Two of the three follow targets are now gone — tags to `member_interests` on 6 August, handles today — and *both* were the inputs to EPIC-C §8's personalised Discussions feed. That feature is therefore not deferred but **hollowed out**: it has nothing left to select on. What survives from that section is the **trending view**, which stops being a *fallback* (there is nothing left to fall back from) and becomes simply an alternative ordering, if it is wanted at all. See the S7 entry in the slice backlog.
+>
+> Following a discussion — everything else in this document — is unaffected and live.
 
 ---
 
@@ -55,17 +63,19 @@ So the product has three distinct acts, and they should have distinct names:
 
 | Act | Object | Means | Mechanism |
 |---|---|---|---|
-| **Follow** | a discussion | tell me when there's more | `community.follows`, `target_type = post` |
-| **Follow** | a handle | tell me when they post | `community.follows`, `target_type = handle` (S7) |
+| **Follow** | a discussion | tell me when there's more | `community.follows`, `target_type = post` — **built** |
+| ~~**Follow**~~ | ~~a handle~~ | ~~tell me when they post~~ | **not required** (8 Aug 2026); the enum value survives, unused |
 | **Interests** | tags | this is my clinical area | `community.member_interests` (built) |
 
-"Follow" carries both a handle and a post because in both cases it means the same thing to a member — *tell me when there's more* — and the object makes the difference obvious in context. Tags never meant that; they mean *this is my area*, which is why they read badly as a follow and read naturally as an interest. **"Tag follow" is retired as a term.**
+"Follow" was to carry both a handle and a post because in both cases it means the same thing to a member — *tell me when there's more* — and the object makes the difference obvious in context. Tags never meant that; they mean *this is my area*, which is why they read badly as a follow and read naturally as an interest. **"Tag follow" is retired as a term.**
+
+With handle-following dropped (8 Aug), one target remains — which is why the shipped control reads **"Follow discussion"** rather than a bare "Follow". Naming the object cost two words and stopped the label from having to be renamed if a second target ever arrives.
 
 ---
 
 ## 3. Data model — the delta
 
-`community.follows` does not exist yet — it is specified in EPIC-B §8 and referenced in two schema comments, but no migration creates it. This slice creates it, with one amendment to the specified shape.
+`community.follows` did not exist when this was written — it was specified in EPIC-B §8 and referenced in two schema comments, but no migration created it. This slice created it (migration `0027`), with one amendment to the specified shape.
 
 ```
 community.follows
@@ -80,7 +90,7 @@ community.follows
 
 **The amendment**: `target_type` becomes `enum(handle, post)`; tag-following is dropped in favour of `member_interests` (Section 2). Everything else in EPIC-B §8 survives intact — the `target_type`/`target_id` discriminator, EPIC-B's ownership of the write path, other epics as read-only consumers. If anything the table fits its own description better now, since both remaining target types genuinely mean the same thing.
 
-**This slice only implements `post`.** The `handle` value ships in the enum from the start for the same reason EPIC-G shipped all five notification types up front (`community.schema.ts:507`): carrying an unused enum label costs nothing, and adding one later costs a migration.
+**Only `post` is implemented, and — as of 8 August — only `post` is planned.** The `handle` value shipped in the enum on the reasoning that carrying an unused label costs nothing while adding one later costs a migration. That reasoning now works in the other direction and is why it **stays**: removing it would cost a migration today, and re-adding it another one if the decision is revisited. An unused enum label is the cheapest possible way to hold a door open.
 
 Two consequences of the polymorphic `target_id` worth naming, both shared with `community.kudos` and `community.reports`, which already use this pattern:
 
@@ -248,7 +258,7 @@ Two consequences to accept deliberately:
 
 ## 9. Anonymity and status constraints
 
-**No watcher counts.** No "12 people are following this" on a thread, no follower counts anywhere, no notification when someone follows you (which will matter more when S7 adds handle-follows). The style guide is unambiguous that kudos-derived standing is the only ranked signal a member may see about another (§1.3), and an attention count is a ranking signal wearing different clothes. It also buys nothing: the member gets no decision from it.
+**No watcher counts.** No "12 people are following this" on a thread, no follower counts anywhere, no notification when someone follows you. (This mattered most for handle-follows, now dropped — but it is stated as a standing rule rather than a property of one feature, because the argument is about status signalling, not about which object is followed.) The style guide is unambiguous that kudos-derived standing is the only ranked signal a member may see about another (§1.3), and an attention count is a ranking signal wearing different clothes. It also buys nothing: the member gets no decision from it.
 
 **Nothing new is disclosed.** A follow is a `handle_id`-to-`post_id` row; the payload names the replying handle, who is already publicly attributed in the thread. No path to `identity` is involved, and the existing disclosure guard (`npm run lint:disclosure -w apps/api`) covers the new payload file for free.
 
@@ -271,8 +281,8 @@ Two consequences to accept deliberately:
 
 ## 11. Out of scope
 
-- **Handle-follows** and the personalised Discussions list — S7, and the reason the enum ships with a `handle` value it does not yet use.
-- **The trending fallback** — S7.
+- ~~**Handle-follows** and the personalised Discussions list~~ — **not required** as of 8 August 2026. The enum keeps its unused `handle` value (§3), but nothing is planned against it, and EPIC-C §8's personalised feed has lost both of its inputs rather than one.
+- **The trending view** — still S7, and now the only part of §8 with anything behind it. Note it is no longer a *fallback*: there is nothing left for it to be a fallback from, so if it is built it is a view in its own right, and the adaptive-window design that exists to stop a cold-start feed looking empty applies to it directly.
 - **The weekly digest** — EPIC-G, deferred at S10 pending `community.follows`. This slice creates the table the digest was waiting for, but the digest itself needs the tag half of a member's interests (now `member_interests`) and is a separate piece of work.
 - **A separate mute-versus-unfollow distinction** — one control, one row. Unfollowing silences the thread completely (Section 5), which is what members mean by muting.
 - **`mention`** — the parser is EPIC-C's and unchanged by this slice. But Section 5 gives it a second job: it is the channel that reaches someone in a thread they have muted, which makes it more load-bearing than it looked when it was deferred at S10.
@@ -282,10 +292,10 @@ Two consequences to accept deliberately:
 
 ## 12. Decisions needed
 
-1. **Confirm the EPIC-B §8 amendment** — `target_type` becomes `enum(handle, post)`, tag-following is retired, tags live in `member_interests`. This is the one item here that changes a spec rather than adding to it, and everything else assumes it.
+1. ~~**Confirm the EPIC-B §8 amendment**~~ — **settled.** `target_type` is `enum(handle, post)`, tag-following retired to `member_interests`, and as of 8 August the `handle` half is not required either. In practice one live target remains: `post`.
 
-2. **Confirm the backfill in Section 4.** Auto-following on authoring, with a follow row backfilled for every post and comment already written, keeps existing members' notifications exactly as they are today and adds a mute they have never had. The two new notifications it introduces — sibling answers, and replies under someone else's answer in your own thread — are additive. Worth a conscious yes, but a much smaller ask than an earlier draft of this document implied.
+2. ~~**Confirm the backfill in Section 4.**~~ — **done**; it ran on live with 0 posts and 0 commenters left unsubscribed. Auto-following on authoring, with a follow row backfilled for every post and comment already written, keeps existing members' notifications exactly as they are today and adds a mute they have never had. The two new notifications it introduces — sibling answers, and replies under someone else's answer in your own thread — are additive. Worth a conscious yes, but a much smaller ask than an earlier draft of this document implied.
 
-3. **Default channels for `thread_activity`.** The recommendation is **in-app on, email on** — but only under Section 6's collapsing rule, which caps it at one email per thread per read. The conservative alternative is email off by default, at the cost of the feature being invisible to anyone who does not go looking in settings.
+3. **Default channels for `thread_activity`** — *still open.* Shipped as recommended, but not ratified. The recommendation was **in-app on, email on** — but only under Section 6's collapsing rule, which caps it at one email per thread per read. The conservative alternative is email off by default, at the cost of the feature being invisible to anyone who does not go looking in settings.
 
-4. **Slice number.** Filed here as S15 because it is a new deliverable rather than a split of S7, and because it is being built ahead of the rest of S7. If it reads better as S7a, that is a naming preference and nothing in this document depends on it.
+4. ~~**Slice number.**~~ — **S15.** Filed as S15 because it is a new deliverable rather than a split of S7, and because it is being built ahead of the rest of S7. If it reads better as S7a, that is a naming preference and nothing in this document depends on it.

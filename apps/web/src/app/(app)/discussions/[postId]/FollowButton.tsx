@@ -16,10 +16,11 @@ import { toggleFollowAction } from './actions';
  * "Follow" and "Following" are different words, not the same word in two colours. Nothing
  * here relies on the fill or the border to be legible.
  *
- * The label names its **object** — "Follow discussion", not "Follow" — because following a
- * *handle* is S7's, and the two will eventually sit in the same product. A bare "Follow"
- * would be ambiguous the moment that lands, and the ambiguity would be worst on a profile,
- * where both could plausibly appear.
+ * The label names its **object** — "Follow discussion", not "Follow". Handle-following was
+ * judged not required shortly after this shipped (2026-08-08), so a bare "Follow" would in
+ * fact be unambiguous today; the label stays as it is because naming the object costs two
+ * words, reads no worse, and means nothing has to be renamed if a second target ever
+ * arrives. Members should not learn a control twice.
  *
  * Never gold in either state — this is not kudos, and kudos gold is the product's one
  * status colour.

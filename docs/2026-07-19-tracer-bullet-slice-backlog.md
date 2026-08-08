@@ -98,20 +98,26 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S7 — Discovery: follows, personalised feed, trending, search  [parallel-able] [Should + Must(search)] — **search built 2026-08-02**
+## S7 — Discovery: search, and what is left of the personalised feed  [parallel-able] [Should + Must(search)] — **search built 2026-08-02; the rest largely dissolved**
 
-> **Status.** The **Must-have half is in**: `GET /v1/search` (EPIC-C §4 — weighted tsvector with tag and category names folded in, `websearch_to_tsquery`, `pg_trgm` typo fallback, `ts_rank_cd` → recency → kudos tiebreak) and screen C3. **Not built**: the personalised feed and the trending fallback — both Should-have and separable, as the note below anticipated.
+> **Status.** The **Must-have half is in**: `GET /v1/search` (EPIC-C §4 — weighted tsvector with tag and category names folded in, `websearch_to_tsquery`, `pg_trgm` typo fallback, `ts_rank_cd` → recency → kudos tiebreak) and screen C3. **Not built**: the personalised feed and the trending view — and the personalised feed no longer has a definition to build, per the two scope changes below.
 >
-> **Scope narrowed 2026-08-06.** `community.follows` now lands in **S15** (post-follows), which creates the table; S7 adds the `handle` target type and the personalised list that consumes it. **Tag-following is retired** — that half is `community.member_interests`, built in S8b. See `docs/2026-08-06-post-follow-design.md` §2–3 for the reasoning and the EPIC-B §8 amendment it proposes.
+> **Scope narrowed 2026-08-06, then again 2026-08-08 — very little of S7 is left.** `community.follows` landed in **S15** (post-follows). **Tag-following is retired** (that half is `community.member_interests`, S8b) and **handle-following is not required** (decided on review, 8 Aug).
+>
+> ⚠️ **That removes both inputs to the personalised feed, so it is hollowed out rather than deferred** — `GET /v1/feed` as specced in EPIC-C §8 has nothing left to select on. Reviving a personalised Discussions home means designing it afresh from what members have actually told us (their clinical interests), not resuming this.
+>
+> **What remains of S7:** search (**built**), and the **trending view** — which is no longer a *fallback*, since there is nothing to fall back from, but a standalone alternative ordering if it is wanted at all. Its adaptive window (24h → 7d → 30d → all-time) still earns its keep on its own terms: it exists so a cold-start view is never empty.
+>
+> Until then the Discussions list is chronological with search as the way in, which is what is live.
 >
 > Fixed on the way: a tag filter did an **exact match**, so filtering on any parent region returned 0 posts while its subtree held dozens. The composer's picker drops an ancestor when a descendant is chosen precisely because it assumes query-time broadening; that half was missing. Both the list and search now expand a tag to its subtree.
 >
 > **Outstanding and needing Andrew, not code:** `community.tags.synonyms` was seeded for 11 tags on 2026-08-05 (#92), taking feed classification coverage 45% → 55%; **most of the 588 remain empty**. §4 calls the clinical synonym dictionary the single most important search-quality feature for this audience; it is a data top-up on the existing tags.
 
-- **Delivers**: following a handle shapes the Discussions home; an empty feed falls back to trending; full-text search returns posts.
-- **Touches**: EPIC-B (`follows.target_type = handle` — the table itself comes from S15; `POST`/`DELETE /v1/follows`); EPIC-C (§8 personalised feed `GET /v1/feed` + adaptive trending fallback; §4 search `GET /v1/search`, Postgres FTS + `pg_trgm` + synonym dictionary seeded from `tags.synonyms`). Screens C2, C3, C1 (personalised).
-- **Depends on**: S4 (posts to follow/search), S3 (handles), S15 (`community.follows`).
-- **Notes**: **search is Must-have**, the personalised feed is Should-have — separable in priority though they share the discovery surface. Follow buttons appear on threads/profiles (`follows_*` DTO fields). The tag half of the original personalisation idea is `member_interests` (S8b), not a follow.
+- **Delivers**: full-text search returns posts (**built**); optionally a trending view, kudos-ranked over an adaptive window.
+- **Touches**: EPIC-C only (§4 search `GET /v1/search`, Postgres FTS + `pg_trgm` + synonym dictionary seeded from `tags.synonyms` — **built**; §8's trending view — not built). Screen C3 (built); C1 stays chronological. **No longer touches EPIC-B**: post-follows shipped in S15 and are read by notifications, not by any list on this screen.
+- **Depends on**: S4 (posts to search), S3 (handles).
+- **Notes**: **search was the Must-have and it is in.** What remains is Should-have and now *optional* rather than merely unbuilt — the personalised feed lost both its inputs (see the status box), so there is no "follow buttons on threads/profiles" work here either. The tag half of the original personalisation idea is `member_interests` (S8b); the handle half is not required.
 
 ---
 
@@ -234,7 +240,9 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 >
 > **And it delivers the off-switch the product has never had.** The follow row becomes the thread's one subscription record, which `reply` consults too — so unfollowing genuinely silences a thread, and a member can mute one noisy question without turning off reply notifications everywhere. With rows backfilled for existing content it is additive: nobody's current notifications change.
 >
-> **Retires "tag follow".** EPIC-B §8's `target_type enum(handle, tag)` becomes `enum(handle, post)`; the tag half is already owned by `community.member_interests` (S8b), with a picker over the full taxonomy already in front of members. Three acts, two verbs: follow a discussion, follow a handle, choose your interests.
+> **Retires "tag follow".** EPIC-B §8's `target_type enum(handle, tag)` becomes `enum(handle, post)`; the tag half is already owned by `community.member_interests` (S8b), with a picker over the full taxonomy already in front of members.
+>
+> **Updated 2026-08-08 — handle-following is not required either**, so `post` is the one live target type and the shipped control reads "Follow discussion". The unused `handle` enum value stays: removing it costs a migration now and another one if the decision is revisited.
 
 - **Delivers**: a Follow control on a thread; authoring a post or comment auto-follows it; unfollow mutes the thread outright; later replies arrive as one collapsing notification per thread ("3 new replies on …"); a fourth Activity pane listing followed discussions the member did **not** write in (My Q&A keeps the ones they did).
 - **Touches**: EPIC-B (`community.follows` — this slice creates it; `POST`/`DELETE /v1/follows`, `GET /v1/follows/me`); EPIC-G (new `thread_activity` notification type — a migration, per `community.schema.ts:507`'s stated price; sixth row in the F4 matrix); EPIC-C (`viewerContext.isFollowing` on the thread DTO). Screens C4, E1, new E3 (Activity › Following).

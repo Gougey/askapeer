@@ -93,9 +93,9 @@ export class ListPostsDto {
  * Follow a target (EPIC-B §8, S15).
  *
  * `targetType` is validated against `post` alone even though the column and the enum both
- * carry `handle`. S7 owns handle-follows and the personalised list that consumes them; until
- * that exists, accepting the value would let a client create rows nothing reads and no
- * screen can undo.
+ * carry `handle`. Handle-following was judged **not required** on review (2026-08-08), so
+ * accepting the value would let a client create rows nothing reads and no screen can undo.
+ * The validator, not the enum, is what keeps that shut.
  */
 export class CreateFollowDto {
   @IsIn(['post'])
