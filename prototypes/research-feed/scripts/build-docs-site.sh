@@ -35,6 +35,7 @@ DOCS=(
   "slice-backlog|$REPO_ROOT/docs/2026-07-19-tracer-bullet-slice-backlog.md|Tracer-Bullet Slice Backlog|Ordered, dependency-aware build sequence of thin vertical slices derived from the specs + screen inventory. The last planning artifact before code.|Client"
   "open-questions|$REPO_ROOT/docs/2026-07-14-technical-specs-open-questions.md|Consolidated Open Questions|Every open question/conflict across all specs, gathered for team review.|Review"
   "taxonomy-standards|$REPO_ROOT/docs/2026-07-17-taxonomy-standards-research.md|Taxonomy Standards Research|Candidate standard medical taxonomies (MeSH, OSIICS) for the forum tag vocabulary — input to FD-4.|Review"
+  "body-part-condition-synonym-list|$REPO_ROOT/docs/body-part-condition-and-synonym-list.md|Body Parts, Conditions & Synonyms (Andrew, Aug 2026)|Andrew Renshaw's 98-page clinical vocabulary, re-formatted from the source PDF: anatomy and conditions by region, 350 preferred terms mapped to their synonyms, and the assessment/treatment vocabulary — plus what it would mean for the 588-tag taxonomy.|Review"
   "development|$REPO_ROOT/DEVELOPMENT.md|Development Setup|Running the monorepo locally: prerequisites, migrations, and how the simulated verification providers stand in for HCPC and Onfido.|Build"
 )
 
