@@ -75,14 +75,6 @@ sharing a name.</p>
 </thead>
 <tbody>
 <tr>
-<td>Upper limb → Muscles</td>
-<td style="text-align: right;">49</td>
-<td style="text-align: right;">14</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">2</td>
-<td><strong>⚠</strong> 2 duplicate group names</td>
-</tr>
-<tr>
 <td>Upper limb → Ligaments</td>
 <td style="text-align: right;">140</td>
 <td style="text-align: right;">21</td>
@@ -106,14 +98,6 @@ sharing a name.</p>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td>◇ proposed grouping — 1 boundary to confirm</td>
-</tr>
-<tr>
-<td>Upper limb → Conditions</td>
-<td style="text-align: right;">78</td>
-<td style="text-align: right;">15</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-<td><strong>⚠</strong> 1 duplicate group name</td>
 </tr>
 <tr>
 <td>Thoracic spine → Ligaments</td>
@@ -150,7 +134,23 @@ sharing a name.</p>
 <tr>
 <td>Cervical spine → Conditions</td>
 <td style="text-align: right;">59</td>
-<td style="text-align: right;">11</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Upper limb → Muscles</td>
+<td style="text-align: right;">49</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Upper limb → Conditions</td>
+<td style="text-align: right;">78</td>
+<td style="text-align: right;">14</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td>✓</td>
@@ -166,7 +166,7 @@ sharing a name.</p>
 <tr>
 <td>Thoracic spine → Conditions</td>
 <td style="text-align: right;">29</td>
-<td style="text-align: right;">8</td>
+<td style="text-align: right;">7</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td>✓</td>
@@ -182,7 +182,7 @@ sharing a name.</p>
 <tr>
 <td>Lumbar spine → Conditions</td>
 <td style="text-align: right;">41</td>
-<td style="text-align: right;">11</td>
+<td style="text-align: right;">10</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td>✓</td>
@@ -198,7 +198,7 @@ sharing a name.</p>
 <tr>
 <td>Lower limb → Conditions</td>
 <td style="text-align: right;">102</td>
-<td style="text-align: right;">16</td>
+<td style="text-align: right;">15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td>✓</td>
@@ -232,12 +232,19 @@ sharing a name.</p>
 <p>Read that as three tiers:</p>
 <ul>
 <li><strong>Muscles and conditions</strong> — every term sits in a named
-group and no two terms clash under the same parent. These already match
-the live taxonomy leaf for leaf and need no further input. The only
-blemish is in the upper limb, where three group names repeat
-(<em>Superficial</em>, <em>Deep</em>, <em>Nerve</em> are each used
-twice, for the flexor and extensor compartments); qualifying those names
-is a one-line fix, not a clinical question.</li>
+group and nothing clashes under the same parent. These match the live
+taxonomy leaf for leaf and need no further input. Nine of these groups
+are <strong>parents of other groups</strong>, which the source marks
+only by leaving the parent heading empty: <em>Hyoid Muscles</em> over
+Suprahyoid and Infrahyoid, the two forearm compartments over their
+Superficial/Intermediate/Deep layers, <em>Hand</em> over Thenar,
+Hypothenar and Central, <em>Thigh</em>, <em>Leg (Posterior)</em>,
+<em>Foot</em>, and — in the conditions lists — <em>Shoulder</em> and
+<em>Knee</em> over their per-structure categories. Restoring that level
+is what clears the last of the duplicate group names:
+<em>Superficial</em> and <em>Deep</em> stop colliding once each sits
+under its own compartment, and the two <em>Nerve</em> groups separate
+under Elbow and Wrist.</li>
 <li><strong>Ligaments have a proposed grouping.</strong> The source
 lists most of them as one flat run — the upper limb is 140 terms with no
 headings at all — and 72 names repeat inside those runs. That is not
@@ -280,9 +287,8 @@ Superficial <span class="count">— 3</span>
 </details>
 <details class="tree">
 <summary>
-Hyoid Muscles <span class="count">— 0</span>
+Hyoid Muscles <span class="count">— 8, 2 sub-groups</span>
 </summary>
-</details>
 <details class="tree">
 <summary>
 Suprahyoid <span class="count">— 4</span>
@@ -304,6 +310,7 @@ Infrahyoid <span class="count">— 4</span>
 <li>Thyrohyoid</li>
 <li>Omohyoid</li>
 </ul>
+</details>
 </details>
 <details class="tree">
 <summary>
@@ -447,14 +454,9 @@ heading)</span> <span class="count">— 3</span>
 </details>
 <details class="tree">
 <summary>
-Conditions <span class="count">— 59 terms, 11 groups</span> <span
+Conditions <span class="count">— 59 terms, 10 groups</span> <span
 class="ok">✓ structured</span>
 </summary>
-<details class="tree">
-<summary>
-Cervical Spine MSK conditions (tags) <span class="count">— 0</span>
-</summary>
-</details>
 <details class="tree">
 <summary>
 Muscular Conditions <span class="count">— 12</span>
@@ -594,7 +596,7 @@ Upper limb <span class="count">— 267 terms, 3 branches</span>
 <details class="tree">
 <summary>
 Muscles <span class="count">— 49 terms, 14 groups</span> <span
-class="warn">⚠ 2 duplicate group names</span>
+class="ok">✓ structured</span>
 </summary>
 <details class="tree">
 <summary>
@@ -638,9 +640,8 @@ Arm (Posterior Compartment) <span class="count">— 2</span>
 </details>
 <details class="tree">
 <summary>
-Forearm Flexor Compartment <span class="count">— 0</span>
+Forearm Flexor Compartment <span class="count">— 8, 3 sub-groups</span>
 </summary>
-</details>
 <details class="tree">
 <summary>
 Superficial <span class="count">— 4</span>
@@ -670,11 +671,12 @@ Deep <span class="count">— 3</span>
 <li>Pronator quadratus</li>
 </ul>
 </details>
+</details>
 <details class="tree">
 <summary>
-Forearm Extensor Compartment <span class="count">— 0</span>
+Forearm Extensor Compartment <span class="count">— 11, 2
+sub-groups</span>
 </summary>
-</details>
 <details class="tree">
 <summary>
 Superficial <span class="count">— 6</span>
@@ -700,11 +702,11 @@ Deep <span class="count">— 5</span>
 <li>Extensor indicis</li>
 </ul>
 </details>
+</details>
 <details class="tree">
 <summary>
-Hand <span class="count">— 0</span>
+Hand <span class="count">— 11, 3 sub-groups</span>
 </summary>
-</details>
 <details class="tree">
 <summary>
 Thenar <span class="count">— 4</span>
@@ -736,6 +738,7 @@ Central <span class="count">— 3</span>
 <li>Palmar interossei (3)</li>
 <li>Dorsal interossei (4)</li>
 </ul>
+</details>
 </details>
 </details>
 <details class="tree">
@@ -1064,19 +1067,13 @@ Flexor pulley system <span class="count">— 10</span>
 </details>
 <details class="tree">
 <summary>
-Conditions <span class="count">— 78 terms, 15 groups</span> <span
-class="warn">⚠ 1 duplicate group name</span>
+Conditions <span class="count">— 78 terms, 14 groups</span> <span
+class="ok">✓ structured</span>
 </summary>
 <details class="tree">
 <summary>
-Upper Limb MSK conditions (tags) <span class="count">— 0</span>
+Shoulder <span class="count">— 27, 7 sub-groups</span>
 </summary>
-</details>
-<details class="tree">
-<summary>
-Shoulder <span class="count">— 0</span>
-</summary>
-</details>
 <details class="tree">
 <summary>
 Rotator Cuff <span class="count">— 4</span>
@@ -1153,9 +1150,10 @@ Fractures <span class="count">— 3</span>
 <li>Scapular fracture</li>
 </ul>
 </details>
+</details>
 <details class="tree">
 <summary>
-Elbow <span class="count">— 13</span>
+Elbow <span class="count">— 16, 1 sub-groups</span>
 </summary>
 <ul>
 <li>Lateral epicondylopathy (tennis elbow)</li>
@@ -1172,7 +1170,6 @@ Elbow <span class="count">— 13</span>
 <li>Elbow dislocation</li>
 <li>Capitellar OCD</li>
 </ul>
-</details>
 <details class="tree">
 <summary>
 Nerve <span class="count">— 3</span>
@@ -1182,6 +1179,7 @@ Nerve <span class="count">— 3</span>
 <li>Radial tunnel syndrome</li>
 <li>Posterior interosseous nerve syndrome</li>
 </ul>
+</details>
 </details>
 <details class="tree">
 <summary>
@@ -1198,7 +1196,7 @@ Forearm <span class="count">— 6</span>
 </details>
 <details class="tree">
 <summary>
-Wrist <span class="count">— 13</span>
+Wrist <span class="count">— 15, 1 sub-groups</span>
 </summary>
 <ul>
 <li>Wrist sprain</li>
@@ -1215,7 +1213,6 @@ Wrist <span class="count">— 13</span>
 <li>Distal radius fracture</li>
 <li>Scaphoid fracture</li>
 </ul>
-</details>
 <details class="tree">
 <summary>
 Nerve <span class="count">— 2</span>
@@ -1224,6 +1221,7 @@ Nerve <span class="count">— 2</span>
 <li>Carpal tunnel syndrome</li>
 <li>Guyon’s canal syndrome</li>
 </ul>
+</details>
 </details>
 <details class="tree">
 <summary>
@@ -1357,14 +1355,9 @@ Costovertebral &amp; costotransverse joints <span class="count">—
 </details>
 <details class="tree">
 <summary>
-Conditions <span class="count">— 29 terms, 8 groups</span> <span
+Conditions <span class="count">— 29 terms, 7 groups</span> <span
 class="ok">✓ structured</span>
 </summary>
-<details class="tree">
-<summary>
-Thoracic Spine MSK conditions (tags) <span class="count">— 0</span>
-</summary>
-</details>
 <details class="tree">
 <summary>
 Muscular <span class="count">— 4</span>
@@ -1552,14 +1545,9 @@ Restated — a second pass over the segmental list <span class="count">—
 </details>
 <details class="tree">
 <summary>
-Conditions <span class="count">— 41 terms, 11 groups</span> <span
+Conditions <span class="count">— 41 terms, 10 groups</span> <span
 class="ok">✓ structured</span>
 </summary>
-<details class="tree">
-<summary>
-Lumbar Spine MSK conditions (tags) <span class="count">— 0</span>
-</summary>
-</details>
 <details class="tree">
 <summary>
 Muscular <span class="count">— 5</span>
@@ -1701,9 +1689,8 @@ Gluteal Region <span class="count">— 10</span>
 </details>
 <details class="tree">
 <summary>
-Thigh <span class="count">— 0</span>
+Thigh <span class="count">— 16, 3 sub-groups</span>
 </summary>
-</details>
 <details class="tree">
 <summary>
 Anterior <span class="count">— 6</span>
@@ -1741,6 +1728,7 @@ Posterior <span class="count">— 4</span>
 <li>Semimembranosus</li>
 </ul>
 </details>
+</details>
 <details class="tree">
 <summary>
 Leg (Anterior) <span class="count">— 4</span>
@@ -1763,9 +1751,8 @@ Leg (Lateral) <span class="count">— 2</span>
 </details>
 <details class="tree">
 <summary>
-Leg (Posterior) <span class="count">— 0</span>
+Leg (Posterior) <span class="count">— 7, 2 sub-groups</span>
 </summary>
-</details>
 <details class="tree">
 <summary>
 Superficial <span class="count">— 3</span>
@@ -1787,11 +1774,11 @@ Deep <span class="count">— 4</span>
 <li>Flexor digitorum longus</li>
 </ul>
 </details>
+</details>
 <details class="tree">
 <summary>
-Foot <span class="count">— 0</span>
+Foot <span class="count">— 12, 5 sub-groups</span>
 </summary>
-</details>
 <details class="tree">
 <summary>
 Dorsum <span class="count">— 2</span>
@@ -1838,6 +1825,7 @@ Plantar Layer 4 <span class="count">— 2</span>
 <li>Plantar interossei (3)</li>
 <li>Dorsal interossei (4)</li>
 </ul>
+</details>
 </details>
 </details>
 <details class="tree">
@@ -2255,14 +2243,9 @@ Retinacula, sheaths &amp; digital pulleys <span class="count">— 9</span>
 </details>
 <details class="tree">
 <summary>
-Conditions <span class="count">— 102 terms, 16 groups</span> <span
+Conditions <span class="count">— 102 terms, 15 groups</span> <span
 class="ok">✓ structured</span>
 </summary>
-<details class="tree">
-<summary>
-Lower Limb MSK conditions (tags) <span class="count">— 0</span>
-</summary>
-</details>
 <details class="tree">
 <summary>
 Hip <span class="count">— 18</span>
@@ -2317,9 +2300,8 @@ Thigh <span class="count">— 7</span>
 </details>
 <details class="tree">
 <summary>
-Knee <span class="count">— 0</span>
+Knee <span class="count">— 26, 7 sub-groups</span>
 </summary>
-</details>
 <details class="tree">
 <summary>
 Ligaments <span class="count">— 5</span>
@@ -2395,9 +2377,10 @@ Other <span class="count">— 4</span>
 <li>Hoffa’s fat pad syndrome</li>
 </ul>
 </details>
+</details>
 <details class="tree">
 <summary>
-Lower Leg <span class="count">— 10</span>
+Lower Leg <span class="count">— 12, 1 sub-groups</span>
 </summary>
 <ul>
 <li>Medial tibial stress syndrome</li>
@@ -2411,7 +2394,6 @@ Lower Leg <span class="count">— 10</span>
 <li>Achilles rupture</li>
 <li>Plantaris rupture</li>
 </ul>
-</details>
 <details class="tree">
 <summary>
 Nerve <span class="count">— 2</span>
@@ -2420,6 +2402,7 @@ Nerve <span class="count">— 2</span>
 <li>Common peroneal neuropathy</li>
 <li>Tibial nerve entrapment</li>
 </ul>
+</details>
 </details>
 <details class="tree">
 <summary>

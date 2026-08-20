@@ -30,29 +30,29 @@ Every branch of Part 1, worst first. **The flag is about the *shape* of the list
 
 | Branch | Terms | Groups | Loose terms | Duplicate names | |
 |---|---:|---:|---:|---:|---|
-| Upper limb → Muscles | 49 | 14 | 0 | 2 | **⚠** 2 duplicate group names |
 | Upper limb → Ligaments | 140 | 21 | 0 | 1 | ◇ proposed grouping — 21 boundaries to confirm · **⚠** 1 duplicate term name |
 | Pelvis, hip and pelvic floor → Bones & landmarks | 71 | 9 | 0 | 2 | **⚠** 2 duplicate term names |
 | Cervical spine → Ligaments | 28 | 5 | 0 | 0 | ◇ proposed grouping — 1 boundary to confirm |
-| Upper limb → Conditions | 78 | 15 | 0 | 1 | **⚠** 1 duplicate group name |
 | Thoracic spine → Ligaments | 14 | 2 | 0 | 0 | ◇ proposed grouping — 2 boundaries to confirm |
 | Lumbar spine → Ligaments | 19 | 3 | 0 | 0 | ◇ proposed grouping — 3 boundaries to confirm |
 | Lower limb → Ligaments | 180 | 27 | 0 | 0 | ◇ proposed grouping — 24 boundaries to confirm |
 | Cervical spine → Muscles | 35 | 8 | 0 | 0 | ✓ |
-| Cervical spine → Conditions | 59 | 11 | 0 | 0 | ✓ |
+| Cervical spine → Conditions | 59 | 10 | 0 | 0 | ✓ |
+| Upper limb → Muscles | 49 | 14 | 0 | 0 | ✓ |
+| Upper limb → Conditions | 78 | 14 | 0 | 0 | ✓ |
 | Thoracic spine → Muscles | 22 | 4 | 0 | 0 | ✓ |
-| Thoracic spine → Conditions | 29 | 8 | 0 | 0 | ✓ |
+| Thoracic spine → Conditions | 29 | 7 | 0 | 0 | ✓ |
 | Lumbar spine → Muscles | 15 | 3 | 0 | 0 | ✓ |
-| Lumbar spine → Conditions | 41 | 11 | 0 | 0 | ✓ |
+| Lumbar spine → Conditions | 41 | 10 | 0 | 0 | ✓ |
 | Lower limb → Muscles | 51 | 16 | 0 | 0 | ✓ |
-| Lower limb → Conditions | 102 | 16 | 0 | 0 | ✓ |
+| Lower limb → Conditions | 102 | 15 | 0 | 0 | ✓ |
 | Pelvis, hip and pelvic floor → Muscles | 45 | 7 | 0 | 0 | ✓ |
 | Pelvis, hip and pelvic floor → Ligaments | 32 | 5 | 0 | 0 | ✓ |
 | Pelvis, hip and pelvic floor → Conditions | 112 | 11 | 0 | 0 | ✓ |
 
 Read that as three tiers:
 
-- **Muscles and conditions** — every term sits in a named group and no two terms clash under the same parent. These already match the live taxonomy leaf for leaf and need no further input. The only blemish is in the upper limb, where three group names repeat (*Superficial*, *Deep*, *Nerve* are each used twice, for the flexor and extensor compartments); qualifying those names is a one-line fix, not a clinical question.
+- **Muscles and conditions** — every term sits in a named group and nothing clashes under the same parent. These match the live taxonomy leaf for leaf and need no further input. Nine of these groups are **parents of other groups**, which the source marks only by leaving the parent heading empty: *Hyoid Muscles* over Suprahyoid and Infrahyoid, the two forearm compartments over their Superficial/Intermediate/Deep layers, *Hand* over Thenar, Hypothenar and Central, *Thigh*, *Leg (Posterior)*, *Foot*, and — in the conditions lists — *Shoulder* and *Knee* over their per-structure categories. Restoring that level is what clears the last of the duplicate group names: *Superficial* and *Deep* stop colliding once each sits under its own compartment, and the two *Nerve* groups separate under Elbow and Wrist.
 - **Ligaments have a proposed grouping.** The source lists most of them as one flat run — the upper limb is 140 terms with no headings at all — and 72 names repeat inside those runs. That is not disorder: the source walks each region joint by joint and restates a shared ligament when it moves on, so the repeats *are* the boundaries. Cutting the runs at those points gives 58 joint blocks and drops the name clashes from **72 to 1** — the survivor being a genuine nesting case, not a duplicate. The blocks are proposals and every boundary needs Andrew's eye, but he should be confirming a structure rather than inventing one.
 - **The pelvis has been reconstructed** and now matches the others. The source drafts that region *twice* — once bone by bone, once consolidated by structure type — and both drafts were left in the file, which is what produced the 40 groups, the six *Common associated conditions* headings and the apparent duplication. Reconciling the two drafts yields four clean branches; see the note on the region itself for every move made.
 
@@ -75,10 +75,9 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Hyoid Muscles <span class="count">— 0</span></summary>
+<summary>Hyoid Muscles <span class="count">— 8, 2 sub-groups</span></summary>
 
 
-</details>
 <details class="tree">
 <summary>Suprahyoid <span class="count">— 4</span></summary>
 
@@ -96,6 +95,7 @@ Read that as three tiers:
 - Thyrohyoid
 - Omohyoid
 
+</details>
 </details>
 <details class="tree">
 <summary>Deep Neck Flexors <span class="count">— 4</span></summary>
@@ -202,13 +202,8 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Conditions <span class="count">— 59 terms, 11 groups</span> <span class="ok">✓ structured</span></summary>
+<summary>Conditions <span class="count">— 59 terms, 10 groups</span> <span class="ok">✓ structured</span></summary>
 
-<details class="tree">
-<summary>Cervical Spine MSK conditions (tags) <span class="count">— 0</span></summary>
-
-
-</details>
 <details class="tree">
 <summary>Muscular Conditions <span class="count">— 12</span></summary>
 
@@ -324,7 +319,7 @@ Read that as three tiers:
 <summary>Upper limb <span class="count">— 267 terms, 3 branches</span></summary>
 
 <details class="tree">
-<summary>Muscles <span class="count">— 49 terms, 14 groups</span> <span class="warn">⚠ 2 duplicate group names</span></summary>
+<summary>Muscles <span class="count">— 49 terms, 14 groups</span> <span class="ok">✓ structured</span></summary>
 
 <details class="tree">
 <summary>Shoulder & Scapular Muscles <span class="count">— 14</span></summary>
@@ -361,10 +356,9 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Forearm Flexor Compartment <span class="count">— 0</span></summary>
+<summary>Forearm Flexor Compartment <span class="count">— 8, 3 sub-groups</span></summary>
 
 
-</details>
 <details class="tree">
 <summary>Superficial <span class="count">— 4</span></summary>
 
@@ -388,11 +382,11 @@ Read that as three tiers:
 - Pronator quadratus
 
 </details>
-<details class="tree">
-<summary>Forearm Extensor Compartment <span class="count">— 0</span></summary>
-
-
 </details>
+<details class="tree">
+<summary>Forearm Extensor Compartment <span class="count">— 11, 2 sub-groups</span></summary>
+
+
 <details class="tree">
 <summary>Superficial <span class="count">— 6</span></summary>
 
@@ -414,11 +408,11 @@ Read that as three tiers:
 - Extensor indicis
 
 </details>
-<details class="tree">
-<summary>Hand <span class="count">— 0</span></summary>
-
-
 </details>
+<details class="tree">
+<summary>Hand <span class="count">— 11, 3 sub-groups</span></summary>
+
+
 <details class="tree">
 <summary>Thenar <span class="count">— 4</span></summary>
 
@@ -444,6 +438,7 @@ Read that as three tiers:
 - Palmar interossei (3)
 - Dorsal interossei (4)
 
+</details>
 </details>
 </details>
 <details class="tree">
@@ -698,18 +693,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Conditions <span class="count">— 78 terms, 15 groups</span> <span class="warn">⚠ 1 duplicate group name</span></summary>
+<summary>Conditions <span class="count">— 78 terms, 14 groups</span> <span class="ok">✓ structured</span></summary>
 
 <details class="tree">
-<summary>Upper Limb MSK conditions (tags) <span class="count">— 0</span></summary>
+<summary>Shoulder <span class="count">— 27, 7 sub-groups</span></summary>
 
 
-</details>
-<details class="tree">
-<summary>Shoulder <span class="count">— 0</span></summary>
-
-
-</details>
 <details class="tree">
 <summary>Rotator Cuff <span class="count">— 4</span></summary>
 
@@ -772,8 +761,9 @@ Read that as three tiers:
 - Scapular fracture
 
 </details>
+</details>
 <details class="tree">
-<summary>Elbow <span class="count">— 13</span></summary>
+<summary>Elbow <span class="count">— 16, 1 sub-groups</span></summary>
 
 - Lateral epicondylopathy (tennis elbow)
 - Medial epicondylopathy (golfer's elbow)
@@ -789,7 +779,6 @@ Read that as three tiers:
 - Elbow dislocation
 - Capitellar OCD
 
-</details>
 <details class="tree">
 <summary>Nerve <span class="count">— 3</span></summary>
 
@@ -797,6 +786,7 @@ Read that as three tiers:
 - Radial tunnel syndrome
 - Posterior interosseous nerve syndrome
 
+</details>
 </details>
 <details class="tree">
 <summary>Forearm <span class="count">— 6</span></summary>
@@ -810,7 +800,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Wrist <span class="count">— 13</span></summary>
+<summary>Wrist <span class="count">— 15, 1 sub-groups</span></summary>
 
 - Wrist sprain
 - TFCC injury
@@ -826,13 +816,13 @@ Read that as three tiers:
 - Distal radius fracture
 - Scaphoid fracture
 
-</details>
 <details class="tree">
 <summary>Nerve <span class="count">— 2</span></summary>
 
 - Carpal tunnel syndrome
 - Guyon's canal syndrome
 
+</details>
 </details>
 <details class="tree">
 <summary>Hand & Fingers <span class="count">— 14</span></summary>
@@ -935,13 +925,8 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Conditions <span class="count">— 29 terms, 8 groups</span> <span class="ok">✓ structured</span></summary>
+<summary>Conditions <span class="count">— 29 terms, 7 groups</span> <span class="ok">✓ structured</span></summary>
 
-<details class="tree">
-<summary>Thoracic Spine MSK conditions (tags) <span class="count">— 0</span></summary>
-
-
-</details>
 <details class="tree">
 <summary>Muscular <span class="count">— 4</span></summary>
 
@@ -1086,13 +1071,8 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Conditions <span class="count">— 41 terms, 11 groups</span> <span class="ok">✓ structured</span></summary>
+<summary>Conditions <span class="count">— 41 terms, 10 groups</span> <span class="ok">✓ structured</span></summary>
 
-<details class="tree">
-<summary>Lumbar Spine MSK conditions (tags) <span class="count">— 0</span></summary>
-
-
-</details>
 <details class="tree">
 <summary>Muscular <span class="count">— 5</span></summary>
 
@@ -1208,10 +1188,9 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Thigh <span class="count">— 0</span></summary>
+<summary>Thigh <span class="count">— 16, 3 sub-groups</span></summary>
 
 
-</details>
 <details class="tree">
 <summary>Anterior <span class="count">— 6</span></summary>
 
@@ -1243,6 +1222,7 @@ Read that as three tiers:
 - Semimembranosus
 
 </details>
+</details>
 <details class="tree">
 <summary>Leg (Anterior) <span class="count">— 4</span></summary>
 
@@ -1260,10 +1240,9 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Leg (Posterior) <span class="count">— 0</span></summary>
+<summary>Leg (Posterior) <span class="count">— 7, 2 sub-groups</span></summary>
 
 
-</details>
 <details class="tree">
 <summary>Superficial <span class="count">— 3</span></summary>
 
@@ -1281,11 +1260,11 @@ Read that as three tiers:
 - Flexor digitorum longus
 
 </details>
-<details class="tree">
-<summary>Foot <span class="count">— 0</span></summary>
-
-
 </details>
+<details class="tree">
+<summary>Foot <span class="count">— 12, 5 sub-groups</span></summary>
+
+
 <details class="tree">
 <summary>Dorsum <span class="count">— 2</span></summary>
 
@@ -1322,6 +1301,7 @@ Read that as three tiers:
 - Plantar interossei (3)
 - Dorsal interossei (4)
 
+</details>
 </details>
 </details>
 <details class="tree">
@@ -1646,13 +1626,8 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Conditions <span class="count">— 102 terms, 16 groups</span> <span class="ok">✓ structured</span></summary>
+<summary>Conditions <span class="count">— 102 terms, 15 groups</span> <span class="ok">✓ structured</span></summary>
 
-<details class="tree">
-<summary>Lower Limb MSK conditions (tags) <span class="count">— 0</span></summary>
-
-
-</details>
 <details class="tree">
 <summary>Hip <span class="count">— 18</span></summary>
 
@@ -1700,10 +1675,9 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Knee <span class="count">— 0</span></summary>
+<summary>Knee <span class="count">— 26, 7 sub-groups</span></summary>
 
 
-</details>
 <details class="tree">
 <summary>Ligaments <span class="count">— 5</span></summary>
 
@@ -1765,8 +1739,9 @@ Read that as three tiers:
 - Hoffa's fat pad syndrome
 
 </details>
+</details>
 <details class="tree">
-<summary>Lower Leg <span class="count">— 10</span></summary>
+<summary>Lower Leg <span class="count">— 12, 1 sub-groups</span></summary>
 
 - Medial tibial stress syndrome
 - Tibial stress fracture
@@ -1779,13 +1754,13 @@ Read that as three tiers:
 - Achilles rupture
 - Plantaris rupture
 
-</details>
 <details class="tree">
 <summary>Nerve <span class="count">— 2</span></summary>
 
 - Common peroneal neuropathy
 - Tibial nerve entrapment
 
+</details>
 </details>
 <details class="tree">
 <summary>Ankle <span class="count">— 12</span></summary>
