@@ -30,14 +30,14 @@ Every branch of Part 1, worst first. **The flag is about the *shape* of the list
 
 | Branch | Terms | Groups | Loose terms | Duplicate names | |
 |---|---:|---:|---:|---:|---|
-| Upper limb → Ligaments | 140 | 0 | 140 | 28 | **⚠** no sub-grouping · 28 duplicate term names |
-| Lower limb → Ligaments | 180 | 3 | 76 | 36 | **⚠** 76 loose · 36 duplicate term names |
-| Lumbar spine → Ligaments | 19 | 0 | 19 | 4 | **⚠** no sub-grouping · 4 duplicate term names |
-| Pelvis, hip and pelvic floor → Muscles | 281 | 40 | 0 | 11 | **⚠** 2 duplicate term names · 9 duplicate group names |
-| Thoracic spine → Ligaments | 14 | 0 | 14 | 0 | **⚠** no sub-grouping |
-| Cervical spine → Ligaments | 28 | 4 | 10 | 0 | **⚠** 10 loose |
 | Upper limb → Muscles | 49 | 14 | 0 | 2 | **⚠** 2 duplicate group names |
-| Upper limb → Conditions | 78 | 15 | 0 | 1 | **⚠** 1 duplicate group names |
+| Upper limb → Ligaments | 140 | 21 | 0 | 1 | ◇ proposed grouping — 21 boundaries to confirm · **⚠** 1 duplicate term name |
+| Pelvis, hip and pelvic floor → Bones & landmarks | 71 | 9 | 0 | 2 | **⚠** 2 duplicate term names |
+| Cervical spine → Ligaments | 28 | 5 | 0 | 0 | ◇ proposed grouping — 1 boundary to confirm |
+| Upper limb → Conditions | 78 | 15 | 0 | 1 | **⚠** 1 duplicate group name |
+| Thoracic spine → Ligaments | 14 | 2 | 0 | 0 | ◇ proposed grouping — 2 boundaries to confirm |
+| Lumbar spine → Ligaments | 19 | 3 | 0 | 0 | ◇ proposed grouping — 3 boundaries to confirm |
+| Lower limb → Ligaments | 180 | 27 | 0 | 0 | ◇ proposed grouping — 24 boundaries to confirm |
 | Cervical spine → Muscles | 35 | 8 | 0 | 0 | ✓ |
 | Cervical spine → Conditions | 59 | 11 | 0 | 0 | ✓ |
 | Thoracic spine → Muscles | 22 | 4 | 0 | 0 | ✓ |
@@ -46,12 +46,15 @@ Every branch of Part 1, worst first. **The flag is about the *shape* of the list
 | Lumbar spine → Conditions | 41 | 11 | 0 | 0 | ✓ |
 | Lower limb → Muscles | 51 | 16 | 0 | 0 | ✓ |
 | Lower limb → Conditions | 102 | 16 | 0 | 0 | ✓ |
+| Pelvis, hip and pelvic floor → Muscles | 45 | 7 | 0 | 0 | ✓ |
+| Pelvis, hip and pelvic floor → Ligaments | 32 | 5 | 0 | 0 | ✓ |
+| Pelvis, hip and pelvic floor → Conditions | 112 | 11 | 0 | 0 | ✓ |
 
 Read that as three tiers:
 
 - **Muscles and conditions** — every term sits in a named group and no two terms clash under the same parent. These already match the live taxonomy leaf for leaf and need no further input. The only blemish is in the upper limb, where three group names repeat (*Superficial*, *Deep*, *Nerve* are each used twice, for the flexor and extensor compartments); qualifying those names is a one-line fix, not a clinical question.
-- **Ligaments are the weak spot.** 249 of the 309 ligaments have no group heading at all — the upper limb is a single flat run of 140 — and 68 names repeat *inside* that flat run, because the source walks joint by joint and some ligaments serve two joints. Expand *Upper limb → Ligaments* below and the problem is immediately visible. As it stands this branch cannot be loaded: sibling names must be unique.
-- **The pelvis is organised on a different plan** from every other region — bone by bone, not muscles/ligaments/conditions — with 40 groups, nine repeated group names (*Common associated conditions* appears six times), one heading that is only the tail of a wrapped line, and two that are notes to us rather than clinical terms.
+- **Ligaments have a proposed grouping.** The source lists most of them as one flat run — the upper limb is 140 terms with no headings at all — and 72 names repeat inside those runs. That is not disorder: the source walks each region joint by joint and restates a shared ligament when it moves on, so the repeats *are* the boundaries. Cutting the runs at those points gives 58 joint blocks and drops the name clashes from **72 to 1** — the survivor being a genuine nesting case, not a duplicate. The blocks are proposals and every boundary needs Andrew's eye, but he should be confirming a structure rather than inventing one.
+- **The pelvis has been reconstructed** and now matches the others. The source drafts that region *twice* — once bone by bone, once consolidated by structure type — and both drafts were left in the file, which is what produced the 40 groups, the six *Common associated conditions* headings and the apparent duplication. Reconciling the two drafts yields four clean branches; see the note on the region itself for every move made.
 
 ---
 
@@ -140,9 +143,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 28 terms, 4 groups</span> <span class="warn">⚠ 10 loose</span></summary>
+<summary>Ligaments <span class="count">— 28 terms, 5 groups</span> <span class="ok">◇ proposed grouping — 1 boundary to confirm</span></summary>
 
-<p class="count">10 terms below sit directly under this branch with no group heading in the source.</p>
+> **Proposed grouping — headings inserted, nothing else touched.** The source lists these as one flat run, but it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Every block below is a **contiguous slice of the original order** — no term has been moved, reordered, reworded or removed. The pattern is Andrew's own: the cervical spine is the one region where he wrote these headings himself, and blocks carrying his wording are marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**
+
+<details class="tree">
+<summary>Sub-axial cervical spine <span class="count">— 10</span></summary>
 
 - Anterior longitudinal ligament
 - Posterior longitudinal ligament
@@ -155,8 +161,9 @@ Read that as three tiers:
 - Uncovertebral joint capsular ligaments
 - Intervertebral disc annular fibres / annulus fibrosus
 
+</details>
 <details class="tree">
-<summary>Atlanto-occipital ligaments <span class="count">— 4</span></summary>
+<summary>Atlanto-occipital ligaments <span class="ok">(Andrew's heading)</span> <span class="count">— 4</span></summary>
 
 - Anterior atlanto-occipital membrane
 - Posterior atlanto-occipital membrane
@@ -165,7 +172,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Atlantoaxial ligaments <span class="count">— 3</span></summary>
+<summary>Atlantoaxial ligaments <span class="ok">(Andrew's heading)</span> <span class="count">— 3</span></summary>
 
 - Anterior atlantoaxial membrane
 - Posterior atlantoaxial membrane
@@ -173,7 +180,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Ligaments associated with the dens <span class="count">— 8</span></summary>
+<summary>Ligaments associated with the dens <span class="ok">(Andrew's heading)</span> <span class="count">— 8</span></summary>
 
 - Transverse ligament of the atlas
 - Cruciform ligament of the atlas
@@ -186,7 +193,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Other upper cervical stabilisers <span class="count">— 3</span></summary>
+<summary>Other upper cervical stabilisers <span class="ok">(Andrew's heading)</span> <span class="count">— 3</span></summary>
 
 - Ligamentum nuchae
 - Atlantoaxial capsular ligaments
@@ -440,9 +447,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 140 terms, 0 groups</span> <span class="warn">⚠ no sub-grouping · 28 duplicate term names</span></summary>
+<summary>Ligaments <span class="count">— 140 terms, 21 groups</span> <span class="ok">◇ proposed grouping — 21 boundaries to confirm · ⚠ 1 duplicate term name</span></summary>
 
-<p class="count">140 terms below sit directly under this branch with no group heading in the source.</p>
+> **Proposed grouping — headings inserted, nothing else touched.** The source lists these as one flat run, but it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Every block below is a **contiguous slice of the original order** — no term has been moved, reordered, reworded or removed. The pattern is Andrew's own: the cervical spine is the one region where he wrote these headings himself, and blocks carrying his wording are marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**
+
+<details class="tree">
+<summary>Acromioclavicular joint & scapular ligaments <span class="count">— 12</span></summary>
 
 - Acromioclavicular ligament
 - Superior acromioclavicular ligament
@@ -456,16 +466,31 @@ Read that as three tiers:
 - Inferior transverse scapular ligament
 - Spinoglenoid ligament
 - Suprascapular ligament
+
+</details>
+<details class="tree">
+<summary>Sternoclavicular joint <span class="count">— 6</span></summary>
+
 - Anterior sternoclavicular ligament
 - Posterior sternoclavicular ligament
 - Superior sternoclavicular ligament
 - Costoclavicular ligament
 - Interclavicular ligament
 - Sternoclavicular joint capsule
+
+</details>
+<details class="tree">
+<summary>Scapular ligaments — restated <span class="count">— 4</span></summary>
+
 - Superior transverse scapular ligament
 - Inferior transverse scapular ligament
 - Spinoglenoid ligament
 - Coracoacromial ligament
+
+</details>
+<details class="tree">
+<summary>Glenohumeral joint <span class="count">— 11</span></summary>
+
 - Glenohumeral joint capsule
 - Superior glenohumeral ligament
 - Middle glenohumeral ligament
@@ -477,12 +502,22 @@ Read that as three tiers:
 - Transverse humeral ligament
 - Coracoacromial ligament
 - Acromioclavicular ligament
+
+</details>
+<details class="tree">
+<summary>Glenoid labrum & capsulolabral complexes <span class="count">— 6</span></summary>
+
 - Superior labral complex
 - Glenoid labrum
 - Rotator interval capsule/ligamentous complex
 - Anterior capsulolabral complex
 - Posterior capsulolabral complex
 - Inferior glenohumeral ligament complex
+
+</details>
+<details class="tree">
+<summary>Elbow joint <span class="count">— 12</span></summary>
+
 - Ulnar collateral ligament
 - Medial collateral ligament
   - Anterior bundle
@@ -495,19 +530,39 @@ Read that as three tiers:
 - Posterior capsule
 - Anterior capsule
 - Elbow joint capsule
+
+</details>
+<details class="tree">
+<summary>Proximal radioulnar joint <span class="count">— 4</span></summary>
+
 - Annular ligament of radius
 - Quadrate ligament
 - Interosseous membrane of forearm
 - Oblique cord
+
+</details>
+<details class="tree">
+<summary>Forearm — restated, with interosseous detail <span class="count">— 6</span></summary>
+
 - Annular ligament
 - Quadrate ligament
 - Interosseous membrane of forearm
 - Central band
 - Accessory bands
 - Distal oblique bundle
+
+</details>
+<details class="tree">
+<summary>Distal radioulnar joint & TFCC <span class="count">— 3</span></summary>
+
 - Palmar radioulnar ligament
 - Dorsal radioulnar ligament
 - Articular disc / triangular fibrocartilage complex
+
+</details>
+<details class="tree">
+<summary>Wrist — radiocarpal & ulnocarpal <span class="count">— 15</span></summary>
+
 - Palmar radiocarpal ligaments
   - Radioscaphocapitate ligament
   - Long radiolunate ligament
@@ -523,6 +578,11 @@ Read that as three tiers:
 - Ulnar collateral ligament of wrist
 - Scapholunate interosseous ligament
 - Lunotriquetral interosseous ligament
+
+</details>
+<details class="tree">
+<summary>Wrist — midcarpal & intercarpal <span class="count">— 10</span></summary>
+
 - Scaphocapitate ligament
 - Scaphotrapeziotrapezoid ligament
 - Trapeziotrapezoid ligament
@@ -533,21 +593,46 @@ Read that as three tiers:
 - Pisohamate ligament
 - Pisometacarpal ligament
 - Dorsal intercarpal ligament
+
+</details>
+<details class="tree">
+<summary>Carpometacarpal joints <span class="count">— 3</span></summary>
+
 - Dorsal carpometacarpal ligaments
 - Palmar intercarpal ligaments
 - Palmar carpometacarpal ligaments
+
+</details>
+<details class="tree">
+<summary>Carpometacarpal joints — restated <span class="count">— 3</span></summary>
+
 - Dorsal carpometacarpal ligaments
 - Palmar carpometacarpal ligaments
 - Intermetacarpal ligaments
+
+</details>
+<details class="tree">
+<summary>Thumb — first carpometacarpal joint <span class="count">— 6</span></summary>
+
 - Anterior oblique ligament
 - Beak ligament
 - Dorsoradial ligament
 - Posterior oblique ligament
 - Ulnar collateral ligament
 - First carpometacarpal joint capsule
+
+</details>
+<details class="tree">
+<summary>Thumb — metacarpophalangeal joint <span class="count">— 3</span></summary>
+
 - Radial collateral ligament
 - Ulnar collateral ligament
 - Accessory collateral ligament
+
+</details>
+<details class="tree">
+<summary>Finger metacarpophalangeal joints <span class="count">— 7</span></summary>
+
 - Palmar plate
 - Deep transverse metacarpal ligament
 - Ulnar collateral ligament
@@ -555,17 +640,37 @@ Read that as three tiers:
 - Accessory collateral ligaments
 - Volar plate
 - Adductor pollicis aponeurosis
+
+</details>
+<details class="tree">
+<summary>Proximal interphalangeal joints <span class="count">— 3</span></summary>
+
 - Proper collateral ligaments
 - Accessory collateral ligaments
 - Palmar plates
+
+</details>
+<details class="tree">
+<summary>Distal interphalangeal joints <span class="count">— 3</span></summary>
+
 - Proper collateral ligaments
 - Accessory collateral ligaments
 - Palmar plates
+
+</details>
+<details class="tree">
+<summary>Finger joints — restated collaterals <span class="count">— 5</span></summary>
+
 - Radial collateral ligament
 - Ulnar collateral ligament
 - Accessory collateral ligaments
 - Palmar plate
 - Deep transverse metacarpal ligament
+
+</details>
+<details class="tree">
+<summary>Hand — fascial & retinacular structures <span class="count">— 8</span></summary>
+
 - Superficial transverse metacarpal ligament
 - Natatory ligaments
 - Cleland's ligaments
@@ -574,6 +679,11 @@ Read that as three tiers:
 - Retinacular ligaments
 - Oblique retinacular ligament
 - Transverse retinacular ligament
+
+</details>
+<details class="tree">
+<summary>Flexor pulley system <span class="count">— 10</span></summary>
+
 - Annular pulleys
   - A1 pulley
   - A2 pulley
@@ -586,8 +696,9 @@ Read that as three tiers:
   - C3
 
 </details>
+</details>
 <details class="tree">
-<summary>Conditions <span class="count">— 78 terms, 15 groups</span> <span class="warn">⚠ 1 duplicate group names</span></summary>
+<summary>Conditions <span class="count">— 78 terms, 15 groups</span> <span class="warn">⚠ 1 duplicate group name</span></summary>
 
 <details class="tree">
 <summary>Upper Limb MSK conditions (tags) <span class="count">— 0</span></summary>
@@ -794,9 +905,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 14 terms, 0 groups</span> <span class="warn">⚠ no sub-grouping</span></summary>
+<summary>Ligaments <span class="count">— 14 terms, 2 groups</span> <span class="ok">◇ proposed grouping — 2 boundaries to confirm</span></summary>
 
-<p class="count">14 terms below sit directly under this branch with no group heading in the source.</p>
+> **Proposed grouping — headings inserted, nothing else touched.** The source lists these as one flat run, but it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Every block below is a **contiguous slice of the original order** — no term has been moved, reordered, reworded or removed. The pattern is Andrew's own: the cervical spine is the one region where he wrote these headings himself, and blocks carrying his wording are marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**
+
+<details class="tree">
+<summary>Thoracic spine — segmental ligaments <span class="count">— 8</span></summary>
 
 - Anterior longitudinal ligament
 - Posterior longitudinal ligament
@@ -806,6 +920,11 @@ Read that as three tiers:
 - Intertransverse ligaments
 - Facet joint capsular ligaments
 - Intervertebral disc annular fibres / annulus fibrosus
+
+</details>
+<details class="tree">
+<summary>Costovertebral & costotransverse joints <span class="count">— 6</span></summary>
+
 - Radiate ligament of head of rib
 - Intra-articular ligament of head of rib
 - Capsular ligament of the costovertebral joint
@@ -813,6 +932,7 @@ Read that as three tiers:
 - Lateral costotransverse ligament
 - Superior costotransverse ligament
 
+</details>
 </details>
 <details class="tree">
 <summary>Conditions <span class="count">— 29 terms, 8 groups</span> <span class="ok">✓ structured</span></summary>
@@ -926,9 +1046,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 19 terms, 0 groups</span> <span class="warn">⚠ no sub-grouping · 4 duplicate term names</span></summary>
+<summary>Ligaments <span class="count">— 19 terms, 3 groups</span> <span class="ok">◇ proposed grouping — 3 boundaries to confirm</span></summary>
 
-<p class="count">19 terms below sit directly under this branch with no group heading in the source.</p>
+> **Proposed grouping — headings inserted, nothing else touched.** The source lists these as one flat run, but it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Every block below is a **contiguous slice of the original order** — no term has been moved, reordered, reworded or removed. The pattern is Andrew's own: the cervical spine is the one region where he wrote these headings himself, and blocks carrying his wording are marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**
+
+<details class="tree">
+<summary>Lumbar spine — segmental ligaments <span class="count">— 8</span></summary>
 
 - Anterior longitudinal ligament
 - Posterior longitudinal ligament
@@ -938,11 +1061,21 @@ Read that as three tiers:
 - Intertransverse ligaments
 - Facet joint capsular ligaments
 - Intervertebral disc annular fibres / annulus fibrosus
+
+</details>
+<details class="tree">
+<summary>Lumbosacral junction <span class="count">— 5</span></summary>
+
 - Iliolumbar ligament
 - Lumbosacral iliolumbar ligament
 - Lumbosacral ligament
 - Lateral lumbosacral ligament
 - Lumbosacral facet joint capsules
+
+</details>
+<details class="tree">
+<summary>Restated — a second pass over the segmental list <span class="count">— 6</span></summary>
+
 - Anterior longitudinal ligament
 - Posterior longitudinal ligament
 - Ligamentum flavum
@@ -950,6 +1083,7 @@ Read that as three tiers:
 - Supraspinous ligament
 - Iliolumbar ligament
 
+</details>
 </details>
 <details class="tree">
 <summary>Conditions <span class="count">— 41 terms, 11 groups</span> <span class="ok">✓ structured</span></summary>
@@ -1191,9 +1325,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 180 terms, 3 groups</span> <span class="warn">⚠ 76 loose · 36 duplicate term names</span></summary>
+<summary>Ligaments <span class="count">— 180 terms, 27 groups</span> <span class="ok">◇ proposed grouping — 24 boundaries to confirm</span></summary>
 
-<p class="count">76 terms below sit directly under this branch with no group heading in the source.</p>
+> **Proposed grouping — headings inserted, nothing else touched.** The source lists these as one flat run, but it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Every block below is a **contiguous slice of the original order** — no term has been moved, reordered, reworded or removed. The pattern is Andrew's own: the cervical spine is the one region where he wrote these headings himself, and blocks carrying his wording are marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**
+
+<details class="tree">
+<summary>Hip joint <span class="count">— 11</span></summary>
 
 - Iliofemoral ligament
   - Superior band
@@ -1206,11 +1343,21 @@ Read that as three tiers:
 - Ligament of head of femur
   - Ligamentum teres
 - Hip joint capsule
+
+</details>
+<details class="tree">
+<summary>Hip joint — restated <span class="count">— 5</span></summary>
+
 - Iliofemoral ligament
 - Pubofemoral ligament
 - Ischiofemoral ligament
 - Transverse acetabular ligament
 - Acetabular labrum
+
+</details>
+<details class="tree">
+<summary>Sacroiliac joint <span class="count">— 7</span></summary>
+
 - Anterior sacroiliac ligament
 - Interosseous sacroiliac ligament
 - Short posterior sacroiliac ligament
@@ -1218,10 +1365,20 @@ Read that as three tiers:
 - Sacrotuberous ligament
 - Sacrospinous ligament
 - Iliolumbar ligament
+
+</details>
+<details class="tree">
+<summary>Pubic symphysis <span class="count">— 4</span></summary>
+
 - Superior pubic ligament
 - Inferior/arcuate pubic ligament
 - Anterior pubic ligament
 - Posterior pubic ligament
+
+</details>
+<details class="tree">
+<summary>Knee — collateral & corner structures <span class="count">— 18</span></summary>
+
 - Medial collateral ligament
   - Superficial MCL
   - Deep MCL
@@ -1240,6 +1397,11 @@ Read that as three tiers:
 - Popliteofibular ligament
 - Fabellofibular ligament — variable
 - Lateral capsular ligament
+
+</details>
+<details class="tree">
+<summary>Knee — cruciate & meniscofemoral ligaments <span class="count">— 10</span></summary>
+
 - Anterior cruciate ligament
   - Anteromedial bundle
   - Posterolateral bundle
@@ -1250,6 +1412,11 @@ Read that as three tiers:
 - Posterior meniscofemoral ligament
 - Humphrey ligament
 - Wrisberg ligament
+
+</details>
+<details class="tree">
+<summary>Knee — meniscal attachments <span class="count">— 8</span></summary>
+
 - Transverse ligament of knee
 - Anterior meniscotibial ligaments
 - Posterior meniscotibial ligaments
@@ -1258,6 +1425,11 @@ Read that as three tiers:
 - Medial meniscotibial ligaments
 - Lateral meniscotibial ligaments
 - Meniscal root
+
+</details>
+<details class="tree">
+<summary>Knee — extensor mechanism & patellar stabilisers <span class="count">— 10</span></summary>
+
 - Patellar ligament
 - Medial patellofemoral ligament
 - Lateral patellofemoral ligament
@@ -1268,12 +1440,18 @@ Read that as three tiers:
 - Patellar retinacula
   - Medial patellar retinaculum
   - Lateral patellar retinaculum
+
+</details>
+<details class="tree">
+<summary>Superior tibiofibular joint <span class="count">— 3</span></summary>
+
 - Anterior superior tibiofibular ligament
 - Posterior superior tibiofibular ligament
 - Superior tibiofibular joint capsule
 
+</details>
 <details class="tree">
-<summary>Interosseous membrane <span class="count">— 3</span></summary>
+<summary>Interosseous membrane <span class="ok">(Andrew's heading)</span> <span class="count">— 3</span></summary>
 
 - Interosseous membrane
 - Central interosseous band
@@ -1281,13 +1459,18 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Distal tibiofibular syndesmosis/syndesmotic ligament <span class="count">— 10</span></summary>
+<summary>Distal tibiofibular syndesmosis/syndesmotic ligament <span class="ok">(Andrew's heading)</span> <span class="count">— 5</span></summary>
 
 - Anterior inferior tibiofibular ligament
 - Posterior inferior tibiofibular ligament
 - Inferior transverse tibiofibular ligament
 - Interosseous tibiofibular ligament
 - Distal tibiofibular syndesmotic capsul
+
+</details>
+<details class="tree">
+<summary>Ankle — lateral collateral ligaments <span class="count">— 5</span></summary>
+
 - Anterior talofibular ligament
 - Calcaneofibular ligament
 - Posterior talofibular ligament
@@ -1296,22 +1479,37 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Deltoid/medial collateral ligament: <span class="count">— 91</span></summary>
+<summary>Deltoid/medial collateral ligament: <span class="ok">(Andrew's heading)</span> <span class="count">— 5</span></summary>
 
     - Superficial layer- Tibionavicular ligament, Superficial tibiocalcaneal
     - ligament, Posterior tibiotalar ligament
 - Deep layer- Deep tibiotalar ligament, Anterior tibiotalar ligament
 - Anterior talocrural capsule
 - Posterior talocrural capsule
+
+</details>
+<details class="tree">
+<summary>Ankle — restated collaterals <span class="count">— 5</span></summary>
+
 - Medial collateral ligament
 - Lateral collateral ligament
 - Distal tibiofibular syndesmotic ligaments
 - Interosseous talocalcaneal ligament
 - Cervical ligament
+
+</details>
+<details class="tree">
+<summary>Subtalar joint <span class="count">— 4</span></summary>
+
 - Medial talocalcaneal ligament
 - Lateral talocalcaneal ligament
 - Posterior talocalcaneal ligament
 - Talocalcaneal joint capsule
+
+</details>
+<details class="tree">
+<summary>Talonavicular joint & spring ligament complex <span class="count">— 7</span></summary>
+
 - Dorsal talonavicular ligament
 - Plantar talonavicular ligament
 - Calcaneonavicular ligament
@@ -1319,6 +1517,11 @@ Read that as three tiers:
   - Superior/medial calcaneonavicular ligament
   - Inferior calcaneonavicular ligament
   - Superomedial calcaneonavicular ligament
+
+</details>
+<details class="tree">
+<summary>Calcaneocuboid joint & bifurcate ligament <span class="count">— 9</span></summary>
+
 - Dorsal calcaneocuboid ligament
 - Plantar calcaneocuboid ligament
 - Long plantar ligament
@@ -1328,9 +1531,19 @@ Read that as three tiers:
   - Calcaneocuboid component
 - Talonavicular ligaments
 - Calcaneocuboid ligaments
+
+</details>
+<details class="tree">
+<summary>Calcaneocuboid — restated <span class="count">— 3</span></summary>
+
 - Long plantar ligament
 - Short plantar ligament
 - Plantar calcaneonavicular ligament
+
+</details>
+<details class="tree">
+<summary>Tarsometatarsal (Lisfranc) joints <span class="count">— 7</span></summary>
+
 - Dorsal tarsometatarsal ligaments
 - Plantar tarsometatarsal ligaments
 - Interosseous tarsometatarsal ligaments
@@ -1338,6 +1551,11 @@ Read that as three tiers:
 - Interosseous cuneometatarsal ligament
 - Plantar Lisfranc ligament
 - Dorsal Lisfranc ligament
+
+</details>
+<details class="tree">
+<summary>Intertarsal, cuneonavicular & cuboid ligaments <span class="count">— 13</span></summary>
+
 - Interosseous talocalcaneal ligament
 - Interosseous cuneiform ligaments
 - Dorsal intertarsal ligaments
@@ -1351,35 +1569,70 @@ Read that as three tiers:
 - Dorsal cuboid ligaments
 - Plantar cuboid ligaments
 - Interosseous cuboid ligaments
+
+</details>
+<details class="tree">
+<summary>Metatarsophalangeal joints <span class="count">— 5</span></summary>
+
 - Medial collateral ligament
 - Lateral collateral ligament
 - Accessory collateral ligaments
 - Plantar plate
 - Deep transverse metatarsal ligament
+
+</details>
+<details class="tree">
+<summary>First MTP & sesamoid complex <span class="count">— 6</span></summary>
+
 - Medial collateral ligament
 - Lateral collateral ligament
 - Sesamoid ligaments
 - Metatarsosesamoid ligaments
 - Inter-sesamoid ligament
 - Plantar plate
+
+</details>
+<details class="tree">
+<summary>Proximal interphalangeal joints <span class="count">— 4</span></summary>
+
 - Medial collateral ligament
 - Lateral collateral ligament
 - Accessory collateral ligaments
 - Plantar plate
+
+</details>
+<details class="tree">
+<summary>Distal interphalangeal joints <span class="count">— 4</span></summary>
+
 - Medial collateral ligament
 - Lateral collateral ligament
 - Accessory collateral ligaments
 - Plantar plate
+
+</details>
+<details class="tree">
+<summary>Plantar structures <span class="count">— 4</span></summary>
+
 - Plantar calcaneonavicular ligament / spring ligament
 - Long plantar ligament
 - Short plantar ligament
 - Plantar aponeurosis
+
+</details>
+<details class="tree">
+<summary>Plantar structures — restated <span class="count">— 6</span></summary>
+
 - Long plantar ligament
 - Short plantar ligament
 - Plantar calcaneocuboid ligament
 - Deep transverse metatarsal ligament
 - Intermetatarsal ligaments
 - Interosseous ligaments
+
+</details>
+<details class="tree">
+<summary>Retinacula, sheaths & digital pulleys <span class="count">— 9</span></summary>
+
 - Superior extensor retinaculum
 - Inferior extensor retinaculum
 - Flexor retinaculum
@@ -1580,10 +1833,17 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree lvl1">
-<summary>Pelvis, hip and pelvic floor <span class="count">— 281 terms, 1 branches</span></summary>
+<summary>Pelvis, hip and pelvic floor <span class="count">— 260 terms, 4 branches</span></summary>
+
+> **Reconstructed — the only region where the running order has been changed.** The source drafts the pelvis twice: once bone by bone (Ilium, Ischium, Pubis, Acetabulum, SI joint, Sacrum, Coccyx, Pelvic ring, Inguinal region — each with its own landmarks, ligaments and conditions), and again consolidated by structure type at the end. Both drafts survived into the file. The two have been reconciled here into the same **Muscles / Ligaments / Conditions** shape the other regions use, plus a **Bones & landmarks** branch that only the pelvis enumerates. Six headings all reading *Common associated conditions* are renamed for the bone they describe; three headings that carried no terms of their own, and one that was only the tail of a wrapped line, are dropped as the introducers they were. **No term has been invented, reworded or removed** — only re-parented. What the two drafts disagreed on:
+
+> - *Pelvic floor Muscles* → Muscles → Pelvic floor: 4 terms already present, adds **Levator ani**.
+> - *Muscles* → Muscles → Perineal muscles: 7 terms already present, adds nothing new.
+> - *Pelvic ligaments* → Ligaments (reconciled against the consolidated list): 5 terms already present, adds **Posterior sacroiliac ligament**, **Iliac portion of the inguinal ligament**.
+> - *Major ligaments* → Ligaments (reconciled against the consolidated list): 5 terms already present, adds nothing new.
 
 <details class="tree">
-<summary>Muscles <span class="count">— 281 terms, 40 groups</span> <span class="warn">⚠ 2 duplicate term names · 9 duplicate group names</span></summary>
+<summary>Muscles <span class="count">— 45 terms, 7 groups</span> <span class="ok">✓ structured</span></summary>
 
 <details class="tree">
 <summary>Abdominal / trunk <span class="count">— 10</span></summary>
@@ -1644,12 +1904,13 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Pelvic floor <span class="count">— 4</span></summary>
+<summary>Pelvic floor <span class="count">— 5</span></summary>
 
 - Puborectalis
 - Pubococcygeus
 - Iliococcygeus
 - Coccygeus (ischiococcygeus)
+- Levator ani
 
 </details>
 <details class="tree">
@@ -1664,355 +1925,12 @@ Read that as three tiers:
 - Sphincter urethrovaginalis
 
 </details>
-<details class="tree">
-<summary>Pelvic bones / bony landmarks <span class="count">— 10</span></summary>
-
-- Ilium
-- Iliac crest
-- Anterior superior iliac spine (ASIS)
-- Anterior inferior iliac spine (AIIS)
-- Posterior superior iliac spine (PSIS)
-- Posterior inferior iliac spine (PIIS)
-- Iliac fossa
-- Gluteal surface
-- Auricular surface
-- Arcuate line
-
 </details>
 <details class="tree">
-<summary>Pelvic ligaments <span class="count">— 7</span></summary>
+<summary>Ligaments <span class="count">— 32 terms, 5 groups</span> <span class="ok">✓ structured</span></summary>
 
-- Iliolumbar ligament
-- Anterior sacroiliac ligament
-- Interosseous sacroiliac ligament
-- Posterior sacroiliac ligament
-- Sacrotuberous ligament
-- Sacrospinous ligament
-- Iliac portion of the inguinal ligament
-
-</details>
 <details class="tree">
-<summary>Pelvic bony conditions <span class="count">— 11</span></summary>
-
-- Iliac crest contusion
-- Iliac crest fracture
-- Iliac wing fracture
-- Iliac stress fracture
-- Iliac apophysitis
-- ASIS avulsion fracture
-- AIIS avulsion fracture
-- ASIS apophysitis
-- AIIS apophysitis
-- Iliac enthesopathy
-- Sacroiliac joint pathology
-
-</details>
-<details class="tree">
-<summary>Bones / bony landmarks from Ischium bone: <span class="count">— 7</span></summary>
-
-- Ischium
-- Ischial body
-- Ischial ramus
-- Ischial tuberosity
-- Ischial spine
-- Greater sciatic notch
-- Lesser sciatic notch
-
-</details>
-<details class="tree">
-<summary>Major ligaments <span class="count">— 5</span></summary>
-
-- Sacrotuberous ligament
-- Sacrospinous ligament
-- Ischiofemoral ligament
-- Posterior sacroiliac ligament
-- Interosseous sacroiliac ligament
-
-</details>
-<details class="tree">
-<summary>Common associated conditions <span class="count">— 10</span></summary>
-
-- Ischial tuberosity fracture
-- Ischial stress fracture
-- Ischial apophysitis
-- Ischial tuberosity avulsion
-- Proximal hamstring avulsion
-- Proximal hamstring tendinopathy
-- Ischial bursitis
-- Ischial enthesopathy
-- Ischial nerve-related pain
-- Ischiogluteal bursitis
-
-</details>
-<details class="tree">
-<summary>Bones / bony landmarks- Pubis bone <span class="count">— 10</span></summary>
-
-- Pubic body
-- Superior pubic ramus
-- Inferior pubic ramus
-- Pubic crest
-- Pubic tubercle
-- Pectineal line
-- Superior pubic ramus
-- Inferior pubic ramus
-- Ischiopubic ramus
-- Pubic symphysis
-
-</details>
-<details class="tree">
-<summary>Common associated conditions <span class="count">— 15</span></summary>
-
-- Osteitis pubis
-- Pubic symphysis dysfunction
-- Pubic symphysis instability
-- Pubic symphysis diastasis
-- Pubic symphysis arthritis
-- Pubic ramus fracture
-- Pubic ramus stress fracture
-- Pubic bone stress injury
-- Adductor origin injury
-- Athletic pubalgia
-- Core muscle injury
-- Rectus abdominis–adductor injury
-- Pubic osteomyelitis
-- Acetabulum- needs to be added as a keyword as it forms part of the hip joint- (the area of the
-- hip joint known as ‘the socket’- and formed by the ilium, ischium and pubis):
-
-</details>
-<details class="tree">
-<summary>Structures <span class="count">— 6</span></summary>
-
-- Acetabular rim
-- Acetabular fossa
-- Lunate surface
-- Acetabular notch
-- Transverse acetabular ligament
-- Acetabular labrum
-
-</details>
-<details class="tree">
-<summary>Common associated conditions <span class="count">— 11</span></summary>
-
-- Acetabular fracture
-- Acetabular stress fracture
-- Acetabular dysplasia
-- Acetabular retroversion
-- Acetabular overcoverage
-- Femoroacetabular impingement
-- Acetabular labral tear
-- Acetabular cartilage injury
-- Hip instability
-- Hip dislocation
-- Hip osteoarthritis
-
-</details>
-<details class="tree">
-<summary>Sacroiliac joint- Bones / structures <span class="count">— 6</span></summary>
-
-- Sacrum
-- Ilium
-- Sacral auricular surface
-- Iliac auricular surface
-- SI joint capsule
-- SI joint articular surfaces
-
-</details>
-<details class="tree">
-<summary>Common associated conditions <span class="count">— 13</span></summary>
-
-- Sacroiliac joint dysfunction
-- Sacroiliitis
-- SI joint sprain
-- SI joint instability
-- SI joint hypermobility
-- SI joint hypomobility
-- SI joint osteoarthritis
-- SI joint ankylosis
-- SI joint fracture
-- SI joint fracture-dislocation
-- Inflammatory sacroiliitis
-- Infectious sacroiliitis
-- Pregnancy-related SI dysfunction
-
-</details>
-<details class="tree">
-<summary>Sacrum Bones / structures <span class="count">— 9</span></summary>
-
-- Sacrum
-- Sacral promontory
-- Sacral ala
-- Sacral canal
-- Sacral foramina
-- Sacral hiatus
-- Sacral cornua
-- Sacral bodies
-- Sacral articular processes
-
-</details>
-<details class="tree">
-<summary>Common associated conditions <span class="count">— 9</span></summary>
-
-- Sacral fracture
-- Sacral stress fracture
-- Sacral insufficiency fracture
-- Sacroiliitis
-- Sacral stress reaction
-- Sacral tumour
-- Sacral osteomyelitis
-- Sacral nerve-root compression
-- Sacralization/lumbosacral transitional anatomy
-
-</details>
-<details class="tree">
-<summary>Coccyx Bones / structures <span class="count">— 5</span></summary>
-
-- Coccyx
-- Coccygeal vertebrae
-- Coccygeal cornua
-- Sacrococcygeal joint
-- Anococcygeal region
-
-</details>
-<details class="tree">
-<summary>Common associated conditions <span class="count">— 8</span></summary>
-
-- Coccydynia
-- Coccygeal fracture
-- Coccygeal dislocation
-- Coccygeal subluxation
-- Coccygeal instability
-- Sacrococcygeal joint degeneration
-- Coccygeal osteoarthritis
-- Post-traumatic coccygeal pain
-
-</details>
-<details class="tree">
-<summary>Pelvic ring- needs to be added as an individual term- Bones / structures (already <span class="count">— 0</span></summary>
-
-
-</details>
-<details class="tree">
-<summary>detailed above) <span class="count">— 9</span></summary>
-
-- Sacrum
-- Right innominate bone
-- Left innominate bone
-- Ilium
-- Ischium
-- Pubis
-- Pubic symphysis
-- Sacroiliac joints
-- Acetabula/Acetabulum
-
-</details>
-<details class="tree">
-<summary>Common injuries- not already detailed above <span class="count">— 12</span></summary>
-
-- Pelvic ring fracture
-- Stable pelvic fracture
-- Unstable pelvic fracture
-- Open pelvic fracture
-- APC injury
-- Lateral compression injury
-- Vertical shear injury
-- Combined-mechanism injury
-- Pubic symphysis disruption
-- SI joint disruption
-- Pelvic ring diastasis
-- Pelvic stress fracture
-
-</details>
-<details class="tree">
-<summary>Inguinal region-This is worth separating because it is a major source of groin/pubic pain. <span class="count">— 0</span></summary>
-
-
-</details>
-<details class="tree">
-<summary>Structures <span class="count">— 9</span></summary>
-
-- Inguinal canal
-- Deep inguinal ring
-- Superficial inguinal ring
-- Pubic tubercle
-- Pubic crest
-- Pectineal line
-- Conjoint tendon
-- Rectus sheath
-- Transversalis fascia
-
-</details>
-<details class="tree">
-<summary>Common conditions <span class="count">— 7</span></summary>
-
-- Inguinal hernia
-- Femoral hernia
-- Sports hernia
-- Athletic pubalgia
-- Inguinal-related groin pain
-- Conjoint tendon injury
-- Abdominal wall injury
-
-</details>
-<details class="tree">
-<summary>Pelvic floor Muscles <span class="count">— 5</span></summary>
-
-- Levator ani
-  - Puborectalis
-  - Pubococcygeus
-  - Iliococcygeus
-- Coccygeus
-
-</details>
-<details class="tree">
-<summary>Common conditions <span class="count">— 10</span></summary>
-
-- Pelvic floor muscle weakness
-- Pelvic floor hypertonicity
-- Pelvic floor myalgia
-- Pelvic floor muscle spasm
-- Levator ani syndrome
-- Pelvic floor muscle injury
-- Levator ani avulsion
-- Pelvic floor dysfunction
-- Pelvic floor muscle trigger points
-- Pelvic floor muscle coordination disorders
-
-</details>
-<details class="tree">
-<summary>Perineum: <span class="count">— 0</span></summary>
-
-
-</details>
-<details class="tree">
-<summary>Muscles <span class="count">— 7</span></summary>
-
-- Superficial transverse perineal
-- Deep transverse perineal
-- Ischiocavernosus
-- Bulbospongiosus
-- External anal sphincter
-- Compressor urethrae
-- Sphincter urethrovaginalis
-
-</details>
-<details class="tree">
-<summary>Common conditions <span class="count">— 6</span></summary>
-
-- Perineal muscle injury
-- Pelvic floor muscle injury
-- Perineal pain
-- Perineal muscle spasm
-- Pelvic floor dysfunction
-- Obstetric pelvic floor injury
-
-</details>
-<details class="tree">
-<summary>Pelvic ligaments: <span class="count">— 0</span></summary>
-
-
-</details>
-<details class="tree">
-<summary>Sacroiliac / posterior pelvis <span class="count">— 7</span></summary>
+<summary>Sacroiliac / posterior pelvis <span class="count">— 8</span></summary>
 
 - Anterior sacroiliac ligament
 - Interosseous sacroiliac ligament
@@ -2021,10 +1939,11 @@ Read that as three tiers:
 - Sacrotuberous ligament
 - Sacrospinous ligament
 - Iliolumbar ligament
+- Posterior sacroiliac ligament
 
 </details>
 <details class="tree">
-<summary>Pubic / anterior pelvis <span class="count">— 8</span></summary>
+<summary>Pubic / anterior pelvis <span class="count">— 9</span></summary>
 
 - Superior pubic ligament
 - Inferior pubic ligament
@@ -2034,6 +1953,7 @@ Read that as three tiers:
 - Lacunar ligament
 - Pectineal ligament
 - Reflected inguinal ligament
+- Iliac portion of the inguinal ligament
 
 </details>
 <details class="tree">
@@ -2064,6 +1984,297 @@ Read that as three tiers:
 - Anococcygeal ligament/raphe
 - Perineal membrane
 - Endopelvic fascial condensations
+
+</details>
+</details>
+<details class="tree">
+<summary>Bones & landmarks <span class="count">— 71 terms, 9 groups</span> <span class="warn">⚠ 2 duplicate term names</span></summary>
+
+<details class="tree">
+<summary>Ilium <span class="count">— 10</span></summary>
+
+- Ilium
+- Iliac crest
+- Anterior superior iliac spine (ASIS)
+- Anterior inferior iliac spine (AIIS)
+- Posterior superior iliac spine (PSIS)
+- Posterior inferior iliac spine (PIIS)
+- Iliac fossa
+- Gluteal surface
+- Auricular surface
+- Arcuate line
+
+</details>
+<details class="tree">
+<summary>Ischium <span class="count">— 7</span></summary>
+
+- Ischium
+- Ischial body
+- Ischial ramus
+- Ischial tuberosity
+- Ischial spine
+- Greater sciatic notch
+- Lesser sciatic notch
+
+</details>
+<details class="tree">
+<summary>Pubis <span class="count">— 10</span></summary>
+
+- Pubic body
+- Superior pubic ramus
+- Inferior pubic ramus
+- Pubic crest
+- Pubic tubercle
+- Pectineal line
+- Superior pubic ramus
+- Inferior pubic ramus
+- Ischiopubic ramus
+- Pubic symphysis
+
+</details>
+<details class="tree">
+<summary>Acetabulum <span class="count">— 6</span></summary>
+
+- Acetabular rim
+- Acetabular fossa
+- Lunate surface
+- Acetabular notch
+- Transverse acetabular ligament
+- Acetabular labrum
+
+</details>
+<details class="tree">
+<summary>Sacroiliac joint <span class="count">— 6</span></summary>
+
+- Sacrum
+- Ilium
+- Sacral auricular surface
+- Iliac auricular surface
+- SI joint capsule
+- SI joint articular surfaces
+
+</details>
+<details class="tree">
+<summary>Sacrum <span class="count">— 9</span></summary>
+
+- Sacrum
+- Sacral promontory
+- Sacral ala
+- Sacral canal
+- Sacral foramina
+- Sacral hiatus
+- Sacral cornua
+- Sacral bodies
+- Sacral articular processes
+
+</details>
+<details class="tree">
+<summary>Coccyx <span class="count">— 5</span></summary>
+
+- Coccyx
+- Coccygeal vertebrae
+- Coccygeal cornua
+- Sacrococcygeal joint
+- Anococcygeal region
+
+</details>
+<details class="tree">
+<summary>Pelvic ring <span class="count">— 9</span></summary>
+
+- Sacrum
+- Right innominate bone
+- Left innominate bone
+- Ilium
+- Ischium
+- Pubis
+- Pubic symphysis
+- Sacroiliac joints
+- Acetabula/Acetabulum
+
+</details>
+<details class="tree">
+<summary>Inguinal region <span class="count">— 9</span></summary>
+
+- Inguinal canal
+- Deep inguinal ring
+- Superficial inguinal ring
+- Pubic tubercle
+- Pubic crest
+- Pectineal line
+- Conjoint tendon
+- Rectus sheath
+- Transversalis fascia
+
+</details>
+</details>
+<details class="tree">
+<summary>Conditions <span class="count">— 112 terms, 11 groups</span> <span class="ok">✓ structured</span></summary>
+
+<details class="tree">
+<summary>Ilium <span class="count">— 11</span></summary>
+
+- Iliac crest contusion
+- Iliac crest fracture
+- Iliac wing fracture
+- Iliac stress fracture
+- Iliac apophysitis
+- ASIS avulsion fracture
+- AIIS avulsion fracture
+- ASIS apophysitis
+- AIIS apophysitis
+- Iliac enthesopathy
+- Sacroiliac joint pathology
+
+</details>
+<details class="tree">
+<summary>Ischium <span class="count">— 10</span></summary>
+
+- Ischial tuberosity fracture
+- Ischial stress fracture
+- Ischial apophysitis
+- Ischial tuberosity avulsion
+- Proximal hamstring avulsion
+- Proximal hamstring tendinopathy
+- Ischial bursitis
+- Ischial enthesopathy
+- Ischial nerve-related pain
+- Ischiogluteal bursitis
+
+</details>
+<details class="tree">
+<summary>Pubis <span class="count">— 15</span></summary>
+
+- Osteitis pubis
+- Pubic symphysis dysfunction
+- Pubic symphysis instability
+- Pubic symphysis diastasis
+- Pubic symphysis arthritis
+- Pubic ramus fracture
+- Pubic ramus stress fracture
+- Pubic bone stress injury
+- Adductor origin injury
+- Athletic pubalgia
+- Core muscle injury
+- Rectus abdominis–adductor injury
+- Pubic osteomyelitis
+- Acetabulum- needs to be added as a keyword as it forms part of the hip joint- (the area of the
+- hip joint known as ‘the socket’- and formed by the ilium, ischium and pubis):
+
+</details>
+<details class="tree">
+<summary>Acetabulum <span class="count">— 11</span></summary>
+
+- Acetabular fracture
+- Acetabular stress fracture
+- Acetabular dysplasia
+- Acetabular retroversion
+- Acetabular overcoverage
+- Femoroacetabular impingement
+- Acetabular labral tear
+- Acetabular cartilage injury
+- Hip instability
+- Hip dislocation
+- Hip osteoarthritis
+
+</details>
+<details class="tree">
+<summary>Sacroiliac joint <span class="count">— 13</span></summary>
+
+- Sacroiliac joint dysfunction
+- Sacroiliitis
+- SI joint sprain
+- SI joint instability
+- SI joint hypermobility
+- SI joint hypomobility
+- SI joint osteoarthritis
+- SI joint ankylosis
+- SI joint fracture
+- SI joint fracture-dislocation
+- Inflammatory sacroiliitis
+- Infectious sacroiliitis
+- Pregnancy-related SI dysfunction
+
+</details>
+<details class="tree">
+<summary>Sacrum <span class="count">— 9</span></summary>
+
+- Sacral fracture
+- Sacral stress fracture
+- Sacral insufficiency fracture
+- Sacroiliitis
+- Sacral stress reaction
+- Sacral tumour
+- Sacral osteomyelitis
+- Sacral nerve-root compression
+- Sacralization/lumbosacral transitional anatomy
+
+</details>
+<details class="tree">
+<summary>Coccyx <span class="count">— 8</span></summary>
+
+- Coccydynia
+- Coccygeal fracture
+- Coccygeal dislocation
+- Coccygeal subluxation
+- Coccygeal instability
+- Sacrococcygeal joint degeneration
+- Coccygeal osteoarthritis
+- Post-traumatic coccygeal pain
+
+</details>
+<details class="tree">
+<summary>Pelvic ring <span class="count">— 12</span></summary>
+
+- Pelvic ring fracture
+- Stable pelvic fracture
+- Unstable pelvic fracture
+- Open pelvic fracture
+- APC injury
+- Lateral compression injury
+- Vertical shear injury
+- Combined-mechanism injury
+- Pubic symphysis disruption
+- SI joint disruption
+- Pelvic ring diastasis
+- Pelvic stress fracture
+
+</details>
+<details class="tree">
+<summary>Inguinal region <span class="count">— 7</span></summary>
+
+- Inguinal hernia
+- Femoral hernia
+- Sports hernia
+- Athletic pubalgia
+- Inguinal-related groin pain
+- Conjoint tendon injury
+- Abdominal wall injury
+
+</details>
+<details class="tree">
+<summary>Pelvic floor <span class="count">— 10</span></summary>
+
+- Pelvic floor muscle weakness
+- Pelvic floor hypertonicity
+- Pelvic floor myalgia
+- Pelvic floor muscle spasm
+- Levator ani syndrome
+- Pelvic floor muscle injury
+- Levator ani avulsion
+- Pelvic floor dysfunction
+- Pelvic floor muscle trigger points
+- Pelvic floor muscle coordination disorders
+
+</details>
+<details class="tree">
+<summary>Perineum <span class="count">— 6</span></summary>
+
+- Perineal muscle injury
+- Pelvic floor muscle injury
+- Perineal pain
+- Perineal muscle spasm
+- Pelvic floor dysfunction
+- Obstetric pelvic floor injury
 
 </details>
 </details>
@@ -4395,7 +4606,35 @@ model this becomes, because both warn against a synonym mapping that would other
 > \*"Runner's knee" is ambiguous and should not be treated as a unique synonym because it is also
 > commonly used for patellofemoral pain syndrome.
 
-**8. 154 terms in Part 1 appear in more than one region** — "Medial collateral ligament" appears
+**8. The pelvis is drafted twice, and both drafts are in the file.** This is the single largest
+structural problem in the document, and it is a formatting accident rather than a clinical one. The
+region is written once bone by bone — Ilium, Ischium, Pubis, Acetabulum, SI joint, Sacrum, Coccyx,
+Pelvic ring, Inguinal region, each with its own landmarks, ligaments and conditions — and then again
+at the end, consolidated by structure type. The evidence that these are two passes over the same
+material rather than two different lists:
+
+- The perineal muscles are listed **twice, identically** — all seven terms, same order.
+- The pelvic floor muscles are listed twice, the second adding only *Levator ani*.
+- The consolidated ligament block (*Pelvic ligaments:* → Sacroiliac / posterior pelvis, Pubic /
+  anterior pelvis, Hip / acetabulum, Sacrum / coccyx, Pelvic floor / perineum) already contains 9
+  of the 12 ligaments named in the earlier per-bone groups. Only *Posterior sacroiliac ligament*
+  and *Iliac portion of the inguinal ligament* are unique to the earlier pass.
+
+The compounding formatting problem is that the block introducers were never styled as headings:
+*Pelvic ring…*, *Inguinal region…*, *Perineum:* and *Pelvic ligaments:* each carry no terms of their
+own, one of them wrapped onto a second line that then read as its own heading, and the *Acetabulum*
+introducer is not bold at all — it is plain text sitting at the heading indent. That is why six
+consecutive groups all appear as *Common associated conditions* with nothing to say which bone each
+belongs to.
+
+The document above reconciles the two drafts into the standard shape. **Andrew should confirm the
+reconciliation**, in particular that the consolidated ligament block is the one he intends to keep.
+
+**9. Two landmarks are listed twice inside the same group.** *Superior pubic ramus* and *Inferior
+pubic ramus* each appear twice in the Pubis landmarks list. Left in place above rather than silently
+removed, since a duplicate is the kind of thing worth seeing.
+
+**10. 154 terms in Part 1 appear in more than one region** — "Medial collateral ligament" appears
 seven times, "Lateral collateral ligament" six. This is correct anatomy (the knee and the elbow both
 have one), and it matches how the live taxonomy already works: a tag's identity is its name *within
 its parent*, not globally. Noted only so it is not mistaken for duplication to be cleaned up.
