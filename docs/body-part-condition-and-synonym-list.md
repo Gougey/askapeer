@@ -4557,21 +4557,25 @@ clinical terms:
 
 These are actionable, but they need to move out of the term list and into a decision.
 
-**6. Sixteen preferred terms appear in two different synonym tables, and eight of those carry
-*different* synonym sets.** The lettered tables run by pathology (I–O) and then by region (P–U), so
+**6. Sixteen preferred terms appear in two different synonym tables.** The lettered tables run by
+pathology (I–O) and then by region (P–U), so the same condition is reached twice. Most of that is
+harmless, and only three rows need a decision:
+
+- **Ten are identical** in both tables — merge on sight, nothing is lost.
+- **Three are subsets**: the region table simply carries fewer aliases than the pathology table
+  (*Achilles tendinopathy*, *Gluteal tendinopathy*, *De Quervain tenosynovitis*). Taking the union
+  loses nothing either.
+- **Three genuinely disagree**, and neither side contains the other: The lettered tables run by pathology (I–O) and then by region (P–U), so
 the same condition is reached twice. Examples:
 
-| Term | In pathology table | In region table |
+| Term | In the pathology table | In the region table |
 |---|---|---|
 | Bursitis | Bursa inflammation; inflammation of a bursa | Inflamed bursa; bursal inflammation |
-| Achilles tendinopathy | Achilles tendinitis; Achilles tendon disorder | Achilles tendinitis |
 | Chondromalacia patellae | Patellar chondromalacia; patellar cartilage softening | Patellofemoral cartilage degeneration |
 | Meniscal tear | Meniscus tear; meniscal injury | Torn meniscus |
-| Gluteal tendinopathy | Gluteal tendinosis; lateral hip tendinopathy | Lateral hip tendinopathy |
-| De Quervain tenosynovitis | De Quervain disease; De Quervain's tenosynovitis | De Quervain disease |
 
-Whether these should be merged into a single term carrying the union of both lists, or whether the
-duplication signals a real distinction, is a clinical judgement — not one to make silently in code.
+For those three, whether to keep the union or whether the difference signals a real distinction is a
+clinical judgement — not one to make silently in code. The other thirteen can be merged mechanically.
 
 **7. Two deliberate clinical caveats are recorded as footnotes** and must survive into whatever data
 model this becomes, because both warn against a synonym mapping that would otherwise look obvious:

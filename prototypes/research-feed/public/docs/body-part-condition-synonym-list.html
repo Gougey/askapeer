@@ -10671,9 +10671,20 @@ needed as tags)</strong>”</p>
 <p>These are actionable, but they need to move out of the term list and
 into a decision.</p>
 <p><strong>6. Sixteen preferred terms appear in two different synonym
-tables, and eight of those carry <em>different</em> synonym
-sets.</strong> The lettered tables run by pathology (I–O) and then by
-region (P–U), so the same condition is reached twice. Examples:</p>
+tables.</strong> The lettered tables run by pathology (I–O) and then by
+region (P–U), so the same condition is reached twice. Most of that is
+harmless, and only three rows need a decision:</p>
+<ul>
+<li><strong>Ten are identical</strong> in both tables — merge on sight,
+nothing is lost.</li>
+<li><strong>Three are subsets</strong>: the region table simply carries
+fewer aliases than the pathology table (<em>Achilles tendinopathy</em>,
+<em>Gluteal tendinopathy</em>, <em>De Quervain tenosynovitis</em>).
+Taking the union loses nothing either.</li>
+<li><strong>Three genuinely disagree</strong>, and neither side contains
+the other: The lettered tables run by pathology (I–O) and then by region
+(P–U), so the same condition is reached twice. Examples:</li>
+</ul>
 <table>
 <colgroup>
 <col style="width: 33%" />
@@ -10683,8 +10694,8 @@ region (P–U), so the same condition is reached twice. Examples:</p>
 <thead>
 <tr>
 <th>Term</th>
-<th>In pathology table</th>
-<th>In region table</th>
+<th>In the pathology table</th>
+<th>In the region table</th>
 </tr>
 </thead>
 <tbody>
@@ -10692,11 +10703,6 @@ region (P–U), so the same condition is reached twice. Examples:</p>
 <td>Bursitis</td>
 <td>Bursa inflammation; inflammation of a bursa</td>
 <td>Inflamed bursa; bursal inflammation</td>
-</tr>
-<tr>
-<td>Achilles tendinopathy</td>
-<td>Achilles tendinitis; Achilles tendon disorder</td>
-<td>Achilles tendinitis</td>
 </tr>
 <tr>
 <td>Chondromalacia patellae</td>
@@ -10708,21 +10714,11 @@ region (P–U), so the same condition is reached twice. Examples:</p>
 <td>Meniscus tear; meniscal injury</td>
 <td>Torn meniscus</td>
 </tr>
-<tr>
-<td>Gluteal tendinopathy</td>
-<td>Gluteal tendinosis; lateral hip tendinopathy</td>
-<td>Lateral hip tendinopathy</td>
-</tr>
-<tr>
-<td>De Quervain tenosynovitis</td>
-<td>De Quervain disease; De Quervain’s tenosynovitis</td>
-<td>De Quervain disease</td>
-</tr>
 </tbody>
 </table>
-<p>Whether these should be merged into a single term carrying the union
-of both lists, or whether the duplication signals a real distinction, is
-a clinical judgement — not one to make silently in code.</p>
+<p>For those three, whether to keep the union or whether the difference
+signals a real distinction is a clinical judgement — not one to make
+silently in code. The other thirteen can be merged mechanically.</p>
 <p><strong>7. Two deliberate clinical caveats are recorded as
 footnotes</strong> and must survive into whatever data model this
 becomes, because both warn against a synonym mapping that would
