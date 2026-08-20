@@ -23,3 +23,8 @@ coverage/
 
 # Microsoft Office temp/lock files
 ~$*
+
+# Python (docs/tools/) — bytecode and the regenerable intermediate model
+__pycache__/
+*.pyc
+docs/tools/vocabulary/model.json
