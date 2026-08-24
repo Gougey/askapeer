@@ -121,3 +121,35 @@ Three observations worth carrying into the discussion:
 - **Part 1 is roughly half new.** 481 new terms against 588 existing rows is not a top-up, it is a
   significant expansion — and the interests picker already offers members the whole tree, so
   anything added here lands in front of them.
+
+---
+
+## Appendix C — Andrew's review, 2026-08-24
+
+Andrew reviewed Part 1 and confirmed the ligament groupings in all five regions. His amendments
+are applied above and recorded verbatim in `docs/tools/vocabulary/amendments.py`: the restated
+blocks removed, the cervical upper-stabiliser block dissolved into its respective headings,
+*Forearm* and the interosseous membrane kept, the interphalangeal joints given radial collateral /
+ulnar collateral / palmar ligament, and the deltoid layers turned into proper lists.
+
+**Three questions went back to him**, and until they are answered nothing here is final:
+
+1. **Three terms would have been lost.** *Intermetacarpal ligaments* (in the carpometacarpal
+   section he asked to remove) and *Intermetatarsal ligaments* and *Interosseous ligaments* (in
+   the plantar section he asked to remove) appear **nowhere else in the document**. They have been
+   moved into the surviving block and marked *awaiting Andrew* rather than deleted.
+
+2. **"Pelvic ring can be removed" — which of the two?** The source itself disagrees about them.
+   *Bones & landmarks → Pelvic ring* is headed "already detailed above" and is safe to drop.
+   *Conditions → Pelvic ring* is headed "Common injuries — **not** already detailed above" and
+   holds **12 conditions found nowhere else**, including pelvic ring fracture, APC injury, lateral
+   compression injury, vertical shear injury and pelvic ring diastasis. Both are untouched pending
+   his answer.
+
+3. **"Finger joints — restated collaterals"** was not mentioned while he was specifying the
+   contents of the PIP and DIP joints immediately above it. It is left in place, still marked as
+   a proposal.
+
+He also asked what the two duplicate term names were: *Superior pubic ramus* and *Inferior pubic
+ramus*, each listed twice in Pelvis → Bones & landmarks → Pubis. The structure-health table now
+names duplicates rather than only counting them.

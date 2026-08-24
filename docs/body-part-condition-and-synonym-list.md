@@ -30,21 +30,21 @@ Every branch of Part 1, worst first. **The flag is about the *shape* of the list
 
 | Branch | Terms | Groups | Loose terms | Duplicate names | |
 |---|---:|---:|---:|---:|---|
-| Upper limb → Ligaments | 140 | 21 | 0 | 1 | ◇ proposed grouping — 21 boundaries to confirm · **⚠** 1 duplicate term name |
-| Pelvis, hip and pelvic floor → Bones & landmarks | 71 | 9 | 0 | 2 | **⚠** 2 duplicate term names |
-| Cervical spine → Ligaments | 28 | 5 | 0 | 0 | ◇ proposed grouping — 1 boundary to confirm |
-| Thoracic spine → Ligaments | 14 | 2 | 0 | 0 | ◇ proposed grouping — 2 boundaries to confirm |
-| Lumbar spine → Ligaments | 19 | 3 | 0 | 0 | ◇ proposed grouping — 3 boundaries to confirm |
-| Lower limb → Ligaments | 180 | 27 | 0 | 0 | ◇ proposed grouping — 24 boundaries to confirm |
+| Upper limb → Ligaments | 134 | 19 | 0 | 1 | ◇ 1 proposed heading — not yet reviewed · **⚠** 1 duplicate term name (*Ulnocarpal ligament complex*) |
+| Pelvis, hip and pelvic floor → Bones & landmarks | 71 | 9 | 0 | 2 | **⚠** 2 duplicate term names (*Superior pubic ramus*, *Inferior pubic ramus*) |
 | Cervical spine → Muscles | 35 | 8 | 0 | 0 | ✓ |
+| Cervical spine → Ligaments | 27 | 4 | 0 | 0 | ✓ |
 | Cervical spine → Conditions | 59 | 10 | 0 | 0 | ✓ |
 | Upper limb → Muscles | 49 | 14 | 0 | 0 | ✓ |
 | Upper limb → Conditions | 78 | 14 | 0 | 0 | ✓ |
 | Thoracic spine → Muscles | 22 | 4 | 0 | 0 | ✓ |
+| Thoracic spine → Ligaments | 14 | 2 | 0 | 0 | ✓ |
 | Thoracic spine → Conditions | 29 | 7 | 0 | 0 | ✓ |
 | Lumbar spine → Muscles | 15 | 3 | 0 | 0 | ✓ |
+| Lumbar spine → Ligaments | 13 | 2 | 0 | 0 | ✓ |
 | Lumbar spine → Conditions | 41 | 10 | 0 | 0 | ✓ |
 | Lower limb → Muscles | 51 | 16 | 0 | 0 | ✓ |
+| Lower limb → Ligaments | 167 | 23 | 0 | 0 | ✓ |
 | Lower limb → Conditions | 102 | 15 | 0 | 0 | ✓ |
 | Pelvis, hip and pelvic floor → Muscles | 45 | 7 | 0 | 0 | ✓ |
 | Pelvis, hip and pelvic floor → Ligaments | 32 | 5 | 0 | 0 | ✓ |
@@ -53,7 +53,7 @@ Every branch of Part 1, worst first. **The flag is about the *shape* of the list
 Read that as three tiers:
 
 - **Muscles and conditions** — every term sits in a named group and nothing clashes under the same parent. These match the live taxonomy leaf for leaf and need no further input. Nine of these groups are **parents of other groups**, which the source marks only by leaving the parent heading empty: *Hyoid Muscles* over Suprahyoid and Infrahyoid, the two forearm compartments over their Superficial/Intermediate/Deep layers, *Hand* over Thenar, Hypothenar and Central, *Thigh*, *Leg (Posterior)*, *Foot*, and — in the conditions lists — *Shoulder* and *Knee* over their per-structure categories. Restoring that level is what clears the last of the duplicate group names: *Superficial* and *Deep* stop colliding once each sits under its own compartment, and the two *Nerve* groups separate under Elbow and Wrist.
-- **Ligaments have a proposed grouping.** The source lists most of them as one flat run — the upper limb is 140 terms with no headings at all — and 72 names repeat inside those runs. That is not disorder: the source walks each region joint by joint and restates a shared ligament when it moves on, so the repeats *are* the boundaries. Cutting the runs at those points gives 58 joint blocks and drops the name clashes from **72 to 1** — the survivor being a genuine nesting case, not a duplicate. The blocks are proposals and every boundary needs Andrew's eye, but he should be confirming a structure rather than inventing one.
+- **Ligaments — reviewed and confirmed by Andrew on 2026-08-24.** The source listed most of them as one flat run; because it walks each region joint by joint and restates a shared ligament when it moves on, the repeats marked the boundaries. Andrew confirmed the resulting blocks, had the restated sections removed, and corrected the interphalangeal joints and the deltoid layers. Three terms he asked to delete appear nowhere else in the document and are **retained and marked** rather than dropped silently — they are back with him.
 - **The pelvis has been reconstructed** and now matches the others. The source drafts that region *twice* — once bone by bone, once consolidated by structure type — and both drafts were left in the file, which is what produced the 40 groups, the six *Common associated conditions* headings and the apparent duplication. Reconciling the two drafts yields four clean branches; see the note on the region itself for every move made.
 
 ---
@@ -61,7 +61,7 @@ Read that as three tiers:
 ## Part 1 — Anatomy and conditions by region
 
 <details class="tree lvl1">
-<summary>Cervical spine <span class="count">— 122 terms, 3 branches</span></summary>
+<summary>Cervical spine <span class="count">— 121 terms, 3 branches</span></summary>
 
 <details class="tree">
 <summary>Muscles <span class="count">— 35 terms, 8 groups</span> <span class="ok">✓ structured</span></summary>
@@ -143,12 +143,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 28 terms, 5 groups</span> <span class="ok">◇ proposed grouping — 1 boundary to confirm</span></summary>
+<summary>Ligaments <span class="count">— 27 terms, 4 groups</span> <span class="ok">✓ structured</span></summary>
 
-> **Proposed grouping — headings inserted, nothing else touched.** The source lists these as one flat run, but it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Every block below is a **contiguous slice of the original order** — no term has been moved, reordered, reworded or removed. The pattern is Andrew's own: the cervical spine is the one region where he wrote these headings himself, and blocks carrying his wording are marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**
+> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Blocks he has not commented on are still marked *proposed*, and any term marked *awaiting Andrew* was rescued from a section he asked to delete because it appears nowhere else in the document.
 
 <details class="tree">
-<summary>Sub-axial cervical spine <span class="count">— 10</span></summary>
+<summary>Cervical spine <span class="ok">(confirmed)</span> <span class="count">— 10</span></summary>
 
 - Anterior longitudinal ligament
 - Posterior longitudinal ligament
@@ -163,20 +163,22 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Atlanto-occipital ligaments <span class="ok">(Andrew's heading)</span> <span class="count">— 4</span></summary>
+<summary>Atlanto-occipital ligaments <span class="ok">(Andrew's heading)</span> <span class="count">— 5</span></summary>
 
 - Anterior atlanto-occipital membrane
 - Posterior atlanto-occipital membrane
 - Atlanto-occipital joint capsules
 - Lateral atlanto-occipital capsular ligament
+- Atlanto-occipital capsular ligaments
 
 </details>
 <details class="tree">
-<summary>Atlantoaxial ligaments <span class="ok">(Andrew's heading)</span> <span class="count">— 3</span></summary>
+<summary>Atlantoaxial ligaments <span class="ok">(Andrew's heading)</span> <span class="count">— 4</span></summary>
 
 - Anterior atlantoaxial membrane
 - Posterior atlantoaxial membrane
 - Atlantoaxial joint capsule
+- Atlantoaxial capsular ligaments
 
 </details>
 <details class="tree">
@@ -190,14 +192,6 @@ Read that as three tiers:
 - Alar ligaments
 - Apical ligament of the dens
 - Tectorial membrane
-
-</details>
-<details class="tree">
-<summary>Other upper cervical stabilisers <span class="ok">(Andrew's heading)</span> <span class="count">— 3</span></summary>
-
-- Ligamentum nuchae
-- Atlantoaxial capsular ligaments
-- Atlanto-occipital capsular ligaments
 
 </details>
 </details>
@@ -316,7 +310,7 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree lvl1">
-<summary>Upper limb <span class="count">— 267 terms, 3 branches</span></summary>
+<summary>Upper limb <span class="count">— 261 terms, 3 branches</span></summary>
 
 <details class="tree">
 <summary>Muscles <span class="count">— 49 terms, 14 groups</span> <span class="ok">✓ structured</span></summary>
@@ -442,12 +436,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 140 terms, 21 groups</span> <span class="ok">◇ proposed grouping — 21 boundaries to confirm · ⚠ 1 duplicate term name</span></summary>
+<summary>Ligaments <span class="count">— 134 terms, 19 groups</span> <span class="ok">◇ 1 proposed heading — not yet reviewed · ⚠ 1 duplicate term name (*Ulnocarpal ligament complex*)</span></summary>
 
-> **Proposed grouping — headings inserted, nothing else touched.** The source lists these as one flat run, but it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Every block below is a **contiguous slice of the original order** — no term has been moved, reordered, reworded or removed. The pattern is Andrew's own: the cervical spine is the one region where he wrote these headings himself, and blocks carrying his wording are marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**
+> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Blocks he has not commented on are still marked *proposed*, and any term marked *awaiting Andrew* was rescued from a section he asked to delete because it appears nowhere else in the document.
 
 <details class="tree">
-<summary>Acromioclavicular joint & scapular ligaments <span class="count">— 12</span></summary>
+<summary>Acromioclavicular joint & scapular ligaments <span class="ok">(confirmed)</span> <span class="count">— 12</span></summary>
 
 - Acromioclavicular ligament
 - Superior acromioclavicular ligament
@@ -464,7 +458,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Sternoclavicular joint <span class="count">— 6</span></summary>
+<summary>Sternoclavicular joint <span class="ok">(confirmed)</span> <span class="count">— 6</span></summary>
 
 - Anterior sternoclavicular ligament
 - Posterior sternoclavicular ligament
@@ -475,16 +469,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Scapular ligaments — restated <span class="count">— 4</span></summary>
-
-- Superior transverse scapular ligament
-- Inferior transverse scapular ligament
-- Spinoglenoid ligament
-- Coracoacromial ligament
-
-</details>
-<details class="tree">
-<summary>Glenohumeral joint <span class="count">— 11</span></summary>
+<summary>Glenohumeral joint <span class="ok">(confirmed)</span> <span class="count">— 11</span></summary>
 
 - Glenohumeral joint capsule
 - Superior glenohumeral ligament
@@ -500,7 +485,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Glenoid labrum & capsulolabral complexes <span class="count">— 6</span></summary>
+<summary>Glenoid labrum & capsulolabral complexes <span class="ok">(confirmed)</span> <span class="count">— 6</span></summary>
 
 - Superior labral complex
 - Glenoid labrum
@@ -511,7 +496,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Elbow joint <span class="count">— 12</span></summary>
+<summary>Elbow joint <span class="ok">(confirmed)</span> <span class="count">— 12</span></summary>
 
 - Ulnar collateral ligament
 - Medial collateral ligament
@@ -528,7 +513,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Proximal radioulnar joint <span class="count">— 4</span></summary>
+<summary>Proximal radioulnar joint <span class="ok">(confirmed)</span> <span class="count">— 4</span></summary>
 
 - Annular ligament of radius
 - Quadrate ligament
@@ -537,7 +522,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Forearm — restated, with interosseous detail <span class="count">— 6</span></summary>
+<summary>Forearm <span class="ok">(confirmed)</span> <span class="count">— 6</span></summary>
 
 - Annular ligament
 - Quadrate ligament
@@ -548,7 +533,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Distal radioulnar joint & TFCC <span class="count">— 3</span></summary>
+<summary>Distal radioulnar joint & TFCC <span class="ok">(confirmed)</span> <span class="count">— 3</span></summary>
 
 - Palmar radioulnar ligament
 - Dorsal radioulnar ligament
@@ -556,7 +541,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Wrist — radiocarpal & ulnocarpal <span class="count">— 15</span></summary>
+<summary>Wrist — radiocarpal & ulnocarpal <span class="ok">(confirmed)</span> <span class="count">— 15</span></summary>
 
 - Palmar radiocarpal ligaments
   - Radioscaphocapitate ligament
@@ -576,7 +561,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Wrist — midcarpal & intercarpal <span class="count">— 10</span></summary>
+<summary>Wrist — midcarpal & intercarpal <span class="ok">(confirmed)</span> <span class="count">— 10</span></summary>
 
 - Scaphocapitate ligament
 - Scaphotrapeziotrapezoid ligament
@@ -591,23 +576,16 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Carpometacarpal joints <span class="count">— 3</span></summary>
+<summary>Carpometacarpal joints <span class="ok">(confirmed)</span> <span class="count">— 4</span></summary>
 
 - Dorsal carpometacarpal ligaments
 - Palmar intercarpal ligaments
 - Palmar carpometacarpal ligaments
+- Intermetacarpal ligaments <span class="warn">— retained — appears nowhere else, awaiting Andrew</span>
 
 </details>
 <details class="tree">
-<summary>Carpometacarpal joints — restated <span class="count">— 3</span></summary>
-
-- Dorsal carpometacarpal ligaments
-- Palmar carpometacarpal ligaments
-- Intermetacarpal ligaments
-
-</details>
-<details class="tree">
-<summary>Thumb — first carpometacarpal joint <span class="count">— 6</span></summary>
+<summary>Thumb — first carpometacarpal joint <span class="ok">(confirmed)</span> <span class="count">— 6</span></summary>
 
 - Anterior oblique ligament
 - Beak ligament
@@ -618,7 +596,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Thumb — metacarpophalangeal joint <span class="count">— 3</span></summary>
+<summary>Thumb — metacarpophalangeal joint <span class="ok">(confirmed)</span> <span class="count">— 3</span></summary>
 
 - Radial collateral ligament
 - Ulnar collateral ligament
@@ -626,7 +604,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Finger metacarpophalangeal joints <span class="count">— 7</span></summary>
+<summary>Finger metacarpophalangeal joints <span class="ok">(confirmed)</span> <span class="count">— 7</span></summary>
 
 - Palmar plate
 - Deep transverse metacarpal ligament
@@ -638,23 +616,23 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Proximal interphalangeal joints <span class="count">— 3</span></summary>
+<summary>Proximal interphalangeal joints <span class="ok">(content set by Andrew)</span> <span class="count">— 3</span></summary>
 
-- Proper collateral ligaments
-- Accessory collateral ligaments
-- Palmar plates
-
-</details>
-<details class="tree">
-<summary>Distal interphalangeal joints <span class="count">— 3</span></summary>
-
-- Proper collateral ligaments
-- Accessory collateral ligaments
-- Palmar plates
+- Radial collateral ligament
+- Ulnar collateral ligament
+- Palmar ligament
 
 </details>
 <details class="tree">
-<summary>Finger joints — restated collaterals <span class="count">— 5</span></summary>
+<summary>Distal interphalangeal joints <span class="ok">(content set by Andrew)</span> <span class="count">— 3</span></summary>
+
+- Radial collateral ligament
+- Ulnar collateral ligament
+- Palmar ligament
+
+</details>
+<details class="tree">
+<summary>Finger joints — restated collaterals <span class="warn">(proposed)</span> <span class="count">— 5</span></summary>
 
 - Radial collateral ligament
 - Ulnar collateral ligament
@@ -664,7 +642,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Hand — fascial & retinacular structures <span class="count">— 8</span></summary>
+<summary>Hand — fascial & retinacular structures <span class="ok">(confirmed)</span> <span class="count">— 8</span></summary>
 
 - Superficial transverse metacarpal ligament
 - Natatory ligaments
@@ -677,7 +655,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Flexor pulley system <span class="count">— 10</span></summary>
+<summary>Flexor pulley system <span class="ok">(confirmed)</span> <span class="count">— 10</span></summary>
 
 - Annular pulleys
   - A1 pulley
@@ -895,12 +873,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 14 terms, 2 groups</span> <span class="ok">◇ proposed grouping — 2 boundaries to confirm</span></summary>
+<summary>Ligaments <span class="count">— 14 terms, 2 groups</span> <span class="ok">✓ structured</span></summary>
 
-> **Proposed grouping — headings inserted, nothing else touched.** The source lists these as one flat run, but it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Every block below is a **contiguous slice of the original order** — no term has been moved, reordered, reworded or removed. The pattern is Andrew's own: the cervical spine is the one region where he wrote these headings himself, and blocks carrying his wording are marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**
+> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Blocks he has not commented on are still marked *proposed*, and any term marked *awaiting Andrew* was rescued from a section he asked to delete because it appears nowhere else in the document.
 
 <details class="tree">
-<summary>Thoracic spine — segmental ligaments <span class="count">— 8</span></summary>
+<summary>Thoracic spine — segmental ligaments <span class="ok">(confirmed)</span> <span class="count">— 8</span></summary>
 
 - Anterior longitudinal ligament
 - Posterior longitudinal ligament
@@ -913,7 +891,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Costovertebral & costotransverse joints <span class="count">— 6</span></summary>
+<summary>Costovertebral & costotransverse joints <span class="ok">(confirmed)</span> <span class="count">— 6</span></summary>
 
 - Radiate ligament of head of rib
 - Intra-articular ligament of head of rib
@@ -994,7 +972,7 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree lvl1">
-<summary>Lumbar spine <span class="count">— 75 terms, 3 branches</span></summary>
+<summary>Lumbar spine <span class="count">— 69 terms, 3 branches</span></summary>
 
 <details class="tree">
 <summary>Muscles <span class="count">— 15 terms, 3 groups</span> <span class="ok">✓ structured</span></summary>
@@ -1031,12 +1009,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 19 terms, 3 groups</span> <span class="ok">◇ proposed grouping — 3 boundaries to confirm</span></summary>
+<summary>Ligaments <span class="count">— 13 terms, 2 groups</span> <span class="ok">✓ structured</span></summary>
 
-> **Proposed grouping — headings inserted, nothing else touched.** The source lists these as one flat run, but it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Every block below is a **contiguous slice of the original order** — no term has been moved, reordered, reworded or removed. The pattern is Andrew's own: the cervical spine is the one region where he wrote these headings himself, and blocks carrying his wording are marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**
+> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Blocks he has not commented on are still marked *proposed*, and any term marked *awaiting Andrew* was rescued from a section he asked to delete because it appears nowhere else in the document.
 
 <details class="tree">
-<summary>Lumbar spine — segmental ligaments <span class="count">— 8</span></summary>
+<summary>Lumbar spine — segmental ligaments <span class="ok">(confirmed)</span> <span class="count">— 8</span></summary>
 
 - Anterior longitudinal ligament
 - Posterior longitudinal ligament
@@ -1049,24 +1027,13 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Lumbosacral junction <span class="count">— 5</span></summary>
+<summary>Lumbosacral junction <span class="ok">(confirmed)</span> <span class="count">— 5</span></summary>
 
 - Iliolumbar ligament
 - Lumbosacral iliolumbar ligament
 - Lumbosacral ligament
 - Lateral lumbosacral ligament
 - Lumbosacral facet joint capsules
-
-</details>
-<details class="tree">
-<summary>Restated — a second pass over the segmental list <span class="count">— 6</span></summary>
-
-- Anterior longitudinal ligament
-- Posterior longitudinal ligament
-- Ligamentum flavum
-- Interspinous ligament
-- Supraspinous ligament
-- Iliolumbar ligament
 
 </details>
 </details>
@@ -1167,7 +1134,7 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree lvl1">
-<summary>Lower limb <span class="count">— 333 terms, 3 branches</span></summary>
+<summary>Lower limb <span class="count">— 320 terms, 3 branches</span></summary>
 
 <details class="tree">
 <summary>Muscles <span class="count">— 51 terms, 16 groups</span> <span class="ok">✓ structured</span></summary>
@@ -1305,12 +1272,12 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 180 terms, 27 groups</span> <span class="ok">◇ proposed grouping — 24 boundaries to confirm</span></summary>
+<summary>Ligaments <span class="count">— 167 terms, 23 groups</span> <span class="ok">✓ structured</span></summary>
 
-> **Proposed grouping — headings inserted, nothing else touched.** The source lists these as one flat run, but it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Every block below is a **contiguous slice of the original order** — no term has been moved, reordered, reworded or removed. The pattern is Andrew's own: the cervical spine is the one region where he wrote these headings himself, and blocks carrying his wording are marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**
+> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Blocks he has not commented on are still marked *proposed*, and any term marked *awaiting Andrew* was rescued from a section he asked to delete because it appears nowhere else in the document.
 
 <details class="tree">
-<summary>Hip joint <span class="count">— 11</span></summary>
+<summary>Hip joint <span class="ok">(confirmed)</span> <span class="count">— 11</span></summary>
 
 - Iliofemoral ligament
   - Superior band
@@ -1326,17 +1293,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Hip joint — restated <span class="count">— 5</span></summary>
-
-- Iliofemoral ligament
-- Pubofemoral ligament
-- Ischiofemoral ligament
-- Transverse acetabular ligament
-- Acetabular labrum
-
-</details>
-<details class="tree">
-<summary>Sacroiliac joint <span class="count">— 7</span></summary>
+<summary>Sacroiliac joint <span class="ok">(confirmed)</span> <span class="count">— 7</span></summary>
 
 - Anterior sacroiliac ligament
 - Interosseous sacroiliac ligament
@@ -1348,7 +1305,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Pubic symphysis <span class="count">— 4</span></summary>
+<summary>Pubic symphysis <span class="ok">(confirmed)</span> <span class="count">— 4</span></summary>
 
 - Superior pubic ligament
 - Inferior/arcuate pubic ligament
@@ -1357,7 +1314,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Knee — collateral & corner structures <span class="count">— 18</span></summary>
+<summary>Knee — collateral & corner structures <span class="ok">(confirmed)</span> <span class="count">— 18</span></summary>
 
 - Medial collateral ligament
   - Superficial MCL
@@ -1380,7 +1337,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Knee — cruciate & meniscofemoral ligaments <span class="count">— 10</span></summary>
+<summary>Knee — cruciate & meniscofemoral ligaments <span class="ok">(confirmed)</span> <span class="count">— 10</span></summary>
 
 - Anterior cruciate ligament
   - Anteromedial bundle
@@ -1395,7 +1352,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Knee — meniscal attachments <span class="count">— 8</span></summary>
+<summary>Knee — meniscal attachments <span class="ok">(confirmed)</span> <span class="count">— 8</span></summary>
 
 - Transverse ligament of knee
 - Anterior meniscotibial ligaments
@@ -1408,7 +1365,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Knee — extensor mechanism & patellar stabilisers <span class="count">— 10</span></summary>
+<summary>Knee — extensor mechanism & patellar stabilisers <span class="ok">(confirmed)</span> <span class="count">— 10</span></summary>
 
 - Patellar ligament
 - Medial patellofemoral ligament
@@ -1423,7 +1380,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Superior tibiofibular joint <span class="count">— 3</span></summary>
+<summary>Superior tibiofibular joint <span class="ok">(confirmed)</span> <span class="count">— 3</span></summary>
 
 - Anterior superior tibiofibular ligament
 - Posterior superior tibiofibular ligament
@@ -1449,7 +1406,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Ankle — lateral collateral ligaments <span class="count">— 5</span></summary>
+<summary>Ankle — lateral collateral ligaments <span class="ok">(confirmed)</span> <span class="count">— 5</span></summary>
 
 - Anterior talofibular ligament
 - Calcaneofibular ligament
@@ -1459,27 +1416,21 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Deltoid/medial collateral ligament: <span class="ok">(Andrew's heading)</span> <span class="count">— 5</span></summary>
+<summary>Deltoid/medial collateral ligament: <span class="ok">(content set by Andrew)</span> <span class="count">— 9</span></summary>
 
-    - Superficial layer- Tibionavicular ligament, Superficial tibiocalcaneal
-    - ligament, Posterior tibiotalar ligament
-- Deep layer- Deep tibiotalar ligament, Anterior tibiotalar ligament
+- Superficial layer
+  - Tibionavicular ligament
+  - Superficial tibiocalcaneal ligament
+  - Posterior tibiotalar ligament
+- Deep layer
+  - Deep tibiotalar ligament
+  - Anterior tibiotalar ligament
 - Anterior talocrural capsule
 - Posterior talocrural capsule
 
 </details>
 <details class="tree">
-<summary>Ankle — restated collaterals <span class="count">— 5</span></summary>
-
-- Medial collateral ligament
-- Lateral collateral ligament
-- Distal tibiofibular syndesmotic ligaments
-- Interosseous talocalcaneal ligament
-- Cervical ligament
-
-</details>
-<details class="tree">
-<summary>Subtalar joint <span class="count">— 4</span></summary>
+<summary>Subtalar joint <span class="ok">(confirmed)</span> <span class="count">— 4</span></summary>
 
 - Medial talocalcaneal ligament
 - Lateral talocalcaneal ligament
@@ -1488,7 +1439,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Talonavicular joint & spring ligament complex <span class="count">— 7</span></summary>
+<summary>Talonavicular joint & spring ligament complex <span class="ok">(confirmed)</span> <span class="count">— 7</span></summary>
 
 - Dorsal talonavicular ligament
 - Plantar talonavicular ligament
@@ -1500,7 +1451,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Calcaneocuboid joint & bifurcate ligament <span class="count">— 9</span></summary>
+<summary>Calcaneocuboid joint & bifurcate ligament <span class="ok">(confirmed)</span> <span class="count">— 9</span></summary>
 
 - Dorsal calcaneocuboid ligament
 - Plantar calcaneocuboid ligament
@@ -1514,15 +1465,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Calcaneocuboid — restated <span class="count">— 3</span></summary>
-
-- Long plantar ligament
-- Short plantar ligament
-- Plantar calcaneonavicular ligament
-
-</details>
-<details class="tree">
-<summary>Tarsometatarsal (Lisfranc) joints <span class="count">— 7</span></summary>
+<summary>Tarsometatarsal (Lisfranc) joints <span class="ok">(confirmed)</span> <span class="count">— 7</span></summary>
 
 - Dorsal tarsometatarsal ligaments
 - Plantar tarsometatarsal ligaments
@@ -1534,7 +1477,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Intertarsal, cuneonavicular & cuboid ligaments <span class="count">— 13</span></summary>
+<summary>Intertarsal, cuneonavicular & cuboid ligaments <span class="ok">(confirmed)</span> <span class="count">— 13</span></summary>
 
 - Interosseous talocalcaneal ligament
 - Interosseous cuneiform ligaments
@@ -1552,7 +1495,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Metatarsophalangeal joints <span class="count">— 5</span></summary>
+<summary>Metatarsophalangeal joints <span class="ok">(confirmed)</span> <span class="count">— 5</span></summary>
 
 - Medial collateral ligament
 - Lateral collateral ligament
@@ -1562,7 +1505,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>First MTP & sesamoid complex <span class="count">— 6</span></summary>
+<summary>First MTP & sesamoid complex <span class="ok">(confirmed)</span> <span class="count">— 6</span></summary>
 
 - Medial collateral ligament
 - Lateral collateral ligament
@@ -1573,7 +1516,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Proximal interphalangeal joints <span class="count">— 4</span></summary>
+<summary>Proximal interphalangeal joints <span class="ok">(confirmed)</span> <span class="count">— 4</span></summary>
 
 - Medial collateral ligament
 - Lateral collateral ligament
@@ -1582,7 +1525,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Distal interphalangeal joints <span class="count">— 4</span></summary>
+<summary>Distal interphalangeal joints <span class="ok">(confirmed)</span> <span class="count">— 4</span></summary>
 
 - Medial collateral ligament
 - Lateral collateral ligament
@@ -1591,27 +1534,18 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Plantar structures <span class="count">— 4</span></summary>
+<summary>Plantar structures <span class="ok">(confirmed)</span> <span class="count">— 6</span></summary>
 
 - Plantar calcaneonavicular ligament / spring ligament
 - Long plantar ligament
 - Short plantar ligament
 - Plantar aponeurosis
+- Intermetatarsal ligaments <span class="warn">— retained — appears nowhere else, awaiting Andrew</span>
+- Interosseous ligaments <span class="warn">— retained — appears nowhere else, awaiting Andrew</span>
 
 </details>
 <details class="tree">
-<summary>Plantar structures — restated <span class="count">— 6</span></summary>
-
-- Long plantar ligament
-- Short plantar ligament
-- Plantar calcaneocuboid ligament
-- Deep transverse metatarsal ligament
-- Intermetatarsal ligaments
-- Interosseous ligaments
-
-</details>
-<details class="tree">
-<summary>Retinacula, sheaths & digital pulleys <span class="count">— 9</span></summary>
+<summary>Retinacula, sheaths & digital pulleys <span class="ok">(confirmed)</span> <span class="count">— 9</span></summary>
 
 - Superior extensor retinaculum
 - Inferior extensor retinaculum
@@ -1963,7 +1897,7 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Bones & landmarks <span class="count">— 71 terms, 9 groups</span> <span class="warn">⚠ 2 duplicate term names</span></summary>
+<summary>Bones & landmarks <span class="count">— 71 terms, 9 groups</span> <span class="warn">⚠ 2 duplicate term names (*Superior pubic ramus*, *Inferior pubic ramus*)</span></summary>
 
 <details class="tree">
 <summary>Ilium <span class="count">— 10</span></summary>
@@ -4648,4 +4582,36 @@ Three observations worth carrying into the discussion:
 - **Part 1 is roughly half new.** 481 new terms against 588 existing rows is not a top-up, it is a
   significant expansion — and the interests picker already offers members the whole tree, so
   anything added here lands in front of them.
+
+---
+
+## Appendix C — Andrew's review, 2026-08-24
+
+Andrew reviewed Part 1 and confirmed the ligament groupings in all five regions. His amendments
+are applied above and recorded verbatim in `docs/tools/vocabulary/amendments.py`: the restated
+blocks removed, the cervical upper-stabiliser block dissolved into its respective headings,
+*Forearm* and the interosseous membrane kept, the interphalangeal joints given radial collateral /
+ulnar collateral / palmar ligament, and the deltoid layers turned into proper lists.
+
+**Three questions went back to him**, and until they are answered nothing here is final:
+
+1. **Three terms would have been lost.** *Intermetacarpal ligaments* (in the carpometacarpal
+   section he asked to remove) and *Intermetatarsal ligaments* and *Interosseous ligaments* (in
+   the plantar section he asked to remove) appear **nowhere else in the document**. They have been
+   moved into the surviving block and marked *awaiting Andrew* rather than deleted.
+
+2. **"Pelvic ring can be removed" — which of the two?** The source itself disagrees about them.
+   *Bones & landmarks → Pelvic ring* is headed "already detailed above" and is safe to drop.
+   *Conditions → Pelvic ring* is headed "Common injuries — **not** already detailed above" and
+   holds **12 conditions found nowhere else**, including pelvic ring fracture, APC injury, lateral
+   compression injury, vertical shear injury and pelvic ring diastasis. Both are untouched pending
+   his answer.
+
+3. **"Finger joints — restated collaterals"** was not mentioned while he was specifying the
+   contents of the PIP and DIP joints immediately above it. It is left in place, still marked as
+   a proposal.
+
+He also asked what the two duplicate term names were: *Superior pubic ramus* and *Inferior pubic
+ramus*, each listed twice in Pelvis → Bones & landmarks → Pubis. The structure-health table now
+names duplicates rather than only counting them.
 

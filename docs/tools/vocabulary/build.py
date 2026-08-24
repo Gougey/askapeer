@@ -20,6 +20,7 @@ from extract import build_model
 from pelvis import rebuild as rebuild_pelvis
 from ligaments import apply as apply_ligaments
 from nesting import apply as apply_nesting
+import amendments
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / "docs" / "body-part-condition-and-synonym-list.md"
@@ -59,9 +60,12 @@ for _r in regions:
         _blocks = apply_ligaments(_r["name"], ordered[(_r["name"], _s["name"])])
         if not _blocks:
             continue
-        _s["groups"] = [{"name": bk["name"], "items": bk["items"], "src": bk["src"]} for bk in _blocks]
+        _blocks = amendments.apply(_r["name"], _blocks)
+        _s["groups"] = [{"name": bk["name"], "items": bk["items"], "src": bk["src"],
+                         "confirmed": bk.get("confirmed", False), "andrew": bk.get("andrew", False)}
+                        for bk in _blocks]
         _s["loose"] = []
-        _s["proposed"] = sum(1 for bk in _blocks if not bk["src"])
+        _s["proposed"] = sum(1 for bk in _blocks if not bk.get("confirmed"))
         LIGAMENT_BLOCKS += len(_blocks)
 
 PELVIS_MERGES = []
@@ -80,6 +84,12 @@ def stats(sub):
     names = [key(i["text"]) for g in all_groups for i in g["items"]] + [key(i["text"]) for i in sub["loose"]]
     # Uniqueness is *sibling-scoped* (tags_parent_name_unique), so only repeats under the
     # SAME parent are collisions — the same ligament under two different joints is legal.
+    dupe_names = []
+    for g in all_groups:
+        counted = collections.Counter(key(i["text"]) for i in g["items"])
+        for i in g["items"]:
+            if counted[key(i["text"])] > 1 and i["text"] not in dupe_names:
+                dupe_names.append(i["text"])
     dupes = sum(c - 1
                 for bucket in [[key(i["text"]) for i in g["items"]] for g in all_groups]
                              + [[key(i["text"]) for i in sub["loose"]]]
@@ -90,7 +100,7 @@ def stats(sub):
     gdupes = sum(c - 1 for names_ in sibling_sets
                  for c in collections.Counter(names_).values() if c > 1)
     return dict(terms=len(names), groups=len(all_groups), loose=len(sub["loose"]),
-                dupes=dupes, gdupes=gdupes)
+                dupes=dupes, gdupes=gdupes, dupe_names=dupe_names)
 
 def verdict(s, proposed=0):
     """Flag for the summary line — this is what makes weak structure visible when collapsed."""
@@ -103,9 +113,11 @@ def verdict(s, proposed=0):
         if n == 1:
             return f"{n} {w}"
         return f"{n} " + (w[:-1] + "ies" if w.endswith("y") else w + "s")
-    if s["dupes"]: bad.append(plural(s["dupes"], "duplicate term name"))
+    if s["dupes"]:
+        named = ", ".join(f"*{n}*" for n in s.get("dupe_names", [])[:3])
+        bad.append(plural(s["dupes"], "duplicate term name") + (f" ({named})" if named else ""))
     if s["gdupes"]: bad.append(plural(s["gdupes"], "duplicate group name"))
-    prop = f"◇ proposed grouping — {plural(proposed, 'boundary')} to confirm" if proposed else ""
+    prop = f"◇ {plural(proposed, 'proposed heading')} — not yet reviewed" if proposed else ""
     if bad and prop:
         return prop + " · ⚠ " + " · ".join(bad)
     if bad:
@@ -180,13 +192,12 @@ W("- **Muscles and conditions** — every term sits in a named group and nothing
   "clears the last of the duplicate group names: *Superficial* and *Deep* stop colliding once "
   "each sits under its own compartment, and the two *Nerve* groups separate under Elbow and "
   "Wrist.")
-W("- **Ligaments have a proposed grouping.** The source lists most of them as one flat run — the "
-  "upper limb is 140 terms with no headings at all — and 72 names repeat inside those runs. That "
-  "is not disorder: the source walks each region joint by joint and restates a shared ligament "
-  "when it moves on, so the repeats *are* the boundaries. Cutting the runs at those points gives "
-  f"{LIGAMENT_BLOCKS} joint blocks and drops the name clashes from **72 to 1** — the survivor "
-  "being a genuine nesting case, not a duplicate. The blocks are proposals and every boundary "
-  "needs Andrew's eye, but he should be confirming a structure rather than inventing one.")
+W("- **Ligaments — reviewed and confirmed by Andrew on 2026-08-24.** The source listed most of "
+  "them as one flat run; because it walks each region joint by joint and restates a shared "
+  "ligament when it moves on, the repeats marked the boundaries. Andrew confirmed the resulting "
+  "blocks, had the restated sections removed, and corrected the interphalangeal joints and the "
+  "deltoid layers. Three terms he asked to delete appear nowhere else in the document and are "
+  "**retained and marked** rather than dropped silently — they are back with him.")
 W("- **The pelvis has been reconstructed** and now matches the others. The source drafts that "
   "region *twice* — once bone by bone, once consolidated by structure type — and both drafts "
   "were left in the file, which is what produced the 40 groups, the six *Common associated "
@@ -235,17 +246,24 @@ for r in regions:
             for it in s["loose"]:
                 W(f"{'  ' * it['depth']}- {dash(it['text'])}")
             W("")
-        if s.get("proposed"):
-            W("> **Proposed grouping — headings inserted, nothing else touched.** The source lists "
-              "these as one flat run, but it walks the region joint by joint and restates a shared "
-              "ligament whenever it moves on, which is what marks each boundary. Every block below "
-              "is a **contiguous slice of the original order** — no term has been moved, reordered, "
-              "reworded or removed. The pattern is Andrew's own: the cervical spine is the one "
-              "region where he wrote these headings himself, and blocks carrying his wording are "
-              "marked *(Andrew's heading)*. **Every unmarked boundary needs his confirmation.**")
+        if s["name"] == "Ligaments" and any(g.get("confirmed") or g.get("src") for g in s["groups"]):
+            W("> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat "
+              "run; it walks the region joint by joint and restates a shared ligament whenever it "
+              "moves on, which is what marks each boundary. Andrew confirmed the resulting blocks "
+              "and asked for the restatements to be dropped, so what follows is his structure, not "
+              "a proposal. Blocks he has not commented on are still marked *proposed*, and any "
+              "term marked *awaiting Andrew* was rescued from a section he asked to delete because "
+              "it appears nowhere else in the document.")
             W("")
         def render_group(g):
-            mark = ' <span class="ok">(Andrew\'s heading)</span>' if g.get("src") else ""
+            if g.get("andrew"):
+                mark = ' <span class="ok">(content set by Andrew)</span>'
+            elif g.get("src"):
+                mark = ' <span class="ok">(Andrew\'s heading)</span>'
+            elif g.get("confirmed"):
+                mark = ' <span class="ok">(confirmed)</span>'
+            else:
+                mark = ' <span class="warn">(proposed)</span>' if "children" not in g and g.get("confirmed") is False else ""
             kids = g.get("children", [])
             n = len(g["items"]) + sum(len(k["items"]) for k in kids)
             sub_note = f", {len(kids)} sub-groups" if kids else ""
@@ -253,7 +271,8 @@ for r in regions:
             W(f'<summary>{dash(g["name"])}{mark} <span class="count">— {n}{sub_note}</span></summary>')
             W("")
             for it in g["items"]:
-                W(f"{'  ' * it['depth']}- {dash(it['text'])}")
+                note = f' <span class="warn">— {it["note"]}</span>' if it.get("note") else ""
+                W(f"{'  ' * it['depth']}- {dash(it['text'])}{note}")
             W("")
             for k in kids:
                 render_group(k)

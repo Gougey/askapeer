@@ -28,11 +28,24 @@ key = lambda s: re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
 HEADING_INDENT = 100
 SYNONYM_PAGES = range(43, 54)  # right-hand column is wrapped cell text, checked as whole rows
 
+# Terms deliberately absent, on Andrew's instruction (2026-08-24). Listed individually with the
+# reason, so that a term going missing for any *other* reason still fails the check.
+AMENDED = {
+    "Proper collateral ligaments":
+        "replaced at PIP and DIP by radial/ulnar collateral and palmar ligament (Andrew)",
+    "Palmar plates":
+        "replaced at PIP and DIP by palmar ligament (Andrew); the singular form remains",
+    "Ligamentum flavum":
+        "lumbar restated list removed (Andrew); the plural 'Ligamenta flava' remains",
+    "Distal tibiofibular syndesmotic ligaments":
+        "ankle restated collaterals removed (Andrew); the term survives as a block heading",
+}
+
 
 def main():
     blob = key(DOC.read_text())
     doc = fitz.open(SRC)
-    lost_terms, changed_headings, checked = [], [], 0
+    lost_terms, changed_headings, amended, checked = [], [], [], 0
     for pno in range(len(doc)):
         for block in doc[pno].get_text("dict")["blocks"]:
             for line in block.get("lines", []):
@@ -44,11 +57,17 @@ def main():
                     continue
                 checked += 1
                 if key(text) and key(text) not in blob:
+                    if text in AMENDED:
+                        amended.append((pno + 1, text))
+                        continue
                     bold = "Bold" in line["spans"][0]["font"]
                     is_heading = x < HEADING_INDENT or bold
                     (changed_headings if is_heading else lost_terms).append((pno + 1, text))
 
     print(f"checked {checked} source lines from {SRC.name}")
+    print(f"terms amended on Andrew's instruction: {len(amended)}")
+    for page, text in amended:
+        print(f"    p{page}: {text} — {AMENDED[text]}")
     print(f"headings renamed or dropped: {len(changed_headings)}")
     for page, text in changed_headings:
         print(f"    p{page}: {text[:72]}")
