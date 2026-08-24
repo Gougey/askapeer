@@ -251,9 +251,9 @@ for r in regions:
               "run; it walks the region joint by joint and restates a shared ligament whenever it "
               "moves on, which is what marks each boundary. Andrew confirmed the resulting blocks "
               "and asked for the restatements to be dropped, so what follows is his structure, not "
-              "a proposal. Blocks he has not commented on are still marked *proposed*, and any "
-              "term marked *awaiting Andrew* was rescued from a section he asked to delete because "
-              "it appears nowhere else in the document.")
+              "a proposal. Every block has now been through him; blocks in his own wording are "
+              "marked *(Andrew's heading)* and contents he dictated are marked *(content set by "
+              "Andrew)*.")
             W("")
         def render_group(g):
             if g.get("andrew"):

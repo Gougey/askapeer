@@ -31,6 +31,15 @@ WHY = {
     "ll-ankle": "ankle restated collaterals can be removed",
     "ll-calc": "calcaneocuboid restated can be removed",
     "ll-plantar": "plantar structures restated can be removed",
+    "rescued-terms": ("yes these can be removed — the ligaments are detailed as lateral or medial "
+                      "in the document already"),
+    "pelvic-ring": ("pelvic ring is the union of the bones already detailed in the document. A "
+                    "fracture of the pelvic ring must therefore involve a fracture of one of those "
+                    "or a joint injury and we have each joint in the document"),
+    "finger-joints": ("finger joints comprise of the proximal and distal interphalangeal joints — "
+                      "the ligaments mentioned in 'finger joints' are therefore already listed"),
+    "pubic-rami": ("these are aspects of the pubic bone, so as long as we have the pubic bone in "
+                   "there and its conditions we are covered comprehensively"),
 }
 
 # Blocks to delete outright. Every term in these survives elsewhere, except where `RESCUE` names it.
@@ -43,6 +52,7 @@ DROP = {
     ("Lower limb", "Ankle — restated collaterals"),
     ("Lower limb", "Calcaneocuboid — restated"),
     ("Lower limb", "Plantar structures — restated"),
+    ("Upper limb", "Finger joints — restated collaterals"),
 }
 
 RENAME = {
@@ -50,12 +60,11 @@ RENAME = {
     ("Upper limb", "Forearm — restated, with interosseous detail"): "Forearm",
 }
 
-# Terms carried out of a dropped block into a surviving one, because nothing else holds them.
-RESCUE = {
-    ("Upper limb", "Intermetacarpal ligaments"): "Carpometacarpal joints",
-    ("Lower limb", "Intermetatarsal ligaments"): "Plantar structures",
-    ("Lower limb", "Interosseous ligaments"): "Plantar structures",
-}
+# Nothing is rescued any more. The three terms held back on 2026-08-24 — Intermetacarpal,
+# Intermetatarsal and Interosseous ligaments — were put to Andrew, who confirmed they go:
+# "yes these can be removed — the ligaments are detailed as lateral or medial in the document
+# already". They now leave with the blocks he asked to delete.
+RESCUE = {}
 
 # Terms moved out of a dropped block to the block Andrew named for them.
 MOVE = {
@@ -83,8 +92,10 @@ EXPAND = {
     ],
 }
 
-# Blocks Andrew has not commented on, so they stay marked as proposals.
-STILL_PROPOSED = {("Upper limb", "Finger joints — restated collaterals")}
+# Every block has now been reviewed. Andrew on the finger restatement, 2026-08-24: "finger joints
+# comprise of the proximal and distal interphalangeal joints — the ligaments mentioned in 'finger
+# joints' are therefore already listed in our document."
+STILL_PROPOSED = set()
 
 
 def apply(region, blocks):

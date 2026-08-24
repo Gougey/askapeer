@@ -33,8 +33,11 @@ PLAN = {
     17: ("B", "Sacroiliac joint"),     18: ("C", "Sacroiliac joint"),
     19: ("B", "Sacrum"),               20: ("C", "Sacrum"),
     21: ("B", "Coccyx"),               22: ("C", "Coccyx"),
-    23: (None, None),                  24: ("B", "Pelvic ring"),
-    25: ("C", "Pelvic ring"),          26: (None, None),
+    # 24/25 dropped on Andrew's instruction 2026-08-24: "pelvic ring is the union of the bones
+    # already detailed in the document. A fracture of the pelvic ring must therefore involve a
+    # fracture of one of those or a joint injury and we have each joint in the document."
+    23: (None, None),                  24: (None, None),
+    25: (None, None),                  26: (None, None),
     27: ("B", "Inguinal region"),      28: ("C", "Inguinal region"),
     29: ("M", "Pelvic floor"),         30: ("C", "Pelvic floor"),
     31: (None, None),                  32: ("M", "Perineal muscles"),
@@ -80,7 +83,15 @@ def rebuild(region):
             continue
         bucket = buckets[branch].setdefault(name, [])
         seen = {key(it["text"]) for it in bucket}
-        added = [it for it in g["items"] if key(it["text"]) not in seen]
+        added = []
+        for it in g["items"]:
+            # Dedupe *within* the source group too: "Superior pubic ramus" and "Inferior pubic
+            # ramus" are each listed twice under Pubis. Andrew 2026-08-24: the rami are aspects
+            # of the pubic bone, so one entry each covers it.
+            if key(it["text"]) in seen:
+                continue
+            seen.add(key(it["text"]))
+            added.append(it)
         dupes = len(g["items"]) - len(added)
         if bucket and dupes:
             merged.append((g["name"], BRANCH[branch] + " → " + name, dupes, [a["text"] for a in added]))

@@ -132,24 +132,28 @@ blocks removed, the cervical upper-stabiliser block dissolved into its respectiv
 *Forearm* and the interosseous membrane kept, the interphalangeal joints given radial collateral /
 ulnar collateral / palmar ligament, and the deltoid layers turned into proper lists.
 
-**Three questions went back to him**, and until they are answered nothing here is final:
+**Three questions went back to him on 2026-08-24, and he answered all three the same day.**
 
-1. **Three terms would have been lost.** *Intermetacarpal ligaments* (in the carpometacarpal
-   section he asked to remove) and *Intermetatarsal ligaments* and *Interosseous ligaments* (in
-   the plantar section he asked to remove) appear **nowhere else in the document**. They have been
-   moved into the surviving block and marked *awaiting Andrew* rather than deleted.
+1. **The three terms that would have been lost** — *Intermetacarpal ligaments*, *Intermetatarsal
+   ligaments* and *Interosseous ligaments*. Andrew: *"yes these can be removed — the ligaments are
+   detailed as lateral or medial in the document already."* Removed.
 
-2. **"Pelvic ring can be removed" — which of the two?** The source itself disagrees about them.
-   *Bones & landmarks → Pelvic ring* is headed "already detailed above" and is safe to drop.
-   *Conditions → Pelvic ring* is headed "Common injuries — **not** already detailed above" and
-   holds **12 conditions found nowhere else**, including pelvic ring fracture, APC injury, lateral
-   compression injury, vertical shear injury and pelvic ring diastasis. Both are untouched pending
-   his answer.
+2. **Which of the two Pelvic ring blocks.** Andrew: *"pelvic ring is the union of the bones already
+   detailed in the document. A fracture of the pelvic ring must therefore involve a fracture of one
+   of those or a joint injury and we have each joint in the document. This can therefore be
+   removed."* **Both** blocks removed — the landmarks and the injuries.
 
-3. **"Finger joints — restated collaterals"** was not mentioned while he was specifying the
-   contents of the PIP and DIP joints immediately above it. It is left in place, still marked as
-   a proposal.
+   > ⚠️ Worth revisiting if the taxonomy is ever used to tag trauma. Eleven of those twelve
+   > conditions had no equivalent elsewhere, and four of them — *APC injury*, *Lateral compression
+   > injury*, *Vertical shear injury*, *Combined-mechanism injury* — are the Young–Burgess
+   > classification, which describes the ring as a whole and cannot be reconstructed from the
+   > individual bones. Andrew's reasoning addresses fractures of the bones, which is sound; these
+   > four are mechanism labels rather than fractures of any one bone.
 
-He also asked what the two duplicate term names were: *Superior pubic ramus* and *Inferior pubic
-ramus*, each listed twice in Pelvis → Bones & landmarks → Pubis. The structure-health table now
-names duplicates rather than only counting them.
+3. **The finger restated collaterals.** Andrew: *"finger joints comprise of the proximal and distal
+   interphalangeal joints — the ligaments mentioned in 'finger joints' are therefore already listed
+   in our document."* Removed.
+
+On the duplicated **pubic rami**, Andrew: *"these are aspects of the pubic bone, so as long as we
+have the pubic bone in there and its conditions we are covered comprehensively."* Each now appears
+once; the source listed both twice.

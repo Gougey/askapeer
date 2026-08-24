@@ -41,9 +41,31 @@ AMENDED = {
         "ankle restated collaterals removed (Andrew); the term survives as a block heading",
 }
 
+# Removed on Andrew's instruction, 2026-08-24.
+_LIGAMENTS = ("removed with the restated block — Andrew: 'the ligaments are detailed as lateral "
+              "or medial in the document already'")
+for _t in ("Intermetacarpal ligaments", "Intermetatarsal ligaments", "Interosseous ligaments"):
+    AMENDED[_t] = _LIGAMENTS
+
+# The whole Pelvic ring section, landmarks and injuries both. Andrew: "pelvic ring is the union of
+# the bones already detailed ... a fracture of the pelvic ring must therefore involve a fracture of
+# one of those or a joint injury and we have each joint in the document."
+_RING = "Pelvic ring section removed (Andrew) — the ring is the union of bones detailed elsewhere"
+for _t in ("Right innominate bone", "Left innominate bone", "Sacroiliac joints",
+           "Acetabula/Acetabulum", "Stable pelvic fracture", "Unstable pelvic fracture",
+           "Open pelvic fracture", "APC injury", "Lateral compression injury",
+           "Vertical shear injury", "Combined-mechanism injury", "Pubic symphysis disruption",
+           "SI joint disruption", "Pelvic ring diastasis", "Pelvic stress fracture"):
+    AMENDED[_t] = _RING
+
 
 def main():
-    blob = key(DOC.read_text())
+    # Compare against the *generated* document only. The hand-written appendices name terms in
+    # order to discuss them ("APC injury ... cannot be reconstructed"), which would otherwise mask
+    # a genuine absence and make this check quietly useless.
+    text = DOC.read_text()
+    cut = text.find("## Appendix A")
+    blob = key(text[:cut] if cut != -1 else text)
     doc = fitz.open(SRC)
     lost_terms, changed_headings, amended, checked = [], [], [], 0
     for pno in range(len(doc)):

@@ -31,8 +31,9 @@ not re-derive the analysis.
 |---|---|
 | `extract.py` | Reads the PDF into a model. Heading level from font size, bullet depth from x-indent, Part 2 tables from real cell extraction. No judgement, just parsing. |
 | `pelvis.py` | Reconciles the pelvis, which the source drafts **twice** — once bone by bone, once consolidated by structure type. Maps each source group to a branch by index, and folds the restated content. |
-| `ligaments.py` | Proposes the joint boundaries inside the flat ligament runs. 58 blocks; the ranges are contiguous slices of the original order. **Unconfirmed — awaiting Andrew.** |
+| `ligaments.py` | The joint boundaries inside the flat ligament runs — 58 blocks, each a contiguous slice of the original order. **Confirmed by Andrew 2026-08-24.** |
 | `nesting.py` | Restores groups that are parents of other groups, which the source marks only by leaving the parent heading empty (*Hyoid Muscles* over Suprahyoid and Infrahyoid, and eight more). |
+| `amendments.py` | Andrew's review of 2026-08-24, his instructions recorded verbatim. Edit here first when he sends more. |
 | `build.py` | Renders the collapsible document, computes the structure-health table, and appends the prose from `appendix.md` and `grading.md`. |
 | `verify.py` | Fails if any term in the PDF is missing from the output. Headings may legitimately be renamed or dropped, so those are listed rather than failed. |
 

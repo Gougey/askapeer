@@ -30,8 +30,7 @@ Every branch of Part 1, worst first. **The flag is about the *shape* of the list
 
 | Branch | Terms | Groups | Loose terms | Duplicate names | |
 |---|---:|---:|---:|---:|---|
-| Upper limb → Ligaments | 134 | 19 | 0 | 1 | ◇ 1 proposed heading — not yet reviewed · **⚠** 1 duplicate term name (*Ulnocarpal ligament complex*) |
-| Pelvis, hip and pelvic floor → Bones & landmarks | 71 | 9 | 0 | 2 | **⚠** 2 duplicate term names (*Superior pubic ramus*, *Inferior pubic ramus*) |
+| Upper limb → Ligaments | 128 | 18 | 0 | 1 | **⚠** 1 duplicate term name (*Ulnocarpal ligament complex*) |
 | Cervical spine → Muscles | 35 | 8 | 0 | 0 | ✓ |
 | Cervical spine → Ligaments | 27 | 4 | 0 | 0 | ✓ |
 | Cervical spine → Conditions | 59 | 10 | 0 | 0 | ✓ |
@@ -44,11 +43,12 @@ Every branch of Part 1, worst first. **The flag is about the *shape* of the list
 | Lumbar spine → Ligaments | 13 | 2 | 0 | 0 | ✓ |
 | Lumbar spine → Conditions | 41 | 10 | 0 | 0 | ✓ |
 | Lower limb → Muscles | 51 | 16 | 0 | 0 | ✓ |
-| Lower limb → Ligaments | 167 | 23 | 0 | 0 | ✓ |
+| Lower limb → Ligaments | 165 | 23 | 0 | 0 | ✓ |
 | Lower limb → Conditions | 102 | 15 | 0 | 0 | ✓ |
 | Pelvis, hip and pelvic floor → Muscles | 45 | 7 | 0 | 0 | ✓ |
 | Pelvis, hip and pelvic floor → Ligaments | 32 | 5 | 0 | 0 | ✓ |
-| Pelvis, hip and pelvic floor → Conditions | 112 | 11 | 0 | 0 | ✓ |
+| Pelvis, hip and pelvic floor → Bones & landmarks | 60 | 8 | 0 | 0 | ✓ |
+| Pelvis, hip and pelvic floor → Conditions | 100 | 10 | 0 | 0 | ✓ |
 
 Read that as three tiers:
 
@@ -145,7 +145,7 @@ Read that as three tiers:
 <details class="tree">
 <summary>Ligaments <span class="count">— 27 terms, 4 groups</span> <span class="ok">✓ structured</span></summary>
 
-> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Blocks he has not commented on are still marked *proposed*, and any term marked *awaiting Andrew* was rescued from a section he asked to delete because it appears nowhere else in the document.
+> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Every block has now been through him; blocks in his own wording are marked *(Andrew's heading)* and contents he dictated are marked *(content set by Andrew)*.
 
 <details class="tree">
 <summary>Cervical spine <span class="ok">(confirmed)</span> <span class="count">— 10</span></summary>
@@ -310,7 +310,7 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree lvl1">
-<summary>Upper limb <span class="count">— 261 terms, 3 branches</span></summary>
+<summary>Upper limb <span class="count">— 255 terms, 3 branches</span></summary>
 
 <details class="tree">
 <summary>Muscles <span class="count">— 49 terms, 14 groups</span> <span class="ok">✓ structured</span></summary>
@@ -436,9 +436,9 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 134 terms, 19 groups</span> <span class="ok">◇ 1 proposed heading — not yet reviewed · ⚠ 1 duplicate term name (*Ulnocarpal ligament complex*)</span></summary>
+<summary>Ligaments <span class="count">— 128 terms, 18 groups</span> <span class="warn">⚠ 1 duplicate term name (*Ulnocarpal ligament complex*)</span></summary>
 
-> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Blocks he has not commented on are still marked *proposed*, and any term marked *awaiting Andrew* was rescued from a section he asked to delete because it appears nowhere else in the document.
+> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Every block has now been through him; blocks in his own wording are marked *(Andrew's heading)* and contents he dictated are marked *(content set by Andrew)*.
 
 <details class="tree">
 <summary>Acromioclavicular joint & scapular ligaments <span class="ok">(confirmed)</span> <span class="count">— 12</span></summary>
@@ -576,12 +576,11 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Carpometacarpal joints <span class="ok">(confirmed)</span> <span class="count">— 4</span></summary>
+<summary>Carpometacarpal joints <span class="ok">(confirmed)</span> <span class="count">— 3</span></summary>
 
 - Dorsal carpometacarpal ligaments
 - Palmar intercarpal ligaments
 - Palmar carpometacarpal ligaments
-- Intermetacarpal ligaments <span class="warn">— retained — appears nowhere else, awaiting Andrew</span>
 
 </details>
 <details class="tree">
@@ -629,16 +628,6 @@ Read that as three tiers:
 - Radial collateral ligament
 - Ulnar collateral ligament
 - Palmar ligament
-
-</details>
-<details class="tree">
-<summary>Finger joints — restated collaterals <span class="warn">(proposed)</span> <span class="count">— 5</span></summary>
-
-- Radial collateral ligament
-- Ulnar collateral ligament
-- Accessory collateral ligaments
-- Palmar plate
-- Deep transverse metacarpal ligament
 
 </details>
 <details class="tree">
@@ -875,7 +864,7 @@ Read that as three tiers:
 <details class="tree">
 <summary>Ligaments <span class="count">— 14 terms, 2 groups</span> <span class="ok">✓ structured</span></summary>
 
-> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Blocks he has not commented on are still marked *proposed*, and any term marked *awaiting Andrew* was rescued from a section he asked to delete because it appears nowhere else in the document.
+> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Every block has now been through him; blocks in his own wording are marked *(Andrew's heading)* and contents he dictated are marked *(content set by Andrew)*.
 
 <details class="tree">
 <summary>Thoracic spine — segmental ligaments <span class="ok">(confirmed)</span> <span class="count">— 8</span></summary>
@@ -1011,7 +1000,7 @@ Read that as three tiers:
 <details class="tree">
 <summary>Ligaments <span class="count">— 13 terms, 2 groups</span> <span class="ok">✓ structured</span></summary>
 
-> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Blocks he has not commented on are still marked *proposed*, and any term marked *awaiting Andrew* was rescued from a section he asked to delete because it appears nowhere else in the document.
+> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Every block has now been through him; blocks in his own wording are marked *(Andrew's heading)* and contents he dictated are marked *(content set by Andrew)*.
 
 <details class="tree">
 <summary>Lumbar spine — segmental ligaments <span class="ok">(confirmed)</span> <span class="count">— 8</span></summary>
@@ -1134,7 +1123,7 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree lvl1">
-<summary>Lower limb <span class="count">— 320 terms, 3 branches</span></summary>
+<summary>Lower limb <span class="count">— 318 terms, 3 branches</span></summary>
 
 <details class="tree">
 <summary>Muscles <span class="count">— 51 terms, 16 groups</span> <span class="ok">✓ structured</span></summary>
@@ -1272,9 +1261,9 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Ligaments <span class="count">— 167 terms, 23 groups</span> <span class="ok">✓ structured</span></summary>
+<summary>Ligaments <span class="count">— 165 terms, 23 groups</span> <span class="ok">✓ structured</span></summary>
 
-> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Blocks he has not commented on are still marked *proposed*, and any term marked *awaiting Andrew* was rescued from a section he asked to delete because it appears nowhere else in the document.
+> **Reviewed by Andrew, 2026-08-24.** The source lists most of these as one flat run; it walks the region joint by joint and restates a shared ligament whenever it moves on, which is what marks each boundary. Andrew confirmed the resulting blocks and asked for the restatements to be dropped, so what follows is his structure, not a proposal. Every block has now been through him; blocks in his own wording are marked *(Andrew's heading)* and contents he dictated are marked *(content set by Andrew)*.
 
 <details class="tree">
 <summary>Hip joint <span class="ok">(confirmed)</span> <span class="count">— 11</span></summary>
@@ -1534,14 +1523,12 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Plantar structures <span class="ok">(confirmed)</span> <span class="count">— 6</span></summary>
+<summary>Plantar structures <span class="ok">(confirmed)</span> <span class="count">— 4</span></summary>
 
 - Plantar calcaneonavicular ligament / spring ligament
 - Long plantar ligament
 - Short plantar ligament
 - Plantar aponeurosis
-- Intermetatarsal ligaments <span class="warn">— retained — appears nowhere else, awaiting Andrew</span>
-- Interosseous ligaments <span class="warn">— retained — appears nowhere else, awaiting Andrew</span>
 
 </details>
 <details class="tree">
@@ -1742,7 +1729,7 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree lvl1">
-<summary>Pelvis, hip and pelvic floor <span class="count">— 260 terms, 4 branches</span></summary>
+<summary>Pelvis, hip and pelvic floor <span class="count">— 237 terms, 4 branches</span></summary>
 
 > **Reconstructed — the only region where the running order has been changed.** The source drafts the pelvis twice: once bone by bone (Ilium, Ischium, Pubis, Acetabulum, SI joint, Sacrum, Coccyx, Pelvic ring, Inguinal region — each with its own landmarks, ligaments and conditions), and again consolidated by structure type at the end. Both drafts survived into the file. The two have been reconciled here into the same **Muscles / Ligaments / Conditions** shape the other regions use, plus a **Bones & landmarks** branch that only the pelvis enumerates. Six headings all reading *Common associated conditions* are renamed for the bone they describe; three headings that carried no terms of their own, and one that was only the tail of a wrapped line, are dropped as the introducers they were. **No term has been invented, reworded or removed** — only re-parented. What the two drafts disagreed on:
 
@@ -1897,7 +1884,7 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Bones & landmarks <span class="count">— 71 terms, 9 groups</span> <span class="warn">⚠ 2 duplicate term names (*Superior pubic ramus*, *Inferior pubic ramus*)</span></summary>
+<summary>Bones & landmarks <span class="count">— 60 terms, 8 groups</span> <span class="ok">✓ structured</span></summary>
 
 <details class="tree">
 <summary>Ilium <span class="count">— 10</span></summary>
@@ -1927,7 +1914,7 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Pubis <span class="count">— 10</span></summary>
+<summary>Pubis <span class="count">— 8</span></summary>
 
 - Pubic body
 - Superior pubic ramus
@@ -1935,8 +1922,6 @@ Read that as three tiers:
 - Pubic crest
 - Pubic tubercle
 - Pectineal line
-- Superior pubic ramus
-- Inferior pubic ramus
 - Ischiopubic ramus
 - Pubic symphysis
 
@@ -1988,20 +1973,6 @@ Read that as three tiers:
 
 </details>
 <details class="tree">
-<summary>Pelvic ring <span class="count">— 9</span></summary>
-
-- Sacrum
-- Right innominate bone
-- Left innominate bone
-- Ilium
-- Ischium
-- Pubis
-- Pubic symphysis
-- Sacroiliac joints
-- Acetabula/Acetabulum
-
-</details>
-<details class="tree">
 <summary>Inguinal region <span class="count">— 9</span></summary>
 
 - Inguinal canal
@@ -2017,7 +1988,7 @@ Read that as three tiers:
 </details>
 </details>
 <details class="tree">
-<summary>Conditions <span class="count">— 112 terms, 11 groups</span> <span class="ok">✓ structured</span></summary>
+<summary>Conditions <span class="count">— 100 terms, 10 groups</span> <span class="ok">✓ structured</span></summary>
 
 <details class="tree">
 <summary>Ilium <span class="count">— 11</span></summary>
@@ -2129,23 +2100,6 @@ Read that as three tiers:
 - Sacrococcygeal joint degeneration
 - Coccygeal osteoarthritis
 - Post-traumatic coccygeal pain
-
-</details>
-<details class="tree">
-<summary>Pelvic ring <span class="count">— 12</span></summary>
-
-- Pelvic ring fracture
-- Stable pelvic fracture
-- Unstable pelvic fracture
-- Open pelvic fracture
-- APC injury
-- Lateral compression injury
-- Vertical shear injury
-- Combined-mechanism injury
-- Pubic symphysis disruption
-- SI joint disruption
-- Pelvic ring diastasis
-- Pelvic stress fracture
 
 </details>
 <details class="tree">
@@ -4593,25 +4547,29 @@ blocks removed, the cervical upper-stabiliser block dissolved into its respectiv
 *Forearm* and the interosseous membrane kept, the interphalangeal joints given radial collateral /
 ulnar collateral / palmar ligament, and the deltoid layers turned into proper lists.
 
-**Three questions went back to him**, and until they are answered nothing here is final:
+**Three questions went back to him on 2026-08-24, and he answered all three the same day.**
 
-1. **Three terms would have been lost.** *Intermetacarpal ligaments* (in the carpometacarpal
-   section he asked to remove) and *Intermetatarsal ligaments* and *Interosseous ligaments* (in
-   the plantar section he asked to remove) appear **nowhere else in the document**. They have been
-   moved into the surviving block and marked *awaiting Andrew* rather than deleted.
+1. **The three terms that would have been lost** — *Intermetacarpal ligaments*, *Intermetatarsal
+   ligaments* and *Interosseous ligaments*. Andrew: *"yes these can be removed — the ligaments are
+   detailed as lateral or medial in the document already."* Removed.
 
-2. **"Pelvic ring can be removed" — which of the two?** The source itself disagrees about them.
-   *Bones & landmarks → Pelvic ring* is headed "already detailed above" and is safe to drop.
-   *Conditions → Pelvic ring* is headed "Common injuries — **not** already detailed above" and
-   holds **12 conditions found nowhere else**, including pelvic ring fracture, APC injury, lateral
-   compression injury, vertical shear injury and pelvic ring diastasis. Both are untouched pending
-   his answer.
+2. **Which of the two Pelvic ring blocks.** Andrew: *"pelvic ring is the union of the bones already
+   detailed in the document. A fracture of the pelvic ring must therefore involve a fracture of one
+   of those or a joint injury and we have each joint in the document. This can therefore be
+   removed."* **Both** blocks removed — the landmarks and the injuries.
 
-3. **"Finger joints — restated collaterals"** was not mentioned while he was specifying the
-   contents of the PIP and DIP joints immediately above it. It is left in place, still marked as
-   a proposal.
+   > ⚠️ Worth revisiting if the taxonomy is ever used to tag trauma. Eleven of those twelve
+   > conditions had no equivalent elsewhere, and four of them — *APC injury*, *Lateral compression
+   > injury*, *Vertical shear injury*, *Combined-mechanism injury* — are the Young–Burgess
+   > classification, which describes the ring as a whole and cannot be reconstructed from the
+   > individual bones. Andrew's reasoning addresses fractures of the bones, which is sound; these
+   > four are mechanism labels rather than fractures of any one bone.
 
-He also asked what the two duplicate term names were: *Superior pubic ramus* and *Inferior pubic
-ramus*, each listed twice in Pelvis → Bones & landmarks → Pubis. The structure-health table now
-names duplicates rather than only counting them.
+3. **The finger restated collaterals.** Andrew: *"finger joints comprise of the proximal and distal
+   interphalangeal joints — the ligaments mentioned in 'finger joints' are therefore already listed
+   in our document."* Removed.
+
+On the duplicated **pubic rami**, Andrew: *"these are aspects of the pubic bone, so as long as we
+have the pubic bone in there and its conditions we are covered comprehensively."* Each now appears
+once; the source listed both twice.
 
