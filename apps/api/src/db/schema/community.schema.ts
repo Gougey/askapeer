@@ -89,7 +89,7 @@ export const handleNameHistory = community.table('handle_name_history', {
  * (EPIC-C §4) keeps full-text search inside Postgres rather than shipping forum content,
  * including de-identified case discussions, to a third-party search service.
  */
-const tsvector = customType<{ data: string; driverData: string }>({
+export const tsvector = customType<{ data: string; driverData: string }>({
   dataType: () => 'tsvector',
 });
 

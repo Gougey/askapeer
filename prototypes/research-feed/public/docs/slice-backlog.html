@@ -611,16 +611,21 @@ switched off. Three decisions open (design doc §12), of which the EPIC-B
 amendment is the only one that changes an existing spec.</li>
 </ul>
 <hr />
-<h2 id="s16-search-the-literature-feed-parallel-able-should">S16 —
-Search the literature feed [parallel-able] [Should]</h2>
+<h2 id="s16-search-the-literature-feed-parallel-able-must">S16 — Search
+the literature feed [parallel-able] [Must]</h2>
 <blockquote>
+<p><strong>Raised to Must on 2026-08-27.</strong> A searchable
+literature feed is close to the point of the product rather than a
+refinement of it — it is the main thing distinguishing this from a
+forum, and S8 already pays the ingestion cost. S17 is Must for the same
+reason: an API no screen reaches delivers nothing.</p>
 <p><strong>The feed has never been searchable.</strong>
 <code>GET /v1/search</code> (S7) queries <code>community.posts</code>
 only. <code>research.articles</code> has no <code>tsvector</code> and no
 full-text index — its only index is <code>articles_rank_idx</code> for
-ranking by date and score — so 2,597 ingested papers are reachable by
-browsing and by interest-matching, but not by a member who types a
-word.</p>
+ranking by date and score — so the ingested corpus — 3,172 papers as of
+2026-08-27, growing twice daily — is reachable by browsing and by
+interest-matching, but not by a member who types a word.</p>
 <p>This is the blocker under S17: there is no point promoting search to
 the app bar while half the app cannot answer.</p>
 <p><strong>Mirror what posts already do.</strong>
@@ -647,16 +652,15 @@ migration; <code>research-feed.service.ts</code>; a query parameter on
 <code>GET /v1/feed</code> or a sibling endpoint). No member-facing
 screen in this slice — S17 is what surfaces it.</li>
 <li><strong>Depends on</strong>: S8 (the corpus it searches).</li>
-<li><strong>Notes</strong>: the generated column backfills across 2,597
-rows on migration — check the lock, it is small now and will not be
-later. Abstracts are long relative to post bodies, so weight and rank
-want a sanity check against real queries before this is called
-done.</li>
+<li><strong>Notes</strong>: the generated column backfills the whole
+table on migration — 3,172 rows is nothing, but the corpus grows twice
+daily and this only gets more expensive. Abstracts are long relative to
+post bodies, so weight and rank want a sanity check against real queries
+before this is called done.</li>
 </ul>
 <hr />
-<h2
-id="s17-search-in-the-app-bar-tabbed-results-parallel-able-should">S17 —
-Search in the app bar, tabbed results [parallel-able] [Should]</h2>
+<h2 id="s17-search-in-the-app-bar-tabbed-results-parallel-able-must">S17
+— Search in the app bar, tabbed results [parallel-able] [Must]</h2>
 <blockquote>
 <p><strong>Search is currently reachable from one screen.</strong> It
 sits as a CTA on Discussions, with a comment in
@@ -802,7 +806,8 @@ both; its S18b half (tag synonyms for the classifier) depends on nothing
 and can go at any time.</li>
 </ul>
 <p><strong>Minimum launchable set</strong> (Must-haves): S0–S5, S7
-(search), S8, S9, S10, S11, S12. S6/S13 desirable; S14 fast-follow.</p>
+(search), S8, S9, S10, S11, S12, S16, S17. S6/S13 desirable; S14
+fast-follow.</p>
 <h2 id="next-step">Next step</h2>
 <p>Each slice maps to <strong>one or a few GitHub issues</strong> (a
 slice may split into migration / API / UI tasks). The

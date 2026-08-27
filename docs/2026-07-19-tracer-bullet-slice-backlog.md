@@ -253,9 +253,11 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S16 — Search the literature feed  [parallel-able] [Should]
+## S16 — Search the literature feed  [parallel-able] [Must]
 
-> **The feed has never been searchable.** `GET /v1/search` (S7) queries `community.posts` only. `research.articles` has no `tsvector` and no full-text index — its only index is `articles_rank_idx` for ranking by date and score — so 2,597 ingested papers are reachable by browsing and by interest-matching, but not by a member who types a word.
+> **Raised to Must on 2026-08-27.** A searchable literature feed is close to the point of the product rather than a refinement of it — it is the main thing distinguishing this from a forum, and S8 already pays the ingestion cost. S17 is Must for the same reason: an API no screen reaches delivers nothing.
+>
+> **The feed has never been searchable.** `GET /v1/search` (S7) queries `community.posts` only. `research.articles` has no `tsvector` and no full-text index — its only index is `articles_rank_idx` for ranking by date and score — so the ingested corpus — 3,172 papers as of 2026-08-27, growing twice daily — is reachable by browsing and by interest-matching, but not by a member who types a word.
 >
 > This is the blocker under S17: there is no point promoting search to the app bar while half the app cannot answer.
 >
@@ -266,11 +268,11 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 - **Delivers**: full-text search over ingested articles — a generated `tsv` (title A, abstract B) plus its GIN index, a search path in the research-feed service, and a **real total count** rather than a page length.
 - **Touches**: EPIC-I (`research.articles` migration; `research-feed.service.ts`; a query parameter on `GET /v1/feed` or a sibling endpoint). No member-facing screen in this slice — S17 is what surfaces it.
 - **Depends on**: S8 (the corpus it searches).
-- **Notes**: the generated column backfills across 2,597 rows on migration — check the lock, it is small now and will not be later. Abstracts are long relative to post bodies, so weight and rank want a sanity check against real queries before this is called done.
+- **Notes**: the generated column backfills the whole table on migration — 3,172 rows is nothing, but the corpus grows twice daily and this only gets more expensive. Abstracts are long relative to post bodies, so weight and rank want a sanity check against real queries before this is called done.
 
 ---
 
-## S17 — Search in the app bar, tabbed results  [parallel-able] [Should]
+## S17 — Search in the app bar, tabbed results  [parallel-able] [Must]
 
 > **Search is currently reachable from one screen.** It sits as a CTA on Discussions, with a comment in `discussions/page.tsx` explaining why: searching is something you do *to* discussions, so it belongs on the surface it searches. That reasoning was right while discussions were the only searchable corpus. Once S16 lands it stops holding, and search belongs in the shell.
 >
@@ -321,7 +323,7 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 - **Fast-follow:** S14 (passkeys).
 - **Discovery, second pass (added 2026-08-27):** S16 → S17 in that order — S16 makes the literature searchable, S17 puts search in the shell and tabs the two corpora. S18 is independent and improves both; its S18b half (tag synonyms for the classifier) depends on nothing and can go at any time.
 
-**Minimum launchable set** (Must-haves): S0–S5, S7 (search), S8, S9, S10, S11, S12. S6/S13 desirable; S14 fast-follow.
+**Minimum launchable set** (Must-haves): S0–S5, S7 (search), S8, S9, S10, S11, S12, S16, S17. S6/S13 desirable; S14 fast-follow.
 
 ## Next step
 
