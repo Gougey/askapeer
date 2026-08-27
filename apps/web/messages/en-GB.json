@@ -358,7 +358,11 @@
       "confirmCta": "Sign out everywhere",
       "cancel": "Cancel"
     },
-    "signOut": "Sign out"
+    "signOutDevice": {
+      "heading": "Sign out",
+      "body": "Signs you out on this device only. Any other device you are signed in on stays signed in.",
+      "cta": "Sign out"
+    }
   },
   "caseCompose": {
     "heading": "Discuss a case",

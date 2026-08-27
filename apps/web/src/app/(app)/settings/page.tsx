@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { SignOutButton } from '@/components/SignOutButton';
+import { SignOutDevice } from './SignOutDevice';
 import { SignOutEverywhere } from './SignOutEverywhere';
 
 /**
@@ -68,11 +68,10 @@ export default async function SettingsPage() {
         ))}
       </ul>
 
+      {/* Routine before drastic: ending this session is the everyday act, and the one that
+          reaches devices a member cannot see reads better as the deliberate step past it. */}
+      <SignOutDevice />
       <SignOutEverywhere />
-
-      {/* Deliberately the lighter of the two: signing out here is the ordinary act, and
-          the emphatic control is the one with consequences beyond this device. */}
-      <SignOutButton label={t('signOut')} />
     </main>
   );
 }
