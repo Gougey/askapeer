@@ -102,7 +102,6 @@
       "kudos": "Kudos",
       "memberSince": "Member since {year}",
       "identityNote": "This is everything other members can see about you.",
-      "signOut": "Sign out",
       "adminConsole": "Admin console",
       "settings": "Settings"
     },
@@ -358,7 +357,8 @@
       "confirm": "This signs you out on every device, including this one.",
       "confirmCta": "Sign out everywhere",
       "cancel": "Cancel"
-    }
+    },
+    "signOut": "Sign out"
   },
   "caseCompose": {
     "heading": "Discuss a case",

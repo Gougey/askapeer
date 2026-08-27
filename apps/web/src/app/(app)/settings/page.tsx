@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { SignOutButton } from '@/components/SignOutButton';
 import { SignOutEverywhere } from './SignOutEverywhere';
 
 /**
@@ -10,9 +11,14 @@ import { SignOutEverywhere } from './SignOutEverywhere';
  * work respectively — and each adds its own row here. A hub full of dead rows teaches a
  * member that the app doesn't work, which is a worse first impression than a short hub.
  *
- * Sign out deliberately stays on the profile screen until F7 exists to hold it: moving a
- * working affordance somewhere new, on the way to somewhere else, is churn a member pays
- * for twice.
+ * **Both sign-out controls live here (moved from the profile screen, 2026-08-27).** They
+ * were split across two screens: the ordinary one on the profile, "sign out everywhere"
+ * here. Two ways to end a session, in two places, one of them a security action — the pair
+ * belongs together so the difference between them is visible at the moment of choosing.
+ *
+ * The ordinary sign-out is kept rather than folded into "everywhere": ending this session
+ * is routine, and on a borrowed or shared device it should not also revoke the phone in
+ * your pocket.
  */
 export default async function SettingsPage() {
   const t = await getTranslations('settings');
@@ -63,6 +69,10 @@ export default async function SettingsPage() {
       </ul>
 
       <SignOutEverywhere />
+
+      {/* Deliberately the lighter of the two: signing out here is the ordinary act, and
+          the emphatic control is the one with consequences beyond this device. */}
+      <SignOutButton label={t('signOut')} />
     </main>
   );
 }
