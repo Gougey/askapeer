@@ -108,7 +108,8 @@
     },
     "unreadNotifications": "{count, plural, one {# unread notification} other {# unread notifications}}",
     "back": "Back",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "search": "Search"
   },
   "identityCheck": {
     "title": "Confirm your identity",
@@ -457,13 +458,21 @@
     "tagsLabel": "Narrow by tag",
     "tagsHint": "Optional. Choosing a region includes everything beneath it.",
     "submit": "Search",
-    "idle": "Search posts, answers and tags across the community.",
+    "idle": "Search discussions, answers and the research feed.",
     "resultCount": "{count, plural, one {1 result} other {# results}}",
     "didYouMean": "Nothing matched “{query}” exactly. Showing {count, plural, one {1 close match} other {# close matches}}.",
     "noResults": "No results. Try fewer words, a broader tag, or check the spelling.",
     "more": "Show more results",
     "advanced": "Advanced",
-    "advancedWithCount": "Advanced ({count, plural, one {1 filter} other {# filters}})"
+    "advancedWithCount": "Advanced ({count, plural, one {1 filter} other {# filters}})",
+    "tabDiscussions": "Discussions ({count})",
+    "tabPapers": "Papers ({count})",
+    "tabsLabel": "Where to search",
+    "noResultsDiscussions": "No discussions matched. Try fewer words, a broader tag, or check the spelling.",
+    "noResultsPapers": "No papers matched. Try fewer words or check the spelling.",
+    "papersCount": "{count, plural, one {1 paper} other {# papers}}",
+    "morePapers": "Show more papers",
+    "filtersDiscussionsOnly": "Category and tag filters apply to discussions only."
   },
   "pagination": {
     "more": "Show more",

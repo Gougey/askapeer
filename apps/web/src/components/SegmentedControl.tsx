@@ -3,7 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export type Segment = { href: string; label: string };
+export type Segment = {
+  href: string;
+  label: string;
+  /**
+   * Set when the two panes are the *same* route with different query strings — search
+   * results are `/search?in=discussions` and `/search?in=papers`, so comparing `pathname`
+   * alone marks both inactive. The caller already knows which is showing, and it is a
+   * server component, so it says so rather than making this read the query string.
+   */
+  active?: boolean;
+};
 
 /**
  * Style guide §8.9 — grey track, 3px padding, the active segment a surface pill with a
@@ -15,11 +25,12 @@ export type Segment = { href: string; label: string };
  * moves between them. `aria-current="page"` is what carries the active state to a screen
  * reader — the pill is colour and shadow, which §9.2 says can never be the only signal.
  */
-export function SegmentedControl({ segments }: { segments: Segment[] }) {
+export function SegmentedControl({ segments, label }: { segments: Segment[]; label?: string }) {
   const pathname = usePathname();
 
   return (
     <nav
+      aria-label={label}
       className="flex"
       style={{
         background: 'var(--color-navy-tint-2)',
@@ -29,7 +40,7 @@ export function SegmentedControl({ segments }: { segments: Segment[] }) {
       }}
     >
       {segments.map((segment) => {
-        const active = pathname === segment.href;
+        const active = segment.active ?? pathname === segment.href;
         return (
           <Link
             key={segment.href}
