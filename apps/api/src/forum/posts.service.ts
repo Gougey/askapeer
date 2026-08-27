@@ -44,6 +44,8 @@ export type PostCard = {
   tags: TagRef[];
   author: AuthorBlock;
   answerCount: number;
+  /** Followers who have not written in the thread — see `watcherCountSql`. */
+  watcherCount: number;
   kudosCount: number;
   createdAt: string;
   editedAt: string | null;
@@ -305,6 +307,7 @@ export class PostsService {
         handleName: handles.handleName,
         kudosTotal: handles.kudosTotal,
         answerCount: answerCountSql,
+        watcherCount: watcherCountSql,
         kudosCount: postKudosCountSql,
         // Null for a question — the join only matches case discussions (EPIC-E §2).
         communityQuestion: caseDetails.communityQuestion,
@@ -396,6 +399,7 @@ export class PostsService {
         handleName: handles.handleName,
         kudosTotal: handles.kudosTotal,
         answerCount: answerCountSql,
+        watcherCount: watcherCountSql,
         kudosCount: postKudosCountSql,
       })
       .from(posts)
@@ -429,6 +433,7 @@ export class PostsService {
         tags: tagsByPost.get(row.id) ?? [],
         author: authorBlock(row),
         answerCount: Number(row.answerCount),
+        watcherCount: Number(row.watcherCount),
         kudosCount: Number(row.kudosCount),
         createdAt: row.createdAt.toISOString(),
         editedAt: row.editedAt?.toISOString() ?? null,
@@ -635,6 +640,32 @@ const answerCountSql = sql<number>`(
     and ${comments.parentCommentId} is null
 )`;
 
+/**
+ * People following this thread who have **not** written in it.
+ *
+ * Not a raw follower count, because that number carries no information: authoring follows a
+ * post and so does answering it, so followers are all-but-always the author plus whoever
+ * replied — across the seeded corpus, 65 of 67 posts had exactly participants + 1, and not
+ * one had a follower who had never posted in the thread. A card showing it would be
+ * restating the answer count in a second column.
+ *
+ * Excluding the author and everyone who commented leaves the number that means something on
+ * its own: how many people are watching this without having said anything yet. Zero on most
+ * threads today, which is why the card hides the stat entirely rather than printing "0".
+ */
+const watcherCountSql = sql<number>`(
+  select count(*) from ${follows} f
+  where f.target_type = 'post'
+    and f.target_id = ${posts.id}
+    and f.follower_handle_id <> ${posts.handleId}
+    and not exists (
+      select 1 from ${comments} c
+      where c.post_id = ${posts.id}
+        and c.handle_id = f.follower_handle_id
+        and c.status = 'published'
+    )
+)`;
+
 const postKudosCountSql = sql<number>`(
   select count(*) from ${kudos}
   where ${kudos.targetType} = 'post' and ${kudos.targetId} = ${posts.id}
@@ -689,6 +720,7 @@ function toCard(
     handleName: string;
     kudosTotal: number;
     answerCount: number;
+    watcherCount: number;
     kudosCount: number;
     communityQuestion: string | null;
   },
@@ -708,6 +740,7 @@ function toCard(
     tags: tagsByPost.get(row.id) ?? [],
     author: authorBlock(row),
     answerCount: Number(row.answerCount),
+    watcherCount: Number(row.watcherCount),
     kudosCount: Number(row.kudosCount),
     createdAt: row.createdAt.toISOString(),
     editedAt: row.editedAt?.toISOString() ?? null,

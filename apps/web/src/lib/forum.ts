@@ -25,6 +25,8 @@ export type PostCard = {
   tags: TagRef[];
   author: AuthorBlock;
   answerCount: number;
+  /** Followers who have not written in the thread — the card shows it only when non-zero. */
+  watcherCount: number;
   kudosCount: number;
   createdAt: string;
   editedAt: string | null;

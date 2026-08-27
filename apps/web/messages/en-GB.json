@@ -223,7 +223,8 @@
       "off": "Follow discussion",
       "ariaOn": "Following this discussion — tap to stop being notified of new replies",
       "ariaOff": "Follow this discussion to be notified of new replies"
-    }
+    },
+    "watching": "{count, plural, one {1 person watching who has not answered} other {# people watching who have not answered}}"
   },
   "report": {
     "report": "Report",
