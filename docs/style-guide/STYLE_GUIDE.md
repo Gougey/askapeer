@@ -663,9 +663,24 @@ The product's signature interactive element.
 
 ### 8.9 Segmented control
 
-Grey track (`#e3e9ec`), 3px padding; active segment = surface pill with a
-soft shadow and navy text. Used for in-pane toggles (My questions / Notifications)
+Hairline strip (`1px --color-border-strong`, `--radius`, segments flush and
+clipped); **active segment = filled `--color-accent` with `--color-surface`
+text**, inactive = muted text on the surface. Used for in-pane toggles
+(My questions / Notifications), search result panes (Discussions / Papers),
 and compose mode (Quick question / Case discussion).
+
+> **Changed 2026-08-27.** This previously specified a grey track with a raised
+> white pill, and the app carried both looks: compose had grown its own markup
+> with a filled segment while everything else used the pill. §8.9 had always
+> named a single control for both, so the divergence was a build drift, not a
+> second component. The filled treatment is the clearer of the two at a glance
+> on a phone and is now the only one — `SegmentedControl` is the sole
+> implementation, and compose renders through it.
+
+Built on links, not buttons: each pane is a route, so it is addressable,
+survives a refresh, and the back button moves between panes. `aria-current`
+carries the active state — the fill is colour, which §9.2 forbids as the only
+signal.
 
 ### 8.10 Forms & inputs
 
