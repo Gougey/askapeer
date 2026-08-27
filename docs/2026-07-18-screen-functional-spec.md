@@ -284,7 +284,8 @@ Each fully-specced screen uses these fields:
    - **Author row** — handle, kudos total, top-contributor badge (if any), member-since.
    - **Body** — *question type*: free-text body. *Case-discussion type*: the nine structured template fields rendered as labelled sections + the **platform disclaimer** (never a free body).
    - **Tags** — tappable chips.
-   - **Kudos control** + count (X2); created/edited timestamp (edited marker only after the 15-min window).
+   - **Kudos control** + count (X2); created/edited timestamp. ~~edited marker only after the 15-min window~~ — **the grace period is scrapped (decided 2026-08-27)**: the marker shows whenever `edited_at` is set. It was never built, and an edit is an edit — a window would mean storing a second timestamp to decide which edits count, for a distinction no reader of a clinical answer benefits from.
+   - Dates are **relative under seven days, then absolute** (`PostedAt`), and carry **no time of day** — EPIC-B's correlation-vector reasoning for year-only `member_since` applies more strongly to posting times, which would expose working patterns.
    - **Poll** (if present) — options + result after voting.
 3. **Best answer** (if marked) — pinned at the top of the answers list.
 4. **Answers section** — count; ordered by **kudos rank** (EPIC-D). Each answer: author row, body, kudos control + count, reply, report, threading indent, edited marker; the post author additionally sees **Mark as best answer**.

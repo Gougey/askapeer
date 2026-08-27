@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { AuthorBlock, PostCard as PostCardDto, TagRef } from '@/lib/forum';
 import { categoryColour } from '@/lib/category-colour';
+import { PostedAt } from './PostedAt';
 
 /**
  * The author row (EPIC-C §13.1's author block). Handle and kudos only — there is no
@@ -89,6 +90,11 @@ export async function PostCard({ post }: { post: PostCardDto }) {
             </span>
             <span>·</span>
             <span>{t('answers', { count: post.answerCount })}</span>
+            <span>·</span>
+            {/* Screen spec C1 lists a timestamp among the card's fields and style guide §8.3
+                puts it in this footer; it had never been built, so the list was the one
+                surface where a question's age was invisible. */}
+            <PostedAt iso={post.createdAt} editedIso={post.editedAt} />
           </span>
         </span>
       </Link>
