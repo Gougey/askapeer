@@ -45,6 +45,7 @@ DOCS=(
 # specs; build-index.py only reads the slug, title, description and group.
 STATIC_DOCS=(
   "case-discussion-mockup|$REPO_ROOT/docs/2026-07-30-case-discussion-mockup.html|Case Discussion — Form & Attestation (mockup)|Interactive draft of the case-discussion composer, the six-item de-identification checklist and the attestation gate, annotated with the clinical questions still open for Andrew. Tick the boxes to see the publish gate.|Client"
+  "bottom-nav-treatments|$REPO_ROOT/docs/2026-08-28-bottom-nav-treatments.html|Bottom Nav — Selected-Tab Treatments (for review)|Five ways of showing which tab you are on, each on a real 430px bar with the app's own icons — for Paul and Andy to compare after Andy found the current one too subtle. Tap the tabs; there is a light/dark switch.|Client"
 )
 
 for entry in "${DOCS[@]}"; do
