@@ -204,6 +204,13 @@
       "when": 1786013830436,
       "tag": "0028_backfill_authored_follows",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1787852100438,
+      "tag": "0029_article_search_tsv",
+      "breakpoints": true
     }
   ]
 }

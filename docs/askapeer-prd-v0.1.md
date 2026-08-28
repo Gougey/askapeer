@@ -209,10 +209,23 @@ The MVP is intentionally narrow: prove the core thesis — that verified, pseudo
 
 | Feature | Description |
 |---|---|
-| **Follow handles** | Follow another member's handle to see their contributions in your feed. You follow their ideas, not their identity. |
+| ~~**Follow handles**~~ | ~~Follow another member's handle to see their contributions in your feed. You follow their ideas, not their identity.~~ **Not required** (decided on review, 8 Aug 2026). |
+| **Follow discussions** | *Added 2026-08-06, **built** (S15).* Follow a thread — whether or not you wrote in it — and be told when it moves, as one collapsing notification rather than one per reply. Unfollowing mutes it. |
 | **Saved / bookmarked posts** | Save posts and threads for later reference. |
-| **Personalised feed** | Home view based on tags and handles followed, with a trending/top view as fallback. |
-| **Email digest** | Weekly digest of top-kudos content in followed tags. |
+| ~~**Personalised feed**~~ | ~~Home view based on tags and handles followed, with a trending/top view as fallback.~~ **Both inputs are gone** — see the note below. |
+| **Email digest** | Weekly digest of top-kudos content in followed tags. **Needs redefining**: "followed tags" no longer exist as such. |
+
+> **Note on this group, added 2026-08-08 — draft, for Paul and Andrew to confirm.**
+>
+> Three of these rows assumed a single "follow" verb applied to tags and handles. Both have since gone: **tag-following** was retired on 6 Aug in favour of *clinical interests* (weighted, subtree-expanded, already built and in front of members, and already ranking the research Feed), and **handle-following** was judged not required on 8 Aug. What shipped instead is **following a discussion**, which is a subscription — it drives notifications, not a list.
+>
+> Two consequences the team should decide on rather than inherit:
+>
+> - **The personalised feed has no definition left**, not merely no implementation. Anyone reviving a personalised Discussions home is designing it afresh, and the honest starting point is the one interest signal members actually give us. The *trending* view survives as a standalone option; it is no longer a fallback, because there is nothing to fall back from.
+> - **The email digest** was specified as "top-kudos content in followed tags". The nearest surviving signal is clinical interests — but a digest built on those is a different product decision from the one originally agreed, not a rename.
+>
+> The rest of the MVP is unaffected: this group is all Should-have.
+
 
 #### Could have (MVP stretch goals)
 

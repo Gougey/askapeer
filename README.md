@@ -21,6 +21,7 @@ The application is being built in `apps/` as thin, tracer-bullet vertical slices
 | `docs/style-guide/` | **The AskaPeer design system** — `STYLE_GUIDE.md` (canonical spec: colour, typography, components, accessibility, voice) and `styleguide.html` (a live, themeable showcase). Applied to `apps/web`. |
 | `docs/archive/` | Earlier working documents, superseded by the PRD. |
 | `docs/AHP_Research_Feed_Design_Conversation.md` | Design discussion behind the research-feed prototype below. |
+| `docs/body-part-condition-and-synonym-list.md` | **Andrew's clinical vocabulary** (Aug 2026) — anatomy and conditions by region, 350 preferred terms mapped to their synonyms, and the assessment/treatment vocabulary, re-formatted from the supplied PDF. Reference material; not yet mapped to the tag taxonomy. |
 | `prototypes/mobile-lookfeel/` | **Mobile look-and-feel prototype** — static HTML, mock content only, no live data. No backend, auth, verification, or payment. |
 | `prototypes/research-feed/` | **The same mobile prototype, with a live "Your feed"** — a Node app pulling real literature from Europe PMC + OpenAlex, rule-based tagging, and explainable ranking against interest tags picked on the Profile pane. Deployed at https://askapeer-research-feed.fly.dev/. |
 

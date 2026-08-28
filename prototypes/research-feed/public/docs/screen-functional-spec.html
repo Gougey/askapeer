@@ -930,7 +930,17 @@ rendered as labelled sections + the <strong>platform disclaimer</strong>
 (never a free body).</li>
 <li><strong>Tags</strong> — tappable chips.</li>
 <li><strong>Kudos control</strong> + count (X2); created/edited
-timestamp (edited marker only after the 15-min window).</li>
+timestamp. <del>edited marker only after the 15-min window</del> —
+<strong>the grace period is scrapped (decided 2026-08-27)</strong>: the
+marker shows whenever <code>edited_at</code> is set. It was never built,
+and an edit is an edit — a window would mean storing a second timestamp
+to decide which edits count, for a distinction no reader of a clinical
+answer benefits from.</li>
+<li>Dates are <strong>relative under seven days, then absolute</strong>
+(<code>PostedAt</code>), and carry <strong>no time of day</strong> —
+EPIC-B’s correlation-vector reasoning for year-only
+<code>member_since</code> applies more strongly to posting times, which
+would expose working patterns.</li>
 <li><strong>Poll</strong> (if present) — options + result after
 voting.</li>
 </ul></li>

@@ -25,6 +25,8 @@ export type PostCard = {
   tags: TagRef[];
   author: AuthorBlock;
   answerCount: number;
+  /** Followers who have not written in the thread — the card shows it only when non-zero. */
+  watcherCount: number;
   kudosCount: number;
   createdAt: string;
   editedAt: string | null;
@@ -111,6 +113,8 @@ export async function fetchFollowedPosts(
 export type SearchResults = {
   posts: PostCard[];
   nextCursor: string | null;
+  /** Matches in total, not on this page — what the result tabs count. */
+  total: number;
   /** The tsquery matched nothing and these came from trigram similarity — the screen says
    *  so rather than presenting a fuzzy match as an exact one. */
   didYouMean: boolean;
@@ -135,7 +139,7 @@ export async function fetchSearch(
   for (const tag of params.tags ?? []) search.append('tag', tag);
   if (params.cursor) search.set('cursor', params.cursor);
   const res = await apiGet<SearchResults>(`/search?${search.toString()}`, token);
-  return res ?? { posts: [], nextCursor: null, didYouMean: false };
+  return res ?? { posts: [], nextCursor: null, didYouMean: false, total: 0 };
 }
 
 /** The composer's two pickers, fetched together — neither is useful without the other. */

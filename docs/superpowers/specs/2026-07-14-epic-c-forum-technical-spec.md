@@ -242,6 +242,19 @@ EPIC-E's de-identification checklist (its Section 4) includes two image-related 
 
 ## 8. Personalised feed (Should-have)
 
+> ### ⚠️ Superseded, 8 August 2026 — this feature has lost both of its inputs
+>
+> The personalised feed selected posts by **tag-follows** *or* **handle-follows**. Both are gone:
+>
+> - **Tag-follows retired (6 Aug)** — that half is `community.member_interests` (EPIC-I), which ranks the **research Feed**, not the Discussions list.
+> - **Handle-follows not required (8 Aug)** — decided on review.
+>
+> So `GET /v1/feed` as specified below **has nothing left to select on**. This is not a deferral; the feature as designed no longer has a definition. Anyone reviving a "personalised Discussions home" is designing it afresh, and should start from what a member has actually told us — which today is their clinical interests — rather than from this section.
+>
+> **What survives is the trending view.** It stops being a *fallback* (there is nothing to fall back from) and becomes a standalone alternative ordering, if it is wanted at all. Its adaptive-window design below stands on its own merits and is unaffected — it exists to stop a cold-start view looking empty, which is a problem the trending view has regardless of what it is falling back from.
+>
+> The Discussions list is therefore chronological, with search (§4, built 2026-08-02) as the way in. See the S7 entry in the slice backlog and `docs/2026-08-06-post-follow-design.md`.
+
 PRD Section 6.1: "Home view based on tags and handles followed, with a trending/top view as fallback." This depends entirely on `community.follows` — the unified handle-and-tag follow mechanism EPIC-B's spec now owns (its Section 8, generalised 2026-07-14 from an earlier handle-only design; see `docs/2026-07-14-technical-specs-open-questions.md`, Section 2, for that history). This epic doesn't own or duplicate that table — it's a read-only consumer:
 
 ```
@@ -280,7 +293,7 @@ No new schema is introduced — `community.follows` (EPIC-B) and `community.post
 
 ## 9. Boundaries with other epics
 
-- **EPIC-B (follows)** owns `community.follows`; this epic reads it (Section 8) filtering both `target_type = tag` and `target_type = handle` for the personalised feed — a read-only consumer, not a second copy of the relationship.
+- **EPIC-B (follows)** owns `community.follows`. This epic *was* to read it for the personalised feed (Section 8) — but with tag-follows retired and handle-follows dropped, **this epic no longer consumes the table at all**. The one live target type, `post`, is consumed by EPIC-G's notification fan-out instead. Note the forum still owns the follow *endpoints* in code (they join `posts` and return this epic's card DTO), which is a placement decision, not a change of ownership.
 - **EPIC-E (case discussions)** writes `type = case_discussion` posts through this epic's own `POST /v1/posts` path, but only after its own de-identification checklist and attestation gate — EPIC-E's spec should treat this epic's endpoint as the underlying mechanism it wraps, not duplicate it.
 - **EPIC-D (kudos)** determines comment *display order* within a thread; this epic's `GET /v1/posts/:post_id` response includes comments in whatever order EPIC-D's ranking specifies, treating it as an injected ordering rather than this epic's own `created_at` ordering.
 - **EPIC-F (moderation)** is the only actor that can set `status = removed` on someone else's content, and is what `community.moderation_actions` (architecture spec, Section 4.2) already logs.

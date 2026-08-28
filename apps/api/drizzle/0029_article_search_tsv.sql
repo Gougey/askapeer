@@ -1,0 +1,2 @@
+ALTER TABLE "research"."articles" ADD COLUMN "tsv" "tsvector" GENERATED ALWAYS AS (setweight(to_tsvector('english', coalesce(title, '')), 'A') || setweight(to_tsvector('english', coalesce(abstract, '')), 'B')) STORED;--> statement-breakpoint
+CREATE INDEX "articles_tsv_idx" ON "research"."articles" USING gin ("tsv");

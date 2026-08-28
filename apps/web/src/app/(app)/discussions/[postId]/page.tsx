@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { fetchThread, type ThreadComment } from '@/lib/forum';
 import { fetchCasePolicy, formatOnset } from '@/lib/cases';
 import { requireAccessToken } from '@/lib/session';
 import { categoryColour } from '@/lib/category-colour';
+import { PostedAt } from '@/components/PostedAt';
 import { AuthorLine, TagList } from '@/components/PostCard';
 import { CaseBody } from './CaseBody';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
@@ -26,9 +27,8 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
   // both, deliberately, since "this exists but isn't for you" is itself a disclosure.
   if (!thread) notFound();
 
-  const [t, format, casePolicy] = await Promise.all([
+  const [t, casePolicy] = await Promise.all([
     getTranslations('discussions'),
-    getFormatter(),
     // Only a case discussion needs the disclaimer, and only the API has the canonical
     // wording — so it is fetched for a case and skipped entirely for a question.
     thread.caseDetail ? fetchCasePolicy(token) : Promise.resolve(null),
@@ -87,10 +87,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
               initialHasKudosed={viewerContext.hasKudosedPost}
             />
           )}
-          <span className="text-xs" style={{ color: 'var(--color-muted)' }}>
-            {format.relativeTime(new Date(post.createdAt))}
-            {post.editedAt && ` · ${t('edited')}`}
-          </span>
+          <PostedAt iso={post.createdAt} editedIso={post.editedAt} />
         </div>
         {/* The subscription control (S15). Sits on its own row rather than beside kudos:
             the two mean different things — one is a judgement about the content, the
@@ -169,7 +166,13 @@ async function Answer({
       className="rounded-xl border p-3"
       style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
     >
-      <AuthorLine author={comment.author} />
+      {/* Author and date on one line: on a thread it matters whether an answer arrived an
+          hour after the question or a year later — clinical advice reads differently either
+          side of a guideline change, and without a date there was no way to tell. */}
+      <span className="flex flex-wrap items-center justify-between gap-2">
+        <AuthorLine author={comment.author} />
+        <PostedAt iso={comment.createdAt} editedIso={comment.editedAt} />
+      </span>
       <p className="mt-2 whitespace-pre-wrap text-sm">{comment.body}</p>
       <div className="mt-2 flex flex-wrap items-center gap-3">
         {comment.isMine ? (

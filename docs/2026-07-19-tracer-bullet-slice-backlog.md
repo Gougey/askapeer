@@ -98,20 +98,28 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 
 ---
 
-## S7 — Discovery: follows, personalised feed, trending, search  [parallel-able] [Should + Must(search)] — **search built 2026-08-02**
+## S7 — Discovery: search, and what is left of the personalised feed  [parallel-able] [Should + Must(search)] — **search built 2026-08-02; the rest largely dissolved**
 
-> **Status.** The **Must-have half is in**: `GET /v1/search` (EPIC-C §4 — weighted tsvector with tag and category names folded in, `websearch_to_tsquery`, `pg_trgm` typo fallback, `ts_rank_cd` → recency → kudos tiebreak) and screen C3. **Not built**: the personalised feed and the trending fallback — both Should-have and separable, as the note below anticipated.
+> **Status.** The **Must-have half is in**: `GET /v1/search` (EPIC-C §4 — weighted tsvector with tag and category names folded in, `websearch_to_tsquery`, `pg_trgm` typo fallback, `ts_rank_cd` → recency → kudos tiebreak) and screen C3. **Not built**: the personalised feed and the trending view — and the personalised feed no longer has a definition to build, per the two scope changes below.
 >
-> **Scope narrowed 2026-08-06.** `community.follows` now lands in **S15** (post-follows), which creates the table; S7 adds the `handle` target type and the personalised list that consumes it. **Tag-following is retired** — that half is `community.member_interests`, built in S8b. See `docs/2026-08-06-post-follow-design.md` §2–3 for the reasoning and the EPIC-B §8 amendment it proposes.
+> **Scope narrowed 2026-08-06, then again 2026-08-08 — very little of S7 is left.** `community.follows` landed in **S15** (post-follows). **Tag-following is retired** (that half is `community.member_interests`, S8b) and **handle-following is not required** (decided on review, 8 Aug).
+>
+> ⚠️ **That removes both inputs to the personalised feed, so it is hollowed out rather than deferred** — `GET /v1/feed` as specced in EPIC-C §8 has nothing left to select on. Reviving a personalised Discussions home means designing it afresh from what members have actually told us (their clinical interests), not resuming this.
+>
+> **What remains of S7:** search (**built**), and the **trending view** — which is no longer a *fallback*, since there is nothing to fall back from, but a standalone alternative ordering if it is wanted at all. Its adaptive window (24h → 7d → 30d → all-time) still earns its keep on its own terms: it exists so a cold-start view is never empty.
+>
+> Until then the Discussions list is chronological with search as the way in, which is what is live.
 >
 > Fixed on the way: a tag filter did an **exact match**, so filtering on any parent region returned 0 posts while its subtree held dozens. The composer's picker drops an ancestor when a descendant is chosen precisely because it assumes query-time broadening; that half was missing. Both the list and search now expand a tag to its subtree.
 >
-> **Outstanding and needing Andrew, not code:** `community.tags.synonyms` was seeded for 11 tags on 2026-08-05 (#92), taking feed classification coverage 45% → 55%; **most of the 588 remain empty**. §4 calls the clinical synonym dictionary the single most important search-quality feature for this audience; it is a data top-up on the existing tags.
+> **The synonym half is now answered and has become S18.** `community.tags.synonyms` was seeded for 11 tags on 2026-08-05 (#92), taking feed classification coverage 45% → 55%; **most of the 588 remain empty**. §4 calls the clinical synonym dictionary the single most important search-quality feature for this audience. Andrew supplied the vocabulary on 2026-08-20 and confirmed on 2026-08-27 that it is *search* vocabulary rather than taxonomy — see **S18**.
+>
+> **Search itself continues in S16 and S17**: the literature feed has never been searchable, and search is still reachable from this one screen rather than the shell.
 
-- **Delivers**: following a handle shapes the Discussions home; an empty feed falls back to trending; full-text search returns posts.
-- **Touches**: EPIC-B (`follows.target_type = handle` — the table itself comes from S15; `POST`/`DELETE /v1/follows`); EPIC-C (§8 personalised feed `GET /v1/feed` + adaptive trending fallback; §4 search `GET /v1/search`, Postgres FTS + `pg_trgm` + synonym dictionary seeded from `tags.synonyms`). Screens C2, C3, C1 (personalised).
-- **Depends on**: S4 (posts to follow/search), S3 (handles), S15 (`community.follows`).
-- **Notes**: **search is Must-have**, the personalised feed is Should-have — separable in priority though they share the discovery surface. Follow buttons appear on threads/profiles (`follows_*` DTO fields). The tag half of the original personalisation idea is `member_interests` (S8b), not a follow.
+- **Delivers**: full-text search returns posts (**built**); optionally a trending view, kudos-ranked over an adaptive window.
+- **Touches**: EPIC-C only (§4 search `GET /v1/search`, Postgres FTS + `pg_trgm` + synonym dictionary seeded from `tags.synonyms` — **built**; §8's trending view — not built). Screen C3 (built); C1 stays chronological. **No longer touches EPIC-B**: post-follows shipped in S15 and are read by notifications, not by any list on this screen.
+- **Depends on**: S4 (posts to search), S3 (handles).
+- **Notes**: **search was the Must-have and it is in.** What remains is Should-have and now *optional* rather than merely unbuilt — the personalised feed lost both its inputs (see the status box), so there is no "follow buttons on threads/profiles" work here either. The tag half of the original personalisation idea is `member_interests` (S8b); the handle half is not required.
 
 ---
 
@@ -234,12 +242,68 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 >
 > **And it delivers the off-switch the product has never had.** The follow row becomes the thread's one subscription record, which `reply` consults too — so unfollowing genuinely silences a thread, and a member can mute one noisy question without turning off reply notifications everywhere. With rows backfilled for existing content it is additive: nobody's current notifications change.
 >
-> **Retires "tag follow".** EPIC-B §8's `target_type enum(handle, tag)` becomes `enum(handle, post)`; the tag half is already owned by `community.member_interests` (S8b), with a picker over the full taxonomy already in front of members. Three acts, two verbs: follow a discussion, follow a handle, choose your interests.
+> **Retires "tag follow".** EPIC-B §8's `target_type enum(handle, tag)` becomes `enum(handle, post)`; the tag half is already owned by `community.member_interests` (S8b), with a picker over the full taxonomy already in front of members.
+>
+> **Updated 2026-08-08 — handle-following is not required either**, so `post` is the one live target type and the shipped control reads "Follow discussion". The unused `handle` enum value stays: removing it costs a migration now and another one if the decision is revisited.
 
 - **Delivers**: a Follow control on a thread; authoring a post or comment auto-follows it; unfollow mutes the thread outright; later replies arrive as one collapsing notification per thread ("3 new replies on …"); a fourth Activity pane listing followed discussions the member did **not** write in (My Q&A keeps the ones they did).
 - **Touches**: EPIC-B (`community.follows` — this slice creates it; `POST`/`DELETE /v1/follows`, `GET /v1/follows/me`); EPIC-G (new `thread_activity` notification type — a migration, per `community.schema.ts:507`'s stated price; sixth row in the F4 matrix); EPIC-C (`viewerContext.isFollowing` on the thread DTO). Screens C4, E1, new E3 (Activity › Following).
 - **Depends on**: S4 (posts), S10 (the notification pipeline it reuses wholesale).
 - **Notes**: the collapsing upsert in §6 of the design doc is the load-bearing part — without it a busy thread puts one notification per reply into every follower's inbox and the feature gets switched off. Three decisions open (design doc §12), of which the EPIC-B amendment is the only one that changes an existing spec.
+
+---
+
+## S16 — Search the literature feed  [parallel-able] [Must]
+
+> **Raised to Must on 2026-08-27.** A searchable literature feed is close to the point of the product rather than a refinement of it — it is the main thing distinguishing this from a forum, and S8 already pays the ingestion cost. S17 is Must for the same reason: an API no screen reaches delivers nothing.
+>
+> **The feed has never been searchable.** `GET /v1/search` (S7) queries `community.posts` only. `research.articles` has no `tsvector` and no full-text index — its only index is `articles_rank_idx` for ranking by date and score — so the ingested corpus — 3,172 papers as of 2026-08-27, growing twice daily — is reachable by browsing and by interest-matching, but not by a member who types a word.
+>
+> This is the blocker under S17: there is no point promoting search to the app bar while half the app cannot answer.
+>
+> **Mirror what posts already do.** `community.posts.tsv` is a generated column — `setweight(to_tsvector('english', title),'A') || setweight(…, body, 'B')` — with a GIN index behind it. Articles want the same shape with `abstract` in the B slot. `pg_trgm` is already enabled (migration `0019`), so the typo fallback is available if wanted.
+>
+> **Two things to decide rather than inherit.** Whether the trigram "did you mean" fallback applies to papers at all — a near-miss on an abstract is less obviously useful than on a question title. And the ranking tiebreak: posts use `ts_rank_cd` → recency → kudos, but papers have no kudos, so the natural tail is `published_date` then `intrinsic_score`.
+
+- **Delivers**: full-text search over ingested articles — a generated `tsv` (title A, abstract B) plus its GIN index, a search path in the research-feed service, and a **real total count** rather than a page length.
+- **Touches**: EPIC-I (`research.articles` migration; `research-feed.service.ts`; a query parameter on `GET /v1/feed` or a sibling endpoint). No member-facing screen in this slice — S17 is what surfaces it.
+- **Depends on**: S8 (the corpus it searches).
+- **Notes**: the generated column backfills the whole table on migration — 3,172 rows is nothing, but the corpus grows twice daily and this only gets more expensive. Abstracts are long relative to post bodies, so weight and rank want a sanity check against real queries before this is called done.
+
+---
+
+## S17 — Search in the app bar, tabbed results  [parallel-able] [Must]
+
+> **Search is currently reachable from one screen.** It sits as a CTA on Discussions, with a comment in `discussions/page.tsx` explaining why: searching is something you do *to* discussions, so it belongs on the surface it searches. That reasoning was right while discussions were the only searchable corpus. Once S16 lands it stops holding, and search belongs in the shell.
+>
+> **The app bar, not the bottom nav.** `AppBar` currently carries the back control and the wordmark, with the entire right-hand side empty — a search icon there costs nothing. The five bottom tabs are fixed by screen spec §1.1 and the Create FAB is centred on there being exactly five; a sixth is a far more disruptive change than it appears.
+>
+> **Tabs are the scope control — there is no pre-search selector.** Always search both, and present two tabs carrying counts. The counts tell a member where the answers are *before* they choose, which a selector asked beforehand cannot do. Decided 2026-08-27 in preference to stacked sections, which make you scroll to discover the second list exists.
+>
+> ⚠️ **Do not label the feed tab "Research".** `Research` is already a forum *category* ("Papers, evidence and appraisal"), so a Research tab would sit beside Research-category posts under Discussions. **Papers** or **Literature**.
+>
+> ⚠️ **The count shown today is not a total.** `search/page.tsx` renders `t('resultCount', { count: results.posts.length })` — the length of the current page. With `DEFAULT_PAGE_SIZE = 20`, a query matching 25 posts reads "20 results" and then offers **More**. That is a live defect independent of this slice, and tab headers make it unacceptable: `SearchResults` needs a real `COUNT(*)` per corpus.
+
+- **Delivers**: a search control in the app bar on every app screen; `/search` presenting **Discussions ⟨n⟩ / Papers ⟨n⟩** as tabs with real counts; scope held in the URL so a result stays shareable and the back button works; landing on whichever tab has results.
+- **Touches**: `components/Brand.tsx` (AppBar), `components/SegmentedControl.tsx` (it decides the active segment from `pathname` alone, so two tabs sharing `/search` need it to compare search params or accept an explicit `active` prop), `app/(app)/search/`, EPIC-C §4 (search response gains a total), EPIC-I (the S16 endpoint). Screen C3; the Discussions CTA can go.
+- **Depends on**: S16.
+- **Notes**: show a zero rather than hiding an empty tab — the absence of results is information. Decide what a count *means* when the trigram fallback fires, since `didYouMean` results are approximate and a bare number overstates them. Cap the count ("99+") before the corpus grows enough to make counting every match wasteful.
+
+---
+
+## S18 — Clinical thesaurus for free-text search  [parallel-able] [Should]
+
+> **Decided with Andrew, 2026-08-27.** Parts 2 and 3 of his vocabulary document (`docs/body-part-condition-and-synonym-list.md`) are **search vocabulary, not taxonomy**. They improve free-text search and do not need to be linked to Part 1 tags. That settles the question left open on 2026-08-20 in favour of a standalone thesaurus.
+>
+> **897 mappings are available**: 563 synonyms across 349 preferred terms in Part 2, and 334 term↔alias pairs from Part 3 once "/" alternatives are split. The other 798 Part 3 entries carry no alias and are ignorable — a term with no alias already matches itself, so *Goniometry* needs no help finding "goniometry".
+>
+> **`ts_rewrite` is named in EPIC-C §4 and implemented nowhere.** Search builds `websearch_to_tsquery('english', term)` straight from what the member typed. Expansion belongs on the query side, not the document side, and one rewrite covers **both** corpora once S16 lands — the same work improving discussion and literature search together.
+
+- **Delivers (S18a)**: a synonym table and a `ts_rewrite` wrapping query construction in both search paths, with mappings stored in both directions so "OA" finds osteoarthritis and "osteoarthritis" finds OA.
+- **Delivers (S18b)**: the 76 Part 2 preferred terms that *do* match a live tag loaded into `community.tags.synonyms` — 138 synonyms across 100 tag rows. Distinct from S18a and worth doing anyway: tag synonyms additionally feed the **research-feed classifier**, where only 279 of 588 tags have ever matched an article and just 11 carry synonyms.
+- **Touches**: EPIC-C §4 (the synonym dictionary it has always specified); EPIC-J (the admin surface for it is already in PRD scope); both search paths; for S18b, `community.tags` and migration `0025`'s precedent.
+- **Depends on**: S16 for the thesaurus to cover both corpora. S18b depends on nothing and can go first.
+- **Notes**: three traps, all measured. English FTS treats `US` (ultrasound) and `AS` (ankylosing spondylitis) as **stop words**, so those mappings can never fire however they are stored. Fifteen aliases mean more than one thing, but only `FRT` is a genuine collision (*Cervical Flexion-Rotation Test* vs *Functional Reach Test*) — the rest are one concept written two ways, which is harmless for search. And two footnotes in the source **forbid** an obvious mapping (DDH is not a synonym for every acetabular dysplasia; "runner's knee" must not resolve to one condition) — a bulk import flattens them unless they are honoured. For **S18b** specifically: four incoming synonyms are themselves tags (*Disc bulge*, *Subdeltoid bursitis*, *Tibial nerve entrapment*, *pars defect*), which is a merge question for Andrew; short abbreviations enter the classifier **unguarded** (its ambiguity guard covers tag *names* only); and *Osteochondral lesion* already carries hand-tuned synonyms, so union rather than overwrite.
 
 ---
 
@@ -257,8 +321,9 @@ The first six slices (S0–S5) are the **walking skeleton of a member and the co
 - **After S3/S4/S5, these can run in parallel** (team size permitting): S6 (question extras), S7 (discovery), S8 (research feed — most independent), S9 (case discussions), S10 (notifications), S11 (moderation).
 - **Can land late:** S12 (billing — seed period buys time), S13 (admin config — migration-seed first).
 - **Fast-follow:** S14 (passkeys).
+- **Discovery, second pass (added 2026-08-27):** S16 → S17 in that order — S16 makes the literature searchable, S17 puts search in the shell and tabs the two corpora. S18 is independent and improves both; its S18b half (tag synonyms for the classifier) depends on nothing and can go at any time.
 
-**Minimum launchable set** (Must-haves): S0–S5, S7 (search), S8, S9, S10, S11, S12. S6/S13 desirable; S14 fast-follow.
+**Minimum launchable set** (Must-haves): S0–S5, S7 (search), S8, S9, S10, S11, S12, S16, S17. S6/S13 desirable; S14 fast-follow.
 
 ## Next step
 

@@ -233,58 +233,76 @@ G-5 + <code>PUT …/accepted-answer</code>;
 </ul>
 <hr />
 <h2
-id="s7-discovery-follows-personalised-feed-trending-search-parallel-able-should-mustsearch-search-built-2026-08-02">S7
-— Discovery: follows, personalised feed, trending, search
+id="s7-discovery-search-and-what-is-left-of-the-personalised-feed-parallel-able-should-mustsearch-search-built-2026-08-02-the-rest-largely-dissolved">S7
+— Discovery: search, and what is left of the personalised feed
 [parallel-able] [Should + Must(search)] — <strong>search built
-2026-08-02</strong></h2>
+2026-08-02; the rest largely dissolved</strong></h2>
 <blockquote>
 <p><strong>Status.</strong> The <strong>Must-have half is in</strong>:
 <code>GET /v1/search</code> (EPIC-C §4 — weighted tsvector with tag and
 category names folded in, <code>websearch_to_tsquery</code>,
 <code>pg_trgm</code> typo fallback, <code>ts_rank_cd</code> → recency →
 kudos tiebreak) and screen C3. <strong>Not built</strong>: the
-personalised feed and the trending fallback — both Should-have and
-separable, as the note below anticipated.</p>
-<p><strong>Scope narrowed 2026-08-06.</strong>
-<code>community.follows</code> now lands in <strong>S15</strong>
-(post-follows), which creates the table; S7 adds the <code>handle</code>
-target type and the personalised list that consumes it.
-<strong>Tag-following is retired</strong> — that half is
-<code>community.member_interests</code>, built in S8b. See
-<code>docs/2026-08-06-post-follow-design.md</code> §2–3 for the
-reasoning and the EPIC-B §8 amendment it proposes.</p>
+personalised feed and the trending view — and the personalised feed no
+longer has a definition to build, per the two scope changes below.</p>
+<p><strong>Scope narrowed 2026-08-06, then again 2026-08-08 — very
+little of S7 is left.</strong> <code>community.follows</code> landed in
+<strong>S15</strong> (post-follows). <strong>Tag-following is
+retired</strong> (that half is <code>community.member_interests</code>,
+S8b) and <strong>handle-following is not required</strong> (decided on
+review, 8 Aug).</p>
+<p>⚠️ <strong>That removes both inputs to the personalised feed, so it
+is hollowed out rather than deferred</strong> —
+<code>GET /v1/feed</code> as specced in EPIC-C §8 has nothing left to
+select on. Reviving a personalised Discussions home means designing it
+afresh from what members have actually told us (their clinical
+interests), not resuming this.</p>
+<p><strong>What remains of S7:</strong> search (<strong>built</strong>),
+and the <strong>trending view</strong> — which is no longer a
+<em>fallback</em>, since there is nothing to fall back from, but a
+standalone alternative ordering if it is wanted at all. Its adaptive
+window (24h → 7d → 30d → all-time) still earns its keep on its own
+terms: it exists so a cold-start view is never empty.</p>
+<p>Until then the Discussions list is chronological with search as the
+way in, which is what is live.</p>
 <p>Fixed on the way: a tag filter did an <strong>exact match</strong>,
 so filtering on any parent region returned 0 posts while its subtree
 held dozens. The composer’s picker drops an ancestor when a descendant
 is chosen precisely because it assumes query-time broadening; that half
 was missing. Both the list and search now expand a tag to its
 subtree.</p>
-<p><strong>Outstanding and needing Andrew, not code:</strong>
+<p><strong>The synonym half is now answered and has become S18.</strong>
 <code>community.tags.synonyms</code> was seeded for 11 tags on
 2026-08-05 (#92), taking feed classification coverage 45% → 55%;
 <strong>most of the 588 remain empty</strong>. §4 calls the clinical
 synonym dictionary the single most important search-quality feature for
-this audience; it is a data top-up on the existing tags.</p>
+this audience. Andrew supplied the vocabulary on 2026-08-20 and
+confirmed on 2026-08-27 that it is <em>search</em> vocabulary rather
+than taxonomy — see <strong>S18</strong>.</p>
+<p><strong>Search itself continues in S16 and S17</strong>: the
+literature feed has never been searchable, and search is still reachable
+from this one screen rather than the shell.</p>
 </blockquote>
 <ul>
-<li><strong>Delivers</strong>: following a handle shapes the Discussions
-home; an empty feed falls back to trending; full-text search returns
-posts.</li>
-<li><strong>Touches</strong>: EPIC-B
-(<code>follows.target_type = handle</code> — the table itself comes from
-S15; <code>POST</code>/<code>DELETE /v1/follows</code>); EPIC-C (§8
-personalised feed <code>GET /v1/feed</code> + adaptive trending
-fallback; §4 search <code>GET /v1/search</code>, Postgres FTS +
-<code>pg_trgm</code> + synonym dictionary seeded from
-<code>tags.synonyms</code>). Screens C2, C3, C1 (personalised).</li>
-<li><strong>Depends on</strong>: S4 (posts to follow/search), S3
-(handles), S15 (<code>community.follows</code>).</li>
-<li><strong>Notes</strong>: <strong>search is Must-have</strong>, the
-personalised feed is Should-have — separable in priority though they
-share the discovery surface. Follow buttons appear on threads/profiles
-(<code>follows_*</code> DTO fields). The tag half of the original
-personalisation idea is <code>member_interests</code> (S8b), not a
-follow.</li>
+<li><strong>Delivers</strong>: full-text search returns posts
+(<strong>built</strong>); optionally a trending view, kudos-ranked over
+an adaptive window.</li>
+<li><strong>Touches</strong>: EPIC-C only (§4 search
+<code>GET /v1/search</code>, Postgres FTS + <code>pg_trgm</code> +
+synonym dictionary seeded from <code>tags.synonyms</code> —
+<strong>built</strong>; §8’s trending view — not built). Screen C3
+(built); C1 stays chronological. <strong>No longer touches
+EPIC-B</strong>: post-follows shipped in S15 and are read by
+notifications, not by any list on this screen.</li>
+<li><strong>Depends on</strong>: S4 (posts to search), S3
+(handles).</li>
+<li><strong>Notes</strong>: <strong>search was the Must-have and it is
+in.</strong> What remains is Should-have and now <em>optional</em>
+rather than merely unbuilt — the personalised feed lost both its inputs
+(see the status box), so there is no “follow buttons on
+threads/profiles” work here either. The tag half of the original
+personalisation idea is <code>member_interests</code> (S8b); the handle
+half is not required.</li>
 </ul>
 <hr />
 <h2
@@ -562,8 +580,12 @@ change.</p>
 <code>target_type enum(handle, tag)</code> becomes
 <code>enum(handle, post)</code>; the tag half is already owned by
 <code>community.member_interests</code> (S8b), with a picker over the
-full taxonomy already in front of members. Three acts, two verbs: follow
-a discussion, follow a handle, choose your interests.</p>
+full taxonomy already in front of members.</p>
+<p><strong>Updated 2026-08-08 — handle-following is not required
+either</strong>, so <code>post</code> is the one live target type and
+the shipped control reads “Follow discussion”. The unused
+<code>handle</code> enum value stays: removing it costs a migration now
+and another one if the decision is revisited.</p>
 </blockquote>
 <ul>
 <li><strong>Delivers</strong>: a Follow control on a thread; authoring a
@@ -589,6 +611,172 @@ switched off. Three decisions open (design doc §12), of which the EPIC-B
 amendment is the only one that changes an existing spec.</li>
 </ul>
 <hr />
+<h2 id="s16-search-the-literature-feed-parallel-able-must">S16 — Search
+the literature feed [parallel-able] [Must]</h2>
+<blockquote>
+<p><strong>Raised to Must on 2026-08-27.</strong> A searchable
+literature feed is close to the point of the product rather than a
+refinement of it — it is the main thing distinguishing this from a
+forum, and S8 already pays the ingestion cost. S17 is Must for the same
+reason: an API no screen reaches delivers nothing.</p>
+<p><strong>The feed has never been searchable.</strong>
+<code>GET /v1/search</code> (S7) queries <code>community.posts</code>
+only. <code>research.articles</code> has no <code>tsvector</code> and no
+full-text index — its only index is <code>articles_rank_idx</code> for
+ranking by date and score — so the ingested corpus — 3,172 papers as of
+2026-08-27, growing twice daily — is reachable by browsing and by
+interest-matching, but not by a member who types a word.</p>
+<p>This is the blocker under S17: there is no point promoting search to
+the app bar while half the app cannot answer.</p>
+<p><strong>Mirror what posts already do.</strong>
+<code>community.posts.tsv</code> is a generated column —
+<code>setweight(to_tsvector('english', title),'A') || setweight(…, body, 'B')</code>
+— with a GIN index behind it. Articles want the same shape with
+<code>abstract</code> in the B slot. <code>pg_trgm</code> is already
+enabled (migration <code>0019</code>), so the typo fallback is available
+if wanted.</p>
+<p><strong>Two things to decide rather than inherit.</strong> Whether
+the trigram “did you mean” fallback applies to papers at all — a
+near-miss on an abstract is less obviously useful than on a question
+title. And the ranking tiebreak: posts use <code>ts_rank_cd</code> →
+recency → kudos, but papers have no kudos, so the natural tail is
+<code>published_date</code> then <code>intrinsic_score</code>.</p>
+</blockquote>
+<ul>
+<li><strong>Delivers</strong>: full-text search over ingested articles —
+a generated <code>tsv</code> (title A, abstract B) plus its GIN index, a
+search path in the research-feed service, and a <strong>real total
+count</strong> rather than a page length.</li>
+<li><strong>Touches</strong>: EPIC-I (<code>research.articles</code>
+migration; <code>research-feed.service.ts</code>; a query parameter on
+<code>GET /v1/feed</code> or a sibling endpoint). No member-facing
+screen in this slice — S17 is what surfaces it.</li>
+<li><strong>Depends on</strong>: S8 (the corpus it searches).</li>
+<li><strong>Notes</strong>: the generated column backfills the whole
+table on migration — 3,172 rows is nothing, but the corpus grows twice
+daily and this only gets more expensive. Abstracts are long relative to
+post bodies, so weight and rank want a sanity check against real queries
+before this is called done.</li>
+</ul>
+<hr />
+<h2 id="s17-search-in-the-app-bar-tabbed-results-parallel-able-must">S17
+— Search in the app bar, tabbed results [parallel-able] [Must]</h2>
+<blockquote>
+<p><strong>Search is currently reachable from one screen.</strong> It
+sits as a CTA on Discussions, with a comment in
+<code>discussions/page.tsx</code> explaining why: searching is something
+you do <em>to</em> discussions, so it belongs on the surface it
+searches. That reasoning was right while discussions were the only
+searchable corpus. Once S16 lands it stops holding, and search belongs
+in the shell.</p>
+<p><strong>The app bar, not the bottom nav.</strong> <code>AppBar</code>
+currently carries the back control and the wordmark, with the entire
+right-hand side empty — a search icon there costs nothing. The five
+bottom tabs are fixed by screen spec §1.1 and the Create FAB is centred
+on there being exactly five; a sixth is a far more disruptive change
+than it appears.</p>
+<p><strong>Tabs are the scope control — there is no pre-search
+selector.</strong> Always search both, and present two tabs carrying
+counts. The counts tell a member where the answers are <em>before</em>
+they choose, which a selector asked beforehand cannot do. Decided
+2026-08-27 in preference to stacked sections, which make you scroll to
+discover the second list exists.</p>
+<p>⚠️ <strong>Do not label the feed tab “Research”.</strong>
+<code>Research</code> is already a forum <em>category</em> (“Papers,
+evidence and appraisal”), so a Research tab would sit beside
+Research-category posts under Discussions. <strong>Papers</strong> or
+<strong>Literature</strong>.</p>
+<p>⚠️ <strong>The count shown today is not a total.</strong>
+<code>search/page.tsx</code> renders
+<code>t('resultCount', { count: results.posts.length })</code> — the
+length of the current page. With <code>DEFAULT_PAGE_SIZE = 20</code>, a
+query matching 25 posts reads “20 results” and then offers
+<strong>More</strong>. That is a live defect independent of this slice,
+and tab headers make it unacceptable: <code>SearchResults</code> needs a
+real <code>COUNT(*)</code> per corpus.</p>
+</blockquote>
+<ul>
+<li><strong>Delivers</strong>: a search control in the app bar on every
+app screen; <code>/search</code> presenting <strong>Discussions ⟨n⟩ /
+Papers ⟨n⟩</strong> as tabs with real counts; scope held in the URL so a
+result stays shareable and the back button works; landing on whichever
+tab has results.</li>
+<li><strong>Touches</strong>: <code>components/Brand.tsx</code>
+(AppBar), <code>components/SegmentedControl.tsx</code> (it decides the
+active segment from <code>pathname</code> alone, so two tabs sharing
+<code>/search</code> need it to compare search params or accept an
+explicit <code>active</code> prop), <code>app/(app)/search/</code>,
+EPIC-C §4 (search response gains a total), EPIC-I (the S16 endpoint).
+Screen C3; the Discussions CTA can go.</li>
+<li><strong>Depends on</strong>: S16.</li>
+<li><strong>Notes</strong>: show a zero rather than hiding an empty tab
+— the absence of results is information. Decide what a count
+<em>means</em> when the trigram fallback fires, since
+<code>didYouMean</code> results are approximate and a bare number
+overstates them. Cap the count (“99+”) before the corpus grows enough to
+make counting every match wasteful.</li>
+</ul>
+<hr />
+<h2
+id="s18-clinical-thesaurus-for-free-text-search-parallel-able-should">S18
+— Clinical thesaurus for free-text search [parallel-able] [Should]</h2>
+<blockquote>
+<p><strong>Decided with Andrew, 2026-08-27.</strong> Parts 2 and 3 of
+his vocabulary document
+(<code>docs/body-part-condition-and-synonym-list.md</code>) are
+<strong>search vocabulary, not taxonomy</strong>. They improve free-text
+search and do not need to be linked to Part 1 tags. That settles the
+question left open on 2026-08-20 in favour of a standalone
+thesaurus.</p>
+<p><strong>897 mappings are available</strong>: 563 synonyms across 349
+preferred terms in Part 2, and 334 term↔︎alias pairs from Part 3 once “/”
+alternatives are split. The other 798 Part 3 entries carry no alias and
+are ignorable — a term with no alias already matches itself, so
+<em>Goniometry</em> needs no help finding “goniometry”.</p>
+<p><strong><code>ts_rewrite</code> is named in EPIC-C §4 and implemented
+nowhere.</strong> Search builds
+<code>websearch_to_tsquery('english', term)</code> straight from what
+the member typed. Expansion belongs on the query side, not the document
+side, and one rewrite covers <strong>both</strong> corpora once S16
+lands — the same work improving discussion and literature search
+together.</p>
+</blockquote>
+<ul>
+<li><strong>Delivers (S18a)</strong>: a synonym table and a
+<code>ts_rewrite</code> wrapping query construction in both search
+paths, with mappings stored in both directions so “OA” finds
+osteoarthritis and “osteoarthritis” finds OA.</li>
+<li><strong>Delivers (S18b)</strong>: the 76 Part 2 preferred terms that
+<em>do</em> match a live tag loaded into
+<code>community.tags.synonyms</code> — 138 synonyms across 100 tag rows.
+Distinct from S18a and worth doing anyway: tag synonyms additionally
+feed the <strong>research-feed classifier</strong>, where only 279 of
+588 tags have ever matched an article and just 11 carry synonyms.</li>
+<li><strong>Touches</strong>: EPIC-C §4 (the synonym dictionary it has
+always specified); EPIC-J (the admin surface for it is already in PRD
+scope); both search paths; for S18b, <code>community.tags</code> and
+migration <code>0025</code>’s precedent.</li>
+<li><strong>Depends on</strong>: S16 for the thesaurus to cover both
+corpora. S18b depends on nothing and can go first.</li>
+<li><strong>Notes</strong>: three traps, all measured. English FTS
+treats <code>US</code> (ultrasound) and <code>AS</code> (ankylosing
+spondylitis) as <strong>stop words</strong>, so those mappings can never
+fire however they are stored. Fifteen aliases mean more than one thing,
+but only <code>FRT</code> is a genuine collision (<em>Cervical
+Flexion-Rotation Test</em> vs <em>Functional Reach Test</em>) — the rest
+are one concept written two ways, which is harmless for search. And two
+footnotes in the source <strong>forbid</strong> an obvious mapping (DDH
+is not a synonym for every acetabular dysplasia; “runner’s knee” must
+not resolve to one condition) — a bulk import flattens them unless they
+are honoured. For <strong>S18b</strong> specifically: four incoming
+synonyms are themselves tags (<em>Disc bulge</em>, <em>Subdeltoid
+bursitis</em>, <em>Tibial nerve entrapment</em>, <em>pars defect</em>),
+which is a merge question for Andrew; short abbreviations enter the
+classifier <strong>unguarded</strong> (its ambiguity guard covers tag
+<em>names</em> only); and <em>Osteochondral lesion</em> already carries
+hand-tuned synonyms, so union rather than overwrite.</li>
+</ul>
+<hr />
 <h2 id="deferred-post-mvp">Deferred (post-MVP)</h2>
 <ul>
 <li><strong>Saved / bookmarked</strong> (G-22) — shape specced
@@ -611,9 +799,15 @@ S11 (moderation).</li>
 <li><strong>Can land late:</strong> S12 (billing — seed period buys
 time), S13 (admin config — migration-seed first).</li>
 <li><strong>Fast-follow:</strong> S14 (passkeys).</li>
+<li><strong>Discovery, second pass (added 2026-08-27):</strong> S16 →
+S17 in that order — S16 makes the literature searchable, S17 puts search
+in the shell and tabs the two corpora. S18 is independent and improves
+both; its S18b half (tag synonyms for the classifier) depends on nothing
+and can go at any time.</li>
 </ul>
 <p><strong>Minimum launchable set</strong> (Must-haves): S0–S5, S7
-(search), S8, S9, S10, S11, S12. S6/S13 desirable; S14 fast-follow.</p>
+(search), S8, S9, S10, S11, S12, S16, S17. S6/S13 desirable; S14
+fast-follow.</p>
 <h2 id="next-step">Next step</h2>
 <p>Each slice maps to <strong>one or a few GitHub issues</strong> (a
 slice may split into migration / API / UI tasks). The

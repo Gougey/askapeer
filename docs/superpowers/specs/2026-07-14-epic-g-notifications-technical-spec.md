@@ -142,6 +142,14 @@ Push is added as a first-class channel now, but **ships inert for the web-only M
 
 ## 7. Weekly digest, built on EPIC-B's unified follows table
 
+> **⚠️ Needs redefining, 8 August 2026 — not merely implementing.**
+>
+> This digest was specified as "top-kudos content in **followed tags**", read from `community.follows`. Tag-following was **retired** on 6 Aug (that signal is now `community.member_interests`) and handle-following was judged **not required** on 8 Aug. The table's one live target type is `post`, which is a per-thread subscription and the wrong grain for a weekly roundup.
+>
+> So the query described below has no source. The nearest surviving signal is **clinical interests** — but a digest built on those is a **different product decision** from the one originally agreed, not a rename, and it should be taken as such. Flagged in the PRD's §6.1 Should-have note for Paul and Andrew.
+>
+> Nothing else in this epic is affected; the digest was already deferred at S10 and has never been built.
+
 **Resolved 2026-07-14** — this section originally flagged a gap: the PRD's Should-have digest (Section 6.1, "top-kudos content in **followed tags**") and EPIC-C's Should-have personalised feed (Section 6.1, "tags **and handles** followed") both assumed a tag-follow mechanism that no spec had built, since EPIC-B originally only specified handle-follows. Adrian's decision (see `docs/2026-07-14-technical-specs-open-questions.md`, Section 2): rather than add a separate tag-follow table, EPIC-B's `community.handle_follows` was generalised into `community.follows` (`target_type` enum of `handle`/`tag`, same discriminator pattern as `community.kudos`/`community.reports`) — see EPIC-B's spec, Section 8.
 
 This epic builds the digest as a scheduled BullMQ job querying each member's `community.follows` rows (both `target_type = tag` and `target_type = handle`) joined against the prior week's kudos-ranked content, delivered by email only (a weekly digest has no obvious in-app equivalent). This epic is a read-only consumer of `community.follows`, same as EPIC-C's personalised feed (its spec, Section 8) — neither epic owns or duplicates the table.

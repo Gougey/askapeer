@@ -383,6 +383,32 @@ archive.</p>
 <hr />
 <h2 id="follows-handles-and-tags-should-have">8. Follows — handles and
 tags (Should-have)</h2>
+<blockquote>
+<p><strong>Amended twice, and the section is now mostly
+historical.</strong></p>
+<ul>
+<li><strong>6 Aug 2026</strong> — <code>target_type</code> became
+<code>enum(handle, post)</code>. Tag-following is retired: that half is
+<code>community.member_interests</code> (EPIC-I, built at S8b), with a
+weighted, subtree-expanded picker over the whole taxonomy already in
+front of members. A second binary copy of the same choice would have
+drifted from it.</li>
+<li><strong>8 Aug 2026</strong> — following a <strong>handle</strong> is
+<strong>not required for the time being</strong>. Deferred, not deleted;
+the enum keeps its unused <code>handle</code> value so revisiting it
+costs no migration.</li>
+</ul>
+<p><strong>What is actually built</strong> is post-following —
+<code>community.follows</code> with <code>target_type = 'post'</code>,
+shipped at S15 (migrations <code>0027</code>/<code>0028</code>). EPIC-B
+retains ownership of the table and the write path as specified below;
+only the set of target types changed.</p>
+<p>Read the rest of this section as the original design and its
+reasoning. Where it describes tag-follows or handle-follows as live
+requirements, <code>docs/2026-08-06-post-follow-design.md</code>
+supersedes it — including its §2, which explains why the three acts
+stopped being one verb.</p>
+</blockquote>
 <p>Two of PRD Section 6.1’s Should-have features turn out to need the
 same underlying mechanism:</p>
 <ul>

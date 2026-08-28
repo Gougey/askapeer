@@ -35,11 +35,29 @@ export type FeedMode = 'personalised' | 'general' | 'fallback';
 
 export type FeedPage = { articles: FeedArticle[]; nextCursor: string | null; mode: FeedMode };
 
+/** Search has no ranking `mode` — relevance is the ordering, and it carries a real total. */
+export type FeedSearchPage = {
+  articles: FeedArticle[];
+  nextCursor: string | null;
+  total: number;
+};
+
 
 export async function fetchFeed(token: string, cursor?: string): Promise<FeedPage> {
   const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
   const page = await apiGet<FeedPage>(`/research-feed${query}`, token);
   return page ?? { articles: [], nextCursor: null, mode: 'general' };
+}
+
+/** S16 — full-text search over the corpus, independent of the member's interests. */
+export async function fetchFeedSearch(
+  token: string,
+  params: { q: string; cursor?: string },
+): Promise<FeedSearchPage> {
+  const search = new URLSearchParams({ q: params.q });
+  if (params.cursor) search.set('cursor', params.cursor);
+  const res = await apiGet<FeedSearchPage>(`/research-feed/search?${search.toString()}`, token);
+  return res ?? { articles: [], nextCursor: null, total: 0 };
 }
 
 export async function fetchArticle(token: string, articleId: string): Promise<ArticleDetail | null> {

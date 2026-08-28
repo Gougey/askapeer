@@ -35,6 +35,7 @@ DOCS=(
   "slice-backlog|$REPO_ROOT/docs/2026-07-19-tracer-bullet-slice-backlog.md|Tracer-Bullet Slice Backlog|Ordered, dependency-aware build sequence of thin vertical slices derived from the specs + screen inventory. The last planning artifact before code.|Client"
   "open-questions|$REPO_ROOT/docs/2026-07-14-technical-specs-open-questions.md|Consolidated Open Questions|Every open question/conflict across all specs, gathered for team review.|Review"
   "taxonomy-standards|$REPO_ROOT/docs/2026-07-17-taxonomy-standards-research.md|Taxonomy Standards Research|Candidate standard medical taxonomies (MeSH, OSIICS) for the forum tag vocabulary — input to FD-4.|Review"
+  "body-part-condition-synonym-list|$REPO_ROOT/docs/body-part-condition-and-synonym-list.md|Body Parts, Conditions & Synonyms (Andrew, Aug 2026)|Andrew Renshaw's 98-page clinical vocabulary, re-formatted from the source PDF: anatomy and conditions by region, 350 preferred terms mapped to their synonyms, and the assessment/treatment vocabulary — plus what it would mean for the 588-tag taxonomy.|Review"
   "development|$REPO_ROOT/DEVELOPMENT.md|Development Setup|Running the monorepo locally: prerequisites, migrations, and how the simulated verification providers stand in for HCPC and Onfido.|Build"
 )
 
@@ -44,6 +45,7 @@ DOCS=(
 # specs; build-index.py only reads the slug, title, description and group.
 STATIC_DOCS=(
   "case-discussion-mockup|$REPO_ROOT/docs/2026-07-30-case-discussion-mockup.html|Case Discussion — Form & Attestation (mockup)|Interactive draft of the case-discussion composer, the six-item de-identification checklist and the attestation gate, annotated with the clinical questions still open for Andrew. Tick the boxes to see the publish gate.|Client"
+  "bottom-nav-treatments|$REPO_ROOT/docs/2026-08-28-bottom-nav-treatments.html|Bottom Nav — Selected-Tab Treatments (for review)|Five ways of showing which tab you are on, each on a real 430px bar with the app's own icons — for Paul and Andy to compare after Andy found the current one too subtle. Tap the tabs; there is a light/dark switch.|Client"
 )
 
 for entry in "${DOCS[@]}"; do

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { BackControl } from './BackControl';
 /**
  * Brand marks. The logo is navy, so on dark backgrounds a light variant is swapped in
@@ -20,7 +22,8 @@ export function BrandLockup({ className = 'h-20 w-auto' }: { className?: string 
  * The slim in-app top bar: the mark (bubbles) + the "AskaPeer" wordmark. Sticky, so the
  * brand stays present as the member scrolls. Sits above the per-screen title.
  */
-export function AppBar() {
+export async function AppBar() {
+  const t = await getTranslations('shell');
   return (
     <header
       className="sticky top-0 z-20 flex items-center gap-2.5 px-4"
@@ -53,6 +56,34 @@ export function AppBar() {
       <span className="text-lg font-extrabold tracking-tight" style={{ fontFamily: 'var(--font-sans)' }}>
         Ask<span style={{ color: 'var(--color-spark)' }}>a</span>Peer
       </span>
+      {/*
+        Search lives here, not in the bottom nav (S17).
+
+        It used to sit as a CTA on Discussions, on the reasoning that searching is something
+        you do *to* discussions. That held while discussions were the only searchable corpus;
+        with the literature searchable too (S16) it is a shell-level action, and the app bar
+        is where one goes without disturbing the five agreed tabs — the Create FAB is centred
+        on there being exactly five, so a sixth is not the cheap change it looks like.
+      */}
+      <Link
+        href="/search"
+        aria-label={t('search')}
+        className="ml-auto flex items-center justify-center"
+        style={{ color: 'var(--color-muted)', minWidth: 44, minHeight: 44 }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden
+          className="size-[22px]"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3.5-3.5" />
+        </svg>
+      </Link>
     </header>
   );
 }
