@@ -12,7 +12,7 @@ import { PostedAt } from './PostedAt';
 export async function AuthorLine({ author }: { author: AuthorBlock }) {
   const t = await getTranslations('discussions');
   return (
-    <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-muted)' }}>
+    <span className="flex min-w-0 items-center text-xs" style={{ color: 'var(--color-muted)' }}>
       {/*
         Standing rides in brackets against the name — "MrFixit(68)" — rather than as a second
         "68 kudos" beside the post's own count. The card carries two kudos numbers, one about
@@ -20,9 +20,18 @@ export async function AuthorLine({ author }: { author: AuthorBlock }) {
         sitting next to the smaller of the two. Bracketed, unlabelled and unstarred, it reads
         as belonging to the handle instead of competing with the post.
       */}
-      <span className="font-medium" style={{ color: 'var(--color-fg)' }}>
+      {/*
+        The handle truncates, the standing does not. A handle may be 30 characters, and on a
+        358px card that is the only part of the row long enough to need giving way — so the
+        ellipsis eats the name and the bracketed number, which is short and is the point,
+        always survives. `min-w-0` on the flex parent is what lets a child shrink below its
+        content width at all; without it `truncate` silently does nothing.
+      */}
+      <span className="truncate font-medium" style={{ color: 'var(--color-fg)' }}>
         {author.handleName}
-        <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>({author.kudosTotal})</span>
+      </span>
+      <span className="shrink-0" style={{ color: 'var(--color-muted)' }}>
+        ({author.kudosTotal})
       </span>
       <span className="sr-only">{t('kudos', { count: author.kudosTotal })}</span>
     </span>
@@ -96,8 +105,8 @@ export async function PostCard({ post }: { post: PostCardDto }) {
         >
           <span className="flex min-w-0 items-center gap-1.5">
             <AuthorLine author={post.author} />
-            <span aria-hidden style={{ opacity: 0.55 }}>·</span>
-            <PostedAt iso={post.createdAt} editedIso={post.editedAt} />
+            <span aria-hidden className="shrink-0" style={{ opacity: 0.55 }}>·</span>
+            <PostedAt iso={post.createdAt} editedIso={post.editedAt} className="shrink-0 text-xs" />
           </span>
           <PostStats
             kudos={post.kudosCount}
@@ -140,7 +149,7 @@ async function PostStats({
 
   return (
     <span
-      className="flex items-center gap-3"
+      className="flex shrink-0 items-center gap-3"
       style={{ fontVariantNumeric: 'tabular-nums' }}
     >
       <span
