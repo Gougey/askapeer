@@ -170,3 +170,30 @@ export async function fetchAdminTags(token: string, q?: string): Promise<AdminTa
 export async function fetchAdminTag(token: string, tagId: string): Promise<AdminTag> {
   return adminGet<AdminTag>(`taxonomy/tags/${tagId}`, token);
 }
+
+export type FeedStatus = {
+  articles: number;
+  classified: number;
+  cursors: {
+    sourceName: string;
+    lastRunAt: string | null;
+    lastError: string | null;
+    articlesSeen: number;
+    articlesStored: number;
+  }[];
+};
+
+export type FeedCoverage = {
+  tags: number;
+  matched: number;
+  silent: number;
+  staleMatches: number;
+  untagged: number;
+  silentTags: { id: string; name: string; region: string; interested: number }[];
+};
+
+export const fetchFeedStatus = (token: string) =>
+  adminGet<FeedStatus>('research-feed/status', token);
+
+export const fetchFeedCoverage = (token: string) =>
+  adminGet<FeedCoverage>('research-feed/coverage', token);

@@ -270,9 +270,18 @@ export class IngestionService {
   /**
    * The taxonomy, flattened with each node's depth.
    *
-   * Read once per run rather than per article: 588 rows joined against every article would
-   * be the pipeline's whole cost. Depth comes from a recursive walk of `parent_id`, the
-   * same shape the tag picker and search subtree expansion already use.
+   * Read once per run rather than per article: the whole tree joined against every article
+   * would be the pipeline's whole cost. Depth comes from a recursive walk of `parent_id`,
+   * the same shape the tag picker and search subtree expansion already use.
+   *
+   * **Retired tags are excluded, and retiring is inherited by construction** — the recursion
+   * only descends through non-retired parents, exactly as `VocabularyService.listTags` does.
+   * Without that, a retired tag goes on matching articles that no member can see it under or
+   * pick it from: the taxonomy expansion retired 34 flattened groups and they immediately
+   * took 621 matches with them, which is 8% of the corpus filed somewhere invisible. A tag
+   * withdrawn from the vocabulary should stop attracting content, not keep collecting it in
+   * the dark; posts already carrying a retired tag are untouched, because this only governs
+   * what future classification writes.
    */
   private async taxonomy(): Promise<PreparedTag[]> {
     const { rows } = await this.db.execute<{
@@ -283,10 +292,11 @@ export class IngestionService {
     }>(sql`
       with recursive walk as (
         select id, name, synonyms, 0 as depth
-        from community.tags where parent_id is null
+        from community.tags where parent_id is null and retired_at is null
         union all
         select t.id, t.name, t.synonyms, w.depth + 1
         from community.tags t join walk w on t.parent_id = w.id
+        where t.retired_at is null
       )
       select id, name, synonyms, depth from walk
     `);
@@ -401,5 +411,83 @@ export class IngestionService {
       .from(articleTags);
     const cursors = await this.db.select().from(ingestionCursors);
     return { articles: Number(total), classified: Number(classified), cursors };
+  }
+
+  /**
+   * Which tags never match anything, and which of those someone is actually waiting on.
+   *
+   * **A ranked worklist, not a report.** Synonym work is the highest-value input to both
+   * search and the feed, and it has been guesswork: the vocabulary is far larger than the
+   * corpus can exercise, so "add synonyms" is thousands of tags deep with no order to it.
+   * What turns that into a queue is `interested` — a tag a member has chosen and that has
+   * never returned them a single article is a promise the product is quietly breaking, and
+   * it should be fixed before a tag nobody has asked for.
+   *
+   * `staleMatches` is the canary for the retirement bug this screen was built alongside: a
+   * retired tag should attract nothing, so anything but zero means classification is writing
+   * to tags no member can see. It counts rows rather than tags because the size of the
+   * mis-filing is what matters, not how many tags did it.
+   */
+  async coverage(): Promise<{
+    tags: number;
+    matched: number;
+    silent: number;
+    staleMatches: number;
+    untagged: number;
+    silentTags: { id: string; name: string; region: string; interested: number }[];
+  }> {
+    const { rows } = await this.db.execute<{
+      id: string;
+      name: string;
+      region: string;
+      interested: number;
+    }>(sql`
+      with recursive walk as (
+        select id, name, parent_id, name as region
+        from community.tags where parent_id is null and retired_at is null
+        union all
+        select t.id, t.name, t.parent_id, w.region
+        from community.tags t join walk w on t.parent_id = w.id
+        where t.retired_at is null
+      )
+      select w.id, w.name, w.region,
+             (select count(*)::int from community.member_interests mi where mi.tag_id = w.id)
+               as interested
+      from walk w
+      where not exists (select 1 from research.article_tags at where at.tag_id = w.id)
+      -- A tag someone is waiting on comes first; after that the shallowest, because a silent
+      -- parent hides its whole subtree from the feed while a silent leaf hides only itself.
+      order by interested desc, w.name asc
+    `);
+
+    const [counts] = await this.db.execute<{
+      tags: number;
+      matched: number;
+      stale: number;
+      untagged: number;
+    }>(sql`
+      select
+        (select count(*)::int from community.tags where retired_at is null) as tags,
+        (select count(distinct tag_id)::int from research.article_tags) as matched,
+        (select count(*)::int from research.article_tags at
+           join community.tags t on t.id = at.tag_id where t.retired_at is not null) as stale,
+        (select count(*)::int from research.articles a
+           where not exists (select 1 from research.article_tags at where at.article_id = a.id))
+          as untagged
+    `).then((r) => r.rows);
+
+    return {
+      tags: Number(counts.tags),
+      matched: Number(counts.matched),
+      silent: rows.length,
+      staleMatches: Number(counts.stale),
+      untagged: Number(counts.untagged),
+      silentTags: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        region: r.region,
+        interested: Number(r.interested),
+      })),
+    };
   }
 }

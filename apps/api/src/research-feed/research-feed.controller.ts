@@ -139,6 +139,18 @@ export class ResearchFeedAdminController {
   reclassify() {
     return this.ingestion.reclassifyAll();
   }
+
+  /**
+   * Which tags never match anything — the ranked worklist for synonym work.
+   *
+   * Separate from `status`, which is about the ingest. This is about the *vocabulary*, and it
+   * is the report that turns "add synonyms" from an unbounded task into a queue ordered by
+   * who is waiting.
+   */
+  @Get('coverage')
+  coverage() {
+    return this.ingestion.coverage();
+  }
 }
 
 /** Re-exported so the module can wire the admin guard's dependencies. */
