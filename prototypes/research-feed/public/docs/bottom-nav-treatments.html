@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bottom nav — active-state treatments — Askapeer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#eef1f4; --surface:#ffffff; --fg:#14212b; --muted:#64757f;
+    --border:#e5ebee; --border-strong:#d7e0e4;
+    --accent:#001f52; --navy-tint:#e6ebf2; --navy-tint-2:#f2f5f9;
+    --spark:#ed1b24; --spark-dark:#c00f18; --shadow-fab:0 6px 16px rgba(237,27,36,.4);
+    --nav-h:62px; --container-max:430px; --radius:16px; --radius-large:20px;
+    --page:#f7f9fa; --note:#5a6a74;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --display:'Fraunces',Georgia,'Times New Roman',serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1220; --surface:#111a2b; --fg:#e2e8f0; --muted:#94a3b8;
+      --border:#1e2c40; --border-strong:#2a3a52;
+      --accent:#6f9bff; --navy-tint:#16233b; --navy-tint-2:#141f33;
+      --page:#080e18; --note:#93a3b4;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1220; --surface:#111a2b; --fg:#e2e8f0; --muted:#94a3b8;
+    --border:#1e2c40; --border-strong:#2a3a52;
+    --accent:#6f9bff; --navy-tint:#16233b; --navy-tint-2:#141f33;
+    --page:#080e18; --note:#93a3b4;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--fg);font-family:var(--sans);line-height:1.55;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:840px;margin:0 auto;padding:44px 20px 90px;display:flex;flex-direction:column;gap:38px}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
+  h1{font-family:var(--display);font-weight:600;font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 10px;
+     letter-spacing:-.01em;text-wrap:balance}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+  h2{font-family:var(--display);font-weight:600;font-size:20px;margin:0;letter-spacing:-.01em}
+  p{margin:0;max-width:66ch}
+  .note{color:var(--note);font-size:14.5px}
+  .lede{font-size:16px;color:var(--note);max-width:64ch}
+
+  button.theme{font:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--border-strong);background:var(--surface);color:var(--fg)}
+  button.theme:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:26px}
+  .option{display:flex;flex-direction:column;gap:12px}
+  .tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.07em;
+       text-transform:uppercase;color:var(--muted)}
+  .tag b{color:var(--fg);font-size:13px;letter-spacing:0;text-transform:none}
+
+  /* phone stage — the app's ground, the nav pinned to its foot exactly as on device */
+  .phone{width:100%;max-width:var(--container-max);margin:0 auto;background:var(--bg);
+         border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .screen{height:96px;background:linear-gradient(var(--bg),var(--bg))}
+  nav.bar{display:flex;align-items:stretch;min-height:var(--nav-h);background:var(--surface);
+          border-top:1px solid var(--border-strong)}
+  nav.bar button{flex:1;border:none;background:transparent;cursor:pointer;font:inherit;padding:8px 0 7px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);position:relative}
+  nav.bar button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+  nav.bar .lab{font-size:12px;line-height:1.2}
+  .glyph{display:flex;align-items:center;justify-content:center;width:44px;height:26px;border-radius:999px}
+  .glyph svg{width:24px;height:24px}
+  /* the Ask FAB — untouched in every option */
+  .fab .glyph{width:52px;height:52px;margin-top:-6px;border-radius:var(--radius-large);color:#fff;
+    background:linear-gradient(135deg,var(--spark),var(--spark-dark));box-shadow:var(--shadow-fab)}
+  .fab .glyph svg{width:26px;height:26px}
+
+  /* A — current: colour only */
+  .t-colour .on{color:var(--accent)}
+  /* B — filled lozenge */
+  .t-fill .on .glyph{background:var(--accent);color:var(--surface)}
+  .t-fill .on{color:var(--accent)}
+  /* C — tinted lozenge */
+  .t-tint .on .glyph{background:var(--navy-tint)}
+  .t-tint .on{color:var(--accent)}
+  /* D — top rail */
+  .t-rail .on{color:var(--accent)}
+  .t-rail .on::before{content:"";position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;
+    background:var(--accent)}
+  /* E — dot */
+  .t-dot .on{color:var(--accent)}
+  .t-dot .on::after{content:"";position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+
+  .rule{border:none;border-top:1px solid var(--border);margin:0}
+  ul{margin:0;padding-left:20px;color:var(--note);font-size:14.5px;display:flex;flex-direction:column;gap:7px}
+  ul strong{color:var(--fg)}
+  .callout{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);padding:20px;
+    display:flex;flex-direction:column;gap:11px}
+  @media (prefers-reduced-motion: no-preference){ nav.bar button{transition:color .12s ease} .glyph{transition:background .12s ease} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="top">
+  <div>
+    <p class="eyebrow">Discussions · app shell</p>
+    <h1>Which selected tab reads fastest?</h1>
+  </div>
+  <button class="theme" type="button" id="themeBtn">Switch to dark</button>
+</div>
+
+<p class="lede">Andy’s note was that the selected tab in the bottom bar isn’t obvious enough. Five treatments below,
+each on a real 430px bar with the app’s own icons and spacing. <strong>Tap the tabs</strong> — the point is how
+quickly your eye finds the selected one, which a screenshot can’t tell you. The Ask button is untouched throughout.</p>
+
+<div class="grid" id="grid"></div>
+
+<hr class="rule">
+
+<div class="callout">
+  <h2>Two things worth knowing before you pick</h2>
+  <ul>
+    <li><strong>Colour alone isn’t allowed to be the only signal.</strong> The style guide (§9.2) says state can’t
+      rest on colour by itself, and today’s treatment does exactly that — <em>A</em> is the same icon in a
+      different hue. Every other option adds a shape, so they are the more correct ones as well as the louder ones.</li>
+    <li><strong>Red is spoken for.</strong> Spark red belongs to the Ask button and the wordmark and cannot be
+      borrowed for a selected state, so navy is what’s available. That is why none of these turn the tab red.</li>
+    <li><strong>B matches what we just chose elsewhere.</strong> The tab headers on Create, Search and Activity now
+      use a filled navy segment, so the filled lozenge would make one idea — “this is the one you’re on” — look the
+      same everywhere in the app.</li>
+  </ul>
+  <p class="note">Adrian’s view is that the current treatment is fine; Andy’s is that it isn’t obvious enough. Both
+  can be true — it reads clearly on a bright desk monitor and less so on a phone at arm’s length outdoors, which is
+  where it will mostly be used.</p>
+</div>
+
+</div>
+
+<script>
+  const ICON = {
+    feed:'M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+    discussions:'M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 21l1.9-4.5A8.4 8.4 0 0 1 3 11.5a8.5 8.5 0 0 1 9-8.4 8.5 8.5 0 0 1 9 8.4z',
+    create:'M12 5v14M5 12h14',
+    activity:'M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0',
+    profile:'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7'
+  };
+  const TABS = [
+    {k:'feed', label:'Feed'},
+    {k:'discussions', label:'Discussions'},
+    {k:'create', label:'Create', fab:true},
+    {k:'activity', label:'Activity'},
+    {k:'profile', label:'Profile'}
+  ];
+  const OPTIONS = [
+    {id:'colour', name:'A — Colour only', sub:'What ships today',
+     note:'The icon and label change to navy. Nothing else moves, so the difference is hue alone — which is what Andy is reacting to, and what §9.2 says cannot carry state on its own.'},
+    {id:'fill', name:'B — Filled lozenge', sub:'Matches the tab headers',
+     note:'A navy pill behind the icon, icon reversed out. The loudest of the five and consistent with the segmented control used on Create, Search and Activity.'},
+    {id:'tint', name:'C — Tinted lozenge', sub:'The quiet version of B',
+     note:'Same shape, filled with the navy tint instead of full navy, icon stays navy. More obvious than colour alone without putting a solid block in the bar.'},
+    {id:'rail', name:'D — Top rail', sub:'Conventional and unambiguous',
+     note:'A 3px navy bar across the top edge of the selected tab. Reads instantly, costs no space around the icon, and survives at a glance in bright light.'},
+    {id:'dot', name:'E — Dot', sub:'The lightest addition',
+     note:'A small navy dot beneath the label. Adds a shape cue while leaving the bar almost exactly as it is today.'}
+  ];
+
+  const svg = (d, stroke=2, filled=false) =>
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+
+  document.getElementById('grid').innerHTML = OPTIONS.map(function (opt) {
+    const buttons = TABS.map(function (tab, i) {
+      const on = i === 1 ? ' on' : '';
+      if (tab.fab) {
+        return '<button type="button" class="fab" data-i="' + i + '" aria-label="Create">' +
+               '<span class="glyph">' + svg(ICON.create, 2.4) + '</span>' +
+               '<span class="lab">' + tab.label + '</span></button>';
+      }
+      return '<button type="button" class="' + on.trim() + '" data-i="' + i + '"' +
+             (on ? ' aria-current="page"' : '') + '>' +
+             '<span class="glyph">' + svg(ICON[tab.k]) + '</span>' +
+             '<span class="lab">' + tab.label + '</span></button>';
+    }).join('');
+    return '<section class="option">' +
+      '<span class="tag">' + opt.sub + ' · <b>' + opt.name + '</b></span>' +
+      '<div class="phone"><div class="screen"></div>' +
+        '<nav class="bar t-' + opt.id + '" aria-label="Primary">' + buttons + '</nav>' +
+      '</div>' +
+      '<p class="note">' + opt.note + '</p>' +
+    '</section>';
+  }).join('');
+
+  // Tapping a tab moves the selected state within that bar only — the FAB never takes it.
+  document.getElementById('grid').addEventListener('click', function (event) {
+    const btn = event.target.closest('nav.bar button');
+    if (!btn || btn.classList.contains('fab')) return;
+    btn.closest('nav.bar').querySelectorAll('button').forEach(function (b) {
+      b.classList.remove('on');
+      b.removeAttribute('aria-current');
+    });
+    btn.classList.add('on');
+    btn.setAttribute('aria-current', 'page');
+  });
+
+  const root = document.documentElement;
+  const themeBtn = document.getElementById('themeBtn');
+  const startsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  let dark = startsDark;
+  const paint = function () {
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    themeBtn.textContent = dark ? 'Switch to light' : 'Switch to dark';
+  };
+  paint();
+  themeBtn.addEventListener('click', function () { dark = !dark; paint(); });
+</script>
+</body>
+</html>

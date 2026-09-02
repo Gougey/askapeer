@@ -521,6 +521,36 @@ images land.</strong></p>
 <hr />
 <h2 id="personalised-feed-should-have">8. Personalised feed
 (Should-have)</h2>
+<blockquote>
+<h3
+id="superseded-8-august-2026-this-feature-has-lost-both-of-its-inputs">⚠️
+Superseded, 8 August 2026 — this feature has lost both of its
+inputs</h3>
+<p>The personalised feed selected posts by <strong>tag-follows</strong>
+<em>or</em> <strong>handle-follows</strong>. Both are gone:</p>
+<ul>
+<li><strong>Tag-follows retired (6 Aug)</strong> — that half is
+<code>community.member_interests</code> (EPIC-I), which ranks the
+<strong>research Feed</strong>, not the Discussions list.</li>
+<li><strong>Handle-follows not required (8 Aug)</strong> — decided on
+review.</li>
+</ul>
+<p>So <code>GET /v1/feed</code> as specified below <strong>has nothing
+left to select on</strong>. This is not a deferral; the feature as
+designed no longer has a definition. Anyone reviving a “personalised
+Discussions home” is designing it afresh, and should start from what a
+member has actually told us — which today is their clinical interests —
+rather than from this section.</p>
+<p><strong>What survives is the trending view.</strong> It stops being a
+<em>fallback</em> (there is nothing to fall back from) and becomes a
+standalone alternative ordering, if it is wanted at all. Its
+adaptive-window design below stands on its own merits and is unaffected
+— it exists to stop a cold-start view looking empty, which is a problem
+the trending view has regardless of what it is falling back from.</p>
+<p>The Discussions list is therefore chronological, with search (§4,
+built 2026-08-02) as the way in. See the S7 entry in the slice backlog
+and <code>docs/2026-08-06-post-follow-design.md</code>.</p>
+</blockquote>
 <p>PRD Section 6.1: “Home view based on tags and handles followed, with
 a trending/top view as fallback.” This depends entirely on
 <code>community.follows</code> — the unified handle-and-tag follow
@@ -573,10 +603,14 @@ tension.</p>
 <h2 id="boundaries-with-other-epics">9. Boundaries with other epics</h2>
 <ul>
 <li><strong>EPIC-B (follows)</strong> owns
-<code>community.follows</code>; this epic reads it (Section 8) filtering
-both <code>target_type = tag</code> and
-<code>target_type = handle</code> for the personalised feed — a
-read-only consumer, not a second copy of the relationship.</li>
+<code>community.follows</code>. This epic <em>was</em> to read it for
+the personalised feed (Section 8) — but with tag-follows retired and
+handle-follows dropped, <strong>this epic no longer consumes the table
+at all</strong>. The one live target type, <code>post</code>, is
+consumed by EPIC-G’s notification fan-out instead. Note the forum still
+owns the follow <em>endpoints</em> in code (they join <code>posts</code>
+and return this epic’s card DTO), which is a placement decision, not a
+change of ownership.</li>
 <li><strong>EPIC-E (case discussions)</strong> writes
 <code>type = case_discussion</code> posts through this epic’s own
 <code>POST /v1/posts</code> path, but only after its own

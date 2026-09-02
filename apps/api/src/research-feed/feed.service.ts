@@ -30,6 +30,21 @@ export type ArticleDetail = FeedArticle & {
   doi: string | null;
 };
 
+export type FeedSearchPage = {
+  articles: FeedArticle[];
+  nextCursor: string | null;
+  /**
+   * How many articles match in total, not how many are on this page.
+   *
+   * The forum's search returns no total and its screen counts the array it was handed, so a
+   * query matching 25 posts reads "20 results" and then offers *More*. A tab header cannot
+   * be wrong that way, so this is a real count — cheap here via a window function over the
+   * matched set, and worth capping ("99+") when the corpus is large enough that counting
+   * every match stops being free.
+   */
+  total: number;
+};
+
 export type FeedPage = {
   articles: FeedArticle[];
   nextCursor: string | null;
@@ -185,6 +200,60 @@ export class FeedService {
     return {
       articles: page.map(toArticle),
       nextCursor: rows.length > limit ? String(offset + limit) : null,
+    };
+  }
+
+  /**
+   * Full-text search over the corpus (S16).
+   *
+   * **Separate from `list`, not a filter on it.** `list` ranks by the member's interests;
+   * search must reach the whole corpus, because the reason to type a word is usually that
+   * it is *outside* what you already follow. Ranking is therefore relevance first, with the
+   * feed's own tiebreak behind it — papers have no kudos, so recency and evidence weight are
+   * what stand in for the forum's kudos tail.
+   *
+   * **No trigram fallback, unlike posts.** The forum falls back to `pg_trgm` similarity when
+   * a query matches no lexemes, and says so via `didYouMean`. A near-miss on a question
+   * title is a plausible guess at what someone meant; a near-miss across 2,597 abstracts is
+   * mostly noise, and the honest answer to a misspelt search of the literature is that we
+   * found nothing. Revisit with real queries rather than in the abstract.
+   */
+  async search(term: string, cursor?: string, limit = DEFAULT_PAGE_SIZE): Promise<FeedSearchPage> {
+    const query = term.trim();
+    if (query === '') return { articles: [], nextCursor: null, total: 0 };
+    const offset = Number.parseInt(cursor ?? '0', 10) || 0;
+
+    const { rows } = await this.db.execute<FeedRow & { total: string }>(sql`
+      select a.id, a.title, a.abstract, a.journal, a.published_date, a.evidence_type,
+             a.open_access, a.url,
+             (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name)
+                                       order by m.confidence desc, m.name), '[]')
+                from (
+                  select distinct on (t.name) t.id, t.name, at.confidence
+                    from research.article_tags at
+                    join community.tags t on t.id = at.tag_id
+                   where at.article_id = a.id
+                   order by t.name, at.confidence desc
+                ) m
+             ) as tags,
+             -- The count of everything matched, carried on each row: one query rather than
+             -- a second round trip, and the window is computed before the limit applies.
+             count(*) over () as total
+        from research.articles a
+       where a.retracted_at is null
+         and a.tsv @@ websearch_to_tsquery('english', ${query})
+       order by ts_rank_cd(a.tsv, websearch_to_tsquery('english', ${query})) desc,
+                a.published_date desc nulls last,
+                a.intrinsic_score desc,
+                a.id desc
+       limit ${limit + 1} offset ${offset}
+    `);
+
+    const page = rows.slice(0, limit);
+    return {
+      articles: page.map(toArticle),
+      nextCursor: rows.length > limit ? String(offset + limit) : null,
+      total: Number(rows[0]?.total ?? 0),
     };
   }
 

@@ -19,6 +19,14 @@ const TRGM_THRESHOLD = 0.3;
 
 export type SearchResults = {
   posts: PostCard[];
+  /**
+   * Matches in total, not on this page.
+   *
+   * Screen C3 used to render `results.posts.length`, so a query matching 25 posts read
+   * "20 results" and then offered *More* — understating by exactly a page. S17's tab
+   * headers cannot be wrong that way, so the count is computed rather than inferred.
+   */
+  total: number;
   /** Offset cursor — see the note in `search()` on why this one is not keyset. */
   nextCursor: string | null;
   /**
@@ -60,7 +68,7 @@ export class SearchService {
     const term = (query.q ?? '').trim();
     // Any one of the three controls is a search. Only *none* of them is not: an empty
     // search would be "the whole corpus, newest first", which is the Discussions list.
-    if (!term && !hasFilters(query)) return { posts: [], nextCursor: null, didYouMean: false };
+    if (!term && !hasFilters(query)) return { posts: [], nextCursor: null, didYouMean: false, total: 0 };
 
     // Browse mode — filters with no words to rank against. There is no relevance to
     // compute and nothing to spell wrong, so it is one pass ordered by recency, and the
@@ -237,9 +245,11 @@ export class SearchService {
       handle_name: string;
       kudos_total: number;
       answer_count: number;
+      watcher_count: number;
       kudos_count: number;
       created_at: Date;
       edited_at: Date | null;
+      total: string;
     }>(sql`
       with candidates as materialized (${candidates})
       select p.id, p.type, p.title,
@@ -250,7 +260,21 @@ export class SearchService {
                where c.post_id = p.id and c.status = 'published')::int as answer_count,
              (select count(*) from community.kudos k
                where k.target_type = 'post' and k.target_id = p.id)::int as kudos_count,
-             p.created_at, p.edited_at
+             -- Followers who have not written in the thread. See watcherCountSql in
+             -- posts.service.ts for why the raw follower count is not the useful number.
+             (select count(*) from community.follows f
+               where f.target_type = 'post' and f.target_id = p.id
+                 and f.follower_handle_id <> p.handle_id
+                 and not exists (
+                   select 1 from community.comments fc
+                    where fc.post_id = p.id and fc.handle_id = f.follower_handle_id
+                      and fc.status = 'published'
+                 ))::int as watcher_count,
+             p.created_at, p.edited_at,
+             -- How many matched in total, not how many are on this page. Carried on each
+             -- row so it costs one query rather than a second round trip; the window is
+             -- computed after the where clause and before the limit, which is what we want.
+             count(*) over () as total
       from candidates cd_ids
       join community.posts p on p.id = cd_ids.id
       join community.handles h on h.id = p.handle_id
@@ -293,11 +317,13 @@ export class SearchService {
           kudosTotal: Number(row.kudos_total),
         },
         answerCount: Number(row.answer_count),
+        watcherCount: Number(row.watcher_count),
         kudosCount: Number(row.kudos_count),
         createdAt: new Date(row.created_at).toISOString(),
         editedAt: row.edited_at ? new Date(row.edited_at).toISOString() : null,
       })),
       nextCursor: rows.length > limit ? String(offset + limit) : null,
+      total: Number(rows[0]?.total ?? 0),
       didYouMean,
     };
   }

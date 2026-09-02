@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { signOutEverywhereAction } from './actions';
+import { SettingsPanel } from './SettingsPanel';
 
 /**
  * Sign out on every device (F8, security).
@@ -18,22 +19,7 @@ export function SignOutEverywhere() {
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <section
-      className="flex flex-col border"
-      style={{
-        background: 'var(--color-surface)',
-        borderColor: 'var(--color-border)',
-        borderRadius: 'var(--radius)',
-        boxShadow: 'var(--shadow-card)',
-        padding: 'var(--space-4)',
-        gap: 'var(--space-2)',
-      }}
-    >
-      <h2 className="text-sm font-semibold">{t('heading')}</h2>
-      <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-        {t('body')}
-      </p>
-
+    <SettingsPanel heading={t('heading')} body={t('body')}>
       {confirming ? (
         <form action={signOutEverywhereAction} className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
           <p className="text-sm font-medium">{t('confirm')}</p>
@@ -69,6 +55,6 @@ export function SignOutEverywhere() {
           {t('cta')}
         </button>
       )}
-    </section>
+    </SettingsPanel>
   );
 }

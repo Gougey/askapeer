@@ -102,13 +102,13 @@
       "kudos": "Kudos",
       "memberSince": "Member since {year}",
       "identityNote": "This is everything other members can see about you.",
-      "signOut": "Sign out",
       "adminConsole": "Admin console",
       "settings": "Settings"
     },
     "unreadNotifications": "{count, plural, one {# unread notification} other {# unread notifications}}",
     "back": "Back",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "search": "Search"
   },
   "identityCheck": {
     "title": "Confirm your identity",
@@ -223,7 +223,8 @@
       "off": "Follow discussion",
       "ariaOn": "Following this discussion — tap to stop being notified of new replies",
       "ariaOff": "Follow this discussion to be notified of new replies"
-    }
+    },
+    "watching": "{count, plural, one {1 person watching who has not answered} other {# people watching who have not answered}}"
   },
   "report": {
     "report": "Report",
@@ -357,6 +358,11 @@
       "confirm": "This signs you out on every device, including this one.",
       "confirmCta": "Sign out everywhere",
       "cancel": "Cancel"
+    },
+    "signOutDevice": {
+      "heading": "Sign out",
+      "body": "Signs you out on this device only. Any other device you are signed in on stays signed in.",
+      "cta": "Sign out"
     }
   },
   "caseCompose": {
@@ -457,13 +463,21 @@
     "tagsLabel": "Narrow by tag",
     "tagsHint": "Optional. Choosing a region includes everything beneath it.",
     "submit": "Search",
-    "idle": "Search posts, answers and tags across the community.",
+    "idle": "Search discussions, answers and the research feed.",
     "resultCount": "{count, plural, one {1 result} other {# results}}",
     "didYouMean": "Nothing matched “{query}” exactly. Showing {count, plural, one {1 close match} other {# close matches}}.",
     "noResults": "No results. Try fewer words, a broader tag, or check the spelling.",
     "more": "Show more results",
     "advanced": "Advanced",
-    "advancedWithCount": "Advanced ({count, plural, one {1 filter} other {# filters}})"
+    "advancedWithCount": "Advanced ({count, plural, one {1 filter} other {# filters}})",
+    "tabDiscussions": "Discussions ({count})",
+    "tabPapers": "Papers ({count})",
+    "tabsLabel": "Where to search",
+    "noResultsDiscussions": "No discussions matched. Try fewer words, a broader tag, or check the spelling.",
+    "noResultsPapers": "No papers matched. Try fewer words or check the spelling.",
+    "papersCount": "{count, plural, one {1 paper} other {# papers}}",
+    "morePapers": "Show more papers",
+    "filtersDiscussionsOnly": "Category and tag filters apply to discussions only."
   },
   "pagination": {
     "more": "Show more",

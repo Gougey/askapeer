@@ -12,7 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { tags } from './community.schema';
+import { tags, tsvector } from './community.schema';
 
 /**
  * The `research` schema (EPIC-I) — the external literature corpus.
@@ -96,6 +96,22 @@ export const articles = research.table(
      * than a migration — and so nothing has to pretend the corpus is clean meanwhile.
      */
     retractedAt: timestamp('retracted_at', { withTimezone: true }),
+    /**
+     * Full-text search over the corpus (S16), weighted the same way posts are: a title hit
+     * outranks a passing mention in a long abstract. `abstract` rather than
+     * `abstract_sections`, because the flattened plain text is what the classifier and the
+     * card snippet already use, and the structured version would index its own headings.
+     *
+     * The feed had no full-text index at all before this: `articles_rank_idx` orders by
+     * date and score, so a member could browse the corpus and be matched into it by their
+     * interests, but never search it.
+     *
+     * Column names are bare rather than Drizzle references, as in `posts.tsv` — a
+     * generated expression cannot refer to the table object it is being defined on.
+     */
+    tsv: tsvector('tsv').generatedAlwaysAs(
+      sql`setweight(to_tsvector('english', coalesce(title, '')), 'A') || setweight(to_tsvector('english', coalesce(abstract, '')), 'B')`,
+    ),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -106,6 +122,7 @@ export const articles = research.table(
     uniqueIndex('articles_pmid_key').on(t.pmid).where(sql`${t.pmid} is not null`),
     // The feed's ordering: newest-and-best first, before any member weighting.
     index('articles_rank_idx').on(t.publishedDate.desc(), t.intrinsicScore.desc()),
+    index('articles_tsv_idx').using('gin', t.tsv),
   ],
 );
 

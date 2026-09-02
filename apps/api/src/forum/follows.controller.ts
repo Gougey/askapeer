@@ -21,9 +21,9 @@ import { CreateFollowDto, ListPostsDto } from './forum.dto';
 /**
  * EPIC-B §8's follow endpoints, narrowed to `target_type = post` for S15.
  *
- * The routes carry `target_type` even though only one value is accepted, so adding
- * handle-follows in S7 is a validator change rather than a new URL shape — and so a client
- * written now does not have to be rewritten then.
+ * The routes carry `target_type` even though only one value is accepted. Handle-following
+ * is not planned (2026-08-08), but the shape costs nothing and means a second target type —
+ * if one is ever wanted — is a validator change rather than a new URL.
  *
  * Like the other `/me`-shaped reads, the list takes no handle: it comes from the token, so
  * there is no request that reads someone else's subscriptions. Who follows a post is not

@@ -117,6 +117,32 @@ cross-references to “§1.4” resolve; full reasoning in Section
 <h2 id="already-resolved">2. Already resolved</h2>
 <p>Decided, kept here for the record rather than deleted.</p>
 <ul>
+<li><strong>Follow targets, revisited — resolved 2026-08-06 and
+2026-08-08.</strong> Supersedes the tag-follow entry below, which
+remains as the record of what was decided in July. Two changes, both
+narrowing. <strong>(1) Tag-following retired (6 Aug):</strong>
+<code>community.member_interests</code> (EPIC-I, built at S8b) already
+asks members which parts of the taxonomy they care about — weighted,
+subtree-expanded, with a picker over all 588 nodes in front of them — so
+a second <em>binary</em> copy of the same choice would have been a
+parallel answer to a question already asked, drifting from the first and
+requiring the tag picker to be built a third time.
+<code>target_type</code> became <code>enum(handle, post)</code>, and
+<strong>post-following was built</strong> (S15, migrations
+<code>0027</code>/<code>0028</code>). <strong>(2) Handle-following not
+required (8 Aug, on review):</strong> deferred rather than deleted; the
+unused <code>handle</code> enum value stays so revisiting costs no
+migration. ⚠️ <strong>The knock-on is the substantive part</strong>:
+tag-follows and handle-follows were the <em>only</em> two inputs to
+EPIC-C §8’s personalised Discussions feed, so that feature is now
+<strong>hollowed out rather than deferred</strong> — it has nothing left
+to select on, and reviving it means designing it afresh from the one
+interest signal members actually give us. The trending view survives as
+a standalone ordering, no longer a fallback. EPIC-G’s weekly digest
+(“top-kudos content in followed tags”) likewise needs redefining rather
+than merely implementing. <em>(PRD §6.1 Should-have note; EPIC-B spec
+§8; EPIC-C spec §8/§9;
+<code>docs/2026-08-06-post-follow-design.md</code>.)</em></li>
 <li><strong>The missing tag-follow mechanism — resolved
 2026-07-14.</strong> Three PRD features assumed a member could “follow a
 tag” — EPIC-C’s Should-have personalised feed (“tags <strong>and

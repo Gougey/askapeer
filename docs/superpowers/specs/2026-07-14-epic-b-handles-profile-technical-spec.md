@@ -191,6 +191,15 @@ Reuses the `community.handles.status` enum already defined in the architecture s
 
 ## 8. Follows — handles and tags (Should-have)
 
+> **Amended twice, and the section is now mostly historical.**
+>
+> - **6 Aug 2026** — `target_type` became `enum(handle, post)`. Tag-following is retired: that half is `community.member_interests` (EPIC-I, built at S8b), with a weighted, subtree-expanded picker over the whole taxonomy already in front of members. A second binary copy of the same choice would have drifted from it.
+> - **8 Aug 2026** — following a **handle** is **not required for the time being**. Deferred, not deleted; the enum keeps its unused `handle` value so revisiting it costs no migration.
+>
+> **What is actually built** is post-following — `community.follows` with `target_type = 'post'`, shipped at S15 (migrations `0027`/`0028`). EPIC-B retains ownership of the table and the write path as specified below; only the set of target types changed.
+>
+> Read the rest of this section as the original design and its reasoning. Where it describes tag-follows or handle-follows as live requirements, `docs/2026-08-06-post-follow-design.md` supersedes it — including its §2, which explains why the three acts stopped being one verb.
+
 Two of PRD Section 6.1's Should-have features turn out to need the same underlying mechanism:
 
 - **"Personalised feed"** (EPIC-C) — home view based on "**tags and handles** followed"
