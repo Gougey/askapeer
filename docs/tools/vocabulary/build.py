@@ -17,10 +17,7 @@ from pathlib import Path
 D = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, D)
 from extract import build_model
-from pelvis import rebuild as rebuild_pelvis
-from ligaments import apply as apply_ligaments
-from nesting import apply as apply_nesting
-import amendments
+from model import part1, walk
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / "docs" / "body-part-condition-and-synonym-list.md"
@@ -30,54 +27,8 @@ dash = lambda s: re.sub(r"\s*—\s*", " — ", s)
 key = lambda s: re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
 
 # ---------------------------------------------------------------- part 1 model
-regions = []
-ordered = collections.defaultdict(list)
-reg = sub = grp = None
-for x in b["part1"]:
-    if x["t"] == "region":
-        reg = {"name": x["text"], "subs": []}; regions.append(reg); sub = grp = None
-    elif x["t"] == "sub":
-        sub = {"name": x["text"], "groups": [], "loose": []}; reg["subs"].append(sub); grp = None
-    elif x["t"] == "group":
-        grp = {"name": x["text"], "items": []}; sub["groups"].append(grp)
-    elif x["t"] == "item" and sub is not None:
-        (grp["items"] if grp else sub["loose"]).append(x)
-        ordered[(reg["name"], sub["name"])].append(x)
-
-for _r in regions:
-    for _s in _r["subs"]:
-        _s["groups"] = [g for g in _s["groups"] if "msk conditions" not in g["name"].lower()]
-
-for _r in regions:
-    for _s in _r["subs"]:
-        _s["groups"] = apply_nesting(_r["name"], _s["name"], _s["groups"])
-
-LIGAMENT_BLOCKS = 0
-for _r in regions:
-    for _s in _r["subs"]:
-        if _s["name"] != "Ligaments":
-            continue
-        _blocks = apply_ligaments(_r["name"], ordered[(_r["name"], _s["name"])])
-        if not _blocks:
-            continue
-        _blocks = amendments.apply(_r["name"], _blocks)
-        _s["groups"] = [{"name": bk["name"], "items": bk["items"], "src": bk["src"],
-                         "confirmed": bk.get("confirmed", False), "andrew": bk.get("andrew", False)}
-                        for bk in _blocks]
-        _s["loose"] = []
-        _s["proposed"] = sum(1 for bk in _blocks if not bk.get("confirmed"))
-        LIGAMENT_BLOCKS += len(_blocks)
-
-PELVIS_MERGES = []
-for _r in regions:
-    if _r["name"].startswith("Pelvis"):
-        _r["subs"], PELVIS_MERGES = rebuild_pelvis(_r)
-
-def walk(groups):
-    """Yield every group in the tree, parents included."""
-    for g in groups:
-        yield g
-        yield from walk(g.get("children", []))
+# Assembled in `model.py`, because the taxonomy loader needs the same tree this renders.
+regions, PELVIS_MERGES, LIGAMENT_BLOCKS = part1(b)
 
 def stats(sub):
     all_groups = list(walk(sub["groups"]))
@@ -149,8 +100,11 @@ W("**Source:** `docs/Body Part, Conditions, and Synonym List.pdf` — supplied b
   "rather than retyped. Nothing has been added, removed or clinically re-worded. Every section is "
   "collapsed by default so the shape is readable at a glance — click any heading to open it.")
 W("")
-W("> **Status: reference material, not yet a decision.** Nothing here has been mapped to the live "
-  "tag taxonomy or loaded into the database.")
+W("> **Status: Parts 1 and 2 are loaded.** Migrations `0030_expand_clinical_taxonomy.sql` and "
+  "`0031_seed_part2_synonyms.sql`, both generated from this source, take the taxonomy from 588 "
+  "tags to 1,304 and the tags carrying search synonyms from 11 to 105. Part 3 remains search "
+  "vocabulary for a standalone thesaurus. See Appendix B for exactly what was inserted, moved, "
+  "renamed and retired.")
 W("")
 W("""<div class="treebar">
 <button type="button" onclick="document.querySelectorAll('details.tree').forEach(d=>d.open=true)">Expand all</button>

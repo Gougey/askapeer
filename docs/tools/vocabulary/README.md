@@ -6,7 +6,13 @@ from Andrew Renshaw's source PDF, `docs/Body Part, Conditions, and Synonym List.
 ```bash
 python3 docs/tools/vocabulary/build.py     # regenerate the document
 python3 docs/tools/vocabulary/verify.py    # prove no term was lost
+python3 docs/tools/vocabulary/taxonomy.py  # report the Part 1 load; --write emits the migration
+python3 docs/tools/vocabulary/synonyms.py  # report the Part 2 load; --write emits the migration
 ```
+
+The two loaders print a full report and write nothing without `--write`. **Re-running either
+regenerates its migration in place** — so if Andrew sends a correction, edit the plan, re-run, and
+review the diff on the SQL. Both are deterministic: same source, same ids, byte-identical output.
 
 Then rebuild and redeploy the docs site:
 
@@ -36,6 +42,9 @@ not re-derive the analysis.
 | `amendments.py` | Andrew's review of 2026-08-24, his instructions recorded verbatim. Edit here first when he sends more. |
 | `build.py` | Renders the collapsible document, computes the structure-health table, and appends the prose from `appendix.md` and `grading.md`. |
 | `verify.py` | Fails if any term in the PDF is missing from the output. Headings may legitimately be renamed or dropped, so those are listed rather than failed. |
+| `model.py` | Assembles the Part 1 tree once, after all four plans have been applied. `build.py` renders it; `taxonomy.py` loads it. Both must see the same tree. |
+| `taxonomy.py` | Turns Part 1 into `apps/api/drizzle/0030_expand_clinical_taxonomy.sql` — an **additive** load expressed as rename / insert / move / retire, never a re-seed. |
+| `synonyms.py` | Turns Part 2 into `apps/api/drizzle/0031_seed_part2_synonyms.sql`, unioning with what migration 0025 already set. |
 
 `appendix.md` and `grading.md` are the only hand-written prose; everything else in the
 document is generated, so counts in the text cannot drift from the data.
@@ -47,6 +56,9 @@ document is generated, so counts in the text cannot drift from the data.
 - **Deciding the restated blocks are redundant** → they are named `… — restated` in
   `ligaments.py` and folded explicitly in `pelvis.py`; drop or merge them there.
 - **Correcting a parent/child grouping** → edit `NEST` in `nesting.py`.
+- **A change that affects the loaded taxonomy** → re-run `taxonomy.py` / `synonyms.py`. If 0030 or
+  0031 has already been applied anywhere, do **not** rewrite it — Drizzle will not re-run an applied
+  migration. Write a new one for the delta instead.
 - **A new PDF from Andrew** → replace the source file and re-run. The plans are keyed by
   index into the source order, so **they will not survive a re-ordered document** — check
   `verify.py` output and the structure-health table before trusting the result.

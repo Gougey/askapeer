@@ -17,7 +17,7 @@ details.lvl1 > summary { font-size: 1.12em; }
 
 **Source:** `docs/Body Part, Conditions, and Synonym List.pdf` — supplied by Andrew Renshaw, August 2026. **This file is a faithful re-formatting of that PDF**, extracted programmatically rather than retyped. Nothing has been added, removed or clinically re-worded. Every section is collapsed by default so the shape is readable at a glance — click any heading to open it.
 
-> **Status: reference material, not yet a decision.** Nothing here has been mapped to the live tag taxonomy or loaded into the database.
+> **Status: Parts 1 and 2 are loaded.** Migrations `0030_expand_clinical_taxonomy.sql` and `0031_seed_part2_synonyms.sql`, both generated from this source, take the taxonomy from 588 tags to 1,304 and the tags carrying search synonyms from 11 to 105. Part 3 remains search vocabulary for a standalone thesaurus. See Appendix B for exactly what was inserted, moved, renamed and retired.
 
 <div class="treebar">
 <button type="button" onclick="document.querySelectorAll('details.tree').forEach(d=>d.open=true)">Expand all</button>
@@ -4510,32 +4510,90 @@ its parent*, not globally. Noted only so it is not mistaken for duplication to b
 
 ## Appendix B — how this relates to the live taxonomy
 
-For context in the discussion that follows this document. **No mapping or loading has been done.**
+**Parts 1 and 2 are loaded.** Two generated migrations do it, and both are produced from this same
+source by `docs/tools/vocabulary/taxonomy.py` and `docs/tools/vocabulary/synonyms.py` — change the
+pipeline and re-run rather than editing the SQL.
 
-The live taxonomy holds **588 tag rows** (538 distinct names, repeated across branches by design)
-under 5 region roots, seeded from Andrew's Body Part List v2.0 in July 2026. Of those, **11 carry
-search synonyms**.
+### Part 1 — `0030_expand_clinical_taxonomy.sql`
 
-Measured against that, this new list contains **1,996 distinct terms**, of which **1,557 do not
-currently exist as a tag**:
+The taxonomy goes from **588 rows to 1,304**. It is not a re-seed: `post_tags`,
+`member_interests` and `article_tags` all reference `community.tags` now, so an id that changes is
+a link that breaks. Every existing row keeps its id, and the load is expressed as four operations.
 
-| Part | Distinct terms | Already a tag | Not yet a tag |
-|---|---:|---:|---:|
-| 1. Anatomy and conditions | 920 | 439 | 481 |
-| 2. Synonyms (preferred terms) | 334 | 76 | 258 |
-| 3. Assessment and treatment | 823 | 0 | 823 |
+| Operation | Rows | What it is |
+|---|---:|---|
+| insert | 716 | the ligaments axis and the pelvis region, neither of which existed, plus the parent levels v2.0 flattened |
+| move | 126 | existing tags re-parented under those restored levels — ids kept, so their posts, interests and article matches move with them |
+| rename | 12 | spelling only: ten names carried a stray backslash from the v2.0 seed's double-escaping (`Guyon\'s canal syndrome`), two used `--` for an en dash |
+| retire | 34 | the flattened compound groups (`Hand Thenar`, `Knee Meniscus`) once their children have moved out |
+| reorder | 49 | tags that stayed put but shifted position in Andrew's list |
 
-Three observations worth carrying into the discussion:
+**Most of the work is *move*, not insert, and that is the point.** The v2.0 seed flattened the
+levels this source only implies — it holds one group called `Shoulder Rotator Cuff` where Andrew's
+list has `Shoulder` containing `Rotator Cuff`. Matching on the parent path alone would have read
+every leaf beneath it as new and duplicated 126 tags that are already carrying content. Identity is
+therefore the normalised name *within its branch*, and a tag whose parent changed is moved.
 
-- **Part 2 is the immediately valuable piece.** Only 76 of its preferred terms match a live tag, but
-  those 76 would bring **138 synonyms** — against the 11 tags that have any today. That is the
-  known weak spot in feed classification, and it needs no taxonomy changes to land.
-- **Part 3 is a different kind of vocabulary.** It has *zero* overlap with the body-part taxonomy
-  because it describes tests, treatments and equipment rather than anatomy or pathology. It is not
-  an extension of the tag tree; it is either a second dimension or out of scope.
-- **Part 1 is roughly half new.** 481 new terms against 588 existing rows is not a top-up, it is a
-  significant expansion — and the interests picker already offers members the whole tree, so
-  anything added here lands in front of them.
+Two things are deliberately not done. `Post-operative cervical fusion rehabilitation` — the one live
+term this list does not carry — is **kept exactly where it is**, because the load is additive and a
+tag a member has already used must not vanish underneath them. And the flattened groups are
+**retired, not deleted**: `listTags` stops descending at a retired node, so they leave the picker
+while anything already tagged with the group itself is untouched.
+
+One term is dropped: *Ulnocarpal ligament complex* appears twice inside its own group in the source,
+and `tags_parent_name_unique` forbids two siblings sharing a name.
+
+### Part 2 — `0031_seed_part2_synonyms.sql`
+
+Synonyms are a `text[]` on the tag row, not a table, so this is a data top-up with no schema change
+that improves two things at once with no code change: forum search folds `name || synonyms` into
+both its tsvector and trigram paths, and the research-feed classifier matches a tag on its name *or*
+any synonym. **Tags carrying synonyms go from 11 to 105**, and distinct synonym terms from 27 to 139.
+
+**The Part 1 expansion barely helps here** — it lifts the matchable set from 85 preferred terms to
+90 — because Part 2 is mostly conditions phrased differently, not the anatomy Part 1 added. Of its
+349 preferred terms, 90 name a tag; the remaining 259 are search vocabulary with no tag to hang off,
+which is exactly why Andrew's decision of 2026-08-27 sends them to a standalone thesaurus (S18a)
+rather than the tag tree.
+
+Twenty-three aliases are deliberately **not** loaded, because a wrong synonym is worse than a missing
+one — it silently mis-files content instead of merely failing to find it:
+
+- **Two are footnoted in the source.** Both recorded footnotes forbid an otherwise obvious mapping:
+  DDH is not a synonym for every acetabular dysplasia, and "runner's knee" must not resolve to one
+  condition. The asterisk is dropped wherever the alias appears, not only where it is marked —
+  otherwise the unmarked *runner's knee* under patellofemoral pain syndrome would slip through.
+- **Two mean more than one tag.** *herniated disc* is given to both *Disc extrusion* and *Disc
+  herniation*.
+- **Seven are themselves tags**, which is a merge question rather than a synonym and is Andrew's to
+  answer: *Proximal hamstring tendinopathy*, *Subdeltoid bursitis*, *Disc bulge*, *pars defect*,
+  *Acetabular labral tear* and *Tibial nerve entrapment*.
+- **Fourteen are bare abbreviations of four characters or less** — `oa`, `as`, `ra`, `psa`, `ocd`,
+  `mps`, `fai`, `cts` and the rest. The classifier applies its ambiguity guard to tag *names* only,
+  so a short synonym enters unguarded and a single-token variant matches on bare presence in a
+  title. `psa`, `mps` and `ocd` all mean something else in a medical corpus, and `as` is a word.
+  This is the same shape as the documented false positive where a materials-science paper on stress
+  fracture in alloys matched the clinical *Stress fracture* tag. **These are unproven rather than
+  rejected**: the admin tag screen dry-runs a proposed synonym against the real corpus and shows
+  the titles that would newly match, which is the evidence needed to add them one at a time.
+
+Existing synonyms are **unioned, never overwritten** — migration 0025 hand-tuned eleven tags against
+the live corpus and that work stands. One further hand-off: `Shoulder Rotator Cuff` carried the
+synonym *rotator cuff* and is one of the groups being retired, so 0030 hands it to the `Rotator Cuff`
+tag that replaces it. The classifier walks `community.tags` without regard to `retired_at`, so
+without that the retired tag would have gone on collecting matches its visible replacement should
+be getting.
+
+### Part 3
+
+Unchanged and out of scope here: it describes tests, treatments and equipment rather than anatomy or
+pathology, has *zero* overlap with the body-part taxonomy, and is search vocabulary for the S18a
+thesaurus.
+
+### After deploying
+
+The stored corpus is **not** re-tagged automatically. `POST /v1/research-feed/reclassify` re-tags it
+against the new tags and synonyms with no refetch, and wants running once after this lands.
 
 ---
 
