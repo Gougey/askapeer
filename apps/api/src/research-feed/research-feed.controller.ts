@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import type { Queue } from 'bullmq';
 import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import type { Request } from 'express';
 import type { AuthedMember } from '../auth/jwt-auth.guard';
@@ -9,6 +10,7 @@ import { AppAccessGuard } from '../auth/app-access.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FeedService } from './feed.service';
 import { IngestionService } from './ingestion.service';
+import { INGESTION_QUEUE, RECLASSIFY_JOB } from './ingestion.queue';
 
 /**
  * The whole interest set, replaced in one call.
@@ -116,7 +118,10 @@ export class ResearchFeedController {
 @Controller('admin/research-feed')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class ResearchFeedAdminController {
-  constructor(private readonly ingestion: IngestionService) {}
+  constructor(
+    private readonly ingestion: IngestionService,
+    @Inject(INGESTION_QUEUE) private readonly queue: Queue,
+  ) {}
 
   @Get('status')
   status() {
@@ -134,10 +139,21 @@ export class ResearchFeedAdminController {
     return this.ingestion.normaliseAbstracts();
   }
 
-  /** Re-tag the stored corpus after a classifier or synonym change — no refetch. */
+  /**
+   * Re-tag the stored corpus after a classifier or synonym change — no refetch.
+   *
+   * **Queued, not awaited, and `run` above is the contrast that explains why.** That one is
+   * synchronous on purpose: an ingest is something you watch, and it returns what came back
+   * from each source. This takes over two minutes on the current corpus, which is longer
+   * than Fly's proxy will hold a connection open — the work completed and the caller got a
+   * dropped socket, so the admin screen reported a failure for a job that had in fact
+   * succeeded. Enqueuing returns immediately and the screen's own numbers show the progress,
+   * which is the honest version of what the caller wanted to know.
+   */
   @Post('reclassify')
-  reclassify() {
-    return this.ingestion.reclassifyAll();
+  async reclassify() {
+    await this.queue.add(RECLASSIFY_JOB, {});
+    return { queued: true };
   }
 
   /**
