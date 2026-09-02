@@ -8,6 +8,7 @@ import {
   INGESTION_QUEUE_NAME,
   INGEST_EVERY_MS,
   INGEST_JOB,
+  RECLASSIFY_JOB,
 } from './ingestion.queue';
 
 /**
@@ -29,9 +30,13 @@ export class IngestionWorker implements OnModuleInit, OnModuleDestroy {
   async onModuleInit(): Promise<void> {
     this.worker = new Worker(
       INGESTION_QUEUE_NAME,
-      async () => this.ingestion.runAll(),
+      async (job) =>
+        job.name === RECLASSIFY_JOB
+          ? this.ingestion.reclassifyAll()
+          : this.ingestion.runAll(),
       // Concurrency 1: two runs at once would double our request rate against two free
-      // public APIs to fetch the same overlapping window twice.
+      // public APIs to fetch the same overlapping window twice — and it is also what keeps
+      // a reclassify from running while an ingest is writing the rows it just deleted.
       { connection: this.connection, concurrency: 1 },
     );
 

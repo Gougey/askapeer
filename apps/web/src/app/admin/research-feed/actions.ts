@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { API_ORIGIN } from '@/lib/api';
 import { getAccessToken } from '@/lib/session';
 
-export type ReclassifyState = { status: 'idle' | 'done' | 'error'; message?: string };
+export type ReclassifyState = { status: 'idle' | 'queued' | 'error'; message?: string };
 
 /**
  * Re-tag the whole stored corpus against the current vocabulary.
@@ -16,27 +16,34 @@ export type ReclassifyState = { status: 'idle' | 'done' | 'error'; message?: str
  * vocabulary. Before this button existed the only way to run it was to mint an admin token by
  * hand, which meant the taxonomy could be improved and the feed silently left behind.
  *
- * It takes over a minute on the current corpus and rebuilds `article_tags` from scratch, so
- * the feed shows fewer matches while it runs. That is why it asks first.
+ * The API queues the work rather than doing it inline: it takes over two minutes, which is
+ * longer than Fly's proxy holds a connection open, so awaiting it here reported a failure for
+ * a job that had actually succeeded. What comes back is an acknowledgement, and the page's own
+ * counts are what show the progress.
  */
 export async function reclassifyAction(): Promise<ReclassifyState> {
   const token = await getAccessToken();
   if (!token) redirect('/');
 
-  const res = await fetch(`${API_ORIGIN}/v1/admin/research-feed/reclassify`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  });
-
-  if (!res.ok) {
-    return { status: 'error', message: `Reclassify failed (${res.status}). Nothing was changed.` };
+  let res: Response;
+  try {
+    res = await fetch(`${API_ORIGIN}/v1/admin/research-feed/reclassify`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+  } catch {
+    return { status: 'error', message: 'Could not reach the API. Nothing was started.' };
   }
 
-  const { articles, matches } = (await res.json()) as { articles: number; matches: number };
+  if (!res.ok) {
+    return { status: 'error', message: `Could not queue the re-tag (${res.status}).` };
+  }
+
   revalidatePath('/admin/research-feed');
   return {
-    status: 'done',
-    message: `Re-tagged ${articles.toLocaleString()} articles — ${matches.toLocaleString()} matches.`,
+    status: 'queued',
+    message:
+      'Re-tagging the corpus. It takes a couple of minutes — refresh to watch the counts move.',
   };
 }

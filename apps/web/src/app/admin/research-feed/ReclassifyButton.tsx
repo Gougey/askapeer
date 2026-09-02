@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { reclassifyAction, type ReclassifyState } from './actions';
 
@@ -12,6 +13,7 @@ export function ReclassifyButton() {
   const [state, setState] = useState<ReclassifyState>({ status: 'idle' });
   const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
+  const router = useRouter();
 
   const run = () => {
     setConfirming(false);
@@ -23,7 +25,7 @@ export function ReclassifyButton() {
       {confirming ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm" style={{ color: 'var(--color-muted)' }}>
-            Re-tag every stored article? Takes about a minute.
+            Re-tag every stored article? Runs in the background for a couple of minutes.
           </span>
           <button
             type="button"
@@ -50,7 +52,7 @@ export function ReclassifyButton() {
           className="w-fit rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-60"
           style={{ borderColor: 'var(--color-border-strong)', color: 'var(--color-fg)' }}
         >
-          {pending ? 'Reclassifying…' : 'Reclassify the corpus'}
+          {pending ? 'Starting…' : 'Reclassify the corpus'}
         </button>
       )}
       {state.message ? (
@@ -59,6 +61,19 @@ export function ReclassifyButton() {
           style={{ color: state.status === 'error' ? 'var(--color-bad)' : 'var(--color-ok)' }}
         >
           {state.message}
+          {state.status === 'queued' ? (
+            <>
+              {' '}
+              <button
+                type="button"
+                onClick={() => router.refresh()}
+                className="underline"
+                style={{ color: 'inherit' }}
+              >
+                Refresh now
+              </button>
+            </>
+          ) : null}
         </p>
       ) : null}
     </div>

@@ -7,6 +7,13 @@ export const INGESTION_QUEUE = Symbol('INGESTION_QUEUE');
 export const INGESTION_QUEUE_NAME = 'research-ingestion';
 export const INGEST_JOB = 'ingest';
 
+/**
+ * Re-tagging runs on the same queue as ingest, and that is the point: concurrency is 1, so a
+ * reclassify can never run while an ingest is writing `article_tags` — the two would be
+ * fighting over the same rows, one of them having just emptied the table.
+ */
+export const RECLASSIFY_JOB = 'reclassify';
+
 /** How often the corpus refreshes. Literature does not move hourly. */
 export const INGEST_EVERY_MS = 12 * 60 * 60 * 1000;
 
