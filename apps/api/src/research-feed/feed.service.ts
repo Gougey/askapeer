@@ -82,24 +82,20 @@ export class FeedService {
     limit = DEFAULT_PAGE_SIZE,
     interestTagIds: string[] = [],
     handleId?: string,
-    evidence?: EvidenceType,
   ): Promise<FeedPage> {
     const offset = Number.parseInt(cursor ?? '0', 10) || 0;
 
     if (interestTagIds.length > 0) {
-      const personalised = await this.rank(offset, limit, interestTagIds, handleId, evidence);
+      const personalised = await this.rank(offset, limit, interestTagIds, handleId);
       // A member with narrow interests and a young corpus would otherwise get an empty
       // screen that looks broken. Falling back to the general ranking is better than
       // nothing, and `mode` lets the screen say which it is rather than pretend.
       if (personalised.articles.length > 0) return { ...personalised, mode: 'personalised' };
-      // The evidence filter is *kept* through the fallback. Widening the interests is the
-      // member's own doing and worth explaining; quietly widening what they asked to see
-      // would answer a question they did not ask.
-      const general = await this.rank(offset, limit, [], undefined, evidence);
+      const general = await this.rank(offset, limit, []);
       return { ...general, mode: 'fallback' };
     }
 
-    const general = await this.rank(offset, limit, [], undefined, evidence);
+    const general = await this.rank(offset, limit, []);
     return { ...general, mode: 'general' };
   }
 
@@ -108,7 +104,6 @@ export class FeedService {
     limit: number,
     interestTagIds: string[],
     handleId?: string,
-    evidence?: EvidenceType,
   ): Promise<Omit<FeedPage, 'mode'>> {
     /*
      * **An interest covers its whole subtree**, the same way a tag filter does in search.
@@ -152,7 +147,6 @@ export class FeedService {
              ) as tags
         from research.articles a
        where a.retracted_at is null
-         ${evidence ? sql`and a.evidence_type = ${evidence}` : sql``}
          ${
            interestTagIds.length > 0
              ? sql`and exists (

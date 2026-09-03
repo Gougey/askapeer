@@ -45,17 +45,6 @@ export class FeedQueryDto {
   @IsString()
   @MaxLength(20)
   cursor?: string;
-
-  /**
-   * Narrow the feed to one rung of the evidence ladder.
-   *
-   * Validated against the enum rather than passed through, because it reaches a `where` on
-   * an enum column — an unknown value would be a type error at the database rather than an
-   * empty page.
-   */
-  @IsOptional()
-  @IsIn(EVIDENCE_TYPES)
-  evidence?: (typeof EVIDENCE_TYPES)[number];
 }
 
 export class FeedSearchDto {
@@ -110,7 +99,7 @@ export class ResearchFeedController {
   @Get()
   async list(@Query() query: FeedQueryDto, @Req() req: Request & { member: AuthedMember }) {
     const tagIds = await this.interests.tagIdsFor(req.member.handleId!);
-    return this.feed.list(query.cursor, undefined, tagIds, req.member.handleId!, query.evidence);
+    return this.feed.list(query.cursor, undefined, tagIds, req.member.handleId!);
   }
 
   @Get('interests')
