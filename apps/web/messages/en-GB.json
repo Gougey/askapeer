@@ -460,8 +460,6 @@
     "queryPlaceholder": "e.g. hamstring return to run, \"ACL\", achilles -surgery",
     "categoryLabel": "Category",
     "anyCategory": "Any category",
-    "tagsLabel": "Narrow by tag",
-    "tagsHint": "Optional. Choosing a region includes everything beneath it.",
     "submit": "Search",
     "idle": "Search discussions, answers and the research feed.",
     "resultCount": "{count, plural, one {1 result} other {# results}}",
@@ -475,10 +473,10 @@
     "noResultsPapers": "No papers matched. Try fewer words or check the spelling.",
     "papersCount": "{count, plural, one {1 paper} other {# papers}}",
     "morePapers": "Show more papers",
-    "tagsWithCount": "Tags ({count})",
     "evidenceLabel": "Filter by evidence type",
     "anyEvidence": "All evidence",
-    "categoryDiscussionsOnly": "The category filter applies to discussions only."
+    "categoryDiscussionsOnly": "The category filter applies to discussions only.",
+    "addTags": "Add tags (optional)"
   },
   "pagination": {
     "more": "Show more",
@@ -504,10 +502,7 @@
     },
     "personalise": "Choose your interests",
     "generalNote": "Showing everything. Choose your clinical interests to make this feed yours.",
-    "fallbackNote": "Nothing matches your interests yet, so this is the general feed. New articles arrive twice a day.",
-    "evidenceFilterLabel": "Filter by evidence type",
-    "evidenceAll": "All evidence",
-    "emptyFiltered": "No {type} articles in your feed yet. New articles arrive twice a day."
+    "fallbackNote": "Nothing matches your interests yet, so this is the general feed. New articles arrive twice a day."
   },
   "interests": {
     "heading": "Your clinical interests",

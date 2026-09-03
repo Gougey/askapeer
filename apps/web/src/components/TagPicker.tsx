@@ -78,6 +78,7 @@ export function TagPicker({
   fieldName = 'tagIds',
   heading,
   hint,
+  addLabel,
 }: {
   tags: Tag[];
   max: number;
@@ -95,8 +96,16 @@ export function TagPicker({
   fieldName?: string;
   /** Overrides the composer's "Tags" label and hint — search asks a different question of
    *  the same control ("narrow by tag", not "tag this post"). */
-  heading?: string;
-  hint?: string;
+  heading?: string | null;
+  hint?: string | null;
+  /**
+   * Overrides the add button's label.
+   *
+   * Search says "Add tags (optional)" on the button itself, because with `heading` and `hint`
+   * set to null the button is the only thing left to say it — the composer keeps its own
+   * wording, where tagging a post is not optional in the same way.
+   */
+  addLabel?: string;
 }) {
   const t = useTranslations('compose');
   const index = useMemo(() => indexTags(tags), [tags]);
@@ -142,19 +151,28 @@ export function TagPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between">
-        <span className="text-sm font-medium">{heading ?? t('tags')}</span>
-        <span
-          className="text-xs tabular-nums"
-          style={{ color: capHit ? 'var(--color-bad)' : 'var(--color-muted)' }}
-          aria-live="polite"
-        >
-          {capHit ? t('tagPicker.capReached', { max }) : `${selected.length} / ${max}`}
-        </span>
-      </div>
-      <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
-        {hint ?? t('tagsHint', { max })}
-      </p>
+      {/*
+        `null` means "no chrome" — the caller is labelling this control some other way. Search
+        does exactly that: the button reads "Add tags (optional)" and repeating a heading and a
+        hint above it said the same thing three times over.
+      */}
+      {heading !== null && (
+        <div className="flex items-baseline justify-between">
+          <span className="text-sm font-medium">{heading ?? t('tags')}</span>
+          <span
+            className="text-xs tabular-nums"
+            style={{ color: capHit ? 'var(--color-bad)' : 'var(--color-muted)' }}
+            aria-live="polite"
+          >
+            {capHit ? t('tagPicker.capReached', { max }) : `${selected.length} / ${max}`}
+          </span>
+        </div>
+      )}
+      {hint !== null && (
+        <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
+          {hint ?? t('tagsHint', { max })}
+        </p>
+      )}
 
       {selected.length > 0 && (
         <ul className="flex flex-wrap gap-1.5">
@@ -195,11 +213,18 @@ export function TagPicker({
       >
         <span aria-hidden>＋</span>
         {selected.length === 0
-          ? t('tagPicker.add')
+          ? (addLabel ?? t('tagPicker.add'))
           : full
             ? t('tagPicker.edit')
             : t('tagPicker.addMore')}
       </button>
+
+      {/* With the heading row hidden, this is the only place the cap can be reported. */}
+      {heading === null && capHit && (
+        <p className="text-xs" style={{ color: 'var(--color-bad)' }} aria-live="polite">
+          {t('tagPicker.capReached', { max })}
+        </p>
+      )}
 
       {open && (
         <TagSheet

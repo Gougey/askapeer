@@ -46,7 +46,6 @@ export function SearchForm({
 
   // Drives both the open state and the label. Counted here rather than passed in, so the
   // two can never disagree about what "active" means.
-  const activeFilters = initialTagIds.length;
 
   const field = {
     background: 'var(--color-surface)',
@@ -105,37 +104,23 @@ export function SearchForm({
         />
       </label>
 
-      <details
-        open={activeFilters > 0}
-        className="border"
-        style={{ borderColor: 'var(--color-border)', borderRadius: 'var(--radius)' }}
-      >
-        <summary
-          className="cursor-pointer select-none px-3 py-2 text-sm font-medium"
-          style={{ color: 'var(--color-accent)' }}
-        >
-          {/* The count is on the label, not only inside: an active filter has to be
-              visible while the panel is shut, or narrow results look like no results.
+      {/*
+        The picker stands on its own, with no fold above it.
 
-              Only tags live here now. Category moved onto the Discussions results and
-              evidence type onto the Papers results, because neither can act on both. */}
-          {activeFilters > 0 ? t('tagsWithCount', { count: activeFilters }) : t('tagsLabel')}
-        </summary>
-
-        <div
-          className="flex flex-col border-t"
-          style={{ gap: 'var(--space-4)', padding: 'var(--space-3)', borderColor: 'var(--color-border)' }}
-        >
-          <TagPicker
-            tags={tags}
-            max={MAX_TAG_FILTERS}
-            fieldName="tag"
-            initialSelectedIds={initialTagIds}
-            heading={t('tagsLabel')}
-            hint={t('tagsHint')}
-          />
-        </div>
-      </details>
+        It used to sit inside a `<details>` labelled "Narrow by tag", which then opened onto a
+        heading that said "Narrow by tag" again, a line of hint text, and only then the button.
+        Three restatements of one idea, and a fold whose only content was the thing it named.
+        The button says what it does and opens the sheet directly.
+      */}
+      <TagPicker
+        tags={tags}
+        max={MAX_TAG_FILTERS}
+        fieldName="tag"
+        initialSelectedIds={initialTagIds}
+        heading={null}
+        hint={null}
+        addLabel={t('addTags')}
+      />
 
       <button
         type="submit"
