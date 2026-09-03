@@ -43,8 +43,15 @@ export type FeedSearchPage = {
 };
 
 
-export async function fetchFeed(token: string, cursor?: string): Promise<FeedPage> {
-  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+export async function fetchFeed(
+  token: string,
+  cursor?: string,
+  evidence?: string,
+): Promise<FeedPage> {
+  const params = new URLSearchParams();
+  if (cursor) params.set('cursor', cursor);
+  if (evidence) params.set('evidence', evidence);
+  const query = params.toString() ? `?${params}` : '';
   const page = await apiGet<FeedPage>(`/research-feed${query}`, token);
   return page ?? { articles: [], nextCursor: null, mode: 'general' };
 }
