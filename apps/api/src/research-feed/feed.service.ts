@@ -18,7 +18,7 @@ export type FeedArticle = {
   openAccess: boolean;
   url: string | null;
   /** What the classifier matched — the "recommended because" evidence, shown as chips. */
-  tags: { id: string; name: string }[];
+  tags: { id: string; name: string; region: string }[];
 };
 
 /** One block of a structured abstract — see `abstract.ts` for why these are parsed. */
@@ -77,6 +77,21 @@ export class FeedService {
    * never quite zero — rather than the prototype's linear fall to nothing at ten years,
    * which declared a 2015 systematic review worthless.
    */
+  /**
+   * Every tag's root region, walked once per query rather than once per article.
+   *
+   * A tag name is only unique among its siblings, so "Tendons" exists under both Shoulder and
+   * Knee and "Nerve" under four regions. The card cannot say which one it means without this,
+   * and that is not cosmetic: selecting *Upper Limb* matches its whole subtree, so a paper can
+   * arrive through `Tendinopathy` — a child of Forearm — with nothing on the card to explain
+   * why. The picker already renders `name · region` for exactly this reason.
+   */
+  private readonly tagRegion = sql`with recursive tag_region as (
+        select id, name as region from community.tags where parent_id is null
+        union all
+        select c.id, r.region from community.tags c join tag_region r on c.parent_id = r.id
+      )`;
+
   async list(
     cursor?: string,
     limit = DEFAULT_PAGE_SIZE,
@@ -117,8 +132,9 @@ export class FeedService {
      * Weight propagates down from the interest that was actually chosen, so a future
      * weighting UI keeps working without the member having to weight every leaf.
      */
-    const expanded = sql`
-      with recursive expanded as (
+    // Appended to `tagRegion` rather than opening its own WITH: one `with recursive` governs
+    // the whole list, and both of these recurse.
+    const expanded = sql`, expanded as (
         select mi.tag_id as id, mi.weight
           from community.member_interests mi
          where mi.handle_id = ${handleId ?? null}
@@ -128,19 +144,21 @@ export class FeedService {
       )`;
 
     const { rows } = await this.db.execute<FeedRow>(sql`
-      ${interestTagIds.length > 0 ? expanded : sql``}
+      ${this.tagRegion}${interestTagIds.length > 0 ? expanded : sql``}
       select a.id, a.title, a.abstract, a.journal, a.published_date, a.evidence_type,
              a.open_access, a.url,
-             (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name)
+             (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name,
+                                                        'region', m.region)
                                        order by m.confidence desc, m.name), '[]')
                 from (
                   -- Distinct on *name*, not id. Taxonomy names are only sibling-scoped
                   -- unique, so "Nerve" and "Bone" exist under several branches at once and
                   -- a plain join renders "Nerve, Nerve, Nerve" on the card. The strongest
                   -- match for a given name is the one worth showing.
-                  select distinct on (t.name) t.id, t.name, at.confidence
+                  select distinct on (t.name) t.id, t.name, r.region, at.confidence
                     from research.article_tags at
                     join community.tags t on t.id = at.tag_id
+                    join tag_region r on r.id = t.id
                    where at.article_id = a.id
                    order by t.name, at.confidence desc
                 ) m
@@ -264,14 +282,17 @@ export class FeedService {
         : sql`ts_rank_cd(a.tsv, websearch_to_tsquery('english', ${query})) desc`;
 
     const { rows } = await this.db.execute<FeedRow & { total: string }>(sql`
+      ${this.tagRegion}
       select a.id, a.title, a.abstract, a.journal, a.published_date, a.evidence_type,
              a.open_access, a.url,
-             (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name)
+             (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name,
+                                                        'region', m.region)
                                        order by m.confidence desc, m.name), '[]')
                 from (
-                  select distinct on (t.name) t.id, t.name, at.confidence
+                  select distinct on (t.name) t.id, t.name, r.region, at.confidence
                     from research.article_tags at
                     join community.tags t on t.id = at.tag_id
+                    join tag_region r on r.id = t.id
                    where at.article_id = a.id
                    order by t.name, at.confidence desc
                 ) m
@@ -304,18 +325,21 @@ export class FeedService {
     const { rows } = await this.db.execute<
       FeedRow & { doi: string | null; abstract_sections: AbstractSection[] }
     >(sql`
+      ${this.tagRegion}
       select a.id, a.title, a.abstract, a.abstract_sections, a.journal, a.published_date,
              a.evidence_type, a.open_access, a.url, a.doi,
-             (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name)
+             (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name,
+                                                        'region', m.region)
                                        order by m.confidence desc, m.name), '[]')
                 from (
                   -- Distinct on *name*, not id. Taxonomy names are only sibling-scoped
                   -- unique, so "Nerve" and "Bone" exist under several branches at once and
                   -- a plain join renders "Nerve, Nerve, Nerve" on the card. The strongest
                   -- match for a given name is the one worth showing.
-                  select distinct on (t.name) t.id, t.name, at.confidence
+                  select distinct on (t.name) t.id, t.name, r.region, at.confidence
                     from research.article_tags at
                     join community.tags t on t.id = at.tag_id
+                    join tag_region r on r.id = t.id
                    where at.article_id = a.id
                    order by t.name, at.confidence desc
                 ) m
@@ -349,7 +373,7 @@ type FeedRow = {
   evidence_type: EvidenceType;
   open_access: boolean;
   url: string | null;
-  tags: { id: string; name: string }[];
+  tags: { id: string; name: string; region: string }[];
 };
 
 function toArticle(row: FeedRow): FeedArticle {
