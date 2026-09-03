@@ -4,7 +4,8 @@ import { ArticleCard } from '@/components/ArticleCard';
 import { InfiniteList } from '@/components/InfiniteList';
 import { fetchFeed } from '@/lib/research-feed';
 import { requireAccessToken } from '@/lib/session';
-import { EVIDENCE_TYPES, EvidenceFilter, type Evidence } from './EvidenceFilter';
+import { isEvidence, type Evidence } from '@/lib/evidence';
+import { EvidenceFilter } from './EvidenceFilter';
 import { loadMoreArticles } from './load-more';
 
 /**
@@ -26,9 +27,7 @@ export default async function FeedPage({
   // Anything unrecognised is treated as no filter rather than passed on: the control only
   // ever emits these five, so a stray value came from a hand-edited URL and the honest
   // response is the unfiltered feed, not an error page.
-  const evidence: Evidence | '' = (EVIDENCE_TYPES as readonly string[]).includes(rawEvidence ?? '')
-    ? (rawEvidence as Evidence)
-    : '';
+  const evidence: Evidence | '' = isEvidence(rawEvidence) ? rawEvidence : '';
   const token = await requireAccessToken();
   const [t, { articles, nextCursor, mode }] = await Promise.all([
     getTranslations('feed'),
