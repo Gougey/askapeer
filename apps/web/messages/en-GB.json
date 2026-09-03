@@ -468,8 +468,6 @@
     "didYouMean": "Nothing matched “{query}” exactly. Showing {count, plural, one {1 close match} other {# close matches}}.",
     "noResults": "No results. Try fewer words, a broader tag, or check the spelling.",
     "more": "Show more results",
-    "advanced": "Advanced",
-    "advancedWithCount": "Advanced ({count, plural, one {1 filter} other {# filters}})",
     "tabDiscussions": "Discussions ({count})",
     "tabPapers": "Papers ({count})",
     "tabsLabel": "Where to search",
@@ -477,7 +475,10 @@
     "noResultsPapers": "No papers matched. Try fewer words or check the spelling.",
     "papersCount": "{count, plural, one {1 paper} other {# papers}}",
     "morePapers": "Show more papers",
-    "filtersDiscussionsOnly": "Category and tag filters apply to discussions only."
+    "tagsWithCount": "Tags ({count})",
+    "evidenceLabel": "Filter by evidence type",
+    "anyEvidence": "All evidence",
+    "categoryDiscussionsOnly": "The category filter applies to discussions only."
   },
   "pagination": {
     "more": "Show more",

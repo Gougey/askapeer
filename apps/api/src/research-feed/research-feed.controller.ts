@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import type { Queue } from 'bullmq';
+import { Transform } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import type { Request } from 'express';
 import type { AuthedMember } from '../auth/jwt-auth.guard';
@@ -62,6 +63,28 @@ export class FeedSearchDto {
   @MaxLength(200)
   q!: string;
 
+  /**
+   * The same tag filter the forum search takes, and for the same reason: a tag is clinical
+   * vocabulary, not forum vocabulary. Articles are classified against the very same
+   * taxonomy, so "everything under Achilles tendinopathy" is a question both corpora can
+   * answer — it was only ever the *category* that could not cross.
+   *
+   * Mirrors `SearchDto`: repeated rather than comma-joined, normalised to an array, and any
+   * UUID version because the taxonomy is seeded with deterministic uuid5 ids.
+   */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined ? undefined : Array.isArray(value) ? value : [value],
+  )
+  @IsUUID('all', { each: true })
+  @ArrayMaxSize(3)
+  tag?: string[];
+
+  /** Post-search refinement, applied on the results themselves. */
+  @IsOptional()
+  @IsIn(EVIDENCE_TYPES)
+  evidence?: (typeof EVIDENCE_TYPES)[number];
+
   @IsOptional()
   @IsString()
   @MaxLength(20)
@@ -118,7 +141,7 @@ export class ResearchFeedController {
    */
   @Get('search')
   search(@Query() query: FeedSearchDto) {
-    return this.feed.search(query.q, query.cursor);
+    return this.feed.search(query.q, query.cursor, undefined, query.tag ?? [], query.evidence);
   }
 
   @Get(':articleId')

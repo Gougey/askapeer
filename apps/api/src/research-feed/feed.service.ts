@@ -224,10 +224,50 @@ export class FeedService {
    * mostly noise, and the honest answer to a misspelt search of the literature is that we
    * found nothing. Revisit with real queries rather than in the abstract.
    */
-  async search(term: string, cursor?: string, limit = DEFAULT_PAGE_SIZE): Promise<FeedSearchPage> {
+  /**
+   * Search the corpus, optionally narrowed by clinical tag and evidence type.
+   *
+   * **Tags reach both corpora; the category never could.** Articles are classified against
+   * the same taxonomy the forum tags posts with, so a tag subtree is a question this corpus
+   * can answer — which is why the tag filter lives with the query, ahead of the results,
+   * while category and evidence sit *on* the results of the tab each belongs to.
+   *
+   * A tag on its own is a legitimate search here, exactly as it is in the forum: the whole
+   * point of "everything under Achilles tendinopathy" is that there are no words that would
+   * express it better.
+   */
+  async search(
+    term: string,
+    cursor?: string,
+    limit = DEFAULT_PAGE_SIZE,
+    tagIds: string[] = [],
+    evidence?: EvidenceType,
+  ): Promise<FeedSearchPage> {
     const query = term.trim();
-    if (query === '') return { articles: [], nextCursor: null, total: 0 };
+    if (query === '' && tagIds.length === 0) return { articles: [], nextCursor: null, total: 0 };
     const offset = Number.parseInt(cursor ?? '0', 10) || 0;
+
+    // Each tag matches the tag *and its whole subtree*, the same expansion the forum search
+    // and the personalised feed both make — picking "Lower Limb" has to find an article
+    // tagged "Achilles tendinopathy", or the three surfaces disagree about what a tag means.
+    const tagPredicates = tagIds.map(
+      (tagId) => sql`and exists (
+        with recursive subtree as (
+          select id from community.tags where id = ${tagId}
+          union all
+          select c.id from community.tags c join subtree s on c.parent_id = s.id
+        )
+        select 1 from research.article_tags at
+        where at.article_id = a.id and at.tag_id in (select id from subtree)
+      )`,
+    );
+    const tagFilter = tagPredicates.length > 0 ? sql.join(tagPredicates, sql` `) : sql``;
+    // With no words to rank by, a tag-only search falls back to the feed's own ordering.
+    const textFilter = query === '' ? sql`` : sql`and a.tsv @@ websearch_to_tsquery('english', ${query})`;
+    const ranking =
+      query === ''
+        ? sql`a.intrinsic_score desc`
+        : sql`ts_rank_cd(a.tsv, websearch_to_tsquery('english', ${query})) desc`;
 
     const { rows } = await this.db.execute<FeedRow & { total: string }>(sql`
       select a.id, a.title, a.abstract, a.journal, a.published_date, a.evidence_type,
@@ -247,8 +287,10 @@ export class FeedService {
              count(*) over () as total
         from research.articles a
        where a.retracted_at is null
-         and a.tsv @@ websearch_to_tsquery('english', ${query})
-       order by ts_rank_cd(a.tsv, websearch_to_tsquery('english', ${query})) desc,
+         ${textFilter}
+         ${evidence ? sql`and a.evidence_type = ${evidence}` : sql``}
+         ${tagFilter}
+       order by ${ranking},
                 a.published_date desc nulls last,
                 a.intrinsic_score desc,
                 a.id desc

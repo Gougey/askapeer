@@ -3,9 +3,12 @@ import { getTranslations } from 'next-intl/server';
 import { ArticleCard } from '@/components/ArticleCard';
 import { PostCard } from '@/components/PostCard';
 import { SegmentedControl } from '@/components/SegmentedControl';
+import { EVIDENCE_TYPES, isEvidence } from '@/lib/evidence';
 import { fetchSearch, fetchVocabulary } from '@/lib/forum';
 import { fetchFeedSearch } from '@/lib/research-feed';
 import { requireAccessToken } from '@/lib/session';
+import { categoryColour } from '@/lib/category-colour';
+import { ResultFilter } from './ResultFilter';
 import { SearchForm } from './SearchForm';
 
 type Scope = 'discussions' | 'papers';
@@ -33,6 +36,7 @@ export default async function SearchPage({
   searchParams: Promise<{
     q?: string;
     category?: string;
+    evidence?: string;
     tag?: string | string[];
     cursor?: string;
     in?: string;
@@ -45,22 +49,30 @@ export default async function SearchPage({
   // Express gives one repeated param as a string and several as an array; Next does the
   // same, so both shapes have to be handled or a single tag filter silently vanishes.
   const tagIds = params.tag === undefined ? [] : Array.isArray(params.tag) ? params.tag : [params.tag];
+  // Post-search refinements. Each belongs to one tab, is applied to that tab's results, and
+  // is simply not sent to the corpus that cannot answer it.
+  const evidence = isEvidence(params.evidence) ? params.evidence : '';
 
-  // Any one of the three controls counts as a search. Gating on `q` alone left the two
-  // filters unable to act on their own — a category or a tag subtree is a perfectly good
-  // thing to ask for, and there are no words that would express it better.
+  // Any one of these counts as a search. Gating on `q` alone left the filters unable to act
+  // on their own — a category or a tag subtree is a perfectly good thing to ask for, and
+  // there are no words that would express it better.
   const searched = q !== '' || category !== '' || tagIds.length > 0;
 
-  const [t, { categories, tags }, posts, papers] = await Promise.all([
+  const [t, tFeed, { categories, tags }, posts, papers] = await Promise.all([
     getTranslations('search'),
+    getTranslations('feed'),
     fetchVocabulary(token),
     searched
       ? fetchSearch(token, { q, category, tags: tagIds, cursor: params.cursor })
       : Promise.resolve(null),
-    // Papers have no category or tag filters — those are forum vocabulary — so a
-    // filters-only search has nothing to ask the corpus and is not asked.
-    searched && q !== ''
-      ? fetchFeedSearch(token, { q, cursor: params.cursor })
+    /*
+     * Papers take the query and the tags — a tag is *clinical* vocabulary and articles carry
+     * the same taxonomy — but never the category, which is forum vocabulary with no meaning
+     * here. So a tag-only search now reaches both corpora, where before it silently reached
+     * one; only a category-only search is still a discussions-only question.
+     */
+    searched && (q !== '' || tagIds.length > 0)
+      ? fetchFeedSearch(token, { q, tags: tagIds, evidence: evidence || undefined, cursor: params.cursor })
       : Promise.resolve(null),
   ]);
 
@@ -73,10 +85,18 @@ export default async function SearchPage({
   const scope: Scope =
     requested ?? ((posts?.total ?? 0) === 0 && (papers?.total ?? 0) > 0 ? 'papers' : 'discussions');
 
-  const href = (next: { in?: Scope; cursor?: string }) => {
+  /*
+   * Every link out of this screen rebuilds the whole query, so a refinement survives paging
+   * and tab switching. `cursor` is deliberately *not* carried by default: changing a filter
+   * or a tab is a new first page, and only the pager asks for an offset.
+   */
+  const href = (next: { in?: Scope; cursor?: string; category?: string; evidence?: string }) => {
     const url = new URLSearchParams();
     if (q) url.set('q', q);
-    if (category) url.set('category', category);
+    const nextCategory = next.category ?? category;
+    const nextEvidence = next.evidence ?? evidence;
+    if (nextCategory) url.set('category', nextCategory);
+    if (nextEvidence) url.set('evidence', nextEvidence);
     for (const tag of tagIds) url.append('tag', tag);
     if (next.in) url.set('in', next.in);
     if (next.cursor) url.set('cursor', next.cursor);
@@ -87,13 +107,7 @@ export default async function SearchPage({
     <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
       <h1 className="text-xl font-semibold">{t('heading')}</h1>
 
-      <SearchForm
-        categories={categories}
-        tags={tags}
-        initialQuery={q}
-        initialCategory={category}
-        initialTagIds={tagIds}
-      />
+      <SearchForm tags={tags} initialQuery={q} initialTagIds={tagIds} />
 
       {!searched ? (
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
@@ -121,6 +135,22 @@ export default async function SearchPage({
 
           {scope === 'discussions' ? (
             <>
+              {/* Refines these results, and appears only here — a category cannot narrow a
+                  paper, so it is not offered on the tab where it would do nothing. */}
+              <ResultFilter
+                name="category"
+                label={t('categoryLabel')}
+                value={category}
+                allLabel={t('anyCategory')}
+                options={categories.map((c) => ({
+                  value: c.id,
+                  label: c.name,
+                  colour: categoryColour(c.colour),
+                  href: href({ in: 'discussions', category: c.id }),
+                }))}
+                allHref={href({ in: 'discussions', category: '' })}
+              />
+
               <p className="text-sm" style={{ color: 'var(--color-muted)' }} aria-live="polite">
                 {(posts?.total ?? 0) === 0
                   ? t('noResultsDiscussions')
@@ -152,17 +182,32 @@ export default async function SearchPage({
             </>
           ) : (
             <>
+              {/* The counterpart to the category control on the other tab: evidence type is
+                  a property of a paper and means nothing to a discussion. */}
+              <ResultFilter
+                name="evidence"
+                label={t('evidenceLabel')}
+                value={evidence}
+                allLabel={t('anyEvidence')}
+                options={EVIDENCE_TYPES.map((type) => ({
+                  value: type,
+                  label: tFeed(`evidence.${type}`),
+                  href: href({ in: 'papers', evidence: type }),
+                }))}
+                allHref={href({ in: 'papers', evidence: '' })}
+              />
+
               <p className="text-sm" style={{ color: 'var(--color-muted)' }} aria-live="polite">
                 {(papers?.total ?? 0) === 0
                   ? t('noResultsPapers')
                   : t('papersCount', { count: papers?.total ?? 0 })}
               </p>
 
-              {/* The filters are forum vocabulary and do not reach the corpus. Said plainly,
-                  because a filter that looks applied and is not is worse than one absent. */}
-              {(category !== '' || tagIds.length > 0) && (
+              {/* A category is the one thing that still cannot cross, so it is the one thing
+                  still worth saying — and only when it is actually set. */}
+              {category !== '' && (
                 <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-                  {t('filtersDiscussionsOnly')}
+                  {t('categoryDiscussionsOnly')}
                 </p>
               )}
 
