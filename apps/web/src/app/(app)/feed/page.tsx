@@ -4,6 +4,7 @@ import { ArticleCard } from '@/components/ArticleCard';
 import { InfiniteList } from '@/components/InfiniteList';
 import { fetchFeed } from '@/lib/research-feed';
 import { requireAccessToken } from '@/lib/session';
+import { EVIDENCE_TYPES, EvidenceFilter, type Evidence } from './EvidenceFilter';
 import { loadMoreArticles } from './load-more';
 
 /**
@@ -19,22 +20,32 @@ import { loadMoreArticles } from './load-more';
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cursor?: string }>;
+  searchParams: Promise<{ cursor?: string; evidence?: string }>;
 }) {
-  const { cursor } = await searchParams;
+  const { cursor, evidence: rawEvidence } = await searchParams;
+  // Anything unrecognised is treated as no filter rather than passed on: the control only
+  // ever emits these five, so a stray value came from a hand-edited URL and the honest
+  // response is the unfiltered feed, not an error page.
+  const evidence: Evidence | '' = (EVIDENCE_TYPES as readonly string[]).includes(rawEvidence ?? '')
+    ? (rawEvidence as Evidence)
+    : '';
   const token = await requireAccessToken();
   const [t, { articles, nextCursor, mode }] = await Promise.all([
     getTranslations('feed'),
-    fetchFeed(token, cursor),
+    fetchFeed(token, cursor, evidence || undefined),
   ]);
 
   return (
     <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
-      <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+      {/*
+        Heading and filter share a row. The standing description that used to sit under the
+        heading said what the screen already demonstrates — the first card is recent, and the
+        evidence type is on every card — so it cost a line of vertical space on the smallest
+        screens to repeat what was visible. The filter earns that space instead.
+      */}
+      <div className="flex items-center justify-between" style={{ gap: 'var(--space-3)' }}>
         <h1 className="text-xl font-semibold">{t('heading')}</h1>
-        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-          {t('subheading')}
-        </p>
+        <EvidenceFilter value={evidence} />
       </div>
 
       {/*
@@ -69,14 +80,22 @@ export default async function FeedPage({
 
       {articles.length === 0 ? (
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-          {t('empty')}
+          {/* A filtered empty feed is not the same event as an empty corpus, and saying so
+              is what stops it reading as a fault. */}
+          {evidence ? t('emptyFiltered', { type: t(`evidence.${evidence}`) }) : t('empty')}
         </p>
       ) : (
         <InfiniteList
           initialCursor={nextCursor}
-          loadMore={loadMoreArticles}
-          storageKey="feed"
-          fallbackHref={nextCursor ? `/feed?cursor=${nextCursor}` : null}
+          // Bound rather than read from the URL inside the action: the filter has to survive
+          // paging, or page two silently returns the unfiltered feed.
+          loadMore={loadMoreArticles.bind(null, evidence || undefined)}
+          storageKey={evidence ? `feed:${evidence}` : 'feed'}
+          fallbackHref={
+            nextCursor
+              ? `/feed?cursor=${nextCursor}${evidence ? `&evidence=${evidence}` : ''}`
+              : null
+          }
         >
           <ul className="flex flex-col" style={{ gap: 'var(--space-3)' }}>
             {articles.map((article) => (

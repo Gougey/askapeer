@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Inject, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import type { Queue } from 'bullmq';
-import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import type { Request } from 'express';
 import type { AuthedMember } from '../auth/jwt-auth.guard';
 import { InterestsService } from './interests.service';
@@ -30,11 +30,31 @@ export class InterestsDto {
   tagIds!: string[];
 }
 
+/** The evidence ladder, as stored. `other` is a real value, not an absence. */
+export const EVIDENCE_TYPES = [
+  'systematic_review',
+  'randomised_trial',
+  'cohort_study',
+  'case_report',
+  'other',
+] as const;
+
 export class FeedQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(20)
   cursor?: string;
+
+  /**
+   * Narrow the feed to one rung of the evidence ladder.
+   *
+   * Validated against the enum rather than passed through, because it reaches a `where` on
+   * an enum column — an unknown value would be a type error at the database rather than an
+   * empty page.
+   */
+  @IsOptional()
+  @IsIn(EVIDENCE_TYPES)
+  evidence?: (typeof EVIDENCE_TYPES)[number];
 }
 
 export class FeedSearchDto {
@@ -67,7 +87,7 @@ export class ResearchFeedController {
   @Get()
   async list(@Query() query: FeedQueryDto, @Req() req: Request & { member: AuthedMember }) {
     const tagIds = await this.interests.tagIdsFor(req.member.handleId!);
-    return this.feed.list(query.cursor, undefined, tagIds, req.member.handleId!);
+    return this.feed.list(query.cursor, undefined, tagIds, req.member.handleId!, query.evidence);
   }
 
   @Get('interests')

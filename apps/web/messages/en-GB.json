@@ -488,7 +488,6 @@
   },
   "feed": {
     "heading": "Feed",
-    "subheading": "Recent sports medicine and physiotherapy research, newest and best-evidenced first.",
     "empty": "Nothing here yet. The feed refreshes twice a day.",
     "abstract": "Abstract",
     "noAbstract": "No abstract was published with this article.",
@@ -504,7 +503,10 @@
     },
     "personalise": "Choose your interests",
     "generalNote": "Showing everything. Choose your clinical interests to make this feed yours.",
-    "fallbackNote": "Nothing matches your interests yet, so this is the general feed. New articles arrive twice a day."
+    "fallbackNote": "Nothing matches your interests yet, so this is the general feed. New articles arrive twice a day.",
+    "evidenceFilterLabel": "Filter by evidence type",
+    "evidenceAll": "All evidence",
+    "emptyFiltered": "No {type} articles in your feed yet. New articles arrive twice a day."
   },
   "interests": {
     "heading": "Your clinical interests",
