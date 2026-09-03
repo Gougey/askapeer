@@ -79,6 +79,18 @@ export async function ArticleCard({ article }: { article: FeedArticle }) {
                 }}
               >
                 {tag.name}
+                {/*
+                  `name · region`, the same treatment the picker gives a chosen tag, and for
+                  the same reason: a name is only unique among its siblings. "Tendons" exists
+                  under both Shoulder and Knee, so without the region a card cannot say why it
+                  matched — selecting *Upper Limb* pulls in its whole subtree, and an Achilles
+                  paper can arrive through a tag called `Tendinopathy` that happens to live
+                  under Forearm. Suppressed when the tag *is* the region, which would just
+                  repeat itself.
+                */}
+                {tag.region && tag.name !== tag.region && (
+                  <span style={{ color: 'var(--color-faint)' }}> · {tag.region}</span>
+                )}
               </li>
             ))}
           </ul>

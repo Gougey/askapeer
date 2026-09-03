@@ -18,7 +18,7 @@ export type FeedArticle = {
   openAccess: boolean;
   url: string | null;
   /** What the classifier matched. Empty is normal — not every article is placeable. */
-  tags: { id: string; name: string }[];
+  tags: { id: string; name: string; region: string }[];
 };
 
 /** A structured abstract's blocks. Parsed server-side — never markup. */
