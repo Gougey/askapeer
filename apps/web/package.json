@@ -9,7 +9,8 @@
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
     "lint:tokens": "node scripts/check-design-tokens.mjs",
-    "lint:inputs": "node scripts/check-input-zoom.mjs"
+    "lint:inputs": "node scripts/check-input-zoom.mjs",
+    "lint:boundary": "node scripts/check-client-boundary.mjs"
   },
   "dependencies": {
     "@askapeer/design-tokens": "*",

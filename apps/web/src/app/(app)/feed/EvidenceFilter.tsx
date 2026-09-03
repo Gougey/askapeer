@@ -3,16 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useTransition } from 'react';
-
-export const EVIDENCE_TYPES = [
-  'systematic_review',
-  'randomised_trial',
-  'cohort_study',
-  'case_report',
-  'other',
-] as const;
-
-export type Evidence = (typeof EVIDENCE_TYPES)[number];
+import { EVIDENCE_TYPES, type Evidence } from '@/lib/evidence';
 
 /**
  * Narrow the feed to one rung of the evidence ladder — Andrew's request, on the screen where
