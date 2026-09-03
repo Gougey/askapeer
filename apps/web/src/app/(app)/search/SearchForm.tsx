@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { TagPicker } from '@/components/TagPicker';
-import { categoryColour } from '@/lib/category-colour';
-import type { Category, Tag } from '@/lib/forum';
+import type { Tag } from '@/lib/forum';
 
 /** The API caps `?tag=` at three; more than that and a result set is empty by construction. */
 const MAX_TAG_FILTERS = 3;
@@ -35,26 +33,20 @@ const MAX_TAG_FILTERS = 3;
  * have nothing on screen explaining why.
  */
 export function SearchForm({
-  categories,
   tags,
   initialQuery,
-  initialCategory,
   initialTagIds,
 }: {
-  categories: Category[];
   tags: Tag[];
   initialQuery: string;
-  initialCategory: string;
   initialTagIds: string[];
 }) {
   const t = useTranslations('search');
-  // Tracked so the closed control can wear the chosen category's colour; the form is
   // still a plain GET form and still submits this select by name.
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
 
   // Drives both the open state and the label. Counted here rather than passed in, so the
   // two can never disagree about what "active" means.
-  const activeFilters = (initialCategory ? 1 : 0) + initialTagIds.length;
+  const activeFilters = initialTagIds.length;
 
   const field = {
     background: 'var(--color-surface)',
@@ -123,40 +115,17 @@ export function SearchForm({
           style={{ color: 'var(--color-accent)' }}
         >
           {/* The count is on the label, not only inside: an active filter has to be
-              visible while the panel is shut, or narrow results look like no results. */}
-          {activeFilters > 0 ? t('advancedWithCount', { count: activeFilters }) : t('advanced')}
+              visible while the panel is shut, or narrow results look like no results.
+
+              Only tags live here now. Category moved onto the Discussions results and
+              evidence type onto the Papers results, because neither can act on both. */}
+          {activeFilters > 0 ? t('tagsWithCount', { count: activeFilters }) : t('tagsLabel')}
         </summary>
 
         <div
           className="flex flex-col border-t"
           style={{ gap: 'var(--space-4)', padding: 'var(--space-3)', borderColor: 'var(--color-border)' }}
         >
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">{t('categoryLabel')}</span>
-            <select
-              name="category"
-              value={selectedCategory}
-              onChange={(event) => setSelectedCategory(event.target.value)}
-              className="border px-3 py-2"
-              /*
-               * The closed control takes the chosen category's colour. The `<option>`
-               * colours are progressive enhancement — desktop browsers honour them, iOS
-               * and Android draw the open list themselves and ignore them.
-               */
-              style={{ ...field, color: categoryColour(categories.find((c) => c.id === selectedCategory)?.colour) }}
-            >
-              {/* Explicit, or it inherits the colour set on the select above. */}
-              <option value="" style={{ color: 'var(--color-fg)' }}>
-                {t('anyCategory')}
-              </option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id} style={{ color: categoryColour(category.colour) }}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
           <TagPicker
             tags={tags}
             max={MAX_TAG_FILTERS}

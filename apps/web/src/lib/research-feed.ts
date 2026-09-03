@@ -59,9 +59,12 @@ export async function fetchFeed(
 /** S16 — full-text search over the corpus, independent of the member's interests. */
 export async function fetchFeedSearch(
   token: string,
-  params: { q: string; cursor?: string },
+  params: { q: string; tags?: string[]; evidence?: string; cursor?: string },
 ): Promise<FeedSearchPage> {
   const search = new URLSearchParams({ q: params.q });
+  // Repeated rather than comma-joined, matching the forum search and the API's own contract.
+  for (const tag of params.tags ?? []) search.append('tag', tag);
+  if (params.evidence) search.set('evidence', params.evidence);
   if (params.cursor) search.set('cursor', params.cursor);
   const res = await apiGet<FeedSearchPage>(`/research-feed/search?${search.toString()}`, token);
   return res ?? { articles: [], nextCursor: null, total: 0 };
