@@ -225,6 +225,13 @@
       "when": 1787942100438,
       "tag": "0031_seed_part2_synonyms",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787945700438,
+      "tag": "0032_region_scope_generic_tags",
+      "breakpoints": true
     }
   ]
 }
