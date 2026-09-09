@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { TagPicker } from '@/components/TagPicker';
 import type { Tag } from '@/lib/forum';
@@ -49,6 +49,33 @@ export function InterestPicker({
     status: 'idle',
   });
 
+  /*
+   * **Chosen is not saved, and the screen has to say so.**
+   *
+   * The sheet's button says "Done", which is the more final-sounding of the two words on this
+   * screen — and after it the chips already show the new selection, so the page looks finished.
+   * A member reasonably stops there, and their interests never leave the browser. That is
+   * exactly what happened in testing: seven old interests still stored, none of the two
+   * chosen, and a feed correctly ranked on interests the member thought they had replaced.
+   *
+   * The picker's own note — "there is nothing to undo: every tap has already committed" — is
+   * true in the composer, where the selection is committed along with the post. Here it is
+   * committed only to the form.
+   */
+  const [chosen, setChosen] = useState<string[]>(initialSelected);
+  // The baseline moves to whatever was last written, so a saved set stops reading as dirty.
+  const [saved, setSaved] = useState<string[]>(initialSelected);
+  const onSelectionChange = useCallback((ids: string[]) => setChosen(ids), []);
+  const same = (a: string[], b: string[]) =>
+    a.length === b.length && [...a].sort().join() === [...b].sort().join();
+  const dirty = useMemo(() => !same(chosen, saved), [chosen, saved]);
+
+  useEffect(() => {
+    if (state.status === 'saved') setSaved(chosen);
+    // Only when the action reports a save; `chosen` moving must not clear the flag itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.status]);
+
   return (
     <form action={action} className="flex flex-col" style={{ gap: 'var(--space-4)' }}>
       {/* `fieldName="tag"` matches what the save action reads, and what search already posts. */}
@@ -59,14 +86,27 @@ export function InterestPicker({
         initialSelectedIds={initialSelected}
         heading={t('pickerHeading')}
         hint={t('pickerHint')}
+        onSelectionChange={onSelectionChange}
       />
+
+      {dirty && (
+        <p
+          className="text-sm font-medium"
+          role="status"
+          /* Accent, not `--color-warn`: that one is functional and admin-only. This is not a
+             fault, it is the next step, so it wears the colour the save button wears. */
+          style={{ color: 'var(--color-accent)' }}
+        >
+          {t('unsaved')}
+        </p>
+      )}
 
       {state.status === 'error' && (
         <p className="text-sm" role="alert" style={{ color: 'var(--color-bad)' }}>
           {state.message}
         </p>
       )}
-      {state.status === 'saved' && (
+      {state.status === 'saved' && !dirty && (
         <p className="text-sm" role="status" style={{ color: 'var(--color-ok)' }}>
           {t('saved')}
         </p>
@@ -78,7 +118,7 @@ export function InterestPicker({
         className="w-full px-3 py-3 font-medium text-white disabled:opacity-60"
         style={{ background: 'var(--color-accent)', borderRadius: 'var(--radius)' }}
       >
-        {pending ? t('saving') : t('save')}
+        {pending ? t('saving') : dirty ? t('saveChanges') : t('save')}
       </button>
     </form>
   );
