@@ -79,6 +79,7 @@ export function TagPicker({
   heading,
   hint,
   addLabel,
+  onSelectionChange,
 }: {
   tags: Tag[];
   max: number;
@@ -106,10 +107,24 @@ export function TagPicker({
    * wording, where tagging a post is not optional in the same way.
    */
   addLabel?: string;
+  /**
+   * Told whenever the selection changes, so a caller can tell *chosen* from *saved*.
+   *
+   * The composer needs nothing here — its selection is part of a draft and is committed with
+   * the post. A settings form does: there the sheet's "Done" commits to the form and a
+   * separate button commits to the server, and without this the two are indistinguishable
+   * on screen. Optional, so nothing else has to care.
+   */
+  onSelectionChange?: (ids: string[]) => void;
 }) {
   const t = useTranslations('compose');
   const index = useMemo(() => indexTags(tags), [tags]);
   const [selected, setSelected] = useState<string[]>(initialSelectedIds ?? []);
+  // Reported in an effect rather than inside the setters, so a caller's state update never
+  // lands during this component's render.
+  useEffect(() => {
+    onSelectionChange?.(selected);
+  }, [selected, onSelectionChange]);
   const [open, setOpen] = useState(false);
   const [capHit, setCapHit] = useState(false);
   const addButtonRef = useRef<HTMLButtonElement>(null);

@@ -511,6 +511,8 @@
     "saving": "Saving…",
     "saved": "Saved. Your feed has been updated.",
     "pickerHeading": "Your areas",
-    "pickerHint": "Search or browse the full clinical list. Choosing a region includes everything beneath it."
+    "pickerHint": "Search or browse the full clinical list. Choosing a region includes everything beneath it.",
+    "unsaved": "Not saved yet — choosing closes the picker, this button saves.",
+    "saveChanges": "Save changes"
   }
 }
