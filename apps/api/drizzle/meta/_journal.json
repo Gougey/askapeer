@@ -232,6 +232,13 @@
       "when": 1787945700438,
       "tag": "0032_region_scope_generic_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1787949300438,
+      "tag": "0033_hip_and_hamstring_to_lower_limb",
+      "breakpoints": true
     }
   ]
 }
