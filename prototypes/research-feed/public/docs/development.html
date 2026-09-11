@@ -209,8 +209,8 @@ The design and its reasoning are in
 <code>docs/2026-08-03-research-feed-ingestion-design.md</code>; this is
 what exists and what to know before touching it.</p>
 <p><strong>Built</strong>: the <code>research</code> schema, both source
-adapters (Europe PMC, OpenAlex), dedupe, classification against all 588
-tags, intrinsic scoring, a twice-daily BullMQ repeatable job, admin
+adapters (Europe PMC, OpenAlex), dedupe, classification against every
+live tag, intrinsic scoring, a twice-daily BullMQ repeatable job, admin
 run/reclassify/status endpoints, the Feed tab with infinite scroll, and
 article detail. <strong>Not built</strong>:
 <code>member_interests</code> and the interests picker — so the feed is
@@ -617,7 +617,7 @@ who has tagged a post already knows how to narrow a search.</p>
 <p>Rebuilds the demo corpus: <strong>wipes every post, answer, kudos,
 report and moderation action</strong>, then inserts a fresh one. It does
 <em>not</em> touch <code>identity.members</code>,
-<code>community.handles</code>, the categories or the 588-node taxonomy
+<code>community.handles</code>, the categories or the clinical taxonomy
 — accounts are how people sign in, including the admin allowlist, and
 the vocabulary is seeded by migration.</p>
 <p>Point it anywhere with <code>DATABASE_URL</code> /
@@ -912,10 +912,10 @@ through <code>GET /v1/categories</code> and <code>GET /v1/tags</code>,
 and post creation validates against them — tags are
 <strong>select-only</strong> (FD-4), so an unknown or retired tag id is
 a 400 rather than an invitation to create one.</p>
-<p><code>GET /v1/tags</code> returns Andrew’s v2.0 taxonomy —
-<strong>588 nodes, four levels deep</strong> (region → axis → sub-group
-→ leaf) — flat, one row per node, walked with a recursive CTE in
-<code>vocabulary.service.ts</code>. Each row carries
+<p><code>GET /v1/tags</code> returns Andrew’s clinical taxonomy —
+<strong>1,193 live nodes, five levels deep</strong> (region → axis →
+sub-group → leaf) — flat, one row per node, walked with a recursive CTE
+in <code>vocabulary.service.ts</code>. Each row carries
 <code>parentId</code> (the composer rebuilds the tree),
 <code>region</code> (the root it descends from) and
 <code>hasChildren</code>. Two consequences worth knowing:</p>
@@ -940,7 +940,7 @@ selects it and drills into it, and selection <strong>keeps the most
 specific</strong> tag (adding a descendant drops an ancestor already
 chosen). Broadening is the read side’s job: a filter on an ancestor
 expands to its subtree at query time, so storing both ends of the same
-branch would be noise. All 588 nodes ship to the client in one payload
+branch would be noise. All of them ship to the client in one payload
 (~110 KB) and search runs locally, which is what makes typing feel
 instant; EPIC-C §5’s <code>?prefix=</code> typeahead only earns its keep
 if the taxonomy outgrows that.</p>
@@ -1589,7 +1589,7 @@ planning around the other ninety-nine.</p>
 above.)</p>
 <h2 id="tag-vocabulary-admin-s13-phase-1-screen-g8">Tag vocabulary admin
 (S13 phase 1, screen G8)</h2>
-<p><code>/admin/config/tags</code> — browse and search the 588-node
+<p><code>/admin/config/tags</code> — browse and search the clinical
 vocabulary, and edit synonyms per tag.
 <code>GET/PUT /v1/admin/taxonomy/tags…</code>,
 <code>POST …/preview</code>, <code>GET …/audit</code>.</p>
