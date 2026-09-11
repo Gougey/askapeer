@@ -312,7 +312,10 @@ Taxonomy names are only sibling-scoped unique, so <code>Nerve</code> and
 the stored corpus without refetching.</strong> This is the tuning loop:
 classifier rules, the confidence floor and Andrew’s synonyms all change
 what an article should be tagged with, and none of them should mean
-pulling 1,300 papers from two public APIs again.</li>
+pulling 4,500 papers from two public APIs again. It is queued rather
+than awaited, and it is a long job — see <a
+href="#running-a-reclassify">Running a reclassify</a> before starting
+one.</li>
 <li><strong>Corpus queries live in <code>config.settings</code></strong>
 (<code>research_feed.corpus_queries</code>, comma separated), because
 they decide what the feed is <em>about</em> and will be tuned by looking
@@ -340,6 +343,76 @@ because the only ACL tag is <code>ACL rupture</code>; and
 <code>"chronic low back pain"</code> matches nothing because the tag is
 <code>Lumbar Spine</code>. Three measured examples for the synonym ask —
 and <code>reclassify</code> turns his list into results in seconds.</p>
+<h3 id="running-a-reclassify">Running a reclassify</h3>
+<p>A reclassify re-tags the stored corpus in place. It is the tuning
+loop — a synonym, a classifier rule or a taxonomy migration changes what
+an article <em>should</em> be tagged with, and this is how you find out
+whether the change helped without refetching anything.</p>
+<p><strong>It is a long job now.</strong> 4,519 articles against 1,193
+tags takes <strong>over an hour</strong>. The two-minute figure in this
+document’s history was measured on a 1,290-article corpus and no longer
+holds; assume an hour and plan around being interrupted.</p>
+<p><strong>Start it</strong> from <code>/admin/research-feed</code>, or
+without a token:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> https://askapeer-api.fly.dev/health <span class="op">&gt;</span> /dev/null   <span class="co"># wake the machine first</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&#39;node -e &quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="st">  const {Queue}=require(\&quot;bullmq\&quot;); const R=require(\&quot;ioredis\&quot;);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="st">  const q=new Queue(\&quot;research-ingestion\&quot;,{connection:new R(process.env.REDIS_URL,{maxRetriesPerRequest:null})});</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="st">  q.add(\&quot;reclassify\&quot;,{}).then(j=&gt;{console.log(j.id);process.exit(0)})&quot;&#39;</span></span></code></pre></div>
+<p><strong>Watch it</strong> on <code>/admin/research-feed</code>, which
+leads with a progress line while a run is in flight. That line is
+load-bearing: mid-run the counts beneath it describe <em>how far the
+walk has got</em>, not the state of the feed.</p>
+<p>Four things that have each cost an afternoon:</p>
+<ul>
+<li>⚠️ <strong>Fly autostops the machine running it.</strong> A
+reclassify keeps the <em>worker</em> busy while leaving the <em>app</em>
+looking idle, so the machine Fly picks to shed for “excess capacity” is
+precisely the one doing the work. This killed the run on 2026-09-11 —
+BullMQ moved the job, it stalled again, and the job failed outright. The
+run resumes from its cursor now, but the cheap prevention is to give the
+app some traffic for the duration:
+<code>while true; do curl -s -o /dev/null https://askapeer-api.fly.dev/health; sleep 20; done</code>.</li>
+<li>⚠️ <strong><code>/health</code> reports the database unreachable
+while a reclassify runs, and it is lying.</strong> The probe races a
+2-second timeout (<code>health.service.ts</code>) and loses under that
+load, so the endpoint returns 503 with <code>db.reachable:false</code>,
+<code>migrationsApplied:false</code> and <code>version:"unknown"</code>
+against a database that is fine and being written to throughout. Check
+<code>pg_stat_activity</code> before believing an outage; it clears the
+moment the run ends.</li>
+<li>⚠️ <strong>Mid-run numbers mislead, and so does the finished number
+if you do not know the baseline.</strong> Roughly <strong>half the
+corpus carries no tag at all</strong> and always has — the taxonomy is
+anatomy and pathology, and much of the literature has no body part in
+it. 2,309 tagged of 4,519 is the normal resting state, not a
+regression.</li>
+<li>⚠️ <strong>An interrupted run leaves stale tags, not missing
+ones</strong> — but only since the batching went in. Before it, a
+failure mid-walk left the corpus part-tagged with no way back but a full
+rerun, because the whole table was deleted up front.</li>
+</ul>
+<p><strong>When it finishes</strong>, two things confirm it rather than
+one. The log line names the totals:</p>
+<pre><code>[IngestionService] Reclassified 4519 articles → 6283 tag matches</code></pre>
+<p>and <code>staleMatches</code> on <code>/admin/research-feed</code>
+must be <strong>0</strong> — anything else means classification is
+writing to tags no member can see, which is what the retirement walk in
+<code>taxonomy()</code> exists to prevent.</p>
+<p><strong>After a taxonomy migration, a reclassify is not
+optional.</strong> Retiring a tag leaves its existing
+<code>article_tags</code> rows in place — they are what
+<code>staleMatches</code> counts — and the papers only move to the
+surviving namesake when the corpus is re-tagged. The same is true one
+level up: retiring a tag does <strong>not</strong> touch
+<code>community.member_interests</code>, so a member quietly loses an
+interest unless the migration repoints it (migration 0036 carries a
+generic repair worth copying).</p>
+<p><code>npm run verify:reclassify -w apps/api</code> exercises the
+resumability properties against a real database. ⚠️ It wipes the
+<code>research</code> schema — local only, never against the deployed
+database.</p>
 <h2 id="clinical-interests-and-the-personalised-feed-s8b">Clinical
 interests and the personalised feed (S8b)</h2>
 <p><code>community.member_interests</code> (handle-scoped, weighted)
@@ -816,8 +889,8 @@ onto a sign-in screen.</li>
 <p>Icons are generated from the brand <strong>mark</strong> (a wordmark
 is illegible at 192px) and are committed, so this only runs when the
 brand artwork changes:</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install Pillow <span class="kw">&amp;&amp;</span> <span class="ex">python3</span> apps/web/scripts/generate-pwa-icons.py</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install Pillow <span class="kw">&amp;&amp;</span> <span class="ex">python3</span> apps/web/scripts/generate-pwa-icons.py</span></code></pre></div>
 <blockquote>
 <p><strong>Known issue — signing in to the installed app on
 iOS.</strong> An installed iOS web app has its own cookie store,
@@ -891,9 +964,9 @@ being stuck silently in <code>pending</code></li>
 <p>The timeout is <code>verification.onfido_timeout_hours</code> in
 <code>config.app_meta</code> (EPIC-J config), defaulting to 48h. To
 watch it fire without waiting two days:</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode sql"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">insert</span> <span class="kw">into</span> config.app_meta (<span class="kw">key</span>, <span class="fu">value</span>) <span class="kw">values</span> (<span class="st">&#39;verification.onfido_timeout_hours&#39;</span>, <span class="st">&#39;0.0011&#39;</span>)</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">on</span> conflict (<span class="kw">key</span>) do <span class="kw">update</span> <span class="kw">set</span> <span class="fu">value</span> <span class="op">=</span> excluded.<span class="fu">value</span>;   <span class="co">-- ~4 seconds</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">insert</span> <span class="kw">into</span> config.app_meta (<span class="kw">key</span>, <span class="fu">value</span>) <span class="kw">values</span> (<span class="st">&#39;verification.onfido_timeout_hours&#39;</span>, <span class="st">&#39;0.0011&#39;</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">on</span> conflict (<span class="kw">key</span>) do <span class="kw">update</span> <span class="kw">set</span> <span class="fu">value</span> <span class="op">=</span> excluded.<span class="fu">value</span>;   <span class="co">-- ~4 seconds</span></span></code></pre></div>
 <p>Delete that row to restore the default. From
 <code>needs_more_info</code> the applicant can restart the pipeline
 themselves via the holding page’s “Try again”
@@ -1572,8 +1645,8 @@ is a closed set, the recipient is the only free field, and both admin
 guards plus an hourly rate limit sit in front of it.</p>
 <p><strong>To actually send</strong>, two Fly secrets are needed —
 neither is set yet:</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> secrets set POSTMARK_TOKEN=... EMAIL_PROVIDER=postmark <span class="at">-a</span> askapeer-api</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> secrets set POSTMARK_TOKEN=... EMAIL_PROVIDER=postmark <span class="at">-a</span> askapeer-api</span></code></pre></div>
 <p><code>EMAIL_FROM</code> already defaults to
 <code>AskaPeer &lt;no-reply@mail.askapeer.co.uk&gt;</code>, and that
 domain is verified in Postmark (DKIM + Return-Path confirmed live
@@ -1820,8 +1893,8 @@ stretch, and revisit at the AWS migration.</p>
 <p><code>GET /health</code> (unprefixed) probes both dependencies and
 returns <strong>503</strong> if either is down, so a missing one is
 visible rather than silent:</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
 <h2 id="conventions-established-at-s0">Conventions established at
 S0</h2>
 <ul>

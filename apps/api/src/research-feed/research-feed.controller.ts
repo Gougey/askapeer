@@ -184,7 +184,11 @@ export class ResearchFeedAdminController {
    */
   @Post('reclassify')
   async reclassify() {
-    await this.queue.add(RECLASSIFY_JOB, {});
+    // More attempts than the queue's default of 2, because the run is resumable now: an
+    // attempt that is cut short leaves a committed cursor, so the next one continues rather
+    // than starting again. Failing after two interruptions would throw away work that is
+    // sitting there waiting to be picked up.
+    await this.queue.add(RECLASSIFY_JOB, {}, { attempts: 5 });
     return { queued: true };
   }
 

@@ -181,6 +181,13 @@ export type FeedStatus = {
     articlesSeen: number;
     articlesStored: number;
   }[];
+  /** Present only while a reclassify is in flight or was interrupted part-way. */
+  reclassify: {
+    articlesDone: number;
+    matches: number;
+    startedAt: string;
+    updatedAt: string;
+  } | null;
 };
 
 export type FeedCoverage = {

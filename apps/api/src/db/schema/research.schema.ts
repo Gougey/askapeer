@@ -176,3 +176,30 @@ export const ingestionCursors = research.table('ingestion_cursors', {
   articlesSeen: integer('articles_seen').notNull().default(0),
   articlesStored: integer('articles_stored').notNull().default(0),
 });
+
+/**
+ * Where a reclassify has reached. At most one row, ever.
+ *
+ * A reclassify walks the whole corpus and takes over an hour on it, which is long enough
+ * that being interrupted is normal rather than exceptional — Fly autostops a machine that
+ * looks idle, and a deploy replaces it. Without somewhere to write its progress a run can
+ * only ever start again from nothing, so an interruption at minute fifty costs fifty
+ * minutes and leaves the feed under-tagged until a run finally survives end to end.
+ *
+ * The row exists only while a run is in flight: it is written after each batch commits and
+ * deleted when the walk completes. So "is there a row" answers "was a reclassify
+ * interrupted", which is also what the admin screen needs to say.
+ *
+ * `boolean('id')` with a check constraint is a single-row table: the primary key admits one
+ * value and the check admits only `true`, so a second writer collides rather than quietly
+ * starting a rival cursor.
+ */
+export const reclassifyState = research.table('reclassify_state', {
+  id: boolean('id').primaryKey().default(true).notNull(),
+  /** The last article committed, in id order. Null until the first batch lands. */
+  cursor: uuid('cursor'),
+  articlesDone: integer('articles_done').notNull().default(0),
+  matches: integer('matches').notNull().default(0),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

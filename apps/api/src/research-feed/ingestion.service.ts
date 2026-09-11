@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { articleTags, articles, ingestionCursors } from '../db/schema';
+import { articleTags, articles, ingestionCursors, reclassifyState } from '../db/schema';
 import { SettingsService } from '../settings/settings.service';
 import { parseAbstract, stripInline } from './abstract';
 import { classify, prepareTaxonomy, type PreparedTag } from './classifier';
@@ -46,6 +46,16 @@ const DEFAULT_QUERIES = [
 ];
 
 export const CORPUS_QUERIES_KEY = 'research_feed.corpus_queries';
+
+/**
+ * Articles per reclassify transaction.
+ *
+ * The batch is the unit of everything that matters here: how much of the corpus is briefly
+ * untagged (one uncommitted transaction's worth), how much work an interruption throws away
+ * (at most one batch), and how often the job lock is renewed. 250 keeps all three small
+ * while still amortising the round trip — the whole 4,500-article corpus is 18 batches.
+ */
+const RECLASSIFY_BATCH = 250;
 
 export type IngestionReport = {
   source: string;
@@ -337,26 +347,110 @@ export class IngestionService {
    *
    * The tuning loop this slice will actually live in: the classifier's rules, the
    * confidence floor and — when Andrew's list lands — the tag synonyms all change what
-   * an article should be tagged with, and none of them should mean re-fetching 1,300
+   * an article should be tagged with, and none of them should mean re-fetching 4,500
    * papers from two public APIs to find out whether the change helped.
    *
    * Deletes and rewrites rather than merging, so a rule that *removes* a bad match is
    * visible. A merge would only ever add, which would hide exactly the improvement being
    * tested.
+   *
+   * **Batched and resumable, because being interrupted is normal at this size.** The
+   * original walked the corpus in one pass behind a single `delete from article_tags`. On
+   * 2026-09-11 that run was interrupted — Fly autostopped the machine as idle, BullMQ moved
+   * the job, it stalled again and failed — and left the feed a quarter tagged with no way
+   * back but a full rerun. Two changes make an interruption cheap instead:
+   *
+   * 1. **The delete is per batch and inside the batch's transaction.** The corpus is never
+   *    globally empty; an article either carries its new tags or still carries its old ones,
+   *    and the window where it carries neither is one uncommitted transaction wide.
+   * 2. **Progress is committed as it goes** to `research.reclassify_state`, so a retry picks
+   *    up at the last committed batch rather than at zero. Ordering by `id` is what makes
+   *    "everything after the cursor" a complete description of the work left.
+   *
+   * `onBatch` is how the caller keeps its job lock alive — BullMQ renews on progress, and a
+   * run this long outlives the default lock several times over.
    */
-  async reclassifyAll(): Promise<{ articles: number; matches: number }> {
+  async reclassifyAll(
+    onBatch?: (done: number, total: number) => Promise<void>,
+  ): Promise<{ articles: number; matches: number; resumed: boolean }> {
     const taxonomy = await this.taxonomy();
-    const rows = await this.db
-      .select({ id: articles.id, title: articles.title, abstract: articles.abstract })
+    const [{ total }] = await this.db
+      .select({ total: sql<number>`count(*)::int` })
       .from(articles);
 
-    await this.db.delete(articleTags);
-    let matches = 0;
-    for (const row of rows) {
-      matches += await this.writeTags(row.id, row, taxonomy);
+    const [state] = await this.db.select().from(reclassifyState);
+    const resumed = state !== undefined;
+    let cursor = state?.cursor ?? null;
+    let done = state?.articlesDone ?? 0;
+    let matches = state?.matches ?? 0;
+    if (resumed) {
+      this.log.log(`Resuming reclassify at ${done}/${total} articles, ${matches} matches so far`);
     }
-    this.log.log(`Reclassified ${rows.length} articles → ${matches} tag matches`);
-    return { articles: rows.length, matches };
+
+    for (;;) {
+      const batch = await this.db
+        .select({ id: articles.id, title: articles.title, abstract: articles.abstract })
+        .from(articles)
+        .where(cursor === null ? undefined : gt(articles.id, cursor))
+        .orderBy(articles.id)
+        .limit(RECLASSIFY_BATCH);
+      if (batch.length === 0) break;
+
+      const rows = batch.flatMap((article) =>
+        classify(article, taxonomy).map((m) => ({
+          articleId: article.id,
+          tagId: m.tagId,
+          confidence: m.confidence,
+          matchedIn: m.matchedIn,
+        })),
+      );
+
+      const ids = batch.map((a) => a.id);
+      cursor = ids[ids.length - 1];
+      done += batch.length;
+      matches += rows.length;
+
+      await this.db.transaction(async (tx) => {
+        await tx.delete(articleTags).where(inArray(articleTags.articleId, ids));
+        if (rows.length > 0) await tx.insert(articleTags).values(rows).onConflictDoNothing();
+        await tx
+          .insert(reclassifyState)
+          .values({ cursor, articlesDone: done, matches, updatedAt: new Date() })
+          .onConflictDoUpdate({
+            target: reclassifyState.id,
+            set: { cursor, articlesDone: done, matches, updatedAt: new Date() },
+          });
+      });
+
+      await onBatch?.(done, total);
+    }
+
+    // The walk finished, so there is nothing to resume from. Clearing the row is also what
+    // tells the admin screen the corpus is whole again.
+    await this.db.delete(reclassifyState);
+    this.log.log(`Reclassified ${done} articles → ${matches} tag matches`);
+    return { articles: done, matches, resumed };
+  }
+
+  /**
+   * Where an interrupted reclassify reached, or null if none is outstanding.
+   *
+   * Read by the admin screen, because the corpus counts beside it are meaningless while a
+   * run is in flight — a quarter-finished walk reports three-quarters of the corpus
+   * untagged, which reads as a catastrophic regression rather than as a job still running.
+   */
+  async reclassifyProgress(): Promise<
+    { articlesDone: number; matches: number; startedAt: Date; updatedAt: Date } | null
+  > {
+    const [state] = await this.db.select().from(reclassifyState);
+    return state
+      ? {
+          articlesDone: state.articlesDone,
+          matches: state.matches,
+          startedAt: state.startedAt,
+          updatedAt: state.updatedAt,
+        }
+      : null;
   }
 
   /**
@@ -402,7 +496,12 @@ export class IngestionService {
   }
 
   /** How much corpus exists — used by the admin read and the "is it working" check. */
-  async stats(): Promise<{ articles: number; classified: number; cursors: unknown[] }> {
+  async stats(): Promise<{
+    articles: number;
+    classified: number;
+    cursors: unknown[];
+    reclassify: { articlesDone: number; matches: number; startedAt: Date; updatedAt: Date } | null;
+  }> {
     const [{ count: total }] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(articles);
@@ -410,7 +509,10 @@ export class IngestionService {
       .select({ count: sql<number>`count(distinct ${articleTags.articleId})::int` })
       .from(articleTags);
     const cursors = await this.db.select().from(ingestionCursors);
-    return { articles: Number(total), classified: Number(classified), cursors };
+    // Reported alongside the counts because it is the only thing that makes them readable:
+    // mid-run, `classified` describes how far the walk has got, not the state of the corpus.
+    const reclassify = await this.reclassifyProgress();
+    return { articles: Number(total), classified: Number(classified), cursors, reclassify };
   }
 
   /**
