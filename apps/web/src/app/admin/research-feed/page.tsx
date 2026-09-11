@@ -45,6 +45,37 @@ export default async function ResearchFeedAdminPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/*
+        Above the counts, because it is what makes them readable. A reclassify walks the
+        corpus in batches, so while one is in flight "untagged" describes how far the walk
+        has got rather than the state of the feed — without this line a run in progress
+        reads as a catastrophic regression.
+      */}
+      {status.reclassify && (
+        <div
+          className="flex flex-col border"
+          style={{
+            gap: 'var(--space-1)',
+            padding: 'var(--space-3)',
+            borderColor: 'var(--color-warn)',
+            borderRadius: 'var(--radius)',
+            background: 'var(--color-surface)',
+          }}
+        >
+          <p className="text-sm font-semibold">
+            A reclassify is part-way through the corpus —{' '}
+            {status.reclassify.articlesDone.toLocaleString()} of {status.articles.toLocaleString()}{' '}
+            articles, {status.reclassify.matches.toLocaleString()} matches so far.
+          </p>
+          <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+            The counts below describe the walk, not the feed. Started{' '}
+            {new Date(status.reclassify.startedAt).toLocaleString('en-GB')}; last batch{' '}
+            {new Date(status.reclassify.updatedAt).toLocaleString('en-GB')}. If it has stopped
+            moving, run it again — it resumes from here rather than starting over.
+          </p>
+        </div>
+      )}
+
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold">The corpus</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
