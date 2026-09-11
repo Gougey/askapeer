@@ -128,7 +128,7 @@ design and its reasoning are in `docs/2026-08-03-research-feed-ingestion-design.
 what exists and what to know before touching it.
 
 **Built**: the `research` schema, both source adapters (Europe PMC, OpenAlex), dedupe,
-classification against all 588 tags, intrinsic scoring, a twice-daily BullMQ repeatable job,
+classification against every live tag, intrinsic scoring, a twice-daily BullMQ repeatable job,
 admin run/reclassify/status endpoints, the Feed tab with infinite scroll, and article detail.
 **Not built**: `member_interests` and the interests picker — so the feed is the *same* for
 everyone. That is deliberate (see below).
@@ -411,7 +411,7 @@ search.
 
 Rebuilds the demo corpus: **wipes every post, answer, kudos, report and moderation
 action**, then inserts a fresh one. It does *not* touch `identity.members`,
-`community.handles`, the categories or the 588-node taxonomy — accounts are how people
+`community.handles`, the categories or the clinical taxonomy — accounts are how people
 sign in, including the admin allowlist, and the vocabulary is seeded by migration.
 
 Point it anywhere with `DATABASE_URL` / `REDIS_URL`. It is deterministic: the same seed
@@ -610,7 +610,7 @@ EPIC-J's admin surfaces for editing them are S13. Both are read through
 are **select-only** (FD-4), so an unknown or retired tag id is a 400 rather than an
 invitation to create one.
 
-`GET /v1/tags` returns Andrew's v2.0 taxonomy — **588 nodes, four levels deep**
+`GET /v1/tags` returns Andrew's clinical taxonomy — **1,193 live nodes, five levels deep**
 (region → axis → sub-group → leaf) — flat, one row per node, walked with a recursive CTE
 in `vocabulary.service.ts`. Each row carries `parentId` (the composer rebuilds the tree),
 `region` (the root it descends from) and `hasChildren`. Two consequences worth knowing:
@@ -629,7 +629,7 @@ question" far below the fold. **Any node is taggable**, not just leaves; tapping
 in browse both selects it and drills into it, and selection **keeps the most specific**
 tag (adding a descendant drops an ancestor already chosen). Broadening is the read side's
 job: a filter on an ancestor expands to its subtree at query time, so storing both ends
-of the same branch would be noise. All 588 nodes ship to the client in one payload
+of the same branch would be noise. All of them ship to the client in one payload
 (~110 KB) and search runs locally, which is what makes typing feel instant; EPIC-C §5's
 `?prefix=` typeahead only earns its keep if the taxonomy outgrows that.
 
@@ -1115,7 +1115,7 @@ restriction lifted, and `AUTH_DEV_MAGIC_LINK` has since been removed — see abo
 
 ## Tag vocabulary admin (S13 phase 1, screen G8)
 
-`/admin/config/tags` — browse and search the 588-node vocabulary, and edit synonyms per tag.
+`/admin/config/tags` — browse and search the clinical vocabulary, and edit synonyms per tag.
 `GET/PUT /v1/admin/taxonomy/tags…`, `POST …/preview`, `GET …/audit`.
 
 - **Synonyms only, deliberately.** They change what *matches* and move nothing: a bad
