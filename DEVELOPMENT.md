@@ -198,8 +198,9 @@ everyone. That is deliberate (see below).
   renders "Nerve, Nerve, Nerve" on a card.
 - **`POST /v1/admin/research-feed/reclassify` re-tags the stored corpus without refetching.**
   This is the tuning loop: classifier rules, the confidence floor and Andrew's synonyms all
-  change what an article should be tagged with, and none of them should mean pulling 1,300
-  papers from two public APIs again.
+  change what an article should be tagged with, and none of them should mean pulling 4,500
+  papers from two public APIs again. It is queued rather than awaited, and it is a long job —
+  see [Running a reclassify](#running-a-reclassify) before starting one.
 - **Corpus queries live in `config.settings`** (`research_feed.corpus_queries`, comma
   separated), because they decide what the feed is *about* and will be tuned by looking at
   output. They fall back to a domain-bounded default set in `ingestion.service.ts`.
@@ -220,6 +221,71 @@ Sampling the untagged remainder also found gaps that are **synonyms, not code**:
 Ligament Reconstruction"` matches nothing because the only ACL tag is `ACL rupture`; and
 `"chronic low back pain"` matches nothing because the tag is `Lumbar Spine`. Three measured
 examples for the synonym ask — and `reclassify` turns his list into results in seconds.
+
+### Running a reclassify
+
+A reclassify re-tags the stored corpus in place. It is the tuning loop — a synonym, a
+classifier rule or a taxonomy migration changes what an article *should* be tagged with, and
+this is how you find out whether the change helped without refetching anything.
+
+**It is a long job now.** 4,519 articles against 1,193 tags takes **over an hour**. The
+two-minute figure in this document's history was measured on a 1,290-article corpus and no
+longer holds; assume an hour and plan around being interrupted.
+
+**Start it** from `/admin/research-feed`, or without a token:
+
+```bash
+curl -s https://askapeer-api.fly.dev/health > /dev/null   # wake the machine first
+flyctl ssh console -a askapeer-api -C 'node -e "
+  const {Queue}=require(\"bullmq\"); const R=require(\"ioredis\");
+  const q=new Queue(\"research-ingestion\",{connection:new R(process.env.REDIS_URL,{maxRetriesPerRequest:null})});
+  q.add(\"reclassify\",{}).then(j=>{console.log(j.id);process.exit(0)})"'
+```
+
+**Watch it** on `/admin/research-feed`, which leads with a progress line while a run is in
+flight. That line is load-bearing: mid-run the counts beneath it describe *how far the walk
+has got*, not the state of the feed.
+
+Four things that have each cost an afternoon:
+
+- ⚠️ **Fly autostops the machine running it.** A reclassify keeps the *worker* busy while
+  leaving the *app* looking idle, so the machine Fly picks to shed for "excess capacity" is
+  precisely the one doing the work. This killed the run on 2026-09-11 — BullMQ moved the job,
+  it stalled again, and the job failed outright. The run resumes from its cursor now, but the
+  cheap prevention is to give the app some traffic for the duration: `while true; do curl -s
+  -o /dev/null https://askapeer-api.fly.dev/health; sleep 20; done`.
+- ⚠️ **`/health` reports the database unreachable while a reclassify runs, and it is lying.**
+  The probe races a 2-second timeout (`health.service.ts`) and loses under that load, so the
+  endpoint returns 503 with `db.reachable:false`, `migrationsApplied:false` and
+  `version:"unknown"` against a database that is fine and being written to throughout. Check
+  `pg_stat_activity` before believing an outage; it clears the moment the run ends.
+- ⚠️ **Mid-run numbers mislead, and so does the finished number if you do not know the
+  baseline.** Roughly **half the corpus carries no tag at all** and always has — the taxonomy
+  is anatomy and pathology, and much of the literature has no body part in it. 2,309 tagged of
+  4,519 is the normal resting state, not a regression.
+- ⚠️ **An interrupted run leaves stale tags, not missing ones** — but only since the batching
+  went in. Before it, a failure mid-walk left the corpus part-tagged with no way back but a
+  full rerun, because the whole table was deleted up front.
+
+**When it finishes**, two things confirm it rather than one. The log line names the totals:
+
+```
+[IngestionService] Reclassified 4519 articles → 6283 tag matches
+```
+
+and `staleMatches` on `/admin/research-feed` must be **0** — anything else means
+classification is writing to tags no member can see, which is what the retirement walk in
+`taxonomy()` exists to prevent.
+
+**After a taxonomy migration, a reclassify is not optional.** Retiring a tag leaves its
+existing `article_tags` rows in place — they are what `staleMatches` counts — and the papers
+only move to the surviving namesake when the corpus is re-tagged. The same is true one level
+up: retiring a tag does **not** touch `community.member_interests`, so a member quietly loses
+an interest unless the migration repoints it (migration 0036 carries a generic repair worth
+copying).
+
+`npm run verify:reclassify -w apps/api` exercises the resumability properties against a real
+database. ⚠️ It wipes the `research` schema — local only, never against the deployed database.
 
 ## Clinical interests and the personalised feed (S8b)
 
