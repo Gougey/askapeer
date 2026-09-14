@@ -1036,16 +1036,30 @@ and post creation validates against them — tags are
 <strong>select-only</strong> (FD-4), so an unknown or retired tag id is
 a 400 rather than an invitation to create one.</p>
 <p><code>GET /v1/tags</code> returns Andrew’s clinical taxonomy —
-<strong>1,187 live nodes, five levels deep</strong> (region → axis →
+<strong>1,230 live nodes, five levels deep</strong> (region → axis →
 sub-group → leaf) — flat, one row per node, walked with a recursive CTE
 in <code>vocabulary.service.ts</code>. Each row carries
 <code>parentId</code> (the composer rebuilds the tree),
 <code>region</code> (the root it descends from) and
-<code>hasChildren</code>. Two consequences worth knowing:</p>
+<code>hasChildren</code>.</p>
+<p><strong>One of the seven roots is not a body region.</strong>
+<code>Systemic and Inflammatory Conditions</code> holds the diseases
+that belong to the whole person rather than to a place — rheumatoid
+arthritis, the spondyloarthritis family, the connective-tissue diseases,
+the metabolic bone disorders. Andrew’s rule for what goes there is that
+a systemic disease <em>is not joint specific</em>, which also decides
+what does not: a finding that happens at a site (bursitis, synovitis,
+joint effusion) stays with its site, and the taxonomy already carries
+those per site. Before it existed, rheumatoid arthritis was filed under
+the neck, the thoracic spine and the lumbar spine at once, all three
+copies matching the same papers. Nothing in the API or the picker treats
+it specially — a root is a root — so the only thing to know is that
+<code>region</code> for those tags names a category of disease rather
+than a body part.</p>
+<p>Two consequences worth knowing:</p>
 <ul>
 <li><strong><code>region</code> is not decoration.</strong> Tag names
-are only <em>sibling-scoped</em> unique, so 41 names recur across
-branches (“Rheumatoid arthritis” sits under several regions).
+are only <em>sibling-scoped</em> unique, so names recur across branches.
 <code>region</code> is what tells two identically-named chips apart, in
 the picker and on a post.</li>
 <li><strong>Retiring is inherited.</strong> The recursion only descends
