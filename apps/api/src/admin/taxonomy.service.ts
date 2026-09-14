@@ -144,7 +144,12 @@ export class TaxonomyService {
       // a gloss or a disambiguator by looking for shared base names, which cannot be judged
       // from a single tag — so the live behaviour is approximated closely rather than
       // exactly for the handful of tags with parentheses.
-      const prepared = prepareTaxonomy([{ id: tag.id, name: tag.name, synonyms, depth }]);
+      // The tag's scope terms ride along unchanged: a preview that ignored them would
+      // promise matches the live classifier will refuse, which is the one thing this screen
+      // exists to prevent.
+      const prepared = prepareTaxonomy([
+        { id: tag.id, name: tag.name, synonyms, scopeTerms: tag.scopeTerms ?? [], depth },
+      ]);
       const hits: string[] = [];
       for (const article of corpus) {
         if (classify(article, prepared).length > 0) hits.push(article.title);

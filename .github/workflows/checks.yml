@@ -46,3 +46,9 @@ jobs:
         run: npm run typecheck -w apps/web
       - name: Typecheck API
         run: npm run typecheck -w apps/api
+      # The classifier is a pure function, so its two load-bearing rules can be checked here
+      # rather than found by reclassifying the live corpus — which is how both of them were
+      # actually found. A plural must stem to what its singular stems to, and a scope term
+      # must keep a shared structure out of the wrong joint.
+      - name: Classifier — scope terms and stemming
+        run: npm run verify:scope -w apps/api
