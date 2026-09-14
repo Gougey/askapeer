@@ -64,3 +64,24 @@ document is generated, so counts in the text cannot drift from the data.
   `verify.py` output and the structure-health table before trusting the result.
 
 Always re-run `verify.py` after any change.
+
+## ⚠️ This tooling models the *load*, not the live taxonomy
+
+Everything here reasons about Andrew's PDF and what migrations 0030/0031 made of it. The live
+taxonomy has moved on a long way since — migrations 0032 to 0042 renamed, moved, retired and
+added several hundred tags on Andrew's later answers, and added a `scope_terms` column the
+tooling knows nothing about.
+
+So the reports lie about live, and plausibly. Running `synonyms.py` today still says *"tags
+carrying synonyms: 11 → 95"*, because that is what the load did in September; the live figure is
+175. **Treat the output as a description of the source document, and query the database for
+anything about the present.** If you need to know what live holds, ask live.
+
+Two practical notes:
+
+- `build_model()` **rewrites `docs/body-part-condition-and-synonym-list.md` as a side effect** and
+  prints a line to stdout saying so. If you are piping a generator's output into a `.sql` file,
+  that line lands in the SQL — it will fail with `syntax error at or near "wrote"`.
+- The unmapped preferred terms are the interesting output now, not the mapped ones. The largest
+  block of them was systemic, which is what migration 0041's seventh root was built from; the
+  rest are mostly site-specific findings that belong to a body region rather than here.

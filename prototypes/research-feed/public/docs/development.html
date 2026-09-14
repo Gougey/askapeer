@@ -344,6 +344,86 @@ because the only ACL tag is <code>ACL rupture</code>; and
 <code>"chronic low back pain"</code> matches nothing because the tag is
 <code>Lumbar Spine</code>. Three measured examples for the synonym ask —
 and <code>reclassify</code> turns his list into results in seconds.</p>
+<h3 id="changing-the-taxonomy-the-checklist">Changing the taxonomy — the
+checklist</h3>
+<p>Written down in September 2026 after a run of migrations (0033–0042)
+in which <strong>every single bug was found by reclassifying the live
+corpus and reading the per-tag counts</strong>, and none of them by
+reading the SQL. If you are coming back to this cold, this is the part
+to read.</p>
+<p>The order matters, and step 9 is the one people skip.</p>
+<ol type="1">
+<li><p><strong>Measure first.</strong> Get the per-tag article counts
+for everything you are about to touch. Without a before, the after tells
+you nothing:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">select</span> t.name, <span class="fu">count</span>(<span class="kw">at</span>.article_id) <span class="kw">as</span> papers</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">from</span> community.tags t</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">left</span> <span class="kw">join</span> research.article_tags <span class="kw">at</span> <span class="kw">on</span> <span class="kw">at</span>.tag_id <span class="op">=</span> t.<span class="kw">id</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a> <span class="kw">where</span> t.retired_at <span class="kw">is</span> <span class="kw">null</span> <span class="kw">and</span> t.name ilike <span class="st">&#39;%…%&#39;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a> <span class="kw">group</span> <span class="kw">by</span> t.name <span class="kw">order</span> <span class="kw">by</span> papers <span class="kw">desc</span>;</span></code></pre></div></li>
+<li><p><strong>Guard the migration.</strong> Open with a
+<code>DO $$</code> block asserting every id still carries the name you
+expect, and fail loudly if not. Every migration from 0033 onward does
+this; it is what stops a stale migration silently editing the wrong
+tag.</p></li>
+<li><p><strong>Retire, never delete.</strong> The classifier’s walk
+stops at a retired node, so retiring a parent hides its whole subtree;
+posts and articles already carrying the tag keep it.</p></li>
+<li><p>⚠️ <strong>Qualify the synonyms whenever you qualify a
+name.</strong> A tag matches on its name <em>or any synonym</em>, so a
+bare synonym outlives the name it hung off and goes on matching
+everything the rename was meant to stop. This defeated 0038 completely —
+three renamed tags went on matching the same 45 articles — and was fixed
+in 0039.</p></li>
+<li><p>⚠️ <strong>Then ask whether the new name can still match
+anything.</strong> Names and synonyms are matched by <em>proximity</em>,
+so <code>Knee MCL</code> needs “knee” within five tokens of “MCL”.
+Qualifying a name often makes a tag unmatchable: it took
+<code>Knee MCL</code> from 25 matches to 2, and all three
+stress-fracture tags to zero. If the qualifier is a body part rather
+than part of the phrase, you want a <strong>scope term</strong> (next
+section), not a longer name.</p></li>
+<li><p><strong>Repoint member interests.</strong> Retiring a tag does
+not touch <code>community.member_interests</code> — the member silently
+loses an interest. Migration 0036 carries a generic repair worth
+copying: an interest on a retired tag moves to the unambiguous live
+namesake, a redundant duplicate is deleted, and an interest with no
+namesake is left alone rather than guessed at.</p></li>
+<li><p><strong>Apply locally and run the invariants.</strong> All four
+must come back empty:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- a retired parent still holding a live child</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">select</span> p.name, c.name <span class="kw">from</span> community.tags p <span class="kw">join</span> community.tags c <span class="kw">on</span> c.parent_id <span class="op">=</span> p.<span class="kw">id</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a> <span class="kw">where</span> p.retired_at <span class="kw">is</span> <span class="kw">not</span> <span class="kw">null</span> <span class="kw">and</span> c.retired_at <span class="kw">is</span> <span class="kw">null</span>;</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">-- two live siblings with the same name</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="kw">select</span> parent_id, <span class="fu">lower</span>(name), <span class="fu">count</span>(<span class="op">*</span>) <span class="kw">from</span> community.tags <span class="kw">where</span> retired_at <span class="kw">is</span> <span class="kw">null</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a> <span class="kw">group</span> <span class="kw">by</span> <span class="dv">1</span>, <span class="dv">2</span> <span class="kw">having</span> <span class="fu">count</span>(<span class="op">*</span>) <span class="op">&gt;</span> <span class="dv">1</span>;</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">-- a name living under more than one root (the duplication 0033–0041 removed)</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">-- and a synonym on tags that have no scope term to tell them apart</span></span></code></pre></div></li>
+<li><p><strong>Run all eight checks</strong> (<code>lint:tokens</code>,
+<code>lint:inputs</code>, <code>lint:boundary</code>,
+<code>tokens:check</code>, <code>lint:disclosure</code>,
+<code>typecheck</code> ×2, <code>verify:scope</code>) and gate the merge
+on CI being green — <code>gh pr merge</code> will not refuse a red
+run.</p></li>
+<li><p>⚠️ <strong>Deploy, reclassify, and then read the per-tag counts
+again.</strong> This is where every defect in this run surfaced and the
+only place they could have. A taxonomy change is not finished when the
+migration applies; it is finished when the corpus agrees with
+it.</p></li>
+<li><p><strong>Update the counts in this file and in
+<code>README.md</code></strong>, and rebuild the docs site — both quote
+live figures that a migration invalidates.</p></li>
+</ol>
+<p><strong>Why a reclassify is needed at all, and when it is
+not.</strong> New articles are classified as they are ingested
+(<code>upsert</code> → <code>writeTags</code>), so the twice-daily feed
+needs nothing. A reclassify is only for when the <em>rules</em> change
+underneath the corpus — a taxonomy migration, a synonym, a scope term, a
+classifier change. Skipping it after one leaves the corpus split in two:
+articles ingested after the change follow the new rules, everything
+older keeps tags written under the old ones.</p>
 <h3 id="scope-terms-when-a-structure-belongs-to-several-joints">Scope
 terms — when a structure belongs to several joints</h3>
 <p><code>community.tags.scope_terms</code> is a second, different test
@@ -372,7 +452,8 @@ never an input affordance. “Knee” is not another way of saying
 <code>Knee MCL</code>; it is a condition the document has to
 satisfy.</li>
 <li><strong>An empty scope means no restriction</strong>, which is every
-tag but the 22 collateral ligaments.</li>
+tag but the 40 that carry one — the collateral ligaments, and the stress
+fracture, trigger point and myofascial pain tags.</li>
 <li><strong>Be generous.</strong> A scope that is too broad costs a
 false positive; one that is too narrow costs the paper entirely, which
 is the failure the column exists to fix. <code>Knee MCL</code> includes
@@ -404,12 +485,12 @@ document’s history was measured on a 1,290-article corpus and no longer
 holds; assume an hour and plan around being interrupted.</p>
 <p><strong>Start it</strong> from <code>/admin/research-feed</code>, or
 without a token:</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> https://askapeer-api.fly.dev/health <span class="op">&gt;</span> /dev/null   <span class="co"># wake the machine first</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&#39;node -e &quot;</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="st">  const {Queue}=require(\&quot;bullmq\&quot;); const R=require(\&quot;ioredis\&quot;);</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="st">  const q=new Queue(\&quot;research-ingestion\&quot;,{connection:new R(process.env.REDIS_URL,{maxRetriesPerRequest:null})});</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="st">  q.add(\&quot;reclassify\&quot;,{}).then(j=&gt;{console.log(j.id);process.exit(0)})&quot;&#39;</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> https://askapeer-api.fly.dev/health <span class="op">&gt;</span> /dev/null   <span class="co"># wake the machine first</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&#39;node -e &quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="st">  const {Queue}=require(\&quot;bullmq\&quot;); const R=require(\&quot;ioredis\&quot;);</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="st">  const q=new Queue(\&quot;research-ingestion\&quot;,{connection:new R(process.env.REDIS_URL,{maxRetriesPerRequest:null})});</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="st">  q.add(\&quot;reclassify\&quot;,{}).then(j=&gt;{console.log(j.id);process.exit(0)})&quot;&#39;</span></span></code></pre></div>
 <p><strong>Watch it</strong> on <code>/admin/research-feed</code>, which
 leads with a progress line while a run is in flight. That line is
 load-bearing: mid-run the counts beneath it describe <em>how far the
@@ -939,8 +1020,8 @@ onto a sign-in screen.</li>
 <p>Icons are generated from the brand <strong>mark</strong> (a wordmark
 is illegible at 192px) and are committed, so this only runs when the
 brand artwork changes:</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install Pillow <span class="kw">&amp;&amp;</span> <span class="ex">python3</span> apps/web/scripts/generate-pwa-icons.py</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install Pillow <span class="kw">&amp;&amp;</span> <span class="ex">python3</span> apps/web/scripts/generate-pwa-icons.py</span></code></pre></div>
 <blockquote>
 <p><strong>Known issue — signing in to the installed app on
 iOS.</strong> An installed iOS web app has its own cookie store,
@@ -1014,9 +1095,9 @@ being stuck silently in <code>pending</code></li>
 <p>The timeout is <code>verification.onfido_timeout_hours</code> in
 <code>config.app_meta</code> (EPIC-J config), defaulting to 48h. To
 watch it fire without waiting two days:</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode sql"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">insert</span> <span class="kw">into</span> config.app_meta (<span class="kw">key</span>, <span class="fu">value</span>) <span class="kw">values</span> (<span class="st">&#39;verification.onfido_timeout_hours&#39;</span>, <span class="st">&#39;0.0011&#39;</span>)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">on</span> conflict (<span class="kw">key</span>) do <span class="kw">update</span> <span class="kw">set</span> <span class="fu">value</span> <span class="op">=</span> excluded.<span class="fu">value</span>;   <span class="co">-- ~4 seconds</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">insert</span> <span class="kw">into</span> config.app_meta (<span class="kw">key</span>, <span class="fu">value</span>) <span class="kw">values</span> (<span class="st">&#39;verification.onfido_timeout_hours&#39;</span>, <span class="st">&#39;0.0011&#39;</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">on</span> conflict (<span class="kw">key</span>) do <span class="kw">update</span> <span class="kw">set</span> <span class="fu">value</span> <span class="op">=</span> excluded.<span class="fu">value</span>;   <span class="co">-- ~4 seconds</span></span></code></pre></div>
 <p>Delete that row to restore the default. From
 <code>needs_more_info</code> the applicant can restart the pipeline
 themselves via the holding page’s “Try again”
@@ -1709,8 +1790,8 @@ is a closed set, the recipient is the only free field, and both admin
 guards plus an hourly rate limit sit in front of it.</p>
 <p><strong>To actually send</strong>, two Fly secrets are needed —
 neither is set yet:</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> secrets set POSTMARK_TOKEN=... EMAIL_PROVIDER=postmark <span class="at">-a</span> askapeer-api</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> secrets set POSTMARK_TOKEN=... EMAIL_PROVIDER=postmark <span class="at">-a</span> askapeer-api</span></code></pre></div>
 <p><code>EMAIL_FROM</code> already defaults to
 <code>AskaPeer &lt;no-reply@mail.askapeer.co.uk&gt;</code>, and that
 domain is verified in Postmark (DKIM + Return-Path confirmed live
@@ -1957,8 +2038,8 @@ stretch, and revisit at the AWS migration.</p>
 <p><code>GET /health</code> (unprefixed) probes both dependencies and
 returns <strong>503</strong> if either is down, so a missing one is
 visible rather than silent:</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
 <h2 id="conventions-established-at-s0">Conventions established at
 S0</h2>
 <ul>

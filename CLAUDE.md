@@ -19,6 +19,7 @@ See `README.md` for what currently exists in this repo (the PRD plus two early, 
 - `docs/style-guide/STYLE_GUIDE.md` — **Design system.** Canonical spec for the web app's look: colour tokens, typography (Fraunces + Inter), spacing, components, accessibility (WCAG 2.2 AA), voice, and the anonymity/safety UX patterns. `docs/style-guide/styleguide.html` is the live showcase. See the Design system section below for the load-bearing rules.
 - `docs/AHP_Research_Feed_Design_Conversation.md` — design discussion behind the research-feed prototype in `prototypes/research-feed/`.
 - `README.md` — human-facing repo overview: what's here, how to run the prototypes. This file (`CLAUDE.md`) covers domain constraints and condensed PRD reference for AI-assisted development instead of repeating that overview.
+- `DEVELOPMENT.md` — how to run the monorepo, and the per-slice notes. **Before touching the clinical taxonomy or the classifier, read its three sections "Changing the taxonomy — the checklist", "Scope terms" and "Running a reclassify".** They are the traps earned by migrations 0033–0042, none of which were visible in the SQL: a bare synonym survives the rename it hung off; a qualified name often stops matching anything, because matching is by proximity; retiring a tag silently drops members' interests; and a taxonomy change is only finished once the corpus has been reclassified and the per-tag counts read back.
 
 ## Domain constraints that must inform every design decision
 
