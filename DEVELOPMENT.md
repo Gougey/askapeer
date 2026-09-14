@@ -713,13 +713,26 @@ EPIC-J's admin surfaces for editing them are S13. Both are read through
 are **select-only** (FD-4), so an unknown or retired tag id is a 400 rather than an
 invitation to create one.
 
-`GET /v1/tags` returns Andrew's clinical taxonomy — **1,187 live nodes, five levels deep**
+`GET /v1/tags` returns Andrew's clinical taxonomy — **1,230 live nodes, five levels deep**
 (region → axis → sub-group → leaf) — flat, one row per node, walked with a recursive CTE
 in `vocabulary.service.ts`. Each row carries `parentId` (the composer rebuilds the tree),
-`region` (the root it descends from) and `hasChildren`. Two consequences worth knowing:
+`region` (the root it descends from) and `hasChildren`.
 
-- **`region` is not decoration.** Tag names are only *sibling-scoped* unique, so 41 names
-  recur across branches ("Rheumatoid arthritis" sits under several regions). `region` is
+**One of the seven roots is not a body region.** `Systemic and Inflammatory Conditions` holds
+the diseases that belong to the whole person rather than to a place — rheumatoid arthritis,
+the spondyloarthritis family, the connective-tissue diseases, the metabolic bone disorders.
+Andrew's rule for what goes there is that a systemic disease *is not joint specific*, which
+also decides what does not: a finding that happens at a site (bursitis, synovitis, joint
+effusion) stays with its site, and the taxonomy already carries those per site. Before it
+existed, rheumatoid arthritis was filed under the neck, the thoracic spine and the lumbar
+spine at once, all three copies matching the same papers. Nothing in the API or the picker
+treats it specially — a root is a root — so the only thing to know is that `region` for those
+tags names a category of disease rather than a body part.
+
+Two consequences worth knowing:
+
+- **`region` is not decoration.** Tag names are only *sibling-scoped* unique, so names
+  recur across branches. `region` is
   what tells two identically-named chips apart, in the picker and on a post.
 - **Retiring is inherited.** The recursion only descends through non-retired parents, so
   retiring a sub-group hides its whole subtree from the composer — while posts already
