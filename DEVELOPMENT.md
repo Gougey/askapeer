@@ -222,6 +222,68 @@ Ligament Reconstruction"` matches nothing because the only ACL tag is `ACL ruptu
 `"chronic low back pain"` matches nothing because the tag is `Lumbar Spine`. Three measured
 examples for the synonym ask — and `reclassify` turns his list into results in seconds.
 
+### Changing the taxonomy — the checklist
+
+Written down in September 2026 after a run of migrations (0033–0042) in which **every single
+bug was found by reclassifying the live corpus and reading the per-tag counts**, and none of
+them by reading the SQL. If you are coming back to this cold, this is the part to read.
+
+The order matters, and step 9 is the one people skip.
+
+1. **Measure first.** Get the per-tag article counts for everything you are about to touch.
+   Without a before, the after tells you nothing:
+   ```sql
+   select t.name, count(at.article_id) as papers
+     from community.tags t
+     left join research.article_tags at on at.tag_id = t.id
+    where t.retired_at is null and t.name ilike '%…%'
+    group by t.name order by papers desc;
+   ```
+2. **Guard the migration.** Open with a `DO $$` block asserting every id still carries the name
+   you expect, and fail loudly if not. Every migration from 0033 onward does this; it is what
+   stops a stale migration silently editing the wrong tag.
+3. **Retire, never delete.** The classifier's walk stops at a retired node, so retiring a parent
+   hides its whole subtree; posts and articles already carrying the tag keep it.
+4. ⚠️ **Qualify the synonyms whenever you qualify a name.** A tag matches on its name *or any
+   synonym*, so a bare synonym outlives the name it hung off and goes on matching everything the
+   rename was meant to stop. This defeated 0038 completely — three renamed tags went on matching
+   the same 45 articles — and was fixed in 0039.
+5. ⚠️ **Then ask whether the new name can still match anything.** Names and synonyms are matched
+   by *proximity*, so `Knee MCL` needs "knee" within five tokens of "MCL". Qualifying a name
+   often makes a tag unmatchable: it took `Knee MCL` from 25 matches to 2, and all three
+   stress-fracture tags to zero. If the qualifier is a body part rather than part of the phrase,
+   you want a **scope term** (next section), not a longer name.
+6. **Repoint member interests.** Retiring a tag does not touch `community.member_interests` — the
+   member silently loses an interest. Migration 0036 carries a generic repair worth copying: an
+   interest on a retired tag moves to the unambiguous live namesake, a redundant duplicate is
+   deleted, and an interest with no namesake is left alone rather than guessed at.
+7. **Apply locally and run the invariants.** All four must come back empty:
+   ```sql
+   -- a retired parent still holding a live child
+   select p.name, c.name from community.tags p join community.tags c on c.parent_id = p.id
+    where p.retired_at is not null and c.retired_at is null;
+   -- two live siblings with the same name
+   select parent_id, lower(name), count(*) from community.tags where retired_at is null
+    group by 1, 2 having count(*) > 1;
+   -- a name living under more than one root (the duplication 0033–0041 removed)
+   -- and a synonym on tags that have no scope term to tell them apart
+   ```
+8. **Run all eight checks** (`lint:tokens`, `lint:inputs`, `lint:boundary`, `tokens:check`,
+   `lint:disclosure`, `typecheck` ×2, `verify:scope`) and gate the merge on CI being green —
+   `gh pr merge` will not refuse a red run.
+9. ⚠️ **Deploy, reclassify, and then read the per-tag counts again.** This is where every defect
+   in this run surfaced and the only place they could have. A taxonomy change is not finished
+   when the migration applies; it is finished when the corpus agrees with it.
+10. **Update the counts in this file and in `README.md`**, and rebuild the docs site — both quote
+    live figures that a migration invalidates.
+
+**Why a reclassify is needed at all, and when it is not.** New articles are classified as they
+are ingested (`upsert` → `writeTags`), so the twice-daily feed needs nothing. A reclassify is
+only for when the *rules* change underneath the corpus — a taxonomy migration, a synonym, a
+scope term, a classifier change. Skipping it after one leaves the corpus split in two: articles
+ingested after the change follow the new rules, everything older keeps tags written under the
+old ones.
+
 ### Scope terms — when a structure belongs to several joints
 
 `community.tags.scope_terms` is a second, different test from the name and synonyms, and the
@@ -244,7 +306,8 @@ knee, the elbow and four toe joints at once without any of them stealing the oth
 
 - **Scope terms are classification only** — never search, never an input affordance. "Knee" is
   not another way of saying `Knee MCL`; it is a condition the document has to satisfy.
-- **An empty scope means no restriction**, which is every tag but the 22 collateral ligaments.
+- **An empty scope means no restriction**, which is every tag but the 40 that carry one — the
+  collateral ligaments, and the stress fracture, trigger point and myofascial pain tags.
 - **Be generous.** A scope that is too broad costs a false positive; one that is too narrow
   costs the paper entirely, which is the failure the column exists to fix. `Knee MCL` includes
   `tibial`, and `First MTP MCL` includes `hallux` and `great toe`.
