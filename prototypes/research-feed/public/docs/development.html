@@ -210,11 +210,12 @@ The design and its reasoning are in
 what exists and what to know before touching it.</p>
 <p><strong>Built</strong>: the <code>research</code> schema, both source
 adapters (Europe PMC, OpenAlex), dedupe, classification against every
-live tag, intrinsic scoring, a twice-daily BullMQ repeatable job, admin
-run/reclassify/status endpoints, the Feed tab with infinite scroll, and
-article detail. <strong>Not built</strong>:
-<code>member_interests</code> and the interests picker — so the feed is
-the <em>same</em> for everyone. That is deliberate (see below).</p>
+live tag (by name, synonym and scope term), intrinsic scoring, a
+twice-daily BullMQ repeatable job, admin run/reclassify/status
+endpoints, the Feed tab with infinite scroll, and article detail.
+<strong>Not built</strong>: <code>member_interests</code> and the
+interests picker — so the feed is the <em>same</em> for everyone. That
+is deliberate (see below).</p>
 <ul>
 <li><strong>The prototype was inside out and this is not.</strong>
 <code>prototypes/research-feed</code> queries both APIs <em>per
@@ -343,6 +344,55 @@ because the only ACL tag is <code>ACL rupture</code>; and
 <code>"chronic low back pain"</code> matches nothing because the tag is
 <code>Lumbar Spine</code>. Three measured examples for the synonym ask —
 and <code>reclassify</code> turns his list into results in seconds.</p>
+<h3 id="scope-terms-when-a-structure-belongs-to-several-joints">Scope
+terms — when a structure belongs to several joints</h3>
+<p><code>community.tags.scope_terms</code> is a second, different test
+from the name and synonyms, and the difference is the point.</p>
+<p>A name or synonym is matched by <strong>proximity</strong>: every
+significant word inside a window of <code>words.length + 3</code>. That
+is the right question for a phrase. It is the wrong question for a
+structure several joints share — six joints have a medial collateral
+ligament, and the literature writes <em>“Influence of Concomitant MCL
+Injury”</em> with the joint named nowhere near the ligament, if at all.
+Qualifying the tag name to <code>Knee MCL</code> therefore took it from
+matching all 25 MCL papers (on all six copies, wrongly) to matching
+<strong>2</strong>.</p>
+<p>A scope term is matched <strong>anywhere in title or abstract, with
+no window, and any one term suffices</strong>. So the tag asks two
+questions: <em>is this phrase here</em> (proximity) and <em>is this
+paper about my joint</em> (scope). <code>Knee MCL</code> scopes to
+<code>{knee, tibial}</code> and recovers 22 of the 25, while the toe and
+finger tags stay at zero.</p>
+<p>That is what lets the bare phrase be a synonym again. “Medial
+collateral ligament” sits on the knee, the elbow and four toe joints at
+once without any of them stealing the others’ papers.</p>
+<ul>
+<li><strong>Scope terms are classification only</strong> — never search,
+never an input affordance. “Knee” is not another way of saying
+<code>Knee MCL</code>; it is a condition the document has to
+satisfy.</li>
+<li><strong>An empty scope means no restriction</strong>, which is every
+tag but the 22 collateral ligaments.</li>
+<li><strong>Be generous.</strong> A scope that is too broad costs a
+false positive; one that is too narrow costs the paper entirely, which
+is the failure the column exists to fix. <code>Knee MCL</code> includes
+<code>tibial</code>, and <code>First MTP MCL</code> includes
+<code>hallux</code> and <code>great toe</code>.</li>
+<li><code>npm run verify:scope -w apps/api</code> covers the behaviour
+and runs in CI. No database needed — <code>classify</code> is a pure
+function.</li>
+</ul>
+<p>⚠️ <strong>The stemmer is deliberately crude and must stay
+symmetrical.</strong> It strips a trailing <code>e</code> as well as the
+plural <code>s</code>, so “fractures” and “fracture” both become
+<code>fractur</code>. That looks wrong in isolation and is the only
+thing that makes them match: the original rules took “es” off wholesale,
+leaving “fractures” as <code>fractur</code> while “fracture” stayed
+whole, so every word whose singular ends in <code>e</code> — knee,
+muscle, fracture, rupture — silently failed to match its own plural. The
+same function runs over tag names and article text, so symmetry is the
+only property that matters. The verify script pins nine plural pairs
+against regression.</p>
 <h3 id="running-a-reclassify">Running a reclassify</h3>
 <p>A reclassify re-tags the stored corpus in place. It is the tuning
 loop — a synonym, a classifier rule or a taxonomy migration changes what
