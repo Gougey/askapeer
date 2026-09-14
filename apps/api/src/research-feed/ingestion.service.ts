@@ -298,17 +298,18 @@ export class IngestionService {
       id: string;
       name: string;
       synonyms: string[] | null;
+      scope_terms: string[] | null;
       depth: number;
     }>(sql`
       with recursive walk as (
-        select id, name, synonyms, 0 as depth
+        select id, name, synonyms, scope_terms, 0 as depth
         from community.tags where parent_id is null and retired_at is null
         union all
-        select t.id, t.name, t.synonyms, w.depth + 1
+        select t.id, t.name, t.synonyms, t.scope_terms, w.depth + 1
         from community.tags t join walk w on t.parent_id = w.id
         where t.retired_at is null
       )
-      select id, name, synonyms, depth from walk
+      select id, name, synonyms, scope_terms, depth from walk
     `);
     // Prepared here so each tag's match forms are resolved once per run rather than once
     // per article — and so the ambiguous-base check sees the whole taxonomy at once.
@@ -317,6 +318,7 @@ export class IngestionService {
         id: r.id,
         name: r.name,
         synonyms: r.synonyms ?? [],
+        scopeTerms: r.scope_terms ?? [],
         depth: Number(r.depth),
       })),
     );

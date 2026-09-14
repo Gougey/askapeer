@@ -12,7 +12,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "lint:disclosure": "node scripts/check-disclosure.mjs",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "verify:reclassify": "tsx scripts/verify-reclassify.ts"
+    "verify:reclassify": "tsx scripts/verify-reclassify.ts",
+    "verify:scope": "tsx scripts/verify-classifier-scope.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",

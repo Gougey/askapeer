@@ -25,16 +25,27 @@ const STOP_WORDS = new Set([
  * correct and is not worth it for matching two-to-four word clinical phrases.
  */
 function stem(word: string): string {
-  if (word.length <= 4) return word;
-  for (const [suffix, replacement] of [
-    ['ies', 'y'],
-    ['ses', 's'],
-    ['es', ''],
-    ['s', ''],
-  ] as const) {
-    if (word.endsWith(suffix)) return word.slice(0, -suffix.length) + replacement;
-  }
-  return word;
+  if (word.length <= 3) return word;
+  let w = word;
+  if (w.endsWith('ies') && w.length > 4) w = `${w.slice(0, -3)}y`;
+  else if (w.endsWith('ses') && w.length > 4) w = `${w.slice(0, -3)}s`;
+  // `ss` is not a plural: "stress" and "loss" must survive intact.
+  else if (w.endsWith('s') && !w.endsWith('ss')) w = w.slice(0, -1);
+  /**
+   * **And then a trailing `e`, which is what makes the plurals actually meet their
+   * singulars.** Stripping only the `s` leaves "fractures" as "fracture" and "knees" as
+   * "knee", which is right — but the original rules took "es" off wholesale, so "fractures"
+   * became "fractur" while "fracture" stayed "fracture", and the two never matched. Words
+   * whose singular ends in `e` are a large slice of this vocabulary: knee, muscle, fracture,
+   * rupture, tendinopathie… every one of them was failing to unify with its own plural, and
+   * the guard that skipped words of four letters or fewer hid it for "knee" specifically.
+   *
+   * Dropping the `e` from both forms is cruder than Porter and, unlike the old rule, it is
+   * symmetrical — which is the only property that matters here, because the same function
+   * runs over the tag names and over the article text.
+   */
+  if (w.endsWith('e') && w.length > 3) w = w.slice(0, -1);
+  return w;
 }
 
 export function tokenise(text: string): string[] {
@@ -85,7 +96,7 @@ function nameVariants(tagName: string, ambiguousBases: Set<string>): string[] {
 }
 
 /** A tag with its match forms worked out once, rather than per article. */
-export type PreparedTag = { id: string; depth: number; variants: string[][] };
+export type PreparedTag = { id: string; depth: number; variants: string[][]; scopes: string[][] };
 
 /**
  * Resolve every tag's match forms up front.
@@ -111,7 +122,31 @@ export function prepareTaxonomy(tags: ClassifiableTag[]): PreparedTag[] {
     variants: [...nameVariants(tag.name, ambiguous), ...tag.synonyms]
       .map(significantWords)
       .filter((words) => words.length > 0),
+    scopes: (tag.scopeTerms ?? []).map(significantWords).filter((words) => words.length > 0),
   }));
+}
+
+/**
+ * Is this document about the right body part for this tag?
+ *
+ * **The separation the proximity window cannot express.** A window asks "are these words
+ * near each other", which is the right question for a phrase and the wrong one for a
+ * structure that several joints share. *Knee MCL* needs "MCL" to be a phrase and "knee" to
+ * be a fact about the paper, and those are not the same test: the literature writes "Risk of
+ * Revision After ACL Reconstruction: Influence of Concomitant MCL Injury", where the joint
+ * is named nowhere near the ligament and frequently not in the title at all.
+ *
+ * Measured before this existed: 25 articles mentioned the MCL, 23 named the knee or the
+ * tibia *somewhere*, and 2 had them close enough to match. The window was throwing away
+ * twenty-one papers to answer a question the document had already answered elsewhere.
+ *
+ * So a scope term is checked against the **whole document**, with no window, and **any one
+ * of them is enough** — a scope is a claim about what the paper is about, not a phrase to
+ * find. A tag with no scope terms is unaffected, which is nearly all of them.
+ */
+function inScope(scopes: string[][], tokens: string[]): boolean {
+  if (scopes.length === 0) return true;
+  return scopes.some((words) => words.every((w) => tokens.includes(w)));
 }
 
 /**
@@ -139,6 +174,12 @@ export type ClassifiableTag = {
   id: string;
   name: string;
   synonyms: string[];
+  /**
+   * Words the document must contain *somewhere* for this tag to apply at all — the joint a
+   * shared structure belongs to, typically. Any one of them suffices; empty means no
+   * restriction, which is the case for all but the collateral ligaments today.
+   */
+  scopeTerms?: string[];
   /** Depth in the taxonomy: 0 for a root region, higher for a leaf. Drives specificity. */
   depth: number;
 };
@@ -181,9 +222,16 @@ export function classify(
   const abstractTokens = article.abstract ? tokenise(article.abstract) : [];
   const matches: TagMatch[] = [];
 
+  const allTokens = [...titleTokens, ...abstractTokens];
+
   for (const tag of tags) {
     const { variants } = tag;
     if (variants.length === 0) continue;
+    // Cheapest disqualifier first, and the one that lets a tag carry the bare phrase as a
+    // synonym safely: "medial collateral ligament" can belong to the knee, the elbow and
+    // four toe joints at once, because only the paper's own body part decides which of them
+    // is allowed to claim it.
+    if (!inScope(tag.scopes, allTokens)) continue;
 
     const inTitle = variants.some((words) => matchesIn(words, titleTokens));
     /**

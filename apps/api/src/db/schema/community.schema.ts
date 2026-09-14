@@ -171,6 +171,15 @@ export const tags = community.table(
     parentId: uuid('parent_id').references((): AnyPgColumn => tags.id),
     // Seeds the search synonym dictionary (EPIC-C §4) as well as matching on input.
     synonyms: text('synonyms').array().notNull().default(sql`'{}'::text[]`),
+    /**
+     * Words a paper must contain *somewhere* before this tag may claim it — the joint that
+     * owns a structure several joints share. Any one of them is enough, and an empty array
+     * means no restriction, which is all but the collateral ligaments today.
+     *
+     * Classification only. Unlike `synonyms` this is never a search or input affordance:
+     * "knee" is not another way of saying "Knee MCL", it is a condition on the document.
+     */
+    scopeTerms: text('scope_terms').array().notNull().default(sql`'{}'::text[]`),
     // INTERNAL ONLY — MeSH mapping for research-feed/literature interop (EPIC-I).
     // Never member-facing; deliberately not in any DTO.
     meshId: text('mesh_id'),
