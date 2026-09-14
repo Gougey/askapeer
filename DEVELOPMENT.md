@@ -128,7 +128,7 @@ design and its reasoning are in `docs/2026-08-03-research-feed-ingestion-design.
 what exists and what to know before touching it.
 
 **Built**: the `research` schema, both source adapters (Europe PMC, OpenAlex), dedupe,
-classification against every live tag, intrinsic scoring, a twice-daily BullMQ repeatable job,
+classification against every live tag (by name, synonym and scope term), intrinsic scoring, a twice-daily BullMQ repeatable job,
 admin run/reclassify/status endpoints, the Feed tab with infinite scroll, and article detail.
 **Not built**: `member_interests` and the interests picker — so the feed is the *same* for
 everyone. That is deliberate (see below).
@@ -221,6 +221,43 @@ Sampling the untagged remainder also found gaps that are **synonyms, not code**:
 Ligament Reconstruction"` matches nothing because the only ACL tag is `ACL rupture`; and
 `"chronic low back pain"` matches nothing because the tag is `Lumbar Spine`. Three measured
 examples for the synonym ask — and `reclassify` turns his list into results in seconds.
+
+### Scope terms — when a structure belongs to several joints
+
+`community.tags.scope_terms` is a second, different test from the name and synonyms, and the
+difference is the point.
+
+A name or synonym is matched by **proximity**: every significant word inside a window of
+`words.length + 3`. That is the right question for a phrase. It is the wrong question for a
+structure several joints share — six joints have a medial collateral ligament, and the
+literature writes *"Influence of Concomitant MCL Injury"* with the joint named nowhere near
+the ligament, if at all. Qualifying the tag name to `Knee MCL` therefore took it from matching
+all 25 MCL papers (on all six copies, wrongly) to matching **2**.
+
+A scope term is matched **anywhere in title or abstract, with no window, and any one term
+suffices**. So the tag asks two questions: *is this phrase here* (proximity) and *is this
+paper about my joint* (scope). `Knee MCL` scopes to `{knee, tibial}` and recovers 22 of the
+25, while the toe and finger tags stay at zero.
+
+That is what lets the bare phrase be a synonym again. "Medial collateral ligament" sits on the
+knee, the elbow and four toe joints at once without any of them stealing the others' papers.
+
+- **Scope terms are classification only** — never search, never an input affordance. "Knee" is
+  not another way of saying `Knee MCL`; it is a condition the document has to satisfy.
+- **An empty scope means no restriction**, which is every tag but the 22 collateral ligaments.
+- **Be generous.** A scope that is too broad costs a false positive; one that is too narrow
+  costs the paper entirely, which is the failure the column exists to fix. `Knee MCL` includes
+  `tibial`, and `First MTP MCL` includes `hallux` and `great toe`.
+- `npm run verify:scope -w apps/api` covers the behaviour and runs in CI. No database needed —
+  `classify` is a pure function.
+
+⚠️ **The stemmer is deliberately crude and must stay symmetrical.** It strips a trailing `e`
+as well as the plural `s`, so "fractures" and "fracture" both become `fractur`. That looks
+wrong in isolation and is the only thing that makes them match: the original rules took "es"
+off wholesale, leaving "fractures" as `fractur` while "fracture" stayed whole, so every word
+whose singular ends in `e` — knee, muscle, fracture, rupture — silently failed to match its
+own plural. The same function runs over tag names and article text, so symmetry is the only
+property that matters. The verify script pins nine plural pairs against regression.
 
 ### Running a reclassify
 
