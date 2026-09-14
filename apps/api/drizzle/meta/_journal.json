@@ -295,6 +295,13 @@
       "when": 1788234900438,
       "tag": "0041_systemic_branch",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1788238500438,
+      "tag": "0042_scope_the_qualified_conditions",
+      "breakpoints": true
     }
   ]
 }
