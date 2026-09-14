@@ -676,7 +676,7 @@ EPIC-J's admin surfaces for editing them are S13. Both are read through
 are **select-only** (FD-4), so an unknown or retired tag id is a 400 rather than an
 invitation to create one.
 
-`GET /v1/tags` returns Andrew's clinical taxonomy — **1,193 live nodes, five levels deep**
+`GET /v1/tags` returns Andrew's clinical taxonomy — **1,187 live nodes, five levels deep**
 (region → axis → sub-group → leaf) — flat, one row per node, walked with a recursive CTE
 in `vocabulary.service.ts`. Each row carries `parentId` (the composer rebuilds the tree),
 `region` (the root it descends from) and `hasChildren`. Two consequences worth knowing:

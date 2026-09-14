@@ -986,7 +986,7 @@ and post creation validates against them — tags are
 <strong>select-only</strong> (FD-4), so an unknown or retired tag id is
 a 400 rather than an invitation to create one.</p>
 <p><code>GET /v1/tags</code> returns Andrew’s clinical taxonomy —
-<strong>1,193 live nodes, five levels deep</strong> (region → axis →
+<strong>1,187 live nodes, five levels deep</strong> (region → axis →
 sub-group → leaf) — flat, one row per node, walked with a recursive CTE
 in <code>vocabulary.service.ts</code>. Each row carries
 <code>parentId</code> (the composer rebuilds the tree),
