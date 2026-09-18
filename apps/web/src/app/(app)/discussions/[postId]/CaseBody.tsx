@@ -55,11 +55,18 @@ export async function CaseBody({
         </section>
       ))}
 
-      {detail.attestedAt && (
-        <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
-          {t('attested')}
-        </p>
-      )}
+      {/*
+        No attestation line. It used to sit here, reading "The author has attested that this
+        case is de-identified" — and Andrew asked for it to go after testing, because on the
+        page it reads as a claim being made *to the reader*, who is a verified clinician and
+        neither the audience for it nor able to act on it.
+
+        Only the display goes. `attested_at` is still recorded against the member's verified
+        identity and still gates publication (PRD §10.5 asks for the attestation to be taken
+        and kept, not shown), the correction loop still forces a re-attestation, and the
+        audit trail is untouched. If a moderator ever needs to see it, the field is there —
+        no admin screen renders case fields today, so there was nowhere to move it to.
+      */}
     </div>
   );
 }
