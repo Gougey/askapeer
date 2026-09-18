@@ -31,6 +31,33 @@ type TagIndex = {
 };
 
 const ROOTS = null;
+
+/**
+ * Does this name answer what was typed?
+ *
+ * **Word-prefix, not substring**, and the difference is the whole point. A substring match
+ * needs the letters to be contiguous and in order, so a clinician typing *patella
+ * tendinopathy* got nothing at all: the tag is *Patellar tendinopathy*, and the missing `r`
+ * broke the run. Andrew hit exactly that in testing, and it is the shape of the failure
+ * rather than the one term that matters — singular against plural, `-a` against `-ar`, a
+ * half-typed second word.
+ *
+ * So each word of the query has to start some word of the name, and all of them must land.
+ * "patella ten" finds *Patellar tendinopathy*; "rotator cuff tear" finds *Rotator cuff
+ * tears*; "achilles tendin" finds *Achilles tendinopathy*. Order does not matter, because
+ * "tendinopathy patellar" is the same question asked backwards.
+ *
+ * The plain substring test stays as the first branch, for two reasons: it is the cheap path
+ * for the common case, and it still catches a query that starts mid-word — "flexion" in
+ * *Hip flexion* — which the word-prefix rule alone would miss.
+ */
+function matches(name: string, needle: string, words: string[]): boolean {
+  const haystack = name.toLowerCase();
+  if (haystack.includes(needle)) return true;
+  const nameWords = haystack.split(/[^a-z0-9]+/).filter(Boolean);
+  return words.every((word) => nameWords.some((nameWord) => nameWord.startsWith(word)));
+}
+
 /** Past this the sheet is a scroll chore, and the query wants narrowing instead. */
 const MAX_RESULTS = 20;
 /** Below this, matches are too broad to rank usefully — browse is the better affordance. */
@@ -377,15 +404,13 @@ function TagSheet({
   const results = useMemo(() => {
     if (!searching) return [];
     const needle = trimmed.toLowerCase();
+    const words = needle.split(/\s+/).filter(Boolean);
     const hits: Tag[] = [];
     for (const tag of index.byId.values()) {
       // Synonyms are searched as well as names. An administrator can group a concept the
       // taxonomy scatters — "quadriceps" lives under three different parents — by putting
       // the word on each tag; if search ignored synonyms, that would appear not to work.
-      if (
-        tag.name.toLowerCase().includes(needle) ||
-        tag.synonyms.some((synonym) => synonym.toLowerCase().includes(needle))
-      ) {
+      if (matches(tag.name, needle, words) || tag.synonyms.some((s) => matches(s, needle, words))) {
         hits.push(tag);
       }
     }
