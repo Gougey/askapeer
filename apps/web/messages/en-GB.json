@@ -451,8 +451,7 @@
       "historyPresentingCondition": "History of presenting condition",
       "objectiveFindings": "Objective findings",
       "communityQuestion": "The question"
-    },
-    "attested": "The author has attested that this case is de-identified."
+    }
   },
   "search": {
     "heading": "Search",
