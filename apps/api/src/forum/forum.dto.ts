@@ -26,8 +26,17 @@ export const MAX_TAGS_PER_POST = 5;
  * publish, S9), so accepting `type` here would open a path that skips it.
  */
 export class CreatePostDto {
+  /**
+   * Optional since the composer stopped asking (Andrew's testing review, item 8): tags carry
+   * the clinical meaning, and what was left of the category is the kind of post, which this
+   * endpoint already knows. Omitted, the service resolves the one live question category.
+   *
+   * Still accepted, because the rule is "derive it if you did not say" rather than "you may
+   * not say" — and a supplied id is still checked against the case-discussion gate below.
+   */
+  @IsOptional()
   @IsUUID()
-  categoryId!: string;
+  categoryId?: string;
 
   @IsString()
   @MinLength(1)

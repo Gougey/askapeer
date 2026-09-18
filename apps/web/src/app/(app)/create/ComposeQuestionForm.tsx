@@ -1,10 +1,9 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import type { Category, Tag } from '@/lib/forum';
-import { categoryColour } from '@/lib/category-colour';
+import type { Tag } from '@/lib/forum';
 import { createPostAction, type ComposeState } from './actions';
 import { ConfirmPostDialog } from './ConfirmPostDialog';
 import { TagPicker } from '@/components/TagPicker';
@@ -34,10 +33,8 @@ function ReviewButton({ disabled, onClick }: { disabled: boolean; onClick: () =>
 }
 
 export function ComposeQuestionForm({
-  categories,
   tags,
 }: {
-  categories: Category[];
   tags: Tag[];
 }) {
   const t = useTranslations('compose');
@@ -46,24 +43,7 @@ export function ComposeQuestionForm({
   });
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [categoryId, setCategoryId] = useState('');
   const [confirming, setConfirming] = useState(false);
-  const categoryRef = useRef<HTMLSelectElement>(null);
-
-  /*
-   * React resets the form once an action settles. A controlled <input> survives that,
-   * because React writes the value through to the DOM attribute the reset restores from —
-   * a controlled <select> does not, since no <option> carries `selected`, so it snaps back
-   * to the first option (our empty placeholder). The member then sees a failed post *and*
-   * their category silently cleared, which reads as a second, phantom mistake.
-   *
-   * So re-assert the selection after the reset. Only the select needs this.
-   */
-  useEffect(() => {
-    if (categoryRef.current && categoryRef.current.value !== categoryId) {
-      categoryRef.current.value = categoryId;
-    }
-  }, [state, categoryId]);
 
   /*
    * Close the gate if the post was rejected. The error renders on the form, so leaving the
@@ -74,7 +54,7 @@ export function ComposeQuestionForm({
     if (state.status === 'error') setConfirming(false);
   }, [state]);
 
-  const complete = categoryId !== '' && title.trim() !== '' && body.trim() !== '';
+  const complete = title.trim() !== '' && body.trim() !== '';
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -94,46 +74,17 @@ export function ComposeQuestionForm({
         {t('anonymity.inline')}
       </p>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">{t('category')}</span>
-        <select
-          ref={categoryRef}
-          name="categoryId"
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="rounded-lg border px-3 py-2"
-          /*
-           * The closed control carries the chosen category's colour, which is the part
-           * that works everywhere. The `<option>` colours below are progressive
-           * enhancement: desktop browsers honour them, but iOS and Android draw the open
-           * list with their own native picker and ignore them entirely.
-           */
-          style={{
-            background: 'var(--color-surface)',
-            borderColor: 'var(--color-muted)',
-            color: categoryColour(categories.find((c) => c.id === categoryId)?.colour),
-          }}
-        >
-          {/* Explicit, because an option otherwise inherits the colour set on the select
-              above and the placeholder would take the chosen category's hue. */}
-          <option value="" style={{ color: 'var(--color-fg)' }}>
-            {t('categoryPlaceholder')}
-          </option>
-          {/*
-            Categories reserved for case discussions are not offered here. A clinical case
-            has its own composer and its own de-identification gate, so listing it as a
-            choice for a quick question invites exactly the post that should have gone the
-            other route. The API refuses one too — this only keeps the list honest.
-          */}
-          {categories
-            .filter((category) => category.postType !== 'case_discussion')
-            .map((category) => (
-              <option key={category.id} value={category.id} style={{ color: categoryColour(category.colour) }}>
-                {category.name}
-              </option>
-            ))}
-        </select>
-      </label>
+      {/*
+        No category field. It used to sit here and Andrew asked for it to go after testing:
+        the fastest path in the product — tapping "+" to ask a question — opened with a
+        five-way taxonomy decision whose most common answer was called "General", which is
+        a choice that teaches nothing and costs a beat of confidence.
+
+        The clinical meaning lives in the tags now. What was left of the category was the
+        *kind* of post, and this composer already knows that: it is the question one. The
+        API resolves it (`questionCategoryId`) rather than taking it from here, so a client
+        cannot file a question anywhere else by accident.
+      */}
 
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium">{t('title')}</span>

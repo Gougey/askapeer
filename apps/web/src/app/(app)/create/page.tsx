@@ -11,7 +11,7 @@ import { ComposeTypeSwitch } from './ComposeTypeSwitch';
  */
 export default async function CreatePage() {
   const token = await requireAccessToken();
-  const [t, { categories, tags }] = await Promise.all([
+  const [t, { tags }] = await Promise.all([
     getTranslations('compose'),
     fetchVocabulary(token),
   ]);
@@ -20,7 +20,7 @@ export default async function CreatePage() {
     <main className="flex flex-col gap-4 px-4 py-6">
       <h1 className="text-xl font-semibold">{t('heading')}</h1>
       <ComposeTypeSwitch active="question" />
-      <ComposeQuestionForm categories={categories} tags={tags} />
+      <ComposeQuestionForm tags={tags} />
     </main>
   );
 }

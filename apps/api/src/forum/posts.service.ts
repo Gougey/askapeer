@@ -16,6 +16,7 @@ import {
 } from '../db/schema';
 import { CHECKLIST_ITEMS } from '../cases/case-policy';
 import type { CreatePostDto, ListPostsDto } from './forum.dto';
+import { VocabularyService } from './vocabulary.service';
 
 const DEFAULT_PAGE_SIZE = 20;
 /** Enough of the body to judge whether a question is worth opening, not enough to replace it. */
@@ -132,7 +133,10 @@ type RankableComment = ThreadComment & { createdAtMs: number };
 
 @Injectable()
 export class PostsService {
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly vocabulary: VocabularyService,
+  ) {}
 
   /**
    * Compose a question (screens D1/D2). Case discussions are *not* creatable here — they
@@ -141,12 +145,20 @@ export class PostsService {
    * never become a way around that gate.
    */
   async create(handleId: string, dto: CreatePostDto): Promise<Thread> {
+    /*
+     * The composer no longer asks for a category, so an absent one is the normal case and
+     * is resolved here rather than defaulted in the client. Keeping the derivation on this
+     * side means every client gets it right, and means the question "which category is a
+     * question in?" has exactly one answer in the codebase.
+     */
+    const categoryId = dto.categoryId ?? (await this.vocabulary.questionCategoryId());
+
     const [category] = await this.db
       .select({ id: categories.id, postType: categories.postType })
       .from(categories)
-      .where(and(eq(categories.id, dto.categoryId), isNull(categories.retiredAt)));
+      .where(and(eq(categories.id, categoryId), isNull(categories.retiredAt)));
     if (!category) throw new BadRequestException('That category does not exist.');
-    // The composer already hides this one, but the composer is not the gate: a category
+    // The composer no longer offers this one, but the composer is not the gate: a category
     // reserved for case discussions must not take a question, or the question sidesteps
     // the de-identification route the category implies (EPIC-E).
     if (category.postType === 'case_discussion') {
@@ -173,7 +185,7 @@ export class PostsService {
         .insert(posts)
         .values({
           handleId,
-          categoryId: dto.categoryId,
+          categoryId,
           type: 'question',
           title: dto.title.trim(),
           body: dto.body.trim(),

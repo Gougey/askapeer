@@ -90,6 +90,37 @@ export class VocabularyService {
    * case-discussion category: a case filed under "General" would be wrong in a way nobody
    * would notice for months, where a loud failure gets the seed fixed.
    */
+  /**
+   * The category a question belongs to, since the composer no longer asks.
+   *
+   * Symmetrical with `caseCategoryId` and resolved the same way — by `post_type`, not by
+   * name — so neither side depends on a string an administrator can rename.
+   *
+   * **Exactly one, or it refuses.** If a second question category is ever added, guessing
+   * between them would silently mis-file every post from a client that stopped asking, so
+   * this fails loudly instead: the right response to two categories is to put the choice
+   * back in front of the member, and a 500 here is a far better prompt than a year of
+   * quietly wrong data.
+   */
+  async questionCategoryId(): Promise<string> {
+    const rows = await this.db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.postType, 'question'), isNull(categories.retiredAt)));
+    if (rows.length === 0) {
+      throw new Error(
+        'No live category is marked for questions — the categories vocabulary needs one.',
+      );
+    }
+    if (rows.length > 1) {
+      throw new Error(
+        `${rows.length} live categories are marked for questions. The composer stopped asking on the ` +
+          'understanding there was one; either retire the extras or give the member the choice back.',
+      );
+    }
+    return rows[0].id;
+  }
+
   async caseCategoryId(): Promise<string> {
     const [row] = await this.db
       .select({ id: categories.id })

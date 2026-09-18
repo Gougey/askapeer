@@ -140,8 +140,6 @@
     "confirm": {
       "cancel": "Go back and edit"
     },
-    "category": "Category",
-    "categoryPlaceholder": "Choose a category",
     "title": "Question",
     "titlePlaceholder": "e.g. Return-to-run criteria after hamstring strain?",
     "body": "Details",
@@ -457,8 +455,6 @@
     "heading": "Search",
     "queryLabel": "Search",
     "queryPlaceholder": "e.g. hamstring return to run, \"ACL\", achilles -surgery",
-    "categoryLabel": "Category",
-    "anyCategory": "Any category",
     "submit": "Search",
     "idle": "Search discussions, answers and the research library.",
     "resultCount": "{count, plural, one {1 result} other {# results}}",
