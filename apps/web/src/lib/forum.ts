@@ -57,7 +57,10 @@ export type Thread = {
     isAuthor: boolean;
     hasKudosedPost: boolean;
     isFollowing: boolean;
-    /** Whether the question itself can still be corrected. Always false for a case. */
+    /**
+     * Whether the post itself can still be corrected. True for a case as well as a question —
+     * the form and the route differ, the window does not.
+     */
     canEditPost: boolean;
   };
 };

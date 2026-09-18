@@ -154,3 +154,53 @@ export class AttestCaseDto {
   @IsBoolean()
   confirmed!: boolean;
 }
+
+/**
+ * Correcting a *published* case discussion (Andrew's testing review, item 1).
+ *
+ * The six fields plus the attestation, in one request, because they are one decision: a
+ * case's wording is what the de-identification promise was made about, so new wording needs
+ * a new promise. Splitting them would leave a window — however short — in which the
+ * published text and the attestation describing it disagree.
+ *
+ * Every field is required rather than optional, unlike `UpdateCaseDto`. A draft is edited in
+ * passes and a partial update is the normal shape there; a correction is made against the
+ * whole case in front of you, and the attestation is about all six fields, not the one you
+ * touched.
+ */
+export class CorrectCaseDto {
+  @IsIn(AGE_BANDS)
+  ageBand!: AgeBand;
+
+  @IsInt()
+  @Min(0)
+  @Max(MAX_ONSET_DAYS)
+  onsetDays!: number;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(CASE_FIELD_MAX_LENGTH)
+  presentingCondition!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(CASE_FIELD_MAX_LENGTH)
+  historyPresentingCondition!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(CASE_FIELD_MAX_LENGTH)
+  objectiveFindings!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(CASE_FIELD_MAX_LENGTH)
+  communityQuestion!: string;
+
+  @IsString()
+  @MaxLength(2_000)
+  attestationText!: string;
+
+  @IsBoolean()
+  confirmed!: boolean;
+}

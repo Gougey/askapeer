@@ -195,3 +195,35 @@ async function refusalMessage(res: Response): Promise<string> {
   }
   return 'That could not be saved.';
 }
+
+/**
+ * Correct a published case, re-attesting in the same request (EPIC-E, and Andrew's testing
+ * review item 1 as extended to cases).
+ *
+ * One call rather than an edit followed by an attest: the two are one decision, and split
+ * across two requests the case would briefly be published with wording its attestation does
+ * not describe.
+ */
+export async function correctCaseAction(
+  postId: string,
+  payload: {
+    ageBand: string;
+    onsetDays: number;
+    presentingCondition: string;
+    historyPresentingCondition: string;
+    objectiveFindings: string;
+    communityQuestion: string;
+    attestationText: string;
+    confirmed: boolean;
+  },
+): Promise<{ error: string } | void> {
+  const token = await authedToken();
+  const res = await fetch(`${API_ORIGIN}/v1/case-discussions/${postId}/correct`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+  if (!res.ok) return { error: await refusalMessage(res) };
+  revalidatePath(`/discussions/${postId}`);
+}

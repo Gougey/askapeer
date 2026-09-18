@@ -1,11 +1,28 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { caseAttestations, caseDetails, categories, posts, postTags, tags } from '../db/schema';
+import {
+  caseAttestations,
+  caseDetails,
+  categories,
+  comments,
+  kudos,
+  posts,
+  postTags,
+  reports,
+  tags,
+} from '../db/schema';
 import { PostsService, type Thread } from '../forum/posts.service';
 import { VocabularyService } from '../forum/vocabulary.service';
+import { EDIT_REFUSAL_MESSAGE, editRefusal } from '../forum/edit-window';
 import { ATTESTATION_TEXT, CHECKLIST_ITEMS } from './case-policy';
-import type { AttestCaseDto, CreateCaseDto, SetChecklistDto, UpdateCaseDto } from './cases.dto';
+import type {
+  AttestCaseDto,
+  CorrectCaseDto,
+  CreateCaseDto,
+  SetChecklistDto,
+  UpdateCaseDto,
+} from './cases.dto';
 
 /** How much of the presenting condition becomes the list-surface title. */
 const DERIVED_TITLE_LENGTH = 110;
@@ -138,6 +155,125 @@ export class CasesService {
     });
 
     return this.postsService.getThread(postId, handleId);
+  }
+
+  /**
+   * Correct a *published* case, re-attesting in the same step (Andrew's testing review,
+   * item 1; the case half he confirmed afterwards).
+   *
+   * The edit window is the forum's — nothing has responded, and under 24 hours — because a
+   * case earns kudos and answers exactly as a question does, and rewriting after either
+   * makes them endorsements of text that no longer exists.
+   *
+   * **The attestation travels with the edit and is re-taken, not reused.** A case's wording
+   * is what the de-identification promise was made about, so new wording needs a new promise;
+   * sending them separately would leave a window, however short, in which the published text
+   * and the attestation describing it disagree. A fresh `case_attestations` row is written
+   * rather than the old one updated, so the audit trail reads as it should: published at one
+   * time under one promise, corrected at another under another.
+   *
+   * ⚠️ **The checklist is deliberately not re-taken, and this differs from the draft flow**,
+   * where `updateDraft` clears it on every change. The two are different moments. A draft is
+   * still being assembled and the checklist is part of assembling it; a published case inside
+   * the edit window is finished, and the correction is a correction. Re-confirming the
+   * promise against the new text is the guarantee that matters — Adrian settled this on
+   * 2026-09-18 as "re-tick the de-identification box as part of saving the edit".
+   */
+  async correctPublished(
+    postId: string,
+    member: { memberId: string; handleId: string },
+    dto: CorrectCaseDto,
+    ipAddress: string | null,
+  ): Promise<Thread> {
+    const [row] = await this.db
+      .select({
+        handleId: posts.handleId,
+        type: posts.type,
+        status: posts.status,
+        createdAt: posts.createdAt,
+        checklistState: caseDetails.checklistState,
+      })
+      .from(posts)
+      .innerJoin(caseDetails, eq(caseDetails.postId, posts.id))
+      .where(eq(posts.id, postId));
+    if (!row) throw new NotFoundException('No such case discussion.');
+
+    const [engagement] = await this.db
+      .select({
+        answers: sql<number>`(select count(*) from ${comments}
+           where ${comments.postId} = ${postId} and ${comments.status} = 'published')::int`,
+        kudosCount: sql<number>`(select count(*) from ${kudos}
+           where ${kudos.targetType} = 'post' and ${kudos.targetId} = ${postId})::int`,
+        reportCount: sql<number>`(select count(*) from ${reports}
+           where ${reports.targetType} = 'post' and ${reports.targetId} = ${postId})::int`,
+      })
+      .from(posts)
+      .where(eq(posts.id, postId));
+
+    const refusal = editRefusal({
+      editable: row.type === 'case_discussion' && row.status === 'published',
+      isAuthor: row.handleId === member.handleId,
+      createdAt: row.createdAt,
+      hasEngagement:
+        Number(engagement.answers) > 0 ||
+        Number(engagement.kudosCount) > 0 ||
+        Number(engagement.reportCount) > 0,
+    });
+    // 404 rather than 403 for someone else's: consistent with the rest of this service,
+    // where confirming a case exists is itself a disclosure.
+    if (refusal === 'not_author') throw new NotFoundException('No such case discussion.');
+    if (refusal === 'not_editable') {
+      throw new ForbiddenException(
+        'Only a published case discussion can be corrected this way. A draft is edited directly, and a case sent back by a moderator goes through the correction loop.',
+      );
+    }
+    if (refusal) throw new BadRequestException(EDIT_REFUSAL_MESSAGE[refusal]);
+
+    if (!dto.confirmed) {
+      throw new BadRequestException('The attestation must be confirmed to save a correction.');
+    }
+    // The same staleness guard the first attestation uses: a composer left open across a
+    // policy change would otherwise record wording the member never read.
+    if (dto.attestationText.trim() !== ATTESTATION_TEXT) {
+      throw new BadRequestException(
+        'The attestation wording has changed since this form was opened. Please reload and read it again.',
+      );
+    }
+
+    const fields = trimFields({
+      ageBand: dto.ageBand,
+      onsetDays: dto.onsetDays,
+      presentingCondition: dto.presentingCondition,
+      historyPresentingCondition: dto.historyPresentingCondition,
+      objectiveFindings: dto.objectiveFindings,
+      communityQuestion: dto.communityQuestion,
+    });
+
+    // The checklist as it stood when this case was published — carried into the new
+    // attestation so the row records what was actually confirmed, not an assumption.
+    const state = row.checklistState ?? {};
+    const snapshot = CHECKLIST_ITEMS.map((i) => ({
+      key: i.key,
+      label: i.label,
+      confirmed: state[i.key] === true,
+    }));
+
+    await this.db.transaction(async (tx) => {
+      await tx.update(caseDetails).set(fields).where(eq(caseDetails.postId, postId));
+      await tx
+        .update(posts)
+        .set({ title: derivedTitle(fields), body: derivedBody(fields), editedAt: new Date() })
+        .where(eq(posts.id, postId));
+      await tx.insert(caseAttestations).values({
+        memberId: member.memberId,
+        postId,
+        attestationText: ATTESTATION_TEXT,
+        checklistSnapshot: snapshot,
+        ipAddress,
+      });
+    });
+
+    return this.postsService.getThread(postId, member.handleId);
   }
 
   /**

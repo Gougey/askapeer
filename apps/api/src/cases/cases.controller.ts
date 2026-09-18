@@ -19,7 +19,7 @@ import {
   CASE_DISCLAIMER,
   CHECKLIST_ITEMS,
 } from './case-policy';
-import { AttestCaseDto, CreateCaseDto, SetChecklistDto, UpdateCaseDto } from './cases.dto';
+import { AttestCaseDto, CorrectCaseDto, CreateCaseDto, SetChecklistDto, UpdateCaseDto } from './cases.dto';
 import { CasesService } from './cases.service';
 
 /**
@@ -72,6 +72,28 @@ export class CasesController {
     @Body() dto: SetChecklistDto,
   ) {
     return this.cases.setChecklist(postId, req.member.handleId!, dto);
+  }
+
+  /**
+   * Correct a published case, re-attesting in the same request.
+   *
+   * A `POST … /correct` rather than a PATCH on the case itself, because it is not the same
+   * operation as editing a draft: it carries an attestation, it only applies while the edit
+   * window is open, and conflating the two would leave one route whose meaning depended on
+   * the row's status.
+   */
+  @Post(':postId/correct')
+  correct(
+    @Req() req: Request & { member: AuthedMember },
+    @Param('postId', ParseUUIDPipe) postId: string,
+    @Body() dto: CorrectCaseDto,
+  ) {
+    return this.cases.correctPublished(
+      postId,
+      { memberId: req.member.memberId, handleId: req.member.handleId! },
+      dto,
+      req.ip ?? null,
+    );
   }
 
   @Post(':postId/attest')
