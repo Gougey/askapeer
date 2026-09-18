@@ -121,7 +121,7 @@ with no explicit exit strands the member.
 **Not done:** leaving a composer with text in it discards silently. The case composer has
 "Save as draft"; the question composer has nothing. An unsaved-work guard is a follow-up.
 
-## Research feed (S8 — ingestion + unfiltered Feed tab)
+## Research feed (S8 — ingestion + the Research tab)
 
 `GET /v1/research-feed` and `/v1/research-feed/:articleId` (EPIC-I), screens B1 and B2. The
 design and its reasoning are in `docs/2026-08-03-research-feed-ingestion-design.md`; this is
@@ -129,7 +129,7 @@ what exists and what to know before touching it.
 
 **Built**: the `research` schema, both source adapters (Europe PMC, OpenAlex), dedupe,
 classification against every live tag (by name, synonym and scope term), intrinsic scoring, a twice-daily BullMQ repeatable job,
-admin run/reclassify/status endpoints, the Feed tab with infinite scroll, and article detail.
+admin run/reclassify/status endpoints, the Research tab with infinite scroll, and article detail.
 **Not built**: `member_interests` and the interests picker — so the feed is the *same* for
 everyone. That is deliberate (see below).
 

@@ -201,8 +201,8 @@ rather than changing screen.</li>
 <p><strong>Not done:</strong> leaving a composer with text in it
 discards silently. The case composer has “Save as draft”; the question
 composer has nothing. An unsaved-work guard is a follow-up.</p>
-<h2 id="research-feed-s8-ingestion-unfiltered-feed-tab">Research feed
-(S8 — ingestion + unfiltered Feed tab)</h2>
+<h2 id="research-feed-s8-ingestion-the-research-tab">Research feed (S8 —
+ingestion + the Research tab)</h2>
 <p><code>GET /v1/research-feed</code> and
 <code>/v1/research-feed/:articleId</code> (EPIC-I), screens B1 and B2.
 The design and its reasoning are in
@@ -212,7 +212,7 @@ what exists and what to know before touching it.</p>
 adapters (Europe PMC, OpenAlex), dedupe, classification against every
 live tag (by name, synonym and scope term), intrinsic scoring, a
 twice-daily BullMQ repeatable job, admin run/reclassify/status
-endpoints, the Feed tab with infinite scroll, and article detail.
+endpoints, the Research tab with infinite scroll, and article detail.
 <strong>Not built</strong>: <code>member_interests</code> and the
 interests picker — so the feed is the <em>same</em> for everyone. That
 is deliberate (see below).</p>

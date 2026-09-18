@@ -93,7 +93,7 @@
   },
   "shell": {
     "primaryNav": "Primary",
-    "feed": "Feed",
+    "feed": "Research",
     "discussions": "Discussions",
     "create": "Create",
     "activity": "Activity",
@@ -460,7 +460,7 @@
     "categoryLabel": "Category",
     "anyCategory": "Any category",
     "submit": "Search",
-    "idle": "Search discussions, answers and the research feed.",
+    "idle": "Search discussions, answers and the research library.",
     "resultCount": "{count, plural, one {1 result} other {# results}}",
     "didYouMean": "Nothing matched “{query}” exactly. Showing {count, plural, one {1 close match} other {# close matches}}.",
     "noResults": "No results. Try fewer words, a broader tag, or check the spelling.",
@@ -485,8 +485,8 @@
     "failed": "Could not load more. Try the button below."
   },
   "feed": {
-    "heading": "Feed",
-    "empty": "Nothing here yet. The feed refreshes twice a day.",
+    "heading": "My Research",
+    "empty": "Nothing here yet. New research arrives twice a day.",
     "abstract": "Abstract",
     "noAbstract": "No abstract was published with this article.",
     "readFull": "Read the full article",
@@ -500,8 +500,8 @@
       "other": "Journal article"
     },
     "personalise": "Choose your interests",
-    "generalNote": "Showing everything. Choose your clinical interests to make this feed yours.",
-    "fallbackNote": "Nothing matches your interests yet, so this is the general feed. New articles arrive twice a day."
+    "generalNote": "Showing everything. Choose your clinical interests to make this yours.",
+    "fallbackNote": "Nothing matches your interests yet, so this is the general feed. New research arrives twice a day."
   },
   "interests": {
     "heading": "Your clinical interests",
