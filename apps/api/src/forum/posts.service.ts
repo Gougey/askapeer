@@ -1,4 +1,10 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { encodeCursor, decodeCursor } from '../common/cursor';
 import { DRIZZLE, type Database } from '../db/db.module';
@@ -12,10 +18,12 @@ import {
   kudos,
   postTags,
   posts,
+  reports,
   tags,
 } from '../db/schema';
 import { CHECKLIST_ITEMS } from '../cases/case-policy';
-import type { CreatePostDto, ListPostsDto } from './forum.dto';
+import type { CreatePostDto, ListPostsDto, UpdatePostDto } from './forum.dto';
+import { EDIT_REFUSAL_MESSAGE, editRefusal } from './edit-window';
 import { VocabularyService } from './vocabulary.service';
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -84,6 +92,8 @@ export type ThreadComment = {
   /** The caller authored this comment — drives the self-delete affordance and the fact
    *  that a handle can't kudos its own contribution, without a second round-trip. */
   isMine: boolean;
+  /** May the caller still correct this comment? Same rule as the post — `edit-window.ts`. */
+  canEdit: boolean;
   createdAt: string;
   editedAt: string | null;
 };
@@ -121,6 +131,16 @@ export type Thread = {
   comments: ThreadComment[];
   viewerContext: {
     isAuthor: boolean;
+    /**
+     * May the caller still correct the question itself? See `edit-window.ts` for the rule.
+     * Advertised rather than re-derived client-side, so the affordance the member sees and
+     * the check the API enforces are the same answer computed once.
+     *
+     * Always false for a case discussion: a case's wording is what the de-identification
+     * attestation was made about, and changing it belongs to the correction loop (EPIC-E),
+     * which takes a fresh attestation.
+     */
+    canEditPost: boolean;
     hasKudosedPost: boolean;
     /** Whether the caller is subscribed to this thread (S15). Drives the Follow control,
      *  and is the same row that decides whether they are notified about it at all. */
@@ -426,13 +446,30 @@ export class PostsService {
       throw new NotFoundException('No such post.');
     }
 
-    const [tagsByPost, ranked, hasKudosedPost, isFollowing, caseDetail] = await Promise.all([
-      this.tagsFor([row.id]),
-      this.rankedComments(row.id, viewerHandleId),
-      this.viewerKudosedPost(row.id, viewerHandleId),
-      this.viewerFollowsPost(row.id, viewerHandleId),
-      row.type === 'case_discussion' ? this.caseDetailFor(row.id) : Promise.resolve(undefined),
-    ]);
+    const [tagsByPost, ranked, hasKudosedPost, isFollowing, caseDetail, reportedPosts] =
+      await Promise.all([
+        this.tagsFor([row.id]),
+        this.rankedComments(row.id, viewerHandleId),
+        this.viewerKudosedPost(row.id, viewerHandleId),
+        this.viewerFollowsPost(row.id, viewerHandleId),
+        row.type === 'case_discussion' ? this.caseDetailFor(row.id) : Promise.resolve(undefined),
+        this.reportedTargets('post', [row.id]),
+      ]);
+
+    /*
+     * Answers, kudos and reports are the three things that can have responded to a question.
+     * A case discussion is excluded outright: its wording is what the de-identification
+     * attestation was made about, and revising it belongs to the correction loop, which
+     * takes a fresh one (EPIC-E).
+     */
+    const canEditPost =
+      editRefusal({
+        editable: row.type === 'question' && row.status === 'published',
+        isAuthor,
+        createdAt: row.createdAt,
+        hasEngagement:
+          Number(row.answerCount) > 0 || Number(row.kudosCount) > 0 || reportedPosts.has(row.id),
+      }) === null;
 
     return {
       post: {
@@ -452,8 +489,52 @@ export class PostsService {
       },
       ...(caseDetail ? { caseDetail } : {}),
       comments: ranked,
-      viewerContext: { isAuthor, hasKudosedPost, isFollowing },
+      viewerContext: { isAuthor, hasKudosedPost, isFollowing, canEditPost },
     };
+  }
+
+  /**
+   * Correct a question you have just asked (Andrew's testing review, item 1).
+   *
+   * The gate is `edit-window.ts` and it is re-evaluated here rather than trusted from the
+   * client: `canEditPost` on the thread tells the member whether to offer the affordance,
+   * but the window can close between the page rendering and the save — someone answers, or
+   * the twenty-fourth hour passes — and the second read is the one that decides.
+   *
+   * `editedAt` is stamped even though nothing displays it differently yet: it is the record
+   * that the text changed, and `PostedAt` already renders an "edited" marker from it.
+   */
+  async update(handleId: string, postId: string, dto: UpdatePostDto): Promise<Thread> {
+    const [row] = await this.db
+      .select({
+        handleId: posts.handleId,
+        type: posts.type,
+        status: posts.status,
+        createdAt: posts.createdAt,
+        answerCount: answerCountSql,
+        kudosCount: postKudosCountSql,
+      })
+      .from(posts)
+      .where(eq(posts.id, postId));
+    if (!row || row.status === 'removed') throw new NotFoundException('No such post.');
+
+    const reported = await this.reportedTargets('post', [postId]);
+    const refusal = editRefusal({
+      editable: row.type === 'question' && row.status === 'published',
+      isAuthor: row.handleId === handleId,
+      createdAt: row.createdAt,
+      hasEngagement:
+        Number(row.answerCount) > 0 || Number(row.kudosCount) > 0 || reported.has(postId),
+    });
+    if (refusal === 'not_author') throw new ForbiddenException('You can only edit your own posts.');
+    if (refusal) throw new BadRequestException(EDIT_REFUSAL_MESSAGE[refusal]);
+
+    await this.db
+      .update(posts)
+      .set({ title: dto.title.trim(), body: dto.body.trim(), editedAt: new Date() })
+      .where(eq(posts.id, postId));
+
+    return this.getThread(postId, handleId);
   }
 
   /**
@@ -550,10 +631,17 @@ export class PostsService {
 
     if (rows.length === 0) return [];
 
-    const counts = await this.commentKudos(
-      rows.map((r) => r.id),
-      viewerHandleId,
-    );
+    const [counts, reported] = await Promise.all([
+      this.commentKudos(
+        rows.map((r) => r.id),
+        viewerHandleId,
+      ),
+      this.reportedTargets('comment', rows.map((r) => r.id)),
+    ]);
+
+    // A reply is the comment-level equivalent of an answer, and it is already in `rows` —
+    // no query needed, because a reply to a comment lives in the same thread by definition.
+    const repliedTo = new Set(rows.map((r) => r.parentCommentId).filter(Boolean) as string[]);
 
     const enriched: RankableComment[] = rows.map((row) => ({
       id: row.id,
@@ -563,6 +651,14 @@ export class PostsService {
       kudosCount: counts.get(row.id)?.count ?? 0,
       hasKudosed: counts.get(row.id)?.hasKudosed ?? false,
       isMine: row.handleId === viewerHandleId,
+      canEdit:
+        editRefusal({
+          editable: true,
+          isAuthor: row.handleId === viewerHandleId,
+          createdAt: row.createdAt,
+          hasEngagement:
+            (counts.get(row.id)?.count ?? 0) > 0 || repliedTo.has(row.id) || reported.has(row.id),
+        }) === null,
       createdAt: row.createdAt.toISOString(),
       editedAt: row.editedAt?.toISOString() ?? null,
       createdAtMs: row.createdAt.getTime(),
@@ -608,6 +704,29 @@ export class PostsService {
       });
     }
     return result;
+  }
+
+  /**
+   * Which of these have been reported, so the edit window can close on them.
+   *
+   * A report is an accusation about specific wording. Letting the author revise it while the
+   * report is in the queue would leave a moderator triaging text that no longer exists — and
+   * would be a straightforward way to make an accusation look baseless.
+   *
+   * `reports` is polymorphic with no foreign key (EPIC-F), hence the target-type filter
+   * rather than a join, and every report counts regardless of how it was resolved: a
+   * dismissed report still means somebody read this and objected to it.
+   */
+  private async reportedTargets(
+    targetType: 'post' | 'comment',
+    ids: string[],
+  ): Promise<Set<string>> {
+    if (ids.length === 0) return new Set();
+    const rows = await this.db
+      .selectDistinct({ targetId: reports.targetId })
+      .from(reports)
+      .where(and(eq(reports.targetType, targetType), inArray(reports.targetId, ids)));
+    return new Set(rows.map((r) => r.targetId));
   }
 
   private async viewerKudosedPost(postId: string, viewerHandleId: string): Promise<boolean> {

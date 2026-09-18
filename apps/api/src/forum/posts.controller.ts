@@ -1,8 +1,19 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { AppAccessGuard } from '../auth/app-access.guard';
 import { JwtAuthGuard, type AuthedMember } from '../auth/jwt-auth.guard';
-import { CreatePostDto, ListPostsDto } from './forum.dto';
+import { CreatePostDto, ListPostsDto, UpdatePostDto } from './forum.dto';
 import { PostsService } from './posts.service';
 
 /**
@@ -23,6 +34,16 @@ export class PostsController {
   @Get()
   list(@Query() query: ListPostsDto) {
     return this.posts.list(query);
+  }
+
+  /** Correct your own question, while nothing has responded to it and within 24 hours. */
+  @Patch(':postId')
+  update(
+    @Req() req: Request & { member: AuthedMember },
+    @Param('postId', ParseUUIDPipe) postId: string,
+    @Body() dto: UpdatePostDto,
+  ) {
+    return this.posts.update(req.member.handleId!, postId, dto);
   }
 
   @Get(':postId')

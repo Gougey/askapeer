@@ -1,9 +1,10 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { comments, follows, posts } from '../db/schema';
+import { comments, follows, kudos, posts, reports } from '../db/schema';
 import { NotificationEvents } from '../notifications/notifications.queue';
-import type { CreateCommentDto } from './forum.dto';
+import { EDIT_REFUSAL_MESSAGE, editRefusal } from './edit-window';
+import type { CreateCommentDto, UpdateCommentDto } from './forum.dto';
 
 @Injectable()
 export class CommentsService {
@@ -75,6 +76,55 @@ export class CommentsService {
    * a moderation removal, this does **not** claw back kudos (EPIC-D §7): tidying up a
    * good-faith answer isn't a policy event.
    */
+  /**
+   * Correct an answer or reply you have just written (Andrew's testing review, item 1).
+   *
+   * The same rule as a post — `edit-window.ts` — with the comment-level reading of what
+   * counts as a response: a kudos on it, a reply beneath it, or a report against it. The
+   * thread advertises this as `canEdit`; it is re-checked here because the window can close
+   * between the page rendering and the save.
+   */
+  async update(handleId: string, commentId: string, dto: UpdateCommentDto): Promise<void> {
+    const [comment] = await this.db
+      .select({
+        handleId: comments.handleId,
+        status: comments.status,
+        createdAt: comments.createdAt,
+      })
+      .from(comments)
+      .where(eq(comments.id, commentId));
+    if (!comment || comment.status !== 'published') throw new NotFoundException('No such comment.');
+
+    const [{ replies }] = await this.db
+      .select({ replies: sql<number>`count(*)::int` })
+      .from(comments)
+      .where(and(eq(comments.parentCommentId, commentId), eq(comments.status, 'published')));
+    const [{ kudosCount }] = await this.db
+      .select({ kudosCount: sql<number>`count(*)::int` })
+      .from(kudos)
+      .where(and(eq(kudos.targetType, 'comment'), eq(kudos.targetId, commentId)));
+    const [{ reportCount }] = await this.db
+      .select({ reportCount: sql<number>`count(*)::int` })
+      .from(reports)
+      .where(and(eq(reports.targetType, 'comment'), eq(reports.targetId, commentId)));
+
+    const refusal = editRefusal({
+      editable: true,
+      isAuthor: comment.handleId === handleId,
+      createdAt: comment.createdAt,
+      hasEngagement: Number(replies) > 0 || Number(kudosCount) > 0 || Number(reportCount) > 0,
+    });
+    if (refusal === 'not_author') {
+      throw new ForbiddenException('You can only edit your own comments.');
+    }
+    if (refusal) throw new BadRequestException(EDIT_REFUSAL_MESSAGE[refusal]);
+
+    await this.db
+      .update(comments)
+      .set({ body: dto.body.trim(), editedAt: new Date() })
+      .where(eq(comments.id, commentId));
+  }
+
   async remove(handleId: string, commentId: string): Promise<void> {
     const [comment] = await this.db
       .select({ handleId: comments.handleId, status: comments.status })
