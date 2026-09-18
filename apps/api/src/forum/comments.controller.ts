@@ -1,9 +1,20 @@
-import { Body, Controller, Delete, HttpCode, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { AppAccessGuard } from '../auth/app-access.guard';
 import { JwtAuthGuard, type AuthedMember } from '../auth/jwt-auth.guard';
 import { CommentsService } from './comments.service';
-import { CreateCommentDto } from './forum.dto';
+import { CreateCommentDto, UpdateCommentDto } from './forum.dto';
 
 /**
  * EPIC-C §5 comment write path. Behind both gates like the rest of the forum; the
@@ -22,6 +33,17 @@ export class CommentsController {
     @Body() dto: CreateCommentDto,
   ) {
     return this.comments.create(req.member.handleId!, postId, dto);
+  }
+
+  /** Correct your own answer, while nothing has responded to it and within 24 hours. */
+  @Patch('comments/:commentId')
+  @HttpCode(204)
+  async update(
+    @Req() req: Request & { member: AuthedMember },
+    @Param('commentId', ParseUUIDPipe) commentId: string,
+    @Body() dto: UpdateCommentDto,
+  ) {
+    await this.comments.update(req.member.handleId!, commentId, dto);
   }
 
   @Delete('comments/:commentId')

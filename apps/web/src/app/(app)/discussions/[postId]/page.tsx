@@ -7,6 +7,7 @@ import { categoryColour } from '@/lib/category-colour';
 import { PostedAt } from '@/components/PostedAt';
 import { AuthorLine, TagList } from '@/components/PostCard';
 import { CaseBody } from './CaseBody';
+import { EditAffordance } from './EditAffordance';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
 import { DeleteCommentButton } from './DeleteCommentButton';
 import { KudosButton } from './KudosButton';
@@ -88,6 +89,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
             />
           )}
           <PostedAt iso={post.createdAt} editedIso={post.editedAt} />
+          {/* Only while the window is open — the server decides, and says so on the thread,
+              so this is never an affordance that refuses when tapped. */}
+          {viewerContext.canEditPost && (
+            <EditAffordance postId={post.id} initialTitle={post.title} initialBody={post.body} />
+          )}
         </div>
         {/* The subscription control (S15). Sits on its own row rather than beside kudos:
             the two mean different things — one is a judgement about the content, the
@@ -193,6 +199,9 @@ async function Answer({
           {!isReply && <ReplyAffordance postId={postId} parentCommentId={comment.id} />}
           {!comment.isMine && <ReportButton target="comment" targetId={comment.id} />}
         </ExclusivePanels>
+        {comment.canEdit && (
+          <EditAffordance postId={postId} commentId={comment.id} initialBody={comment.body} />
+        )}
         {comment.isMine && <DeleteCommentButton postId={postId} commentId={comment.id} />}
       </div>
     </div>

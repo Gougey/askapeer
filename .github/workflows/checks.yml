@@ -52,3 +52,8 @@ jobs:
       # must keep a shared structure out of the wrong joint.
       - name: Classifier — scope terms and stemming
         run: npm run verify:scope -w apps/api
+      # The same argument: the edit window is a pure function precisely so the `canEdit` the
+      # API advertises and the check it enforces cannot drift apart, and so the rule can be
+      # pinned here rather than discovered by someone editing a post they should not have.
+      - name: Edit window
+        run: npm run verify:edit-window -w apps/api

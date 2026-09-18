@@ -40,6 +40,8 @@ export type ThreadComment = {
   kudosCount: number;
   hasKudosed: boolean;
   isMine: boolean;
+  /** Whether the edit window is still open on this comment — the server's answer, not ours. */
+  canEdit: boolean;
   createdAt: string;
   editedAt: string | null;
 };
@@ -51,7 +53,13 @@ export type Thread = {
    *  index and is never shown. */
   caseDetail?: CaseDetail;
   comments: ThreadComment[];
-  viewerContext: { isAuthor: boolean; hasKudosedPost: boolean; isFollowing: boolean };
+  viewerContext: {
+    isAuthor: boolean;
+    hasKudosedPost: boolean;
+    isFollowing: boolean;
+    /** Whether the question itself can still be corrected. Always false for a case. */
+    canEditPost: boolean;
+  };
 };
 
 export type Category = {

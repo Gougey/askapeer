@@ -113,3 +113,31 @@ export class CreateFollowDto {
   @IsUUID()
   targetId!: string;
 }
+
+/**
+ * Correcting a question you have just asked (Andrew's testing review, item 1).
+ *
+ * Title and body only. Tags are not editable here because the composer treats them as part
+ * of *filing* rather than wording, and nothing about a typo argues for re-filing; if that
+ * turns out to be wrong it is an additive change, where letting it in now would mean the
+ * edit route could quietly move a post between subject areas.
+ */
+export class UpdatePostDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(TITLE_MAX_LENGTH)
+  title!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(BODY_MAX_LENGTH)
+  body!: string;
+}
+
+/** Correcting an answer or reply. Its parent never changes — that is a different comment. */
+export class UpdateCommentDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(COMMENT_MAX_LENGTH)
+  body!: string;
+}

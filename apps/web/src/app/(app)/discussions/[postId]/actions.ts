@@ -136,3 +136,62 @@ export async function toggleFollowAction(
   );
   if (!res.ok) throw new Error(`Could not update follow (${res.status}).`);
 }
+
+/**
+ * Correct your own question or answer (Andrew's testing review, item 1).
+ *
+ * The API decides whether the window is still open — it re-checks rather than trusting the
+ * `canEdit` that put this affordance on screen, because someone can answer in the seconds
+ * between the page rendering and the save. So a refusal here is a normal outcome, not a bug,
+ * and its message is the server's own explanation of which half of the rule closed.
+ */
+export async function editPostAction(
+  postId: string,
+  title: string,
+  body: string,
+): Promise<{ error: string } | void> {
+  const token = await authedToken();
+  const res = await fetch(`${API_ORIGIN}/v1/posts/${postId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, body }),
+    cache: 'no-store',
+  });
+  if (!res.ok) return { error: await refusalMessage(res) };
+  revalidatePath(`/discussions/${postId}`);
+}
+
+export async function editCommentAction(
+  postId: string,
+  commentId: string,
+  body: string,
+): Promise<{ error: string } | void> {
+  const token = await authedToken();
+  const res = await fetch(`${API_ORIGIN}/v1/comments/${commentId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body }),
+    cache: 'no-store',
+  });
+  if (!res.ok) return { error: await refusalMessage(res) };
+  revalidatePath(`/discussions/${postId}`);
+}
+
+/**
+ * The server's own words for why an edit was refused.
+ *
+ * Surfaced rather than replaced by a generic string because every refusal here names a
+ * different cause — someone answered, the day elapsed, it is a case discussion — and which
+ * one it was is the only useful part. Falls back to a generic line if the body is not the
+ * shape we expect, so a proxy error never renders as "undefined".
+ */
+async function refusalMessage(res: Response): Promise<string> {
+  try {
+    const payload = (await res.json()) as { message?: string | string[] };
+    const message = Array.isArray(payload.message) ? payload.message[0] : payload.message;
+    if (message) return message;
+  } catch {
+    // fall through
+  }
+  return 'That could not be saved.';
+}
