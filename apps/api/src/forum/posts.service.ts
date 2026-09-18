@@ -136,9 +136,10 @@ export type Thread = {
      * Advertised rather than re-derived client-side, so the affordance the member sees and
      * the check the API enforces are the same answer computed once.
      *
-     * Always false for a case discussion: a case's wording is what the de-identification
-     * attestation was made about, and changing it belongs to the correction loop (EPIC-E),
-     * which takes a fresh attestation.
+     * True for a case discussion too, but the route differs: a case is corrected through
+     * `POST /case-discussions/:id/correct`, which carries a fresh attestation, because its
+     * wording is what the de-identification promise was made about. The client picks the
+     * form from whether `caseDetail` is present.
      */
     canEditPost: boolean;
     hasKudosedPost: boolean;
@@ -464,7 +465,11 @@ export class PostsService {
      */
     const canEditPost =
       editRefusal({
-        editable: row.type === 'question' && row.status === 'published',
+        // Both kinds, since Andrew confirmed a case should be correctable too. They take
+        // different routes — a question PATCHes itself, a case POSTs a correction carrying a
+        // fresh attestation — but the window is the same one, and the client picks the form
+        // from whether `caseDetail` is present.
+        editable: row.status === 'published',
         isAuthor,
         createdAt: row.createdAt,
         hasEngagement:

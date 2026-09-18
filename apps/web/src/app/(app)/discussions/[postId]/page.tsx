@@ -8,6 +8,7 @@ import { PostedAt } from '@/components/PostedAt';
 import { AuthorLine, TagList } from '@/components/PostCard';
 import { CaseBody } from './CaseBody';
 import { EditAffordance } from './EditAffordance';
+import { EditCaseAffordance } from './EditCaseAffordance';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
 import { DeleteCommentButton } from './DeleteCommentButton';
 import { KudosButton } from './KudosButton';
@@ -91,9 +92,20 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
           <PostedAt iso={post.createdAt} editedIso={post.editedAt} />
           {/* Only while the window is open — the server decides, and says so on the thread,
               so this is never an affordance that refuses when tapped. */}
-          {viewerContext.canEditPost && (
-            <EditAffordance postId={post.id} initialTitle={post.title} initialBody={post.body} />
-          )}
+          {viewerContext.canEditPost &&
+            (thread.caseDetail ? (
+              // A case is corrected, not edited: six fields and a fresh attestation, which
+              // is a different form and a different route from a question's title and body.
+              casePolicy && (
+                <EditCaseAffordance
+                  postId={post.id}
+                  detail={thread.caseDetail}
+                  policy={casePolicy}
+                />
+              )
+            ) : (
+              <EditAffordance postId={post.id} initialTitle={post.title} initialBody={post.body} />
+            ))}
         </div>
         {/* The subscription control (S15). Sits on its own row rather than beside kudos:
             the two mean different things — one is a judgement about the content, the
