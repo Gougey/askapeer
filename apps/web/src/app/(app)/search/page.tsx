@@ -7,7 +7,6 @@ import { EVIDENCE_TYPES, isEvidence } from '@/lib/evidence';
 import { fetchSearch, fetchVocabulary } from '@/lib/forum';
 import { fetchFeedSearch } from '@/lib/research-feed';
 import { requireAccessToken } from '@/lib/session';
-import { categoryColour } from '@/lib/category-colour';
 import { ResultFilter } from './ResultFilter';
 import { SearchForm } from './SearchForm';
 
@@ -58,7 +57,7 @@ export default async function SearchPage({
   // there are no words that would express it better.
   const searched = q !== '' || category !== '' || tagIds.length > 0;
 
-  const [t, tFeed, { categories, tags }, posts, papers] = await Promise.all([
+  const [t, tFeed, { tags }, posts, papers] = await Promise.all([
     getTranslations('search'),
     getTranslations('feed'),
     fetchVocabulary(token),
@@ -135,21 +134,13 @@ export default async function SearchPage({
 
           {scope === 'discussions' ? (
             <>
-              {/* Refines these results, and appears only here — a category cannot narrow a
-                  paper, so it is not offered on the tab where it would do nothing. */}
-              <ResultFilter
-                name="category"
-                label={t('categoryLabel')}
-                value={category}
-                allLabel={t('anyCategory')}
-                options={categories.map((c) => ({
-                  value: c.id,
-                  label: c.name,
-                  colour: categoryColour(c.colour),
-                  href: href({ in: 'discussions', category: c.id }),
-                }))}
-                allHref={href({ in: 'discussions', category: '' })}
-              />
+              {/*
+                No category filter. Two live categories remain — Clinical Case and General —
+                and the post type already tells a reader which is which, so the control
+                offered a choice between "everything" and "everything that is not a case".
+                It went with the composer's category field (Andrew's testing review, item 8).
+                `?category=` is still honoured by the API, so an old bookmark still works.
+              */}
 
               <p className="text-sm" style={{ color: 'var(--color-muted)' }} aria-live="polite">
                 {(posts?.total ?? 0) === 0

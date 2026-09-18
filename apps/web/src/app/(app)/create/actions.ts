@@ -22,21 +22,22 @@ export async function createPostAction(
   const token = await getAccessToken();
   if (!token) redirect('/');
 
-  const categoryId = String(formData.get('categoryId') ?? '');
   const title = String(formData.get('title') ?? '').trim();
   const body = String(formData.get('body') ?? '').trim();
   const tagIds = formData.getAll('tagIds').map(String);
 
   // Checked here as well as in the browser: the client-side disable is a convenience,
   // and a form can always be submitted without it.
-  if (!categoryId || !title || !body) return { status: 'error', reason: 'missing_fields' };
+  if (!title || !body) return { status: 'error', reason: 'missing_fields' };
 
   let res: Response;
   try {
     res = await fetch(`${API_ORIGIN}/v1/posts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ categoryId, title, body, tagIds }),
+      // No `categoryId`: the API resolves the question category itself, so there is one
+      // place that decides where a question is filed rather than one per client.
+      body: JSON.stringify({ title, body, tagIds }),
       cache: 'no-store',
     });
   } catch {

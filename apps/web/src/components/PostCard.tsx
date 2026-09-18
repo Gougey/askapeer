@@ -81,13 +81,20 @@ export async function PostCard({ post }: { post: PostCardDto }) {
     >
       <Link href={`/discussions/${post.id}`} className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
         {/*
-          The category alone says what kind of post this is. A "Case" pill sat here while
-          the clinical-case category could also hold questions; now that the category is
-          scoped to case discussions it labels them on its own, and the pill said it twice.
+          The category labels a case and says nothing about a question.
+
+          It used to label both, which was worth it while the choice was five-way. Now that
+          the composer no longer asks (Andrew's testing review, item 8) every question
+          carries the same one, and a column of cards each reading "General" is a label that
+          has stopped distinguishing anything. A case still earns its line — that is the
+          distinction a reader is scanning for, and the reason the old "Case" pill was
+          retired in favour of the category saying it.
         */}
-        <span className="text-xs" style={{ color: categoryColour(post.category.colour) }}>
-          {post.category.name}
-        </span>
+        {post.type === 'case_discussion' && (
+          <span className="text-xs" style={{ color: categoryColour(post.category.colour) }}>
+            {post.category.name}
+          </span>
+        )}
         <h2 className="font-medium">{post.title}</h2>
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
           {post.snippet}
