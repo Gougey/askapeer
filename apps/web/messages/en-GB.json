@@ -228,7 +228,9 @@
     "editBody": "Details",
     "saveEdit": "Save changes",
     "savingEdit": "Saving…",
-    "cancelEdit": "Cancel"
+    "cancelEdit": "Cancel",
+    "addUpdate": "Add an update",
+    "yourUpdate": "Your update"
   },
   "report": {
     "report": "Report",

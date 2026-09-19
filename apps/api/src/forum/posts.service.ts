@@ -432,6 +432,7 @@ export class PostsService {
         handleName: handles.handleName,
         kudosTotal: handles.kudosTotal,
         answerCount: answerCountSql,
+        othersAnswered: othersAnsweredSql,
         watcherCount: watcherCountSql,
         kudosCount: postKudosCountSql,
       })
@@ -473,7 +474,9 @@ export class PostsService {
         isAuthor,
         createdAt: row.createdAt,
         hasEngagement:
-          Number(row.answerCount) > 0 || Number(row.kudosCount) > 0 || reportedPosts.has(row.id),
+          Number(row.othersAnswered) > 0 ||
+          Number(row.kudosCount) > 0 ||
+          reportedPosts.has(row.id),
       }) === null;
 
     return {
@@ -516,7 +519,7 @@ export class PostsService {
         type: posts.type,
         status: posts.status,
         createdAt: posts.createdAt,
-        answerCount: answerCountSql,
+        othersAnswered: othersAnsweredSql,
         kudosCount: postKudosCountSql,
       })
       .from(posts)
@@ -529,7 +532,7 @@ export class PostsService {
       isAuthor: row.handleId === handleId,
       createdAt: row.createdAt,
       hasEngagement:
-        Number(row.answerCount) > 0 || Number(row.kudosCount) > 0 || reported.has(postId),
+        Number(row.othersAnswered) > 0 || Number(row.kudosCount) > 0 || reported.has(postId),
     });
     if (refusal === 'not_author') throw new ForbiddenException('You can only edit your own posts.');
     if (refusal) throw new BadRequestException(EDIT_REFUSAL_MESSAGE[refusal]);
@@ -644,9 +647,19 @@ export class PostsService {
       this.reportedTargets('comment', rows.map((r) => r.id)),
     ]);
 
-    // A reply is the comment-level equivalent of an answer, and it is already in `rows` —
-    // no query needed, because a reply to a comment lives in the same thread by definition.
-    const repliedTo = new Set(rows.map((r) => r.parentCommentId).filter(Boolean) as string[]);
+    /*
+     * A reply is the comment-level equivalent of an answer, and it is already in `rows` — no
+     * query needed, because a reply to a comment lives in the same thread by definition.
+     *
+     * Only *someone else's* reply counts, for the same reason your own answer does not close
+     * your own post: replying to yourself is continuing a contribution, not responding to it.
+     */
+    const authorOf = new Map(rows.map((r) => [r.id, r.handleId]));
+    const repliedTo = new Set(
+      rows
+        .filter((r) => r.parentCommentId && r.handleId !== authorOf.get(r.parentCommentId))
+        .map((r) => r.parentCommentId as string),
+    );
 
     const enriched: RankableComment[] = rows.map((row) => ({
       id: row.id,
@@ -769,6 +782,26 @@ export class PostsService {
  * Top-level answers only (published). Nested replies are conversation, not answers, so
  * they don't inflate the count — the same distinction the kudos ranking draws (§4).
  */
+/**
+ * Answers written by someone *other* than the post's author.
+ *
+ * The edit window asks whether anyone has **responded**, and your own follow-up is not a
+ * response — it is more of the same contribution. Counting it meant adding "update: imaging
+ * came back showing X" to your own case locked you out of correcting the case, which is
+ * exactly backwards: the author is the one person whose involvement should not close their
+ * own window. Kudos and reports never had the problem, because you cannot kudos yourself and
+ * would not report yourself.
+ *
+ * Separate from `answerCountSql`, which stays a count of *all* answers — that one is what the
+ * thread displays, and "2 answers" should not become "1" because you wrote one of them.
+ */
+const othersAnsweredSql = sql<number>`(
+  select count(*) from ${comments}
+  where ${comments.postId} = ${posts.id}
+    and ${comments.status} = 'published'
+    and ${comments.handleId} <> ${posts.handleId}
+)`;
+
 const answerCountSql = sql<number>`(
   select count(*) from ${comments}
   where ${comments.postId} = ${posts.id}
