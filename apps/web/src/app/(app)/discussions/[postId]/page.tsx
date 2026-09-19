@@ -10,6 +10,7 @@ import { CaseBody } from './CaseBody';
 import { EditableCommentBody, EditableQuestionBody } from './EditAffordance';
 import { EditableCaseBody } from './EditCaseAffordance';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
+import { OwnThreadUpdate } from './OwnThreadUpdate';
 import { DeleteCommentButton } from './DeleteCommentButton';
 import { KudosButton } from './KudosButton';
 import { FollowButton } from './FollowButton';
@@ -163,10 +164,20 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
           </ul>
         )}
 
-        <div className="rounded-xl border p-3" style={{ borderColor: 'var(--color-muted)' }}>
-          <h3 className="mb-2 text-sm font-medium">{t('yourAnswer')}</h3>
-          <AnswerComposer postId={post.id} />
-        </div>
+        {/*
+          The author gets a link, not an open box. Answering your own thread is allowed and
+          useful — a case earns its keep by saying how it turned out — but being prompted to
+          "share what you would do, and why" on the question you just asked reads as a
+          mistake, and an empty composer under "No answers yet" looks like an unfinished task.
+        */}
+        {viewerContext.isAuthor ? (
+          <OwnThreadUpdate postId={post.id} />
+        ) : (
+          <div className="rounded-xl border p-3" style={{ borderColor: 'var(--color-muted)' }}>
+            <h3 className="mb-2 text-sm font-medium">{t('yourAnswer')}</h3>
+            <AnswerComposer postId={post.id} />
+          </div>
+        )}
       </section>
     </main>
   );

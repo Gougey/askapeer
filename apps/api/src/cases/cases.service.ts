@@ -200,8 +200,11 @@ export class CasesService {
 
     const [engagement] = await this.db
       .select({
+        // Someone *else's* answer. Your own follow-up on your own case is not a response
+        // to it, and locking the author out for adding an update is exactly backwards.
         answers: sql<number>`(select count(*) from ${comments}
-           where ${comments.postId} = ${postId} and ${comments.status} = 'published')::int`,
+           where ${comments.postId} = ${postId} and ${comments.status} = 'published'
+             and ${comments.handleId} <> ${posts.handleId})::int`,
         kudosCount: sql<number>`(select count(*) from ${kudos}
            where ${kudos.targetType} = 'post' and ${kudos.targetId} = ${postId})::int`,
         reportCount: sql<number>`(select count(*) from ${reports}
