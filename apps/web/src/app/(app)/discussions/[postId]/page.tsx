@@ -7,8 +7,8 @@ import { categoryColour } from '@/lib/category-colour';
 import { PostedAt } from '@/components/PostedAt';
 import { AuthorLine, TagList } from '@/components/PostCard';
 import { CaseBody } from './CaseBody';
-import { EditAffordance } from './EditAffordance';
-import { EditCaseAffordance } from './EditCaseAffordance';
+import { EditableCommentBody, EditableQuestionBody } from './EditAffordance';
+import { EditableCaseBody } from './EditCaseAffordance';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
 import { DeleteCommentButton } from './DeleteCommentButton';
 import { KudosButton } from './KudosButton';
@@ -59,23 +59,43 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
           clinician frames the rest of the case against, and the presenting condition
           appears once, in full, directly beneath.
         */}
-        <h1 className="text-xl font-semibold">
-          {thread.caseDetail
-            ? t('caseHeading', {
+        {/*
+          Heading, author and body are wrapped together, because editing replaces all three:
+          a question's title *is* the heading, and a case's heading is derived from the age
+          band and onset the form edits. Swapping only the body left the old title sitting
+          above a form containing a title field.
+        */}
+        {thread.caseDetail ? (
+          <EditableCaseBody
+            postId={post.id}
+            detail={thread.caseDetail}
+            policy={casePolicy ?? null}
+            canEdit={viewerContext.canEditPost}
+          >
+            <h1 className="text-xl font-semibold">
+              {t('caseHeading', {
                 age: t(`caseAge.${thread.caseDetail.ageBand}`),
                 onset: formatOnset(thread.caseDetail.onsetDays),
-              })
-            : post.title}
-        </h1>
-        <AuthorLine author={post.author} />
-        {thread.caseDetail ? (
-          // A case discussion renders its structured template (EPIC-E §7), not `post.body`
-          // — that column is the flattened projection built for the search index.
-          <CaseBody detail={thread.caseDetail} disclaimer={casePolicy?.disclaimer ?? ''} />
+              })}
+            </h1>
+            <AuthorLine author={post.author} />
+            {/* A case discussion renders its structured template (EPIC-E §7), not `post.body`
+                — that column is the flattened projection built for the search index. */}
+            <CaseBody detail={thread.caseDetail} disclaimer={casePolicy?.disclaimer ?? ''} />
+          </EditableCaseBody>
         ) : (
-          /* Member-authored prose: rendered as text, newlines preserved. No HTML or
-             markdown is interpreted, so a post can't inject markup into anyone's page. */
-          <p className="whitespace-pre-wrap text-sm">{post.body}</p>
+          <EditableQuestionBody
+            postId={post.id}
+            title={post.title}
+            body={post.body}
+            canEdit={viewerContext.canEditPost}
+          >
+            <h1 className="text-xl font-semibold">{post.title}</h1>
+            <AuthorLine author={post.author} />
+            {/* Member-authored prose: rendered as text, newlines preserved. No HTML or
+                markdown is interpreted, so a post can't inject markup into anyone's page. */}
+            <p className="whitespace-pre-wrap text-sm">{post.body}</p>
+          </EditableQuestionBody>
         )}
         <TagList tags={post.tags} />
         <div className="flex items-center gap-3">
@@ -90,22 +110,6 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
             />
           )}
           <PostedAt iso={post.createdAt} editedIso={post.editedAt} />
-          {/* Only while the window is open — the server decides, and says so on the thread,
-              so this is never an affordance that refuses when tapped. */}
-          {viewerContext.canEditPost &&
-            (thread.caseDetail ? (
-              // A case is corrected, not edited: six fields and a fresh attestation, which
-              // is a different form and a different route from a question's title and body.
-              casePolicy && (
-                <EditCaseAffordance
-                  postId={post.id}
-                  detail={thread.caseDetail}
-                  policy={casePolicy}
-                />
-              )
-            ) : (
-              <EditAffordance postId={post.id} initialTitle={post.title} initialBody={post.body} />
-            ))}
         </div>
         {/* The subscription control (S15). Sits on its own row rather than beside kudos:
             the two mean different things — one is a judgement about the content, the
@@ -191,7 +195,15 @@ async function Answer({
         <AuthorLine author={comment.author} />
         <PostedAt iso={comment.createdAt} editedIso={comment.editedAt} />
       </span>
-      <p className="mt-2 whitespace-pre-wrap text-sm">{comment.body}</p>
+      {/* Same rule as the post: editing replaces the text rather than appearing beneath it. */}
+      <EditableCommentBody
+        postId={postId}
+        commentId={comment.id}
+        body={comment.body}
+        canEdit={comment.canEdit}
+      >
+        <p className="mt-2 whitespace-pre-wrap text-sm">{comment.body}</p>
+      </EditableCommentBody>
       <div className="mt-2 flex flex-wrap items-center gap-3">
         {comment.isMine ? (
           <StaticKudos label={t('kudos', { count: comment.kudosCount })} />
@@ -211,9 +223,6 @@ async function Answer({
           {!isReply && <ReplyAffordance postId={postId} parentCommentId={comment.id} />}
           {!comment.isMine && <ReportButton target="comment" targetId={comment.id} />}
         </ExclusivePanels>
-        {comment.canEdit && (
-          <EditAffordance postId={postId} commentId={comment.id} initialBody={comment.body} />
-        )}
         {comment.isMine && <DeleteCommentButton postId={postId} commentId={comment.id} />}
       </div>
     </div>

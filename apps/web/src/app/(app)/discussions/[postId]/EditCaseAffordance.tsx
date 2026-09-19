@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { AgeBand, CaseDetail, CasePolicy } from '@/lib/cases';
 import { correctCaseAction } from './actions';
+import { SaveRow } from './EditAffordance';
 
 /** The four prose fields, in the order Andrew's template asks them. */
 const TEMPLATE_FIELDS = [
@@ -24,33 +25,83 @@ const fieldStyle = {
 /**
  * Correcting a published case discussion, inside the edit window.
  *
+ * **The form replaces the case, and looks like the composer that made it.** Andrew's first
+ * look at this found the opposite: the four fields rendered as text, then the same four again
+ * as inputs beneath them, in a narrow column beside the kudos control. A correction should
+ * present as the case you wrote, with the fields open for typing — which also means the age
+ * band and onset lead, as they do in the composer, rather than trailing the prose.
+ *
  * **The attestation is part of the form, not a step after it.** A case's wording is what the
  * de-identification promise was made about, so new wording needs a new promise — and asking
  * for it separately would leave a window, however short, in which the published text and the
- * attestation describing it disagree. The save button stays disabled until the box is ticked,
- * which is the same gate publishing uses.
+ * attestation describing it disagree. Save stays disabled until the box is ticked, which is
+ * the same gate publishing uses.
  *
  * The checklist is not re-asked. It was completed when the case was published and the author
  * is correcting that case, not composing a new one; re-confirming the *promise* against the
  * new text is the guarantee that matters, and six more ticks to fix a typo is the kind of
  * friction that stops people fixing typos.
- *
- * Longer than the question's edit panel for an unavoidable reason: a case has no single body
- * to correct, it has six fields, and showing only the one you meant to change would hide the
- * text the attestation is about.
  */
-export function EditCaseAffordance({
+export function EditableCaseBody({
   postId,
   detail,
   policy,
+  canEdit,
+  children,
+}: {
+  postId: string;
+  detail: CaseDetail;
+  policy: CasePolicy | null;
+  canEdit: boolean;
+  children: ReactNode;
+}) {
+  const t = useTranslations('discussions');
+  const [open, setOpen] = useState(false);
+
+  // Without the policy there is no attestation wording to show, and the server would refuse
+  // the save — so the affordance is not offered rather than offered and broken.
+  if (!open) {
+    return (
+      <>
+        {children}
+        {canEdit && policy && (
+          <div className="mt-2 flex">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="text-xs underline"
+              style={{ color: 'var(--color-muted)' }}
+            >
+              {t('edit')}
+            </button>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <CaseForm
+      postId={postId}
+      detail={detail}
+      policy={policy!}
+      onClose={() => setOpen(false)}
+    />
+  );
+}
+
+function CaseForm({
+  postId,
+  detail,
+  policy,
+  onClose,
 }: {
   postId: string;
   detail: CaseDetail;
   policy: CasePolicy;
+  onClose: () => void;
 }) {
-  const t = useTranslations('discussions');
   const tc = useTranslations('caseCompose');
-  const [open, setOpen] = useState(false);
   const [ageBand, setAgeBand] = useState<AgeBand>(detail.ageBand);
   const [onsetDays, setOnsetDays] = useState(String(detail.onsetDays));
   const [fields, setFields] = useState({
@@ -63,9 +114,9 @@ export function EditCaseAffordance({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const save = () => {
-    setError(null);
+  const save = () =>
     startTransition(async () => {
+      setError(null);
       const result = await correctCaseAction(postId, {
         ageBand,
         onsetDays: Number(onsetDays),
@@ -73,36 +124,25 @@ export function EditCaseAffordance({
         attestationText: policy.attestationText,
         confirmed,
       });
-      // A refused save keeps the panel open with the text intact — the member has to be able
+      // A refused save keeps the form open with the text intact — the member has to be able
       // to recover what they wrote if the window shut under them.
       if (result?.error) setError(result.error);
-      else setOpen(false);
+      else onClose();
     });
-  };
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="text-xs underline"
-        style={{ color: 'var(--color-muted)' }}
-      >
-        {t('edit')}
-      </button>
-    );
-  }
-
-  const complete =
-    confirmed &&
-    onsetDays.trim() !== '' &&
-    Number(onsetDays) >= 0 &&
-    Object.values(fields).every((value) => value.trim() !== '');
+  const incomplete =
+    !confirmed ||
+    onsetDays.trim() === '' ||
+    Number.isNaN(Number(onsetDays)) ||
+    Number(onsetDays) < 0 ||
+    Object.values(fields).some((value) => value.trim() === '');
 
   return (
-    <div className="flex w-full flex-col" style={{ gap: 'var(--space-3)' }}>
+    <div className="flex flex-col" style={{ gap: 'var(--space-3)' }}>
+      {/* Age band and onset lead, as they do in the composer: they are the case's heading,
+          and reading the prose without them is reading it without its subject. */}
       <div className="flex flex-wrap" style={{ gap: 'var(--space-3)' }}>
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-1 flex-col gap-1">
           <span className="text-sm font-medium">{tc('ageBand')}</span>
           <select
             value={ageBand}
@@ -117,7 +157,7 @@ export function EditCaseAffordance({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-1 flex-col gap-1">
           <span className="text-sm font-medium">{tc('onsetDays')}</span>
           <input
             inputMode="numeric"
@@ -158,36 +198,13 @@ export function EditCaseAffordance({
         <span className="text-sm">{policy.attestationText}</span>
       </label>
 
-      {error && (
-        <p className="text-xs" style={{ color: 'var(--color-bad)' }} role="alert">
-          {error}
-        </p>
-      )}
-
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={save}
-          disabled={pending || !complete}
-          className="px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
-          style={{ background: 'var(--color-accent)', borderRadius: 'var(--radius)' }}
-        >
-          {pending ? t('savingEdit') : t('saveEdit')}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setError(null);
-            setConfirmed(false);
-            setOpen(false);
-          }}
-          disabled={pending}
-          className="text-xs underline"
-          style={{ color: 'var(--color-muted)' }}
-        >
-          {t('cancelEdit')}
-        </button>
-      </div>
+      <SaveRow
+        pending={pending}
+        disabled={incomplete}
+        error={error}
+        onSave={save}
+        onCancel={onClose}
+      />
     </div>
   );
 }
