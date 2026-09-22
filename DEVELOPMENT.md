@@ -1,6 +1,6 @@
 # Development
 
-The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off), search over the literature feed and in the app bar across both corpora (S16, S17), and Andrew's clinical vocabulary Parts 1 and 2 loaded into the taxonomy (S18b — 588 → 1,304 tags, 11 → 105 carrying search synonyms)**.
+The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off), search over the literature feed and in the app bar across both corpora (S16, S17), and Andrew's clinical vocabulary Parts 1 and 2 loaded into the taxonomy (S18b — now 1,230 live tags across seven roots, 175 carrying search synonyms), and editing your own contributions (a question, an answer or a published case, until something responds to it and within 24 hours — see "The edit window" below)**.
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
@@ -824,6 +824,57 @@ Two rules worth knowing before extending this epic:
 
 Answering, kudos and the ranked ordering are **S5** (now in): a thread renders its
 answers, members award kudos, and answers sort by that score.
+
+## The edit window
+
+Correcting your own contribution. One rule, three content types, and the reasoning is worth
+keeping because two attempts to build this got it wrong in instructive ways.
+
+**Editable until something responds to it, and never beyond 24 hours** — whichever closes
+first, and both halves are necessary.
+
+Engagement is the real gate. A kudos endorses *that* text, an answer replies to *that*
+question, a report accuses *that* wording; letting the author rewrite afterwards makes all
+three into claims about something that no longer exists. On a network where standing is built
+entirely from kudos on specific contributions, that is not a small thing. The 24 hours is the
+backstop for what engagement cannot see: a post can be read many times without being kudosed,
+answered or reported, and reading leaves no trace to gate on.
+
+⚠️ **Engagement means *somebody else* responded.** `answerCountSql` originally counted the
+author's own answers too, so adding "update: imaging came back showing X" to your own case
+locked you out of correcting it — the one person whose involvement should never close their own
+window. `othersAnsweredSql` is the gate; `answerCount` stays a count of *all* answers, because
+that is what the thread displays. A reply by a comment's own author likewise does not close
+that comment.
+
+**The rule lives in one pure function** (`forum/edit-window.ts`) because `canEdit` is
+advertised on the thread DTO and re-checked on save — the window can close between the page
+rendering and the save, if someone answers in the meantime — and those two answers must never
+disagree. `npm run verify:edit-window -w apps/api` pins nine cases including both boundaries
+and the precedence when two reasons apply at once; it is a CI check.
+
+**A case carries its attestation with the edit.** `POST /v1/case-discussions/:id/correct` takes
+the six fields *and* a fresh attestation in one request, writing a new `case_attestations` row
+rather than updating the old one. Sending them separately would leave a window in which the
+published text and the attestation describing it disagree, which is the whole objection to
+editing a case. The **checklist is deliberately not re-asked** — unlike `updateDraft`, which
+clears it on every change — because a draft is still being assembled while a published case
+inside the window is finished, and re-confirming the *promise* against the new text is the
+guarantee that matters.
+
+⚠️ **An edit replaces the content; it never appears beneath it.** The first build rendered the
+form after the read view *and inside the row of actions*, so a case showed its four fields as
+text and then again as inputs, in a narrow column beside the kudos pill — the form had
+inherited that row's horizontal flex. The wrappers now take the read view as `children` and
+swap it: heading, author and body together, because a question's title *is* its heading and a
+case's heading is derived from the age band and onset the form edits.
+
+Tags are not editable on a question. Nothing about a typo argues for re-filing a post, and
+admitting them would make the edit route a way to move a post between subject areas.
+
+**Answering your own thread is allowed** — a case earns its place in the archive by saying how
+it turned out — but the author gets a collapsed "Add an update" link rather than an open box
+prompting them to "share what you would do, and why" on the question they just asked.
 
 ## Case discussions (S9)
 
