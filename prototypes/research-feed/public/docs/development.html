@@ -29,8 +29,10 @@ drafts), and following a discussion (S15 — subscribe to a thread,
 collapsed notifications when it moves, and the mute that turns them
 off), search over the literature feed and in the app bar across both
 corpora (S16, S17), and Andrew’s clinical vocabulary Parts 1 and 2
-loaded into the taxonomy (S18b — 588 → 1,304 tags, 11 → 105 carrying
-search synonyms)</strong>.</p>
+loaded into the taxonomy (S18b — now 1,230 live tags across seven roots,
+175 carrying search synonyms), and editing your own contributions (a
+question, an answer or a published case, until something responds to it
+and within 24 hours — see “The edit window” below)</strong>.</p>
 <p><strong>Build approach:</strong> <em>prove-then-migrate</em> —
 develop locally + deploy to Fly.io (London) for the early slices;
 migrate to AWS <code>eu-west-2</code> before real practitioners. See the
@@ -1178,6 +1180,66 @@ inherit it rather than re-deriving it.</li>
 <p>Answering, kudos and the ranked ordering are <strong>S5</strong> (now
 in): a thread renders its answers, members award kudos, and answers sort
 by that score.</p>
+<h2 id="the-edit-window">The edit window</h2>
+<p>Correcting your own contribution. One rule, three content types, and
+the reasoning is worth keeping because two attempts to build this got it
+wrong in instructive ways.</p>
+<p><strong>Editable until something responds to it, and never beyond 24
+hours</strong> — whichever closes first, and both halves are
+necessary.</p>
+<p>Engagement is the real gate. A kudos endorses <em>that</em> text, an
+answer replies to <em>that</em> question, a report accuses <em>that</em>
+wording; letting the author rewrite afterwards makes all three into
+claims about something that no longer exists. On a network where
+standing is built entirely from kudos on specific contributions, that is
+not a small thing. The 24 hours is the backstop for what engagement
+cannot see: a post can be read many times without being kudosed,
+answered or reported, and reading leaves no trace to gate on.</p>
+<p>⚠️ <strong>Engagement means <em>somebody else</em>
+responded.</strong> <code>answerCountSql</code> originally counted the
+author’s own answers too, so adding “update: imaging came back showing
+X” to your own case locked you out of correcting it — the one person
+whose involvement should never close their own window.
+<code>othersAnsweredSql</code> is the gate; <code>answerCount</code>
+stays a count of <em>all</em> answers, because that is what the thread
+displays. A reply by a comment’s own author likewise does not close that
+comment.</p>
+<p><strong>The rule lives in one pure function</strong>
+(<code>forum/edit-window.ts</code>) because <code>canEdit</code> is
+advertised on the thread DTO and re-checked on save — the window can
+close between the page rendering and the save, if someone answers in the
+meantime — and those two answers must never disagree.
+<code>npm run verify:edit-window -w apps/api</code> pins nine cases
+including both boundaries and the precedence when two reasons apply at
+once; it is a CI check.</p>
+<p><strong>A case carries its attestation with the edit.</strong>
+<code>POST /v1/case-discussions/:id/correct</code> takes the six fields
+<em>and</em> a fresh attestation in one request, writing a new
+<code>case_attestations</code> row rather than updating the old one.
+Sending them separately would leave a window in which the published text
+and the attestation describing it disagree, which is the whole objection
+to editing a case. The <strong>checklist is deliberately not
+re-asked</strong> — unlike <code>updateDraft</code>, which clears it on
+every change — because a draft is still being assembled while a
+published case inside the window is finished, and re-confirming the
+<em>promise</em> against the new text is the guarantee that matters.</p>
+<p>⚠️ <strong>An edit replaces the content; it never appears beneath
+it.</strong> The first build rendered the form after the read view
+<em>and inside the row of actions</em>, so a case showed its four fields
+as text and then again as inputs, in a narrow column beside the kudos
+pill — the form had inherited that row’s horizontal flex. The wrappers
+now take the read view as <code>children</code> and swap it: heading,
+author and body together, because a question’s title <em>is</em> its
+heading and a case’s heading is derived from the age band and onset the
+form edits.</p>
+<p>Tags are not editable on a question. Nothing about a typo argues for
+re-filing a post, and admitting them would make the edit route a way to
+move a post between subject areas.</p>
+<p><strong>Answering your own thread is allowed</strong> — a case earns
+its place in the archive by saying how it turned out — but the author
+gets a collapsed “Add an update” link rather than an open box prompting
+them to “share what you would do, and why” on the question they just
+asked.</p>
 <h2 id="case-discussions-s9">Case discussions (S9)</h2>
 <p>The platform’s highest-risk surface, and the one place the “no
 patient-identifiable information” policy stops being a promise and
