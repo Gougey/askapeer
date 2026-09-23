@@ -184,11 +184,19 @@ export class ResearchFeedAdminController {
    */
   @Post('reclassify')
   async reclassify() {
-    // More attempts than the queue's default of 2, because the run is resumable now: an
-    // attempt that is cut short leaves a committed cursor, so the next one continues rather
-    // than starting again. Failing after two interruptions would throw away work that is
-    // sitting there waiting to be picked up.
-    await this.queue.add(RECLASSIFY_JOB, {}, { attempts: 5 });
+    /*
+     * **Two attempts, not five.** Resumability argued for more — an interrupted attempt
+     * leaves a committed cursor, so the next one continues — and on 2026-09-23 that reasoning
+     * turned a single stall into a ninety-minute outage: the run blocked the event loop, the
+     * job lock could not be renewed, BullMQ judged it stalled, and the retries kept
+     * re-blocking the loop until the queue was drained by hand.
+     *
+     * The blocking is fixed (`YIELD_EVERY` in the ingestion service), but the lesson stands:
+     * a job that can take the API down with it should not be given four chances to. Two is
+     * enough to ride out a machine restart, and a third failure is a signal to look rather
+     * than something to automate away.
+     */
+    await this.queue.add(RECLASSIFY_JOB, {}, { attempts: 2 });
     return { queued: true };
   }
 

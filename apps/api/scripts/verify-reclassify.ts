@@ -38,6 +38,29 @@ const TITLES = [
   'Plantar fasciitis and the plantar aponeurosis',
 ];
 
+/**
+ * A realistic abstract, because the cost of classifying is per *token*.
+ *
+ * The first version of this test seeded one-sentence abstracts and measured a 168ms worst
+ * gap with the yield removed — under any threshold worth setting, so the guard would have
+ * passed the very bug it exists to catch. Real abstracts run to a couple of hundred words,
+ * and the proximity window is walked over every one of them for every tag.
+ */
+const ABSTRACT = [
+  'A prospective cohort study of rehabilitation after injury in a mixed athletic population.',
+  'Participants were assessed at baseline, six weeks and twelve weeks using isokinetic',
+  'dynamometry, hop testing and patient-reported outcome measures. Return to sport was',
+  'defined as unrestricted participation in training and competition. Secondary outcomes',
+  'included pain on loading, range of movement, and reinjury within twelve months. The',
+  'intervention group completed a progressive loading programme supervised by a',
+  'physiotherapist, while the comparison group followed usual care. Between-group',
+  'differences were analysed with mixed-effects models adjusted for age, sex and baseline',
+  'function. Adherence was recorded in a training diary and verified at each visit.',
+  'Adverse events were monitored throughout and reported descriptively. The findings are',
+  'discussed with reference to current guidelines on graded loading, tendon adaptation and',
+  'criteria-based progression, and to the limitations of single-centre observational work.',
+].join(' ');
+
 async function seed(n: number) {
   await db.execute(sql`delete from research.article_tags`);
   await db.execute(sql`delete from research.reclassify_state`);
@@ -46,7 +69,7 @@ async function seed(n: number) {
     await db.execute(sql`
       insert into research.articles (title, abstract, published_year)
       values (${`${TITLES[i % TITLES.length]} (cohort ${i})`},
-              ${'A prospective cohort study of rehabilitation after injury.'}, 2026)
+              ${ABSTRACT}, 2026)
     `);
   }
 }
@@ -67,6 +90,24 @@ async function main() {
   await seed(620);
   console.log('seeded:', await counts());
 
+  /*
+   * **The event loop must stay responsive while this runs.** `classify` is synchronous and
+   * compares one article against every live tag, so a batch done in one pass is a quarter of
+   * a million string comparisons with no await in them — and Node answers nothing until they
+   * finish. On 2026-09-23 that took the live API off the air for ninety minutes and made
+   * BullMQ judge the job stalled, which restarted it, which blocked the loop again.
+   *
+   * A timer that should fire every 20ms is the whole test: if the longest gap between ticks
+   * is a large multiple of that, something in the run is hogging the thread.
+   */
+  let lastTick = Date.now();
+  let worstGapMs = 0;
+  const heartbeat = setInterval(() => {
+    const now = Date.now();
+    worstGapMs = Math.max(worstGapMs, now - lastTick);
+    lastTick = now;
+  }, 20);
+
   const batches: number[] = [];
   const first = await service.reclassifyAll(async (done) => {
     batches.push(done);
@@ -74,7 +115,9 @@ async function main() {
     // The corpus must never be globally empty mid-run: earlier batches keep their tags.
     if (mid.arts === 0 && done > 250) throw new Error('corpus was emptied mid-run');
   });
+  clearInterval(heartbeat);
   console.log('run 1:', first, 'batch boundaries:', batches);
+  console.log(`event loop: worst tick gap ${worstGapMs}ms during the run`);
   console.log('after run 1:', await counts(), '(state must be 0)');
 
   // Simulate an interruption: rewind the cursor to the end of the first batch and drop the
@@ -98,7 +141,16 @@ async function main() {
   console.log('run 2:', second, 'batch boundaries:', resumedBatches);
   console.log('after run 2:', await counts(), '(state must be 0)');
 
+  const RESPONSIVE_MS = 150;
+  if (worstGapMs > RESPONSIVE_MS) {
+    console.log(
+      `FAIL  the event loop was blocked for ${worstGapMs}ms — an API sharing this process ` +
+        `would have stopped answering. Check the yield in reclassifyAll.`,
+    );
+  }
+
   const ok =
+    worstGapMs <= RESPONSIVE_MS &&
     second.resumed === true &&
     resumedBatches[0] === 500 &&
     second.articles === 620 &&
