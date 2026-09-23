@@ -180,6 +180,19 @@ export const tags = community.table(
      * "knee" is not another way of saying "Knee MCL", it is a condition on the document.
      */
     scopeTerms: text('scope_terms').array().notNull().default(sql`'{}'::text[]`),
+    /**
+     * A node members browse and may follow, but that the classifier never matches on.
+     *
+     * The body-part groups inside each Joints axis — "Ankle joints", "Knee joints" — exist
+     * because Andrew asked for a level between the region and the individual joint: *"some
+     * users may not want to be specific"*. They are real, selectable interests, and following
+     * one works through subtree expansion, so the node itself never needs to match an article.
+     *
+     * Withholding it from matching is what lets it be named plainly. A tag called "Knee joints"
+     * that *did* match would file every knee paper a second time alongside the conditions group
+     * of nearly the same name — the duplication migrations 0033–0042 removed.
+     */
+    navigational: boolean('navigational').notNull().default(false),
     // INTERNAL ONLY — MeSH mapping for research-feed/literature interop (EPIC-I).
     // Never member-facing; deliberately not in any DTO.
     meshId: text('mesh_id'),
