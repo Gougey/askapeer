@@ -317,14 +317,17 @@ export class IngestionService {
       depth: number;
     }>(sql`
       with recursive walk as (
-        select id, name, synonyms, scope_terms, 0 as depth
+        select id, name, synonyms, scope_terms, navigational, 0 as depth
         from community.tags where parent_id is null and retired_at is null
         union all
-        select t.id, t.name, t.synonyms, t.scope_terms, w.depth + 1
+        select t.id, t.name, t.synonyms, t.scope_terms, t.navigational, w.depth + 1
         from community.tags t join walk w on t.parent_id = w.id
         where t.retired_at is null
       )
-      select id, name, synonyms, scope_terms, depth from walk
+      -- Navigational nodes are filtered *here*, not in the recursion: the walk still
+      -- descends through them, so their children classify normally. Excluding them from the
+      -- CTE itself would silently drop every joint beneath a body-part group.
+      select id, name, synonyms, scope_terms, depth from walk where not navigational
     `);
     // Prepared here so each tag's match forms are resolved once per run rather than once
     // per article — and so the ambiguous-base check sees the whole taxonomy at once.
