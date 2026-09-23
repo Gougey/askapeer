@@ -57,6 +57,21 @@ export const CORPUS_QUERIES_KEY = 'research_feed.corpus_queries';
  */
 const RECLASSIFY_BATCH = 250;
 
+/**
+ * Articles classified before handing the event loop back.
+ *
+ * Measured, not guessed. `verify:reclassify` times the worst gap between ticks of a 20ms
+ * heartbeat while a real run goes through 620 articles with realistic abstracts:
+ *
+ *   no yield at all   1460ms   — what took the API down on 2026-09-23
+ *   every 25          294ms    — better, still long enough to drop requests
+ *   every 5            67ms    — indistinguishable from idle
+ *
+ * The yields themselves cost nothing: `setImmediate` is microseconds, and the pre-batching
+ * code effectively yielded on every single article without anyone noticing the overhead.
+ */
+const YIELD_EVERY = 5;
+
 export type IngestionReport = {
   source: string;
   seen: number;
@@ -398,14 +413,35 @@ export class IngestionService {
         .limit(RECLASSIFY_BATCH);
       if (batch.length === 0) break;
 
-      const rows = batch.flatMap((article) =>
-        classify(article, taxonomy).map((m) => ({
-          articleId: article.id,
-          tagId: m.tagId,
-          confidence: m.confidence,
-          matchedIn: m.matchedIn,
-        })),
-      );
+      /*
+       * Classified with the event loop given a breath every `YIELD_EVERY` articles.
+       *
+       * ⚠️ **This yield is load-bearing, not tidiness.** `classify` is synchronous and
+       * compares one article against every live tag, so a whole batch done in one pass is
+       * a quarter of a million string comparisons with no `await` in them — and Node runs
+       * that to completion before it will answer anything else. On 2026-09-23 that took the
+       * API off the air for ninety minutes: HTTP requests timed out, and BullMQ could not
+       * renew the job's lock (`could not renew lock for job 184`), so the job was judged
+       * stalled and restarted itself, blocking the loop again. The app was down until the
+       * queue was drained by hand.
+       *
+       * The original per-article `await writeTags(...)` yielded between every article and
+       * never had the problem; batching (#126) removed the await and with it the yield. So
+       * the yield comes back explicitly, and `setImmediate` rather than `await 0` because a
+       * resolved promise only drains the microtask queue — it never lets I/O run.
+       */
+      const rows: (typeof articleTags.$inferInsert)[] = [];
+      for (const [i, article] of batch.entries()) {
+        for (const m of classify(article, taxonomy)) {
+          rows.push({
+            articleId: article.id,
+            tagId: m.tagId,
+            confidence: m.confidence,
+            matchedIn: m.matchedIn,
+          });
+        }
+        if (i % YIELD_EVERY === YIELD_EVERY - 1) await new Promise(setImmediate);
+      }
 
       const ids = batch.map((a) => a.id);
       cursor = ids[ids.length - 1];
