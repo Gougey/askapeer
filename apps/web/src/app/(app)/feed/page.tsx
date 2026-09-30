@@ -2,20 +2,17 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArticleCard } from '@/components/ArticleCard';
 import { InfiniteList } from '@/components/InfiniteList';
-import { isEvidence } from '@/lib/evidence';
+import { parseFeedFilters, type RawFeedParams } from '@/lib/feed-filters';
 import { fetchVocabulary } from '@/lib/forum';
 import {
   fetchFeed,
   fetchFeedCriteria,
   feedFilterParams,
   type FeedFilters,
-  type FeedSort,
 } from '@/lib/research-feed';
 import { requireAccessToken } from '@/lib/session';
 import { FilterPanel } from './FilterPanel';
 import { loadMoreArticles } from './load-more';
-
-const SORTS: FeedSort[] = ['for_you', 'newest', 'relevance'];
 
 /**
  * My Research (screen B1) — research scored against the clinical taxonomy, and since
@@ -47,15 +44,16 @@ export default async function FeedPage({
   const params = await searchParams;
   const token = await requireAccessToken();
 
-  // Express gives one repeated param as a string and several as an array; Next does the
-  // same, so both shapes have to be handled or a single tag filter silently vanishes.
-  const urlTags =
-    params.tag === undefined ? [] : Array.isArray(params.tag) ? params.tag : [params.tag];
-  const years = Number(params.years);
-  const sort = SORTS.find((value) => value === params.sort);
-  const asked = Boolean(
-    params.f || params.q?.trim() || urlTags.length > 0 || params.evidence || params.years || sort,
-  );
+  /*
+   * ⚠️ **Parsed, not read.** The API validates its query parameters strictly and answers a
+   * bad one with a 400, which `apiGet` throws and Next renders as an error page — so a value
+   * it would refuse must never leave here. `?tag=` did, once: an empty tag reached the API
+   * as `each value in tag must be a UUID` and took the whole screen down. The parser is a
+   * pure module so the rule can be pinned by `npm run verify:feed-filters -w apps/web`
+   * rather than found on live a second time.
+   */
+  const url = parseFeedFilters(params as RawFeedParams);
+  const { asked } = url;
 
   const [t, { tags }, saved] = await Promise.all([
     getTranslations('feed'),
@@ -66,11 +64,11 @@ export default async function FeedPage({
 
   const filters: FeedFilters = asked
     ? {
-        q: params.q?.trim() || undefined,
-        tags: urlTags,
-        evidence: isEvidence(params.evidence) ? params.evidence : undefined,
-        years: Number.isInteger(years) && years >= 1 && years <= 5 ? years : undefined,
-        sort,
+        q: url.q,
+        tags: url.tags,
+        evidence: url.evidence,
+        years: url.years,
+        sort: url.sort,
         applied: true,
       }
     : {

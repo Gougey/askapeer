@@ -503,6 +503,21 @@ already yours.
 - ⚠️ **`loadMoreArticles` takes the filters bound in by the page**, because a server action
   has no URL. Without them page two of a filtered feed is page two of the *unfiltered* one,
   which looks like the filter stopped working halfway down.
+- ⚠️ **Every filter value is sanitised before it leaves the page, not merely narrowed.** The
+  API validates its query parameters strictly (`whitelist` + `forbidNonWhitelisted`, every
+  filter typed), so a value it refuses becomes a 400, which `apiGet` throws and Next renders
+  as an error page. **This took the feed down on the day it shipped**: `?tag=` — an empty tag
+  parameter — reached the API as `each value in tag must be a UUID`, and `tag` was the one
+  filter passed through unchecked while `q`, `evidence`, `years` and `sort` were all
+  filtered. The parsing now lives in `apps/web/src/lib/feed-filters.ts`, a pure module with
+  no imports, and `npm run verify:feed-filters -w apps/web` pins it — including that a URL
+  full of rubbish still counts as *asked*, so a bad filter does not silently fall back to the
+  member's saved settings.
+- **A 4xx from the API now names itself.** `apiGet` used to throw "Askapeer is temporarily
+  unreachable (400)" for everything, which is true of an outage and a lie about a rejected
+  parameter — and it cost an afternoon, because all that reached the log was a status code.
+  A 4xx now records the path and the API's own validation message; a 5xx keeps the
+  "temporarily unreachable" wording, which is the one case where it is true.
 - **A `<details>` and a GET form, not a modal and not client state.** Apply is a navigation,
   so a filtered feed is a real link — bookmarkable, shareable, undone by the back button —
   and the page stays a server component. `<details>` gives the keyboard, the disclosure
