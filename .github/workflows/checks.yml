@@ -57,3 +57,9 @@ jobs:
       # pinned here rather than discovered by someone editing a post they should not have.
       - name: Edit window
         run: npm run verify:edit-window -w apps/api
+      # And again, this time learned the expensive way. The API validates its query
+      # parameters strictly, so a filter value it would refuse turns into a 400, a thrown
+      # fetch and an error page. `?tag=` did exactly that to the Research feed on the day it
+      # shipped, because `tag` was the one filter the page passed through unchecked.
+      - name: Feed filters — nothing the API would reject leaves the URL parser
+        run: npm run verify:feed-filters -w apps/web

@@ -32,7 +32,10 @@ corpora (S16, S17), and Andrew’s clinical vocabulary Parts 1 and 2
 loaded into the taxonomy (S18b — now 1,230 live tags across seven roots,
 175 carrying search synonyms), and editing your own contributions (a
 question, an answer or a published case, until something responds to it
-and within 24 hours — see “The edit window” below)</strong>.</p>
+and within 24 hours — see “The edit window” below), and filtering the
+Research feed in place (keyword, clinical areas, type of paper, period
+and sort, keepable as personal settings — see “Filtering the Research
+feed” below)</strong>.</p>
 <p><strong>Build approach:</strong> <em>prove-then-migrate</em> —
 develop locally + deploy to Fly.io (London) for the early slices;
 migrate to AWS <code>eu-west-2</code> before real practitioners. See the
@@ -607,8 +610,8 @@ everything to 1; the scoring already multiplies by it, so degrees of
 interest become a UI change rather than a migration.</li>
 <li><strong>The set is replaced whole, not upserted per tag.</strong>
 The picker always knows every selection; a partial update would make “I
-deselected that” a second kind of call. Capped at 30 — selecting most of
-the taxonomy expresses the same thing as selecting none.</li>
+deselected that” a second kind of call. Capped at 100 — selecting most
+of the taxonomy expresses the same thing as selecting none.</li>
 </ul>
 <p>Verified end to end: with no interests the feed is
 <code>general</code>; setting <em>Achilles tendinopathy</em> turns the
@@ -616,6 +619,144 @@ whole first page into Achilles articles and reports
 <code>personalised</code>; an interest with no articles behind it
 reports <code>fallback</code> with 20 articles rather than none;
 clearing returns to <code>general</code>.</p>
+<h2 id="filtering-the-research-feed-andrews-review-item-6">Filtering the
+Research feed (Andrew’s review item 6)</h2>
+<p>The Research feed carries a <strong>Filter panel</strong> — keyword,
+clinical areas, type of paper, period and sort — and a member can keep
+what they set up as standing settings. The magnifier search is
+untouched: it reaches the whole corpus, because the reason to type a
+word is usually that it is <em>outside</em> what you follow, while this
+narrows the feed that is already yours.</p>
+<p><code>community.feed_preferences</code> (migration 0046, one row per
+handle), <code>FeedFilters</code> on <code>FeedService.list</code>,
+<code>GET/PUT/DELETE /v1/research-feed/preferences</code>, and
+<code>apps/web/src/app/(app)/feed/FilterPanel.tsx</code>.</p>
+<ul>
+<li><strong>No third ranking path.</strong> The panel narrows the same
+query <code>list</code> already runs. Feed, search and “filtered feed”
+as three separate rankings would drift apart within a release, so the
+narrowing clauses are <code>sql</code> fragments that are empty when
+nothing is asked — an unfiltered feed executes exactly the query it
+executed before any of this existed.</li>
+<li>⚠️ <strong>Tags <em>replace</em> the member’s interests; they do not
+narrow within them.</strong> Andrew’s “change tags on that page rather
+than clinic interests”, read literally: the panel is a way to look
+somewhere else for a moment without disturbing what you follow. Clearing
+the tag row returns the feed to the standing interests. The override
+seeds the same <code>expanded</code> CTE the interests do, at weight 1,
+so the ranking does not fork.</li>
+<li>⚠️ <strong>The tags are not stored in
+<code>feed_preferences</code>.</strong> They live in
+<code>member_interests</code>, which is the one place a member’s
+interests exist; a second copy would let the Settings screen and the
+panel disagree. So saving a panel that has chosen tags
+<strong>overwrites the interests</strong>, and both the web app and this
+table’s comment say so. An <em>empty</em> tag row is left alone rather
+than treated as “no interests” — pressing Save on a panel whose tags
+were never touched must not delete a curated list.</li>
+<li>⚠️ <strong>The period is relative, never a pair of dates.</strong>
+Andrew asked for “year from/to”; an absolute range is wrong the moment
+it becomes a standing setting — “2021–2026” saved today means something
+else next year. So it is 1–5 years back from now, resolved at query
+time, and constrained in the DTO <em>and</em> the table.</li>
+<li>⚠️ <strong>The period control cannot discriminate yet.</strong>
+Measured 2026-09-30: all 6,054 live articles carry
+<code>published_year = 2026</code>, because the ingest began in August
+and only fetches forward. The clause is right and the data is not. The
+screen says so under the control, rather than leaving it to be reported
+as broken. Both sources accept date ranges, so a backfill is possible
+later — and means a much longer reclassify.</li>
+<li><strong>Sort offers three, not two.</strong> <em>For you</em> (the
+composite: evidence weight + recency decay + interest match),
+<em>Newest</em>, and <em>Relevance</em> — the last offered only when a
+keyword is present, because <code>ts_rank</code> of an empty query is
+zero for every row. The API falls back to <em>For you</em> if
+<code>relevance</code> arrives without one, which also covers the member
+who saved <code>relevance</code> with a keyword and later cleared
+it.</li>
+<li>⚠️ <strong>An empty URL is not the same as no filters.</strong> A
+member can save standing criteria, so arriving with nothing asked for
+means “give me my settings”, while <code>?f=1</code> means “this URL is
+the whole truth, including the empty parts of it”. Without that flag,
+clearing the panel would silently restore the saved criteria.
+<code>f=1</code> is a hidden input on the form and is the one thing
+Clear links to.</li>
+<li>⚠️ <strong>The saved tags are shown in the panel but never sent as
+filters.</strong> They <em>are</em> the member’s interests, which
+<code>list</code> applies anyway; resending them as an override would
+give the same articles under the wrong name — the page would report
+<code>filtered</code>, which suppresses the empty-interest fallback and
+takes “choose your interests” off the screen for the people who most
+need it. The panel’s “n on” count is therefore computed from what is
+<em>sent</em>, or every ordinary visit would read “Filter (1 on)”.</li>
+<li><strong><code>filtered</code> is a fourth <code>mode</code>, and it
+suppresses the fallback.</strong> Answering “systematic reviews about
+the elbow” with the general feed tells the member something false about
+their own query, so a filtered feed with no matches returns empty and
+says so.</li>
+<li>⚠️ <strong>The infinite-scroll history is keyed by the
+filters.</strong> <code>InfiniteList</code> replays the cursors it saved
+under <code>storageKey</code>, and a cursor is only an offset into one
+particular result set — replaying the unfiltered feed’s offsets against
+a filtered one splices in pages of a different list.
+<code>storageKey</code> is <code>feed?&lt;filter params&gt;</code>, so a
+change starts a fresh history and going back to a previous filter finds
+its own.</li>
+<li>⚠️ <strong><code>loadMoreArticles</code> takes the filters bound in
+by the page</strong>, because a server action has no URL. Without them
+page two of a filtered feed is page two of the <em>unfiltered</em> one,
+which looks like the filter stopped working halfway down.</li>
+<li>⚠️ <strong>Every filter value is sanitised before it leaves the
+page, not merely narrowed.</strong> The API validates its query
+parameters strictly (<code>whitelist</code> +
+<code>forbidNonWhitelisted</code>, every filter typed), so a value it
+refuses becomes a 400, which <code>apiGet</code> throws and Next renders
+as an error page. <strong>This took the feed down on the day it
+shipped</strong>: <code>?tag=</code> — an empty tag parameter — reached
+the API as <code>each value in tag must be a UUID</code>, and
+<code>tag</code> was the one filter passed through unchecked while
+<code>q</code>, <code>evidence</code>, <code>years</code> and
+<code>sort</code> were all filtered. The parsing now lives in
+<code>apps/web/src/lib/feed-filters.ts</code>, a pure module with no
+imports, and <code>npm run verify:feed-filters -w apps/web</code> pins
+it — including that a URL full of rubbish still counts as
+<em>asked</em>, so a bad filter does not silently fall back to the
+member’s saved settings.</li>
+<li><strong>A 4xx from the API now names itself.</strong>
+<code>apiGet</code> used to throw “Askapeer is temporarily unreachable
+(400)” for everything, which is true of an outage and a lie about a
+rejected parameter — and it cost an afternoon, because all that reached
+the log was a status code. A 4xx now records the path and the API’s own
+validation message; a 5xx keeps the “temporarily unreachable” wording,
+which is the one case where it is true.</li>
+<li><strong>A <code>&lt;details&gt;</code> and a GET form, not a modal
+and not client state.</strong> Apply is a navigation, so a filtered feed
+is a real link — bookmarkable, shareable, undone by the back button —
+and the page stays a server component. <code>&lt;details&gt;</code>
+gives the keyboard, the disclosure semantics and the no-JavaScript case
+for free; the panel animates a collapsing grid track on reveal
+(<code>.filter-panel</code> in <code>globals.css</code>), which is the
+only technique that works at whatever height the tag row turns out to
+be. It opens by default whenever the visit is about filtering at all,
+for the reason the search form opens: a narrowed feed with no control on
+screen explaining why is the confusing case.</li>
+<li><strong>Save is not the form’s submit.</strong> Apply is. The Save
+button dispatches the action by hand with the same <code>FormData</code>
+the GET form would have sent, so the two buttons read one set of
+controls and cannot disagree about what is on screen. The overwrite
+confirmation is in the page rather than a browser dialogue, which is
+dismissed by reflex and says nothing about what is at stake.</li>
+</ul>
+<p>Verified end to end against a 1,067-article local corpus: keyword,
+evidence and period each narrow (period checked by paging to the oldest
+result — <code>years=1</code> stops at 2025-11-30, <code>years=5</code>
+at 2022-02-28, unfiltered reaches 2021-09-30); <code>sort=newest</code>
+reorders and still reports <code>personalised</code>;
+<code>sort=relevance</code> without a keyword falls back; a tag override
+returns shoulder articles and reports <code>filtered</code>; saving
+writes the interests through; saving with an empty tag row leaves them
+intact; <code>DELETE</code> clears the row and the feed returns to
+<code>personalised</code>.</p>
 <h2 id="category-colours">Category colours</h2>
 <p>The content-type label on a post card is drawn in its own hue, so a
 list is scannable without reading every label. Values and the palette

@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint:tokens": "node scripts/check-design-tokens.mjs",
     "lint:inputs": "node scripts/check-input-zoom.mjs",
-    "lint:boundary": "node scripts/check-client-boundary.mjs"
+    "lint:boundary": "node scripts/check-client-boundary.mjs",
+    "verify:feed-filters": "tsx scripts/verify-feed-filters.ts"
   },
   "dependencies": {
     "@askapeer/design-tokens": "*",
@@ -26,6 +27,7 @@
     "@types/react-dom": "^19.2.3",
     "postcss": "^8.4.31",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.1",
     "typescript": "^5.9.3"
   }
 }
