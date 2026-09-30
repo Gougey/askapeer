@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { memberInterests } from '../db/schema';
+import { memberInterests, tags } from '../db/schema';
 
 /**
  * A member's clinical interests (EPIC-I §3).
@@ -18,11 +18,25 @@ import { memberInterests } from '../db/schema';
 export class InterestsService {
   constructor(@Inject(DRIZZLE) private readonly db: Database) {}
 
+  /**
+   * The member's interests — **live tags only**.
+   *
+   * ⚠️ Retiring a tag does not remove it from anybody's interests: the row survives, pointing
+   * at something no screen can render and no article can carry. The picker drops what it
+   * cannot name, so the Research filter panel showed a member "6 / 100" above a single chip,
+   * and sent the five invisible ids as filters — scoping their feed to tags that match
+   * nothing by construction.
+   *
+   * Filtered on the read rather than repaired in the table, because the read fixes every
+   * member at once and a retired tag is not certainly retired forever. The dead rows stay
+   * where they are and cost nothing; if a tag is ever brought back, so is the interest.
+   */
   async list(handleId: string): Promise<{ tagIds: string[] }> {
     const rows = await this.db
       .select({ tagId: memberInterests.tagId })
       .from(memberInterests)
-      .where(eq(memberInterests.handleId, handleId));
+      .innerJoin(tags, eq(tags.id, memberInterests.tagId))
+      .where(and(eq(memberInterests.handleId, handleId), isNull(tags.retiredAt)));
     return { tagIds: rows.map((r) => r.tagId) };
   }
 
@@ -56,11 +70,19 @@ export class InterestsService {
     return tagIds;
   }
 
-  /** Guards the write: only tags that exist can be stored. */
+  /**
+   * Guards the write: only tags that exist **and are not retired** can be stored.
+   *
+   * Retired matters as much as missing. A picker held open while an administrator retires a
+   * tag is ordinary, and storing the choice would write back the very rows `list` now has to
+   * filter out — the member would save an interest that can never be shown to them again.
+   */
   async existingTagIds(tagIds: string[]): Promise<string[]> {
     if (tagIds.length === 0) return [];
     const { rows } = await this.db.execute<{ id: string }>(sql`
-      select id from community.tags where id in (${sql.join(tagIds.map((id) => sql`${id}`), sql`, `)})
+      select id from community.tags
+       where retired_at is null
+         and id in (${sql.join(tagIds.map((id) => sql`${id}`), sql`, `)})
     `);
     return rows.map((r) => r.id);
   }

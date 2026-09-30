@@ -722,6 +722,33 @@ imports, and <code>npm run verify:feed-filters -w apps/web</code> pins
 it — including that a URL full of rubbish still counts as
 <em>asked</em>, so a bad filter does not silently fall back to the
 member’s saved settings.</li>
+<li>⚠️ <strong>Taxonomy ids are uuid5 over the tag’s path — derive them,
+never type them.</strong> Migration 0045 wrote the nine
+<code>navigational</code> joint-group ids as a hand-typed ascending
+sequence, and four ran past the legal UUID variant nibble (the fourth
+group must begin 8, 9, a or b) into <code>c</code>, <code>d</code>,
+<code>e</code>, <code>f</code> and <code>0</code>. <strong>Postgres does
+not check this</strong> — its <code>uuid</code> type takes any 32 hex
+digits — so the migration applied, the tags appeared in the picker, and
+the defect waited for a member to <em>select</em> one: every tag id
+crossing the API is checked with <code>@IsUUID</code>, so choosing
+<em>Hand joints</em> returned 400. It took the Research feed down, and
+forum search and interest-saving would have broken on the same tag.
+Migration 0047 re-keys all nine onto the scheme (only
+<code>parent_id</code> pointed at them — no articles, posts or
+interests), and <code>npm run verify:tag-ids -w apps/api</code> reads
+the migrations statically so the next hand-written id fails in CI rather
+than in front of a member.</li>
+<li>⚠️ <strong>A retired tag does not leave anybody’s
+interests.</strong> The row survives, pointing at something no screen
+can render and no article can carry — so the filter panel showed a
+member “6 / 100” above a single chip and sent the five invisible ids as
+filters, scoping their feed to tags that match nothing by construction.
+<code>InterestsService.list</code> now joins <code>tags</code> and drops
+the retired, and <code>existingTagIds</code> refuses to store one.
+Filtered on the read rather than repaired in the table: the read fixes
+every member at once, and if a tag is ever brought back so is the
+interest.</li>
 <li><strong>A 4xx from the API now names itself.</strong>
 <code>apiGet</code> used to throw “Askapeer is temporarily unreachable
 (400)” for everything, which is true of an outage and a lie about a

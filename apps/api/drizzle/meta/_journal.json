@@ -330,6 +330,13 @@
       "when": 1789470000438,
       "tag": "0046_feed_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1789473600438,
+      "tag": "0047_joint_group_ids",
+      "breakpoints": true
     }
   ]
 }

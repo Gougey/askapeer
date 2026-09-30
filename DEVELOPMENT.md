@@ -513,6 +513,24 @@ already yours.
   no imports, and `npm run verify:feed-filters -w apps/web` pins it — including that a URL
   full of rubbish still counts as *asked*, so a bad filter does not silently fall back to the
   member's saved settings.
+- ⚠️ **Taxonomy ids are uuid5 over the tag's path — derive them, never type them.** Migration
+  0045 wrote the nine `navigational` joint-group ids as a hand-typed ascending sequence, and
+  four ran past the legal UUID variant nibble (the fourth group must begin 8, 9, a or b) into
+  `c`, `d`, `e`, `f` and `0`. **Postgres does not check this** — its `uuid` type takes any 32
+  hex digits — so the migration applied, the tags appeared in the picker, and the defect
+  waited for a member to *select* one: every tag id crossing the API is checked with
+  `@IsUUID`, so choosing *Hand joints* returned 400. It took the Research feed down, and
+  forum search and interest-saving would have broken on the same tag. Migration 0047 re-keys
+  all nine onto the scheme (only `parent_id` pointed at them — no articles, posts or
+  interests), and `npm run verify:tag-ids -w apps/api` reads the migrations statically so the
+  next hand-written id fails in CI rather than in front of a member.
+- ⚠️ **A retired tag does not leave anybody's interests.** The row survives, pointing at
+  something no screen can render and no article can carry — so the filter panel showed a
+  member "6 / 100" above a single chip and sent the five invisible ids as filters, scoping
+  their feed to tags that match nothing by construction. `InterestsService.list` now joins
+  `tags` and drops the retired, and `existingTagIds` refuses to store one. Filtered on the
+  read rather than repaired in the table: the read fixes every member at once, and if a tag is
+  ever brought back so is the interest.
 - **A 4xx from the API now names itself.** `apiGet` used to throw "Askapeer is temporarily
   unreachable (400)" for everything, which is true of an outage and a lie about a rejected
   parameter — and it cost an afternoon, because all that reached the log was a status code.

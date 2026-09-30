@@ -63,3 +63,9 @@ jobs:
       # shipped, because `tag` was the one filter the page passed through unchecked.
       - name: Feed filters — nothing the API would reject leaves the URL parser
         run: npm run verify:feed-filters -w apps/web
+      # The other half of the same failure. Taxonomy ids are uuid5 over the tag's path so a
+      # term lands on the same id everywhere; 0045 typed nine of them by hand and four ran
+      # past the legal variant nibble. Postgres accepts any 32 hex digits, so nothing caught
+      # it until a member selected one and `@IsUUID` answered 400.
+      - name: Tag ids — every id a migration writes is one the API accepts
+        run: npm run verify:tag-ids -w apps/api
