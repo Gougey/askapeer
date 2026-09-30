@@ -44,6 +44,14 @@ check('uuid5 ids are accepted — the taxonomy has no v4 in it', () => {
   assert.equal(parseFeedFilters({ tag: '13817ae4-4642-5c85-97c8-8636221345cb' }).tags.length, 1);
 });
 
+check('an id the API would refuse is dropped, variant nibble and all', () => {
+  // `Hand joints` as migration 0045 wrote it: the fourth group starts `d`, which is not a
+  // legal RFC 4122 variant, so `@IsUUID` refuses it and the page must not forward it.
+  assert.deepEqual(parseFeedFilters({ tag: '8e5293b4-af61-5032-d375-61aea0802c55' }).tags, []);
+  // …and as migration 0047 re-keyed it.
+  assert.equal(parseFeedFilters({ tag: 'f77b8e1a-65a8-5ef2-bb35-7470b6ef0ee6' }).tags.length, 1);
+});
+
 check('a repeated tag is deduplicated', () => {
   const id = 'a30aa659-e562-5f1e-9272-f418e2987a60';
   assert.deepEqual(parseFeedFilters({ tag: [id, id] }).tags, [id]);

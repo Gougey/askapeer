@@ -34,10 +34,21 @@ export const FEED_EVIDENCE = [
 export const FEED_PERIODS = [1, 2, 3, 5] as const;
 
 /**
- * Any UUID version — the taxonomy is seeded with deterministic uuid5 ids, so a version check
- * would reject every real tag.
+ * ⚠️ **The same rule the API applies, including the variant nibble** — the `[89ab]` in the
+ * fourth group.
+ *
+ * Any *version* is allowed, because the taxonomy is seeded with deterministic uuid5 ids and a
+ * version check would reject every real tag. The **variant** is not optional, and a looser
+ * regex here is not a kindness: `class-validator`'s `@IsUUID` enforces it on the other side,
+ * so anything this lets through that it will not becomes a 400 and an error page rather than
+ * a filter quietly ignored.
+ *
+ * That is not theoretical either. Nine joint-group ids were hand-written rather than derived
+ * (migration 0045), four of them ran past `b` into `c`, `d`, `e`, `f` and `0`, and this regex
+ * — permissive at the time — forwarded *Hand joints* to an API that refused it. Migration
+ * 0047 fixed the ids; this makes the page survive the next one regardless.
  */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** The shape Next hands a page: a repeated parameter arrives as an array, one as a string. */
 export type RawFeedParams = {
