@@ -723,3 +723,33 @@ export const memberInterests = community.table(
     index('member_interests_handle_idx').on(t.handleId),
   ],
 );
+
+/**
+ * A member's standing feed criteria (Andrew's review item 6).
+ *
+ * One row per handle — "my feed settings", not named saved searches, which would want naming,
+ * listing and deleting and are a different feature.
+ *
+ * ⚠️ **Tags are deliberately absent.** Chosen tags *override* clinical interests in the panel,
+ * and saving writes them to `member_interests`, which is the one place interests live. A second
+ * copy here would mean the interests screen and the feed could disagree about the same
+ * question.
+ *
+ * The period is a number of years back from now, resolved at query time — never a pair of
+ * dates. An absolute range is wrong the moment it is *stored*, which is exactly what a standing
+ * setting does to it.
+ */
+export const feedPreferences = community.table('feed_preferences', {
+  handleId: uuid('handle_id')
+    .primaryKey()
+    .references(() => handles.id, { onDelete: 'cascade' }),
+  /** Null is "any" — the absence of a filter, not a value. */
+  evidence: text('evidence'),
+  /** Years back from now; null for no period filter. 1–5, checked in the database too. */
+  periodYears: integer('period_years'),
+  /** `for_you` | `newest` | `relevance`. Relevance needs a keyword; the API falls back without one. */
+  sort: text('sort').notNull().default('for_you'),
+  /** A standing keyword, if the member wants one. Usually null. */
+  query: text('query'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

@@ -1,6 +1,6 @@
 # Development
 
-The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off), search over the literature feed and in the app bar across both corpora (S16, S17), and Andrew's clinical vocabulary Parts 1 and 2 loaded into the taxonomy (S18b — now 1,230 live tags across seven roots, 175 carrying search synonyms), and editing your own contributions (a question, an answer or a published case, until something responds to it and within 24 hours — see "The edit window" below)**.
+The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off), search over the literature feed and in the app bar across both corpora (S16, S17), and Andrew's clinical vocabulary Parts 1 and 2 loaded into the taxonomy (S18b — now 1,230 live tags across seven roots, 175 carrying search synonyms), and editing your own contributions (a question, an answer or a published case, until something responds to it and within 24 hours — see "The edit window" below), and filtering the Research feed in place (keyword, clinical areas, type of paper, period and sort, keepable as personal settings — see "Filtering the Research feed" below)**.
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
@@ -433,12 +433,97 @@ database. ⚠️ It wipes the `research` schema — local only, never against th
   multiplies by it, so degrees of interest become a UI change rather than a migration.
 - **The set is replaced whole, not upserted per tag.** The picker always knows every
   selection; a partial update would make "I deselected that" a second kind of call. Capped
-  at 30 — selecting most of the taxonomy expresses the same thing as selecting none.
+  at 100 — selecting most of the taxonomy expresses the same thing as selecting none.
 
 Verified end to end: with no interests the feed is `general`; setting *Achilles
 tendinopathy* turns the whole first page into Achilles articles and reports `personalised`;
 an interest with no articles behind it reports `fallback` with 20 articles rather than none;
 clearing returns to `general`.
+
+## Filtering the Research feed (Andrew's review item 6)
+
+The Research feed carries a **Filter panel** — keyword, clinical areas, type of paper,
+period and sort — and a member can keep what they set up as standing settings. The
+magnifier search is untouched: it reaches the whole corpus, because the reason to type a
+word is usually that it is *outside* what you follow, while this narrows the feed that is
+already yours.
+
+`community.feed_preferences` (migration 0046, one row per handle), `FeedFilters` on
+`FeedService.list`, `GET/PUT/DELETE /v1/research-feed/preferences`, and
+`apps/web/src/app/(app)/feed/FilterPanel.tsx`.
+
+- **No third ranking path.** The panel narrows the same query `list` already runs. Feed,
+  search and "filtered feed" as three separate rankings would drift apart within a release,
+  so the narrowing clauses are `sql` fragments that are empty when nothing is asked — an
+  unfiltered feed executes exactly the query it executed before any of this existed.
+- ⚠️ **Tags *replace* the member's interests; they do not narrow within them.** Andrew's
+  "change tags on that page rather than clinic interests", read literally: the panel is a way
+  to look somewhere else for a moment without disturbing what you follow. Clearing the tag
+  row returns the feed to the standing interests. The override seeds the same `expanded` CTE
+  the interests do, at weight 1, so the ranking does not fork.
+- ⚠️ **The tags are not stored in `feed_preferences`.** They live in `member_interests`,
+  which is the one place a member's interests exist; a second copy would let the Settings
+  screen and the panel disagree. So saving a panel that has chosen tags **overwrites the
+  interests**, and both the web app and this table's comment say so. An *empty* tag row is
+  left alone rather than treated as "no interests" — pressing Save on a panel whose tags were
+  never touched must not delete a curated list.
+- ⚠️ **The period is relative, never a pair of dates.** Andrew asked for "year from/to"; an
+  absolute range is wrong the moment it becomes a standing setting — "2021–2026" saved today
+  means something else next year. So it is 1–5 years back from now, resolved at query time,
+  and constrained in the DTO *and* the table.
+- ⚠️ **The period control cannot discriminate yet.** Measured 2026-09-30: all 6,054 live
+  articles carry `published_year = 2026`, because the ingest began in August and only fetches
+  forward. The clause is right and the data is not. The screen says so under the control,
+  rather than leaving it to be reported as broken. Both sources accept date ranges, so a
+  backfill is possible later — and means a much longer reclassify.
+- **Sort offers three, not two.** *For you* (the composite: evidence weight + recency decay +
+  interest match), *Newest*, and *Relevance* — the last offered only when a keyword is
+  present, because `ts_rank` of an empty query is zero for every row. The API falls back to
+  *For you* if `relevance` arrives without one, which also covers the member who saved
+  `relevance` with a keyword and later cleared it.
+- ⚠️ **An empty URL is not the same as no filters.** A member can save standing criteria, so
+  arriving with nothing asked for means "give me my settings", while `?f=1` means "this URL
+  is the whole truth, including the empty parts of it". Without that flag, clearing the panel
+  would silently restore the saved criteria. `f=1` is a hidden input on the form and is the
+  one thing Clear links to.
+- ⚠️ **The saved tags are shown in the panel but never sent as filters.** They *are* the
+  member's interests, which `list` applies anyway; resending them as an override would give
+  the same articles under the wrong name — the page would report `filtered`, which suppresses
+  the empty-interest fallback and takes "choose your interests" off the screen for the people
+  who most need it. The panel's "n on" count is therefore computed from what is *sent*, or
+  every ordinary visit would read "Filter (1 on)".
+- **`filtered` is a fourth `mode`, and it suppresses the fallback.** Answering "systematic
+  reviews about the elbow" with the general feed tells the member something false about their
+  own query, so a filtered feed with no matches returns empty and says so.
+- ⚠️ **The infinite-scroll history is keyed by the filters.** `InfiniteList` replays the
+  cursors it saved under `storageKey`, and a cursor is only an offset into one particular
+  result set — replaying the unfiltered feed's offsets against a filtered one splices in
+  pages of a different list. `storageKey` is `feed?<filter params>`, so a change starts a
+  fresh history and going back to a previous filter finds its own.
+- ⚠️ **`loadMoreArticles` takes the filters bound in by the page**, because a server action
+  has no URL. Without them page two of a filtered feed is page two of the *unfiltered* one,
+  which looks like the filter stopped working halfway down.
+- **A `<details>` and a GET form, not a modal and not client state.** Apply is a navigation,
+  so a filtered feed is a real link — bookmarkable, shareable, undone by the back button —
+  and the page stays a server component. `<details>` gives the keyboard, the disclosure
+  semantics and the no-JavaScript case for free; the panel animates a collapsing grid track
+  on reveal (`.filter-panel` in `globals.css`), which is the only technique that works at
+  whatever height the tag row turns out to be. It opens by default whenever the visit is
+  about filtering at all, for the reason the search form opens: a narrowed feed with no
+  control on screen explaining why is the confusing case.
+- **Save is not the form's submit.** Apply is. The Save button dispatches the action by hand
+  with the same `FormData` the GET form would have sent, so the two buttons read one set of
+  controls and cannot disagree about what is on screen. The overwrite confirmation is in the
+  page rather than a browser dialogue, which is dismissed by reflex and says nothing about
+  what is at stake.
+
+Verified end to end against a 1,067-article local corpus: keyword, evidence and period each
+narrow (period checked by paging to the oldest result — `years=1` stops at 2025-11-30,
+`years=5` at 2022-02-28, unfiltered reaches 2021-09-30); `sort=newest` reorders and still
+reports `personalised`; `sort=relevance` without a keyword falls back; a tag override returns
+shoulder articles and reports `filtered`; saving writes the interests through; saving with an
+empty tag row leaves them intact; `DELETE` clears the row and the feed returns to
+`personalised`.
 
 ## Category colours
 
