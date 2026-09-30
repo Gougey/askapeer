@@ -224,3 +224,55 @@ h1, h2, h3, h4 {
   border-radius: 2px;
   background: var(--color-accent);
 }
+
+/*
+  The Research filter panel (Andrew's review item 6).
+
+  Adrian asked for a panel that *slides down* rather than a modal: filtering is a small
+  adjustment to what you are already reading, and a modal makes it an errand. `<details>`
+  carries the open state, so the keyboard, the disclosure semantics and the no-JavaScript
+  case all come free — but it reveals its content instantly, which reads as a jump on a
+  screen that was mid-scroll. The content animates on reveal instead, which is the same
+  effect for the eye and costs nothing when the panel is closed.
+
+  Height cannot be transitioned from `auto`, and a fixed max-height would clip the panel
+  once the tag row wraps to a second line, so this animates a grid track that collapses to
+  nothing — the one technique that works at whatever height the content turns out to be.
+*/
+.filter-panel {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: filter-panel-open 180ms ease-out;
+}
+
+.filter-panel > * {
+  min-height: 0;
+}
+
+@keyframes filter-panel-open {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+/* Motion is the decoration here; the panel opening is the information. */
+@media (prefers-reduced-motion: reduce) {
+  .filter-panel {
+    animation: none;
+  }
+}
+
+/* The disclosure triangle is replaced by the button's own styling. */
+.filter-summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.filter-summary::-webkit-details-marker {
+  display: none;
+}

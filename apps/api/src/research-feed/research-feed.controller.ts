@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Inject, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import type { Queue } from 'bullmq';
 import { Transform } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 import type { Request } from 'express';
 import type { AuthedMember } from '../auth/jwt-auth.guard';
+import { FeedPreferencesService } from './feed-preferences.service';
 import { InterestsService } from './interests.service';
 import { AdminAccessModule } from '../admin/admin-access.module';
 import { AdminGuard } from '../admin/admin.guard';
@@ -40,11 +41,110 @@ export const EVIDENCE_TYPES = [
   'other',
 ] as const;
 
+/** The three orderings the filter panel offers. Relevance needs a keyword; the service falls back. */
+export const FEED_SORTS = ['for_you', 'newest', 'relevance'] as const;
+
+/**
+ * The Research filter panel, as URL parameters (Andrew's review item 6).
+ *
+ * **Filters live in the URL**, the way search's already do: a filtered feed is then
+ * bookmarkable, the back button undoes a filter change, and a member can send someone
+ * exactly the view they are looking at.
+ */
 export class FeedQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(20)
   cursor?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  q?: string;
+
+  /**
+   * Tags chosen in the panel. These **replace** the member's clinical interests for this
+   * view rather than narrowing within them — Andrew's "change tags on that page rather than
+   * clinic interests", read literally.
+   *
+   * Capped to match `InterestsDto`, because saving the panel writes these through to the
+   * interests and a lower cap here would fail only at the save.
+   */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined ? undefined : Array.isArray(value) ? value : [value],
+  )
+  @IsUUID('all', { each: true })
+  @ArrayMaxSize(100)
+  tag?: string[];
+
+  @IsOptional()
+  @IsIn(EVIDENCE_TYPES)
+  evidence?: (typeof EVIDENCE_TYPES)[number];
+
+  /**
+   * Years back from now — 1 to 5, never a pair of dates. Andrew asked for "year from/to";
+   * an absolute range is wrong the moment it becomes a *standing* setting, so the control is
+   * relative and resolved at query time.
+   *
+   * ⚠️ It cannot discriminate yet: every article in the corpus is from 2026, because the
+   * ingest began in August and only fetches forward.
+   */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === undefined ? undefined : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  years?: number;
+
+  @IsOptional()
+  @IsIn(FEED_SORTS)
+  sort?: (typeof FEED_SORTS)[number];
+
+  /**
+   * "This URL is the whole truth" — set by Apply, including when the panel was cleared.
+   *
+   * Without it there is no way to tell *nothing asked for* from *deliberately cleared*, and
+   * a member who saved standing criteria and then cleared the panel would watch the saved
+   * criteria come straight back.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(1)
+  f?: string;
+}
+
+/**
+ * Saving the panel as standing settings.
+ *
+ * ⚠️ A non-empty `tagIds` **overwrites** the member's clinical interests, because interests
+ * have exactly one home and a second copy would let the Settings screen and the feed
+ * disagree about what the member follows. The web app warns before sending it.
+ */
+export class FeedPreferencesDto {
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID('all', { each: true })
+  tagIds!: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  query?: string;
+
+  @IsOptional()
+  @IsIn(EVIDENCE_TYPES)
+  evidence?: (typeof EVIDENCE_TYPES)[number];
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  periodYears?: number;
+
+  @IsOptional()
+  @IsIn(FEED_SORTS)
+  sort?: (typeof FEED_SORTS)[number];
 }
 
 export class FeedSearchDto {
@@ -94,12 +194,62 @@ export class ResearchFeedController {
   constructor(
     private readonly feed: FeedService,
     private readonly interests: InterestsService,
+    private readonly preferences: FeedPreferencesService,
   ) {}
 
+  /**
+   * The feed, narrowed by the filter panel or by the member's standing settings.
+   *
+   * **One ranking path, not three.** The panel narrows the same query the unfiltered feed
+   * already runs; a separate "filtered feed" alongside `list` and `search` would drift from
+   * both within a release.
+   */
   @Get()
   async list(@Query() query: FeedQueryDto, @Req() req: Request & { member: AuthedMember }) {
-    const tagIds = await this.interests.tagIdsFor(req.member.handleId!);
-    return this.feed.list(query.cursor, undefined, tagIds, req.member.handleId!);
+    const handleId = req.member.handleId!;
+    const filters = asked(query)
+      ? {
+          tagIds: query.tag ?? [],
+          query: query.q,
+          evidence: query.evidence,
+          periodYears: query.years,
+          sort: query.sort,
+        }
+      : // Nothing asked for: fall back to whatever the member saved.
+        await this.saved(handleId);
+    const tagIds = await this.interests.tagIdsFor(handleId);
+    return this.feed.list(query.cursor, undefined, tagIds, handleId, filters);
+  }
+
+  /**
+   * The saved criteria as *filters*, which means **without the tags**.
+   *
+   * `preferences.get` returns them because the panel has to show what is shaping the page,
+   * but a saved tag is the member's clinical interest, which `list` applies anyway. Passing
+   * it back as a tag *override* would produce the same articles under the wrong name: the
+   * page would be called `filtered`, which suppresses the empty-interest fallback and takes
+   * the "choose your interests" prompt off the screen for the people who most need it.
+   */
+  private async saved(handleId: string) {
+    const { tagIds: _ignored, ...rest } = await this.preferences.get(handleId);
+    return rest;
+  }
+
+  /** The standing criteria, used to seed the panel when the URL carries none. */
+  @Get('preferences')
+  myPreferences(@Req() req: Request & { member: AuthedMember }) {
+    return this.preferences.get(req.member.handleId!);
+  }
+
+  @Put('preferences')
+  savePreferences(@Body() dto: FeedPreferencesDto, @Req() req: Request & { member: AuthedMember }) {
+    return this.preferences.save(req.member.handleId!, dto);
+  }
+
+  @Delete('preferences')
+  async clearPreferences(@Req() req: Request & { member: AuthedMember }) {
+    await this.preferences.clear(req.member.handleId!);
+    return { cleared: true };
   }
 
   @Get('interests')
@@ -211,6 +361,16 @@ export class ResearchFeedAdminController {
   coverage() {
     return this.ingestion.coverage();
   }
+}
+
+/**
+ * Did this request ask for anything?
+ *
+ * `f` alone counts: it is how Apply says "this URL is the whole truth", so clearing the panel
+ * clears the feed rather than silently restoring the saved settings.
+ */
+function asked(q: FeedQueryDto): boolean {
+  return Boolean(q.f || q.q?.trim() || (q.tag?.length ?? 0) > 0 || q.evidence || q.years || q.sort);
 }
 
 /** Re-exported so the module can wire the admin guard's dependencies. */

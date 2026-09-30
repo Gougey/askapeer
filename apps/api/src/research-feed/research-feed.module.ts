@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AdminAccessModule } from '../admin/admin-access.module';
 import { JwtConfigModule } from '../auth/jwt-config.module';
 import { SettingsModule } from '../settings/settings.module';
+import { FeedPreferencesService } from './feed-preferences.service';
 import { FeedService } from './feed.service';
 import { IngestionQueueModule } from './ingestion.queue';
 import { IngestionService } from './ingestion.service';
@@ -29,6 +30,7 @@ import { OpenAlexSource } from './sources/open-alex.source';
   controllers: [ResearchFeedController, ResearchFeedAdminController],
   providers: [
     FeedService,
+    FeedPreferencesService,
     IngestionService,
     InterestsService,
     IngestionWorker,
