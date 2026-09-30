@@ -260,10 +260,22 @@ h1, h2, h3, h4 {
   }
 }
 
+.filter-caret {
+  transition: transform 180ms ease-out;
+}
+
+details[open] > .filter-summary .filter-caret {
+  transform: rotate(180deg);
+}
+
 /* Motion is the decoration here; the panel opening is the information. */
 @media (prefers-reduced-motion: reduce) {
   .filter-panel {
     animation: none;
+  }
+
+  .filter-caret {
+    transition: none;
   }
 }
 
