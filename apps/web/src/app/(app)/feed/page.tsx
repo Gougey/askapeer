@@ -115,19 +115,7 @@ export default async function FeedPage({
     <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
       <h1 className="text-xl font-semibold">{t('heading')}</h1>
 
-      <FilterPanel
-        tags={tags}
-        filters={panelFilters}
-        active={active}
-        /*
-         * Open whenever this visit is about filtering at all, for the reason the search form
-         * opens: arriving on a feed that has been narrowed — by a bookmark, a link, the back
-         * button or your own saved settings — and seeing a short list with no control on
-         * screen explaining why is the confusing case worth the vertical space. It stays open
-         * after Clear too, which is where the next thing a member does is filter again.
-         */
-        defaultOpen={filterKey !== ''}
-      />
+      <FilterPanel tags={tags} filters={panelFilters} active={active} />
 
       {/*
         Say which feed this is, and only when it is not the one the member chose. A

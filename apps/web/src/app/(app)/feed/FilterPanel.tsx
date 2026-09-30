@@ -38,7 +38,6 @@ export function FilterPanel({
   tags,
   filters,
   active,
-  defaultOpen,
 }: {
   tags: Tag[];
   /** Whatever the URL asked for, or the standing settings when it asked for nothing. */
@@ -52,7 +51,6 @@ export function FilterPanel({
    * ordinary visit "Filter (1 on)".
    */
   active: number;
-  defaultOpen: boolean;
 }) {
   const t = useTranslations('feed');
   const form = useRef<HTMLFormElement>(null);
@@ -96,8 +94,17 @@ export function FilterPanel({
   };
 
   return (
+    /*
+     * **Always starts closed, including on a feed that is filtered.**
+     *
+     * It used to open itself whenever the URL carried filters, on the reasoning that a short
+     * list with no visible explanation looks broken. That reasoning was wrong twice over.
+     * Pressing Apply is a request to *see the results*, and leaving the panel standing over
+     * them is the control refusing to get out of the way — so it now shrinks back the moment
+     * it has done its job. And the explanation was never the open panel: it is the count on
+     * the summary, which says "Filter (2 on)" while taking one line instead of a screenful.
+     */
     <details
-      open={defaultOpen}
       className="border"
       style={{ borderColor: 'var(--color-border)', borderRadius: 'var(--radius)' }}
     >
@@ -107,7 +114,8 @@ export function FilterPanel({
       >
         {/* The count is the honest version of an "active" dot: it says how much is on. */}
         <span>{active > 0 ? t('filterCount', { count: active }) : t('filter')}</span>
-        <span aria-hidden="true">▾</span>
+        {/* Points down closed, up open — the caret has to agree with the panel. */}
+        <span className="filter-caret" aria-hidden="true">▾</span>
       </summary>
 
       <div className="filter-panel">

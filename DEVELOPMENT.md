@@ -541,9 +541,12 @@ already yours.
   and the page stays a server component. `<details>` gives the keyboard, the disclosure
   semantics and the no-JavaScript case for free; the panel animates a collapsing grid track
   on reveal (`.filter-panel` in `globals.css`), which is the only technique that works at
-  whatever height the tag row turns out to be. It opens by default whenever the visit is
-  about filtering at all, for the reason the search form opens: a narrowed feed with no
-  control on screen explaining why is the confusing case.
+  whatever height the tag row turns out to be. **It always starts closed, including on a feed
+  that is filtered** — pressing Apply is a request to see the results, and a panel left
+  standing over them is the control refusing to get out of the way. An earlier version opened
+  itself whenever the URL carried filters, on the reasoning that a short list needs an
+  explanation on screen; the explanation was never the open panel, it is the count on the
+  summary, which says "Filter (2 on)" in one line instead of a screenful.
 - **Save is not the form's submit.** Apply is. The Save button dispatches the action by hand
   with the same `FormData` the GET form would have sent, so the two buttons read one set of
   controls and cannot disagree about what is on screen. The overwrite confirmation is in the
