@@ -4,6 +4,7 @@ import { Transform } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 import type { Request } from 'express';
 import type { AuthedMember } from '../auth/jwt-auth.guard';
+import { BackfillService } from './backfill.service';
 import { FeedPreferencesService } from './feed-preferences.service';
 import { InterestsService } from './interests.service';
 import { AdminAccessModule } from '../admin/admin-access.module';
@@ -12,7 +13,7 @@ import { AppAccessGuard } from '../auth/app-access.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FeedService } from './feed.service';
 import { IngestionService } from './ingestion.service';
-import { INGESTION_QUEUE, RECLASSIFY_JOB } from './ingestion.queue';
+import { BACKFILL_JOB, INGESTION_QUEUE, RECLASSIFY_JOB } from './ingestion.queue';
 
 /**
  * The whole interest set, replaced in one call.
@@ -97,6 +98,19 @@ export class FeedQueryDto {
   @IsString()
   @MaxLength(1)
   f?: string;
+}
+
+/** The span to backfill. Bounded hard: a typo here is hours of requests to two free APIs. */
+export class BackfillPlanDto {
+  @IsInt()
+  @Min(1990)
+  @Max(2100)
+  fromYear!: number;
+
+  @IsInt()
+  @Min(1990)
+  @Max(2100)
+  toYear!: number;
 }
 
 export class FeedSearchDto {
@@ -232,6 +246,7 @@ export class ResearchFeedController {
 export class ResearchFeedAdminController {
   constructor(
     private readonly ingestion: IngestionService,
+    private readonly backfill: BackfillService,
     @Inject(INGESTION_QUEUE) private readonly queue: Queue,
   ) {}
 
@@ -278,6 +293,37 @@ export class ResearchFeedAdminController {
      */
     await this.queue.add(RECLASSIFY_JOB, {}, { attempts: 2 });
     return { queued: true };
+  }
+
+  /**
+   * Lay out a historical backfill without starting it.
+   *
+   * ⚠️ **Planning is free and running is not**, which is the whole reason they are two calls.
+   * A plan is a row count you can look at — and across 25 years the honest number is in the
+   * hundreds of thousands of articles, which is a decision about disk, about how long every
+   * future reclassify takes, and about how much of the literature is worth having. Replanning
+   * is safe: it adds missing slices and never resets one that has run.
+   */
+  @Post('backfill/plan')
+  plan(@Body() dto: BackfillPlanDto) {
+    return this.backfill.plan(dto.fromYear, dto.toYear);
+  }
+
+  /**
+   * Start working the plan. Each job takes a few pages and queues the next.
+   *
+   * Stopping it is draining the queue — nothing re-enqueues itself from outside a run, so an
+   * emptied queue stays empty and the committed cursors mean restarting resumes.
+   */
+  @Post('backfill/run')
+  async runBackfill() {
+    await this.queue.add(BACKFILL_JOB, {}, { attempts: 2, removeOnComplete: true });
+    return { queued: true };
+  }
+
+  @Get('backfill/status')
+  backfillStatus() {
+    return this.backfill.status();
   }
 
   /**

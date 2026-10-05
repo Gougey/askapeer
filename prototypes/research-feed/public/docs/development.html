@@ -550,6 +550,107 @@ generic repair worth copying).</p>
 resumability properties against a real database. ⚠️ It wipes the
 <code>research</code> schema — local only, never against the deployed
 database.</p>
+<h2 id="historical-backfill-adminresearch-feedbackfill">Historical
+backfill (<code>/admin/research-feed/backfill/*</code>)</h2>
+<p>Andrew wants 25 years of literature. The twice-daily ingest cannot
+reach it, and the reason is not a setting: <strong>both adapters fetch
+one page of 100 results per query</strong> and move a cursor forward.
+That is right for “what is new since yesterday” and useless for history
+— widening the window returns the newest 100 papers of 25 years,
+nineteen times over, about 1,900 articles.</p>
+<p><code>research.backfill_slices</code> (migration 0050),
+<code>BackfillService</code>, <code>ArticleSource.fetchWindow</code>,
+and the <code>backfill</code> queue job.</p>
+<ul>
+<li><strong>A slice is one source × one query × one year</strong>, and
+is both the unit of work and the unit of restart. Its page cursor is
+committed after every page, so an interruption costs a page; a failure
+costs one year of one query rather than the whole exercise.</li>
+<li><strong>Deep paging, not <code>page</code>.</strong> Europe PMC’s
+<code>page</code> stops working past 1,000 results, which a 25-year
+window passes on its first query — “low back pain” alone has 36,906. It
+uses <code>cursorMark</code>, OpenAlex uses <code>cursor</code>, and the
+end of the road is the token repeating (Europe PMC) or an empty page,
+never a short page: the last page is usually partial.</li>
+<li>⚠️ <strong>OpenAlex is phrase-quoted in <code>fetchWindow</code> and
+not in <code>fetchSince</code>.</strong> Its
+<code>title_and_abstract.search</code> tokenises an unquoted phrase, so
+“return to play” matches anything containing all three words —
+<strong>97,390</strong> works against <strong>9,681</strong> for the
+phrase. At incremental scale that is a handful of papers a day; across
+25 years it is a hundred thousand irrelevant records that every future
+reclassify would walk.</li>
+<li><strong>Newest year first.</strong> A backfill stopped early —
+because it is too big, too slow, or not wanted after all — has then
+collected the years a member is most likely to ask for.</li>
+<li><strong>The job enqueues itself.</strong> Each run takes
+<code>PAGES_PER_RUN</code> pages and queues the next, so the work is a
+chain of short jobs rather than one long one holding the only worker
+slot. Stopping it is draining the queue; nothing re-enqueues from
+outside a run.</li>
+<li>⚠️ <strong><code>YIELD_EVERY = 5</code></strong>, for the reason the
+reclassify outage taught: work that holds the event loop stops BullMQ
+renewing the job lock, the job is judged stalled, and the retries take
+the API with them. Measured during a live run, worst
+<code>/health</code> latency was <strong>21 ms</strong>.</li>
+<li>⚠️ <strong>A slice abandoned mid-run is re-taken after
+<code>STALE_AFTER_MINUTES</code>, and is <em>preferred</em> over a fresh
+one.</strong> Found by killing a run during testing: the slice stayed
+<code>running</code> and nothing would ever pick it up, so the year was
+silently abandoned with its cursor committed and no error anywhere.
+Resumability that only survives a clean stop is not resumability.</li>
+<li><strong>Plan and run are separate calls</strong> because planning is
+free and running is not. The plan is a row count you can look at before
+a single request goes out. Replanning is safe — it adds missing slices
+and never resets one that has run.</li>
+</ul>
+<h3 id="scale-measured-2026-10-05">⚠️ Scale, measured 2026-10-05</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>Articles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Now (~6 months)</td>
+<td>6,498</td>
+</tr>
+<tr>
+<td>Europe PMC, 25 years, 19 queries</td>
+<td>~144,000</td>
+</tr>
+<tr>
+<td><strong>OpenAlex, 25 years, 8 of 19 queries,
+phrase-matched</strong></td>
+<td><strong>308,077</strong></td>
+</tr>
+</tbody>
+</table>
+<p>So the real 25-year corpus is <strong>450,000–600,000 articles —
+70–90× what is there now</strong>, not the 180–200k first estimated from
+Europe PMC alone. At the measured rate (≈33 articles/second locally,
+including fetch, upsert and classification) that is <strong>4–5 hours
+locally</strong> and likely 8–12 on a shared Fly VM.</p>
+<p>Storage, from the measured 6.9 KB per article: <strong>~3.5
+GB</strong> for the articles table. The volume was extended 1 GB →
+<strong>10 GB</strong> on 2026-10-05 to take it. ⚠️ <strong>Fly volumes
+extend but never shrink.</strong></p>
+<p>⚠️ <strong>The ongoing cost is the reclassify, not the
+backfill.</strong> Classification happens inline on ingest, so the
+backfill pays for itself once — but every later taxonomy change
+reclassifies the <em>whole</em> corpus, and Andrew revises the
+vocabulary regularly. At 6.5k articles that is minutes; at 500k it is
+hours, on the job that has already caused one 90-minute outage.</p>
+<p>A cheaper shape, if that trade is unattractive: <strong>25 years of
+systematic reviews, meta-analyses and RCTs only</strong>, which is 13%
+of the volume (~22,000 articles) and keeps everything tractable, with
+the rolling ingest continuing to take everything recent.</p>
 <h2 id="clinical-interests-and-the-personalised-feed-s8b">Clinical
 interests and the personalised feed (S8b)</h2>
 <p><code>community.member_interests</code> (handle-scoped, weighted)

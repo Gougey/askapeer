@@ -387,6 +387,70 @@ copying).
 `npm run verify:reclassify -w apps/api` exercises the resumability properties against a real
 database. ⚠️ It wipes the `research` schema — local only, never against the deployed database.
 
+## Historical backfill (`/admin/research-feed/backfill/*`)
+
+Andrew wants 25 years of literature. The twice-daily ingest cannot reach it, and the reason is
+not a setting: **both adapters fetch one page of 100 results per query** and move a cursor
+forward. That is right for "what is new since yesterday" and useless for history — widening the
+window returns the newest 100 papers of 25 years, nineteen times over, about 1,900 articles.
+
+`research.backfill_slices` (migration 0050), `BackfillService`, `ArticleSource.fetchWindow`,
+and the `backfill` queue job.
+
+- **A slice is one source × one query × one year**, and is both the unit of work and the unit
+  of restart. Its page cursor is committed after every page, so an interruption costs a page;
+  a failure costs one year of one query rather than the whole exercise.
+- **Deep paging, not `page`.** Europe PMC's `page` stops working past 1,000 results, which a
+  25-year window passes on its first query — "low back pain" alone has 36,906. It uses
+  `cursorMark`, OpenAlex uses `cursor`, and the end of the road is the token repeating (Europe
+  PMC) or an empty page, never a short page: the last page is usually partial.
+- ⚠️ **OpenAlex is phrase-quoted in `fetchWindow` and not in `fetchSince`.** Its
+  `title_and_abstract.search` tokenises an unquoted phrase, so "return to play" matches
+  anything containing all three words — **97,390** works against **9,681** for the phrase. At
+  incremental scale that is a handful of papers a day; across 25 years it is a hundred thousand
+  irrelevant records that every future reclassify would walk.
+- **Newest year first.** A backfill stopped early — because it is too big, too slow, or not
+  wanted after all — has then collected the years a member is most likely to ask for.
+- **The job enqueues itself.** Each run takes `PAGES_PER_RUN` pages and queues the next, so the
+  work is a chain of short jobs rather than one long one holding the only worker slot. Stopping
+  it is draining the queue; nothing re-enqueues from outside a run.
+- ⚠️ **`YIELD_EVERY = 5`**, for the reason the reclassify outage taught: work that holds the
+  event loop stops BullMQ renewing the job lock, the job is judged stalled, and the retries
+  take the API with them. Measured during a live run, worst `/health` latency was **21 ms**.
+- ⚠️ **A slice abandoned mid-run is re-taken after `STALE_AFTER_MINUTES`, and is *preferred*
+  over a fresh one.** Found by killing a run during testing: the slice stayed `running` and
+  nothing would ever pick it up, so the year was silently abandoned with its cursor committed
+  and no error anywhere. Resumability that only survives a clean stop is not resumability.
+- **Plan and run are separate calls** because planning is free and running is not. The plan is
+  a row count you can look at before a single request goes out. Replanning is safe — it adds
+  missing slices and never resets one that has run.
+
+### ⚠️ Scale, measured 2026-10-05
+
+| | Articles |
+|---|---|
+| Now (~6 months) | 6,498 |
+| Europe PMC, 25 years, 19 queries | ~144,000 |
+| **OpenAlex, 25 years, 8 of 19 queries, phrase-matched** | **308,077** |
+
+So the real 25-year corpus is **450,000–600,000 articles — 70–90× what is there now**, not the
+180–200k first estimated from Europe PMC alone. At the measured rate (≈33 articles/second
+locally, including fetch, upsert and classification) that is **4–5 hours locally** and likely
+8–12 on a shared Fly VM.
+
+Storage, from the measured 6.9 KB per article: **~3.5 GB** for the articles table. The volume
+was extended 1 GB → **10 GB** on 2026-10-05 to take it. ⚠️ **Fly volumes extend but never
+shrink.**
+
+⚠️ **The ongoing cost is the reclassify, not the backfill.** Classification happens inline on
+ingest, so the backfill pays for itself once — but every later taxonomy change reclassifies the
+*whole* corpus, and Andrew revises the vocabulary regularly. At 6.5k articles that is minutes;
+at 500k it is hours, on the job that has already caused one 90-minute outage.
+
+A cheaper shape, if that trade is unattractive: **25 years of systematic reviews, meta-analyses
+and RCTs only**, which is 13% of the volume (~22,000 articles) and keeps everything tractable,
+with the rolling ingest continuing to take everything recent.
+
 ## Clinical interests and the personalised feed (S8b)
 
 `community.member_interests` (handle-scoped, weighted) plus `GET/PUT /v1/research-feed/interests`,

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { ArticleSource, FetchResult, RawArticle } from './article-source';
+import type { ArticlePage, ArticleSource, FetchResult, RawArticle } from './article-source';
 
 const ENDPOINT = 'https://api.openalex.org/works';
 const PAGE_SIZE = 100;
@@ -73,6 +73,63 @@ export class OpenAlexSource implements ArticleSource {
     }
 
     return { articles: [...seen.values()], nextCursor: isoDay(new Date()) };
+  }
+
+  /**
+   * One page of a bounded window, paged with OpenAlex's `cursor`.
+   *
+   * ⚠️ **The query is quoted here and is not in `fetchSince`.** OpenAlex's
+   * `title_and_abstract.search` tokenises an unquoted phrase, so "return to play" matches
+   * anything containing all three words anywhere — 97,390 works against 9,681 for the phrase.
+   * At incremental scale that extra noise is a handful of papers a day and the classifier
+   * discards most of it; across 25 years it is a hundred thousand irrelevant records that
+   * every future reclassify would have to walk.
+   */
+  async fetchWindow(
+    from: string,
+    to: string,
+    query: string,
+    cursor: string | null,
+    pageSize: number,
+  ): Promise<ArticlePage> {
+    const url = new URL(ENDPOINT);
+    const phrase = `"${query.replace(/"/g, '')}"`;
+    url.searchParams.set(
+      'filter',
+      `title_and_abstract.search:${phrase},from_publication_date:${from},to_publication_date:${to}`,
+    );
+    url.searchParams.set('per-page', String(pageSize));
+    url.searchParams.set('cursor', cursor ?? '*');
+    url.searchParams.set('mailto', CONTACT.replace('mailto:', ''));
+
+    const body = await this.getPage(url);
+    const articles: RawArticle[] = [];
+    for (const work of body.results) {
+      const article = this.normalise(work);
+      if (article) articles.push(article);
+    }
+    return { articles, nextCursor: body.results.length === 0 ? null : body.nextCursor };
+  }
+
+  private async getPage(
+    url: URL,
+  ): Promise<{ results: OpenAlexWork[]; nextCursor: string | null }> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json', 'User-Agent': `askapeer/0.1 (${CONTACT})` },
+      });
+      if (!res.ok) throw new Error(`OpenAlex HTTP ${res.status}`);
+      const body = (await res.json()) as {
+        results?: OpenAlexWork[];
+        meta?: { next_cursor?: string | null };
+      };
+      return { results: body.results ?? [], nextCursor: body.meta?.next_cursor ?? null };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private async get(url: URL, query: string): Promise<OpenAlexWork[]> {

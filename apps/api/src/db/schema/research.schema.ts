@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -203,3 +204,34 @@ export const reclassifyState = research.table('reclassify_state', {
   startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * One unit of historical backfill: a source, a query, a year.
+ *
+ * ⚠️ **The unit of work is also the unit of restart.** A backfill measured in hours must be
+ * interruptible, or the first interruption costs all of it — the same lesson the reclassify
+ * outage taught. The page cursor is committed as each page lands, so a slice that dies
+ * halfway resumes rather than repeating, and a slice that fails is one year of one query
+ * rather than the whole run.
+ */
+export const backfillSlices = research.table(
+  'backfill_slices',
+  {
+    sourceName: text('source_name').notNull(),
+    query: text('query').notNull(),
+    windowStart: date('window_start').notNull(),
+    windowEnd: date('window_end').notNull(),
+    /** `pending` | `running` | `done` | `failed`. */
+    status: text('status').notNull().default('pending'),
+    /** The source's own opaque paging token; null before the first page and after the last. */
+    pageCursor: text('page_cursor'),
+    pagesDone: integer('pages_done').notNull().default(0),
+    articlesSeen: integer('articles_seen').notNull().default(0),
+    articlesStored: integer('articles_stored').notNull().default(0),
+    lastError: text('last_error'),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.sourceName, t.query, t.windowStart] })],
+);

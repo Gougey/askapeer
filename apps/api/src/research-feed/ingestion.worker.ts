@@ -3,7 +3,9 @@ import { Worker, type Queue } from 'bullmq';
 import type { Redis } from 'ioredis';
 import { REDIS } from '../redis/redis.module';
 import { IngestionService } from './ingestion.service';
+import { BackfillService } from './backfill.service';
 import {
+  BACKFILL_JOB,
   INGESTION_QUEUE,
   INGESTION_QUEUE_NAME,
   INGEST_EVERY_MS,
@@ -25,13 +27,30 @@ export class IngestionWorker implements OnModuleInit, OnModuleDestroy {
     @Inject(REDIS) private readonly connection: Redis,
     @Inject(INGESTION_QUEUE) private readonly queue: Queue,
     private readonly ingestion: IngestionService,
+    private readonly backfill: BackfillService,
   ) {}
+
+  /**
+   * One slice, then queue the next — see `BACKFILL_JOB`.
+   *
+   * The chain stops when there is nothing pending, which is also how it stops when an
+   * operator empties the queue by hand: nothing re-enqueues itself from outside a run.
+   */
+  private async runBackfillSlice(): Promise<unknown> {
+    const result = await this.backfill.runNext();
+    if (!result.done) {
+      await this.queue.add(BACKFILL_JOB, {}, { attempts: 2, removeOnComplete: true });
+    }
+    return result;
+  }
 
   async onModuleInit(): Promise<void> {
     this.worker = new Worker(
       INGESTION_QUEUE_NAME,
       async (job) =>
-        job.name === RECLASSIFY_JOB
+        job.name === BACKFILL_JOB
+          ? this.runBackfillSlice()
+          : job.name === RECLASSIFY_JOB
           ? this.ingestion.reclassifyAll(async (done, total) => {
               // Progress is reported for the operator, but it also renews the job's lock —
               // which is the part that matters, because a run this long outlives the default
