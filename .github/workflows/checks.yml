@@ -69,3 +69,8 @@ jobs:
       # it until a member selected one and `@IsUUID` answered 400.
       - name: Tag ids — every id a migration writes is one the API accepts
         run: npm run verify:tag-ids -w apps/api
+      # A backfill is a ten-hour run against two free public APIs, and they are entitled to
+      # say "slow down". The first live run read that as "broken" and wrote off 67 slices —
+      # 67 source-years of literature, silently, because nothing retries a failure.
+      - name: Backfill — a rate limit is a wait, not a failure
+        run: npm run verify:backfill-retry -w apps/api

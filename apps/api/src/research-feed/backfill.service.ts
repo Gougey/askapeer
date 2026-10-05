@@ -42,6 +42,31 @@ const YIELD_EVERY = 5;
 const STALE_AFTER_MINUTES = 10;
 
 /**
+ * The gap left between pages, whatever the source.
+ *
+ * ⚠️ **Added after the first live run was rate-limited.** It asked OpenAlex for pages as fast
+ * as it could store them and collected 67 failed slices in minutes, while Europe PMC beside it
+ * did not drop a request. These are public APIs we use for free, at a volume they have every
+ * right to object to, and a backfill is not in a hurry: 150ms a page over half a million
+ * articles is about twenty minutes spread across ten hours.
+ */
+const PAGE_DELAY_MS = 150;
+
+/**
+ * Is this worth another go later, rather than a slice written off?
+ *
+ * Rate limits and timeouts are *this moment* refusing, not *this slice* being wrong. The
+ * adapter already backs off and retries within a page; if a slice still arrives here saying
+ * 429, the honest state is "not now" — and marking it `failed` is how 67 years of literature
+ * quietly went missing the first time, since nothing retries a failure.
+ */
+export function retryable(message: string): boolean {
+  return /\b429\b|rate|timeout|ETIMEDOUT|ECONNRESET|socket|fetch failed|aborted/i.test(message);
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
  * The historical backfill (Andrew: 25 years).
  *
  * ⚠️ **Why this cannot be a setting on the existing ingest.** `fetchSince` asks each source
@@ -163,7 +188,7 @@ export class BackfillService {
     const source = this.sources.find((s) => s.name === slice.sourceName);
     const label = `${slice.sourceName} ${slice.query} ${slice.windowStart.slice(0, 4)}`;
     if (!source) {
-      await this.fail(slice, `no such source: ${slice.sourceName}`);
+      await this.setback(slice, `no such source: ${slice.sourceName}`, 'failed');
       return { done: false, slice: label, seen: 0, stored: 0 };
     }
 
@@ -198,6 +223,8 @@ export class BackfillService {
           }
         }
         cursor = result.nextCursor;
+        // Politeness, not throttling of our own work — see PAGE_DELAY_MS.
+        await sleep(PAGE_DELAY_MS);
 
         /*
          * Committed per page, not per run. The cursor is the only thing standing between an
@@ -218,8 +245,10 @@ export class BackfillService {
         if (!cursor) break;
       }
     } catch (err) {
-      await this.fail(slice, (err as Error).message);
-      this.log.warn(`backfill ${label} failed: ${(err as Error).message}`);
+      const message = (err as Error).message;
+      // "Not now" goes back in the queue with its cursor; only a real fault is written off.
+      await this.setback(slice, message, retryable(message) ? 'pending' : 'failed');
+      this.log.warn(`backfill ${label} ${retryable(message) ? 'deferred' : 'failed'}: ${message}`);
       return { done: false, slice: label, seen, stored };
     }
 
@@ -246,13 +275,14 @@ export class BackfillService {
     );
   }
 
-  private async fail(
+  private async setback(
     slice: { sourceName: string; query: string; windowStart: string },
     message: string,
+    status: 'pending' | 'failed',
   ): Promise<void> {
     await this.db
       .update(backfillSlices)
-      .set({ status: 'failed', lastError: message.slice(0, 500), updatedAt: new Date() })
+      .set({ status, lastError: message.slice(0, 500), updatedAt: new Date() })
       .where(this.key(slice));
   }
 }

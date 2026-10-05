@@ -14,6 +14,27 @@ const OVERLAP_DAYS = 14;
  */
 const CONTACT = 'mailto:hello@askapeer.com';
 
+/**
+ * How many times a rate-limited page is re-asked before the slice gives up.
+ *
+ * With `BACKOFF_MS` doubling each time, five attempts wait about two minutes in total — long
+ * enough to ride out a burst, short enough that a genuinely closed door is reported rather
+ * than hidden.
+ */
+const RATE_LIMIT_RETRIES = 5;
+const BACKOFF_MS = 2_000;
+
+/**
+ * The gap left between backfill pages.
+ *
+ * OpenAlex's polite pool allows ten requests a second; this asks for about six, because the
+ * limit is a ceiling to stay under rather than a target to hit. It costs nothing — the store
+ * and classify behind each page already takes longer than this.
+ */
+export const OPEN_ALEX_PAGE_DELAY_MS = 150;
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 type OpenAlexWork = {
   id?: string;
   doi?: string;
@@ -111,24 +132,46 @@ export class OpenAlexSource implements ArticleSource {
     return { articles, nextCursor: body.results.length === 0 ? null : body.nextCursor };
   }
 
+  /**
+   * ⚠️ **429 is a wait, not a failure**, and learning that cost 67 slices.
+   *
+   * The first live backfill asked OpenAlex for pages as fast as it could store them and was
+   * rate-limited within minutes — every one of those slices was marked permanently failed,
+   * while Europe PMC beside it did not drop a single request. A public API we are using for
+   * free, at a volume it has every right to object to, will say "slow down", and the only
+   * correct response is to slow down.
+   *
+   * So: honour `Retry-After` when it is given, back off exponentially when it is not, and
+   * only give up after `RATE_LIMIT_RETRIES`. A slice is then failed by something real.
+   */
   private async getPage(
     url: URL,
   ): Promise<{ results: OpenAlexWork[]; nextCursor: string | null }> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    try {
-      const res = await fetch(url, {
-        signal: controller.signal,
-        headers: { Accept: 'application/json', 'User-Agent': `askapeer/0.1 (${CONTACT})` },
-      });
-      if (!res.ok) throw new Error(`OpenAlex HTTP ${res.status}`);
-      const body = (await res.json()) as {
-        results?: OpenAlexWork[];
-        meta?: { next_cursor?: string | null };
-      };
-      return { results: body.results ?? [], nextCursor: body.meta?.next_cursor ?? null };
-    } finally {
-      clearTimeout(timer);
+    for (let attempt = 0; ; attempt += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+      try {
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json', 'User-Agent': `askapeer/0.1 (${CONTACT})` },
+        });
+        if (res.status === 429 && attempt < RATE_LIMIT_RETRIES) {
+          const after = Number(res.headers.get('retry-after'));
+          const waitMs = Number.isFinite(after) && after > 0 ? after * 1000 : BACKOFF_MS * 2 ** attempt;
+          this.log.warn(`OpenAlex rate-limited; waiting ${waitMs}ms (attempt ${attempt + 1})`);
+          clearTimeout(timer);
+          await sleep(waitMs);
+          continue;
+        }
+        if (!res.ok) throw new Error(`OpenAlex HTTP ${res.status}`);
+        const body = (await res.json()) as {
+          results?: OpenAlexWork[];
+          meta?: { next_cursor?: string | null };
+        };
+        return { results: body.results ?? [], nextCursor: body.meta?.next_cursor ?? null };
+      } finally {
+        clearTimeout(timer);
+      }
     }
   }
 

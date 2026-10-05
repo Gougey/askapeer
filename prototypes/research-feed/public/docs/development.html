@@ -599,6 +599,19 @@ one.</strong> Found by killing a run during testing: the slice stayed
 <code>running</code> and nothing would ever pick it up, so the year was
 silently abandoned with its cursor committed and no error anywhere.
 Resumability that only survives a clean stop is not resumability.</li>
+<li>⚠️ <strong>A rate limit is a wait, not a failure — and 150ms is left
+between pages.</strong> The first live run asked OpenAlex for pages as
+fast as it could store them, was rate-limited within minutes, and wrote
+off <strong>67 slices</strong> as <code>failed</code> — 67 source-years
+of literature silently abandoned, because nothing retries a failure.
+Europe PMC beside it did not drop a request. Now: the adapter honours
+<code>Retry-After</code> and backs off exponentially, a refusal about
+<em>this moment</em> (429, timeout, reset socket) returns the slice to
+<code>pending</code> with its cursor, and only a fault about <em>this
+slice</em> writes it off. <code>verify:backfill-retry</code> pins that
+classification. The delay costs about twenty minutes spread across ten
+hours, against two public APIs we use for free at a volume they are
+entitled to object to.</li>
 <li><strong>Plan and run are separate calls</strong> because planning is
 free and running is not. The plan is a row count you can look at before
 a single request goes out. Replanning is safe — it adds missing slices
