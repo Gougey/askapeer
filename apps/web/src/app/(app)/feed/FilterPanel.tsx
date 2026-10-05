@@ -1,13 +1,23 @@
 'use client';
 
-import { useActionState, useRef, useState, useTransition } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { EVIDENCE_TYPES } from '@/lib/evidence';
-import type { FeedFilters } from '@/lib/research-feed';
-import { saveFeedCriteriaAction, type CriteriaState } from './actions';
+import type { FeedFilters, FeedSort } from '@/lib/research-feed';
 
 /** Relative, never a pair of dates: an absolute range saved as a setting is wrong next year. */
 const PERIODS = [1, 2, 3, 5] as const;
+
+/**
+ * What Clear returns the panel to: no keyword, any type, any time, newest first.
+ *
+ * ⚠️ **Clear resets the controls; it does not navigate.** It used to be a link back to
+ * `/feed`, which looked broken the moment the panel began remembering the last criteria used
+ * — you pressed Clear, the page reloaded, and your previous keyword came straight back,
+ * because an unasked visit is exactly when the remembered criteria are applied. Emptying the
+ * fields where they stand is what the button was always taken to mean.
+ */
+const BLANK = { q: '', evidence: '', years: '', sort: 'newest' as FeedSort };
 
 /**
  * The My Research criteria panel.
@@ -30,38 +40,34 @@ const PERIODS = [1, 2, 3, 5] as const;
  */
 export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boolean }) {
   const t = useTranslations('feed');
-  const form = useRef<HTMLFormElement>(null);
-  const [state, save, saving] = useActionState<CriteriaState, FormData>(saveFeedCriteriaAction, {
-    status: 'idle',
-  });
-  const [, startTransition] = useTransition();
 
   /*
-   * One thing needs client state, and only because a *control* depends on it: relevance is
-   * not an ordering without words to rank by.
+   * All four controls are held in state rather than left uncontrolled, which they were until
+   * Clear needed to exist: a `type="reset"` restores each field's *default*, and the defaults
+   * here are the member's last-used criteria — the very thing Clear is for getting rid of.
+   *
+   * The keyword is also what decides whether Relevance is offerable, since `ts_rank` of an
+   * empty query is zero for every row.
    */
-  const [query, setQuery] = useState(filters.q ?? '');
+  const [criteria, setCriteria] = useState({
+    q: filters.q ?? '',
+    evidence: filters.evidence ?? '',
+    years: filters.years ? String(filters.years) : '',
+    sort: (filters.sort ?? 'newest') as FeedSort,
+  });
+  const set = <K extends keyof typeof criteria>(key: K, value: (typeof criteria)[K]) =>
+    setCriteria((current) => ({ ...current, [key]: value }));
 
   const active =
     (filters.q ? 1 : 0) +
     (filters.evidence ? 1 : 0) +
     (filters.years ? 1 : 0) +
-    (filters.sort && filters.sort !== 'recommended' ? 1 : 0);
+    (filters.sort && filters.sort !== 'newest' ? 1 : 0);
 
   const field = {
     background: 'var(--color-surface)',
     borderColor: 'var(--color-border)',
     borderRadius: 'var(--radius)',
-  };
-
-  /*
-   * Save is deliberately *not* the form's submit: Apply is, and Apply is a navigation. The
-   * action is dispatched by hand with the same FormData the GET form would have sent, so the
-   * two buttons read one set of controls and cannot disagree about what is on screen.
-   */
-  const onSave = () => {
-    const data = new FormData(form.current!);
-    startTransition(() => save(data));
   };
 
   return (
@@ -82,7 +88,6 @@ export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boo
 
       <div className="filter-panel">
         <form
-          ref={form}
           action="/feed"
           method="get"
           className="flex flex-col px-3 pb-3"
@@ -124,8 +129,8 @@ export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boo
             <input
               name="q"
               type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              value={criteria.q}
+              onChange={(event) => set('q', event.target.value)}
               placeholder={t('keywordPlaceholder')}
               autoCapitalize="none"
               autoCorrect="off"
@@ -139,13 +144,23 @@ export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boo
             selects truncate their options rather than wrap, which is the trade the single row
             buys: all three choices visible at once without scrolling the panel.
           */}
+          {/*
+            ⚠️ **These three are `text-sm`, below the 16px the input-zoom guard asks for.**
+            Adrian asked for a smaller font because a chosen option was being truncated in a
+            third of a phone's width. The trade is real and is the thing that guard exists to
+            prevent: iOS Safari zooms the page when a control under 16px is tapped. It is
+            least bad here — a `<select>` opens a native picker rather than a keyboard, so the
+            zoom is brief and nothing reflows under a caret — but if it proves annoying on
+            device the fix is shorter option labels, not a viewport lock.
+          */}
           <div className="grid grid-cols-3" style={{ gap: 'var(--space-2)' }}>
             <label className="flex min-w-0 flex-col" style={{ gap: 'var(--space-1)' }}>
               <span className="text-sm font-medium">{t('evidenceLabel')}</span>
               <select
                 name="evidence"
-                defaultValue={filters.evidence ?? ''}
-                className="w-full border px-2 py-2 text-base"
+                value={criteria.evidence}
+                onChange={(event) => set('evidence', event.target.value)}
+                className="w-full border px-2 py-2 text-sm" /* input-zoom-allow — see below */
                 style={field}
               >
                 <option value="">{t('anyEvidence')}</option>
@@ -161,8 +176,9 @@ export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boo
               <span className="text-sm font-medium">{t('periodLabel')}</span>
               <select
                 name="years"
-                defaultValue={filters.years ? String(filters.years) : ''}
-                className="w-full border px-2 py-2 text-base"
+                value={criteria.years}
+                onChange={(event) => set('years', event.target.value)}
+                className="w-full border px-2 py-2 text-sm" /* input-zoom-allow — see below */
                 style={field}
               >
                 <option value="">{t('anyPeriod')}</option>
@@ -178,8 +194,9 @@ export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boo
               <span className="text-sm font-medium">{t('sortLabel')}</span>
               <select
                 name="sort"
-                defaultValue={filters.sort ?? 'recommended'}
-                className="w-full border px-2 py-2 text-base"
+                value={criteria.sort}
+                onChange={(event) => set('sort', event.target.value as FeedSort)}
+                className="w-full border px-2 py-2 text-sm" /* input-zoom-allow — see below */
                 style={field}
               >
                 {/*
@@ -195,7 +212,7 @@ export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boo
                   `ts_rank` of an empty query is zero for every row. Offered only once there is
                   something to rank by; the API falls back if it arrives anyway.
                 */}
-                <option value="relevance" disabled={query.trim() === ''}>
+                <option value="relevance" disabled={criteria.q.trim() === ''}>
                   {t('sortRelevance')}
                 </option>
               </select>
@@ -213,14 +230,14 @@ export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boo
           </p>
 
           <div className="flex" style={{ gap: 'var(--space-2)' }}>
-            {/* Back to the empty screen, which is where a visit starts. */}
-            <a
-              href="/feed"
+            <button
+              type="button"
+              onClick={() => setCriteria({ ...BLANK })}
               className="flex-1 border px-3 py-2 text-center text-sm font-medium"
               style={{ borderColor: 'var(--color-border-strong)', borderRadius: 'var(--radius)' }}
             >
               {t('clearFilters')}
-            </a>
+            </button>
             <button
               type="submit"
               className="flex-1 px-3 py-2 text-sm font-medium text-white"
@@ -230,30 +247,6 @@ export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boo
             </button>
           </div>
 
-          {state.status === 'error' && (
-            <p className="text-sm" role="alert" style={{ color: 'var(--color-bad)' }}>
-              {state.message}
-            </p>
-          )}
-          {state.status === 'saved' && (
-            <p className="text-sm" role="status" style={{ color: 'var(--color-ok)' }}>
-              {t('criteriaSaved')}
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={saving}
-            className="border px-3 py-2 text-sm font-medium disabled:opacity-60"
-            style={{
-              borderColor: 'var(--color-border-strong)',
-              borderRadius: 'var(--radius)',
-              color: 'var(--color-accent)',
-            }}
-          >
-            {saving ? t('savingCriteria') : t('saveCriteria')}
-          </button>
         </form>
       </div>
     </details>

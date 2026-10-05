@@ -470,6 +470,12 @@ screen's question.
   The ordering is evidence weight, recency decay and the taxonomy bonus — a judgement about the
   paper, identical for every member. "For you" named the interest-match term that no longer
   exists, and keeping the word would promise a personalisation that is not happening.
+- **The baseline is `newest`** (migration 0049 moves the column default to match). It is what
+  Clear returns the panel to and what a sortless request gets, so the three places that express
+  it — the DTO fallback, the service fallback and the column default — all say the same thing.
+  `feedFilterParams` now writes `sort` into every URL rather than omitting "the default": the
+  default has already moved once, and a URL that leaves it out silently re-reads whatever the
+  default happens to be that week.
 - **Relevance is offered only with a keyword**, because `ts_rank` of an empty query is zero for
   every row; the API falls back to `recommended` if it arrives without one, which also covers
   the member who saved `relevance` and later cleared the keyword.
@@ -480,9 +486,25 @@ screen's question.
   began in August and only fetches forward. The screen says so under the control rather than
   leaving it to be reported as broken. Both sources accept date ranges, so a backfill is
   possible later — and means a much longer reclassify.
-- **Standing criteria seed the panel; they never run themselves.** Saving spares the retyping;
-  it does not put results on a screen nobody has asked a question of. Saving no longer touches
-  `member_interests` either — that coupling went with the tag row.
+- **The last criteria used are remembered automatically**, and seed the panel next visit. They
+  never *run* themselves — an unasked visit is still an empty screen — they just spare the
+  retyping. This replaced a "Save as my settings" button: what you were last looking at is not
+  a decision worth a button, and the button was one more thing to press.
+  ⚠️ **It is a write on a GET**, which earns its keep by being narrow: only `f=1` without a
+  cursor triggers it, so it records a deliberate Apply and not paging or a prefetch; it is an
+  upsert of exactly what was asked, so twice is the same as once; and it is best-effort, so a
+  failure to remember never costs the member their results.
+- ⚠️ **Clear resets the controls; it does not navigate.** It was a link back to `/feed`, which
+  looked broken the moment the panel began remembering: you pressed Clear, the page reloaded,
+  and your previous keyword came straight back — because an unasked visit is exactly when the
+  remembered criteria are applied. It now empties the fields where they stand, to blank / any
+  type / any time / newest first. That is also why all four controls are React state: a
+  `type="reset"` restores each field's *default*, and the defaults are the very thing Clear
+  exists to get rid of.
+- **The taxonomy chips are off on My Research cards** (`showTags={false}`), because the screen
+  asks nothing of the taxonomy any more — a row of clinical chips under every result was
+  evidence for a match the member had not asked for. **Search keeps them**, where a tag is
+  still one of the filters, and so does the article detail screen.
 - ⚠️ **Every value is sanitised before it leaves the page, not merely narrowed.** The API
   validates strictly (`whitelist` + `forbidNonWhitelisted`), so a value it refuses becomes a
   400, which `apiGet` throws and Next renders as an error page. **This took the feed down on
@@ -501,10 +523,13 @@ screen's question.
   stays a server component. `<details>` gives the keyboard, the disclosure semantics and the
   no-JavaScript case for free; the panel animates a collapsing grid track on reveal
   (`.filter-panel` in `globals.css`), the one technique that works at any content height.
-- **The three dropdowns share one line.** Narrow at phone width, and the selects truncate their
-  options rather than wrap — the trade a single row buys is all three choices visible without
-  scrolling the panel. They stay at `text-base`: anything smaller makes iOS Safari zoom on
-  focus (`lint:inputs` enforces it).
+- ⚠️ **The three dropdowns share one line and are `text-sm`, below what the input-zoom guard
+  asks for** (`input-zoom-allow` on each). A chosen option was truncating in a third of a
+  phone's width, so Adrian asked for the smaller font. The trade is the one that guard exists
+  to prevent: **iOS Safari zooms the page when a control under 16px is tapped.** It is least
+  bad on a `<select>`, which opens a native picker rather than a keyboard, so the zoom is brief
+  and nothing reflows under a caret — but if it annoys on device the fix is shorter option
+  labels, never a viewport lock.
 
 ⚠️ **`/settings/interests` is now an orphan.** Nothing reads `community.member_interests` any
 more. The screen still writes it and its copy no longer claims to rank anything, but what it is
