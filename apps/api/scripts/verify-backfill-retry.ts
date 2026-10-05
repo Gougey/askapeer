@@ -13,7 +13,7 @@
  * Run: npm run verify:backfill-retry -w apps/api
  */
 import { strict as assert } from 'node:assert';
-import { retryable } from '../src/research-feed/backfill.service';
+import { retryAfterMs, retryable } from '../src/research-feed/backfill.service';
 
 let failures = 0;
 function check(name: string, fn: () => void): void {
@@ -60,6 +60,28 @@ check('a 500 is not quietly retried for ever either', () => {
   // Deliberate: a source erroring on *this query* will do so again, and an endless retry
   // would hide it. A human deciding to re-run beats a loop that never reports.
   assert.equal(retryable('OpenAlex HTTP 500'), false);
+});
+
+check('a long Retry-After is read back, so the source can be rested', () => {
+  /*
+   * ⚠️ OpenAlex asked for 9,051 seconds — two and a half hours — and the first version slept
+   * on it inside the request. The worker has one slot, so that single sleep stopped the whole
+   * backfill, Europe PMC included, and would have outlived its job lock many times over.
+   * A number this size is a daily quota, not a pause: it has to come back as data.
+   */
+  assert.equal(retryAfterMs('OpenAlex HTTP 429 retry-after 9051s'), 9_051_000);
+  assert.equal(retryAfterMs('OpenAlex HTTP 429 retry-after 30s'), 30_000);
+});
+
+check('an ordinary refusal carries no rest period', () => {
+  for (const message of ['OpenAlex HTTP 429', 'fetch failed', 'Europe PMC HTTP 500']) {
+    assert.equal(retryAfterMs(message), null, message);
+  }
+});
+
+check('a message carrying a rest period is still retryable', () => {
+  // Both halves have to agree, or the slice is rested *and* written off.
+  assert.equal(retryable('OpenAlex HTTP 429 retry-after 9051s'), true);
 });
 
 if (failures > 0) {

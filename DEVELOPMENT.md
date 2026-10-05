@@ -430,6 +430,15 @@ and the `backfill` queue job.
   a fault about *this slice* writes it off. `verify:backfill-retry` pins that classification.
   The delay costs about twenty minutes spread across ten hours, against two public APIs we use
   for free at a volume they are entitled to object to.
+- ⚠️ **A long `Retry-After` is a quota, not a pause — never sleep on it.** The first fix for
+  the rate limiting honoured the header literally; OpenAlex asked for **9,051 seconds**, and
+  because the worker has a single slot that one sleep stopped the entire backfill, Europe PMC
+  included, and would have outlived its BullMQ lock many times over. Anything past
+  `MAX_BACKOFF_MS` (60s) is now reported rather than waited on: the slice returns to `pending`,
+  the **source** is rested until the clock runs out, and the other source carries on. The rest
+  period is held in memory, so a restart spends one request rediscovering it — cheaper than a
+  table, and far cheaper than letting every slice of a rate-limited source take its turn to be
+  refused.
 - **Plan and run are separate calls** because planning is free and running is not. The plan is
   a row count you can look at before a single request goes out. Replanning is safe — it adds
   missing slices and never resets one that has run.
