@@ -173,7 +173,8 @@ export class IngestionService {
    * different completeness — one has the abstract, the other knows it is open access.
    * Taking whichever arrived last would lose information at random.
    */
-  private async upsert(
+  // Shared with the backfill, which must store and classify exactly as the ingest does.
+  async upsert(
     input: RawArticle,
     taxonomy: PreparedTag[],
   ): Promise<{ stored: boolean; tagsWritten: number }> {
@@ -308,7 +309,8 @@ export class IngestionService {
    * the dark; posts already carrying a retired tag are untouched, because this only governs
    * what future classification writes.
    */
-  private async taxonomy(): Promise<PreparedTag[]> {
+  /** Shared with the backfill. */
+  async taxonomy(): Promise<PreparedTag[]> {
     const { rows } = await this.db.execute<{
       id: string;
       name: string;
@@ -342,7 +344,8 @@ export class IngestionService {
     );
   }
 
-  private async corpusQueries(): Promise<string[]> {
+  /** Shared with the backfill, so both ask the literature the same questions. */
+  async corpusQueries(): Promise<string[]> {
     const configured = await this.settings.get(CORPUS_QUERIES_KEY);
     const parsed = (configured ?? '')
       .split(',')

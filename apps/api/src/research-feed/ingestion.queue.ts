@@ -14,6 +14,17 @@ export const INGEST_JOB = 'ingest';
  */
 export const RECLASSIFY_JOB = 'reclassify';
 
+/**
+ * One bounded piece of the historical backfill.
+ *
+ * ⚠️ **Self-enqueuing rather than one long job.** The whole exercise is hundreds of thousands
+ * of articles over hours; as a single job it would be one stall away from losing everything,
+ * and would hold the queue's only worker slot throughout. Each run takes a few pages, commits
+ * its cursor and queues the next, so the work is a chain of short jobs that an interruption
+ * costs a page of.
+ */
+export const BACKFILL_JOB = 'backfill';
+
 /** How often the corpus refreshes. Literature does not move hourly. */
 export const INGEST_EVERY_MS = 12 * 60 * 60 * 1000;
 

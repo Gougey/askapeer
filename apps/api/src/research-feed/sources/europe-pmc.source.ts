@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { ArticleSource, FetchResult, RawArticle } from './article-source';
+import type { ArticlePage, ArticleSource, FetchResult, RawArticle } from './article-source';
 
 const ENDPOINT = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search';
 const PAGE_SIZE = 100;
@@ -77,6 +77,69 @@ export class EuropePmcSource implements ArticleSource {
     }
 
     return { articles: [...seen.values()], nextCursor: today() };
+  }
+
+  /**
+   * One page of a bounded window, paged with Europe PMC's `cursorMark`.
+   *
+   * ⚠️ **`cursorMark`, not `page`.** The `page` parameter stops working past 1,000 results,
+   * which a 25-year window passes in its first query — "low back pain" alone has 36,906.
+   * `cursorMark=*` starts, and each response carries the `nextCursorMark` that continues it.
+   *
+   * The end of the road is `nextCursorMark` repeating itself rather than an empty page, which
+   * is the documented signal and the only reliable one: the last page is usually partial, not
+   * empty.
+   */
+  async fetchWindow(
+    from: string,
+    to: string,
+    query: string,
+    cursor: string | null,
+    pageSize: number,
+  ): Promise<ArticlePage> {
+    const url = new URL(ENDPOINT);
+    url.searchParams.set('query', `TITLE_ABS:"${query.replace(/"/g, '')}" AND FIRST_PDATE:[${from} TO ${to}]`);
+    url.searchParams.set('format', 'json');
+    url.searchParams.set('resultType', 'core');
+    url.searchParams.set('pageSize', String(pageSize));
+    url.searchParams.set('cursorMark', cursor ?? '*');
+
+    const body = await this.getPage(url, query);
+    const articles: RawArticle[] = [];
+    for (const raw of body.results) {
+      const article = this.normalise(raw);
+      if (article) articles.push(article);
+    }
+    const next = body.nextCursorMark;
+    return {
+      articles,
+      nextCursor: !next || next === cursor || body.results.length === 0 ? null : next,
+    };
+  }
+
+  private async getPage(
+    url: URL,
+    query: string,
+  ): Promise<{ results: EuropePmcResult[]; nextCursorMark: string | null }> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json', 'User-Agent': userAgent() },
+      });
+      if (!res.ok) throw new Error(`Europe PMC HTTP ${res.status}`);
+      const body = (await res.json()) as {
+        resultList?: { result?: EuropePmcResult[] };
+        nextCursorMark?: string;
+      };
+      return {
+        results: body.resultList?.result ?? [],
+        nextCursorMark: body.nextCursorMark ?? null,
+      };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private async get(url: URL, query: string): Promise<EuropePmcResult[]> {

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AdminAccessModule } from '../admin/admin-access.module';
 import { JwtConfigModule } from '../auth/jwt-config.module';
 import { SettingsModule } from '../settings/settings.module';
+import { BackfillService } from './backfill.service';
 import { FeedPreferencesService } from './feed-preferences.service';
 import { FeedService } from './feed.service';
 import { IngestionQueueModule } from './ingestion.queue';
@@ -32,6 +33,7 @@ import { OpenAlexSource } from './sources/open-alex.source';
     FeedService,
     FeedPreferencesService,
     IngestionService,
+    BackfillService,
     InterestsService,
     IngestionWorker,
     EuropePmcSource,
