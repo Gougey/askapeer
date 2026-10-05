@@ -459,9 +459,23 @@ screen's question.
 - **The taxonomy still earns its keep.** Articles are classified against it on ingest, which is
   what puts the chips on a card, what the magnifier search narrows by, and what the "placeable
   at all" bonus in the default ordering rewards. Only the *member-relative* half has gone.
-- ⚠️ **Nothing is shown until something is asked**, and the page — not the API — enforces it:
-  `asked` gates whether the feed is fetched at all. An untouched visit is an empty screen with
-  the panel open; Apply fills it and folds the panel back to its summary line.
+- ⚠️ **Coming back resumes; arriving with nothing prompts.** A bare `/feed` reapplies the
+  criteria last used, so leaving for Discussions and returning does not throw away what you
+  were reading. Only a member with *no* criteria gets the empty screen, and for them the panel
+  opens itself, because there is nothing else on the page to do. An explicit Apply always
+  closes the panel, even one with no criteria set.
+  An earlier build cleared on every arrival; Adrian after using it: "you may well want to enter
+  criteria and start browsing the content but need to do something else and return later."
+- ⚠️ **Resuming is not a write.** The API records criteria only when `f=1` is present, which
+  only Apply sets — so a bare `/feed` reapplying them cannot overwrite what it is resuming.
+- ⚠️ **`f` is stripped from `storageKey`.** The same criteria must produce the same key whether
+  they arrived through Apply (`?f=1&q=…`) or through resuming a bare `/feed`; otherwise leaving
+  the tab and coming back lands on a different scroll history and the pages the member had
+  loaded are not replayed — which is the whole point of resuming.
+- **The summary says "Search", not "Filter".** Filtering is what it did when this screen had a
+  feed of its own to narrow, and it has not had one since interests came out. Two labels, because
+  the control does two jobs: **"Search"** with nothing set, **"New Search or Amend"** once
+  something is.
 - ⚠️ **`?f=1` is load-bearing and the API ignores it.** It is how Apply says "this URL is a
   search", so an Apply with every field left empty — meaning *the whole corpus* — is
   distinguishable from an untouched visit. It is declared on the DTO only because the

@@ -34,11 +34,25 @@ const BLANK = { q: '', evidence: '', years: '', sort: 'newest' as FeedSort };
  * classified against the taxonomy — that is what puts the chips on a card and what the
  * magnifier search narrows by — but no part of a member's profile reaches this page.
  *
- * ⚠️ **It opens on arrival and closes on Apply.** Arriving is the moment the controls matter,
- * because there is nothing else on screen yet; once a question has been asked the results are
- * the point, so the panel folds back to its summary line rather than standing over them.
+ * ⚠️ **It opens only when there is nothing to show**, and closes on Apply. A member with no
+ * criteria has nothing else on the page to do, so the panel prompts them; a member returning
+ * to results they already had wants the results, so it stays a summary line.
+ *
+ * ⚠️ **The summary says "Search", not "Filter".** Filtering is what it did when this screen had
+ * a feed of its own to narrow. It has not had one since interests came out: with nothing set
+ * the panel is where a search *begins*, so calling it a filter described a page that no longer
+ * exists.
  */
-export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boolean }) {
+export function FilterPanel({
+  filters,
+  open,
+  anyCriteria,
+}: {
+  filters: FeedFilters;
+  open: boolean;
+  /** Whether anything is actually set — decides which of the two labels the summary shows. */
+  anyCriteria: boolean;
+}) {
   const t = useTranslations('feed');
 
   /*
@@ -58,12 +72,6 @@ export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boo
   const set = <K extends keyof typeof criteria>(key: K, value: (typeof criteria)[K]) =>
     setCriteria((current) => ({ ...current, [key]: value }));
 
-  const active =
-    (filters.q ? 1 : 0) +
-    (filters.evidence ? 1 : 0) +
-    (filters.years ? 1 : 0) +
-    (filters.sort && filters.sort !== 'newest' ? 1 : 0);
-
   const field = {
     background: 'var(--color-surface)',
     borderColor: 'var(--color-border)',
@@ -80,8 +88,12 @@ export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boo
         className="filter-summary flex items-center justify-between px-3 py-2 text-sm font-medium"
         style={{ color: 'var(--color-accent)' }}
       >
-        {/* The count is the honest version of an "active" dot: it says how much is on. */}
-        <span>{active > 0 ? t('filterCount', { count: active }) : t('filter')}</span>
+        {/*
+          Two labels, because the control does two jobs and the member needs to know which one
+          is in front of them: with nothing set it is how you start, and with a search running
+          it is how you start another or adjust this one.
+        */}
+        <span>{anyCriteria ? t('searchAmend') : t('search')}</span>
         {/* Points down closed, up open — the caret has to agree with the panel. */}
         <span className="filter-caret" aria-hidden="true">▾</span>
       </summary>
