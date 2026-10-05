@@ -42,7 +42,7 @@ export const EVIDENCE_TYPES = [
 ] as const;
 
 /** The three orderings the filter panel offers. Relevance needs a keyword; the service falls back. */
-export const FEED_SORTS = ['for_you', 'newest', 'relevance'] as const;
+export const FEED_SORTS = ['recommended', 'newest', 'relevance'] as const;
 
 /**
  * The Research filter panel, as URL parameters (Andrew's review item 6).
@@ -61,22 +61,6 @@ export class FeedQueryDto {
   @IsString()
   @MaxLength(200)
   q?: string;
-
-  /**
-   * Tags chosen in the panel. These **replace** the member's clinical interests for this
-   * view rather than narrowing within them — Andrew's "change tags on that page rather than
-   * clinic interests", read literally.
-   *
-   * Capped to match `InterestsDto`, because saving the panel writes these through to the
-   * interests and a lower cap here would fail only at the save.
-   */
-  @IsOptional()
-  @Transform(({ value }: { value: unknown }) =>
-    value === undefined ? undefined : Array.isArray(value) ? value : [value],
-  )
-  @IsUUID('all', { each: true })
-  @ArrayMaxSize(100)
-  tag?: string[];
 
   @IsOptional()
   @IsIn(EVIDENCE_TYPES)
@@ -102,11 +86,12 @@ export class FeedQueryDto {
   sort?: (typeof FEED_SORTS)[number];
 
   /**
-   * "This URL is the whole truth" — set by Apply, including when the panel was cleared.
+   * "This URL is a search" — set by Apply, even when every field was left empty.
    *
-   * Without it there is no way to tell *nothing asked for* from *deliberately cleared*, and
-   * a member who saved standing criteria and then cleared the panel would watch the saved
-   * criteria come straight back.
+   * ⚠️ **The API ignores it; the screen does not.** My Research shows nothing until something
+   * is asked, so the page needs to tell an untouched visit from a deliberate Apply with no
+   * criteria. It is declared here only because the validator rejects unknown parameters, and
+   * a request carrying it would otherwise 400.
    */
   @IsOptional()
   @IsString()
@@ -117,16 +102,10 @@ export class FeedQueryDto {
 /**
  * Saving the panel as standing settings.
  *
- * ⚠️ A non-empty `tagIds` **overwrites** the member's clinical interests, because interests
- * have exactly one home and a second copy would let the Settings screen and the feed
- * disagree about what the member follows. The web app warns before sending it.
+ * ⚠️ These **seed** the panel on a later visit; they do not run themselves. An unfiltered
+ * visit to My Research is an empty screen with the panel open, by design.
  */
 export class FeedPreferencesDto {
-  @IsArray()
-  @ArrayMaxSize(100)
-  @IsUUID('all', { each: true })
-  tagIds!: string[];
-
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -198,41 +177,24 @@ export class ResearchFeedController {
   ) {}
 
   /**
-   * The feed, narrowed by the filter panel or by the member's standing settings.
+   * The corpus, narrowed by whatever the filter panel asked for.
    *
-   * **One ranking path, not three.** The panel narrows the same query the unfiltered feed
-   * already runs; a separate "filtered feed" alongside `list` and `search` would drift from
-   * both within a release.
+   * ⚠️ **Nothing about the member reaches this.** It used to read their clinical interests
+   * and rank around them; after testing, Adrian took interests out of My Research entirely.
+   * Two members sending the same query get the same page, and an empty query means the whole
+   * corpus rather than somebody's profile.
+   *
+   * The *screen*, not the API, decides that an unasked visit shows nothing: the page simply
+   * does not call this until there is something to ask.
    */
   @Get()
-  async list(@Query() query: FeedQueryDto, @Req() req: Request & { member: AuthedMember }) {
-    const handleId = req.member.handleId!;
-    const filters = asked(query)
-      ? {
-          tagIds: query.tag ?? [],
-          query: query.q,
-          evidence: query.evidence,
-          periodYears: query.years,
-          sort: query.sort,
-        }
-      : // Nothing asked for: fall back to whatever the member saved.
-        await this.saved(handleId);
-    const tagIds = await this.interests.tagIdsFor(handleId);
-    return this.feed.list(query.cursor, undefined, tagIds, handleId, filters);
-  }
-
-  /**
-   * The saved criteria as *filters*, which means **without the tags**.
-   *
-   * `preferences.get` returns them because the panel has to show what is shaping the page,
-   * but a saved tag is the member's clinical interest, which `list` applies anyway. Passing
-   * it back as a tag *override* would produce the same articles under the wrong name: the
-   * page would be called `filtered`, which suppresses the empty-interest fallback and takes
-   * the "choose your interests" prompt off the screen for the people who most need it.
-   */
-  private async saved(handleId: string) {
-    const { tagIds: _ignored, ...rest } = await this.preferences.get(handleId);
-    return rest;
+  list(@Query() query: FeedQueryDto) {
+    return this.feed.list(query.cursor, undefined, {
+      query: query.q,
+      evidence: query.evidence,
+      periodYears: query.years,
+      sort: query.sort,
+    });
   }
 
   /** The standing criteria, used to seed the panel when the URL carries none. */
@@ -361,16 +323,6 @@ export class ResearchFeedAdminController {
   coverage() {
     return this.ingestion.coverage();
   }
-}
-
-/**
- * Did this request ask for anything?
- *
- * `f` alone counts: it is how Apply says "this URL is the whole truth", so clearing the panel
- * clears the feed rather than silently restoring the saved settings.
- */
-function asked(q: FeedQueryDto): boolean {
-  return Boolean(q.f || q.q?.trim() || (q.tag?.length ?? 0) > 0 || q.evidence || q.years || q.sort);
 }
 
 /** Re-exported so the module can wire the admin guard's dependencies. */

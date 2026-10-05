@@ -11,14 +11,14 @@
  * error and Next turns into an error page. So a value the API would refuse must never leave
  * this function: the cost of one bad character in a URL is the whole screen.
  *
- * That is not hypothetical. `?tag=` — a `tag` parameter with an empty value — reached the
- * API as `each value in tag must be a UUID` and took the feed down, because `tag` was the
- * one field passed through unchecked while `q`, `evidence`, `years` and `sort` were all
- * filtered.
+ * That is not hypothetical. `?tag=` — an empty clinical-tag parameter — reached the API as
+ * `each value in tag must be a UUID` and took the feed down, because `tag` was the one field
+ * passed through unchecked while the rest were all filtered. The tag row has since been
+ * removed from the panel altogether, but the rule it taught is the reason this module exists.
  */
 
 /** The three orderings the panel offers. Relevance needs a keyword; the API falls back. */
-export const FEED_SORTS = ['for_you', 'newest', 'relevance'] as const;
+export const FEED_SORTS = ['recommended', 'newest', 'relevance'] as const;
 export type FeedSortValue = (typeof FEED_SORTS)[number];
 
 /** The evidence ladder, as the API names it. Kept in step with `lib/evidence.ts`. */
@@ -33,28 +33,10 @@ export const FEED_EVIDENCE = [
 /** The periods the panel offers, in years back from now. Relative, never a pair of dates. */
 export const FEED_PERIODS = [1, 2, 3, 5] as const;
 
-/**
- * ⚠️ **The same rule the API applies, including the variant nibble** — the `[89ab]` in the
- * fourth group.
- *
- * Any *version* is allowed, because the taxonomy is seeded with deterministic uuid5 ids and a
- * version check would reject every real tag. The **variant** is not optional, and a looser
- * regex here is not a kindness: `class-validator`'s `@IsUUID` enforces it on the other side,
- * so anything this lets through that it will not becomes a 400 and an error page rather than
- * a filter quietly ignored.
- *
- * That is not theoretical either. Nine joint-group ids were hand-written rather than derived
- * (migration 0045), four of them ran past `b` into `c`, `d`, `e`, `f` and `0`, and this regex
- * — permissive at the time — forwarded *Hand joints* to an API that refused it. Migration
- * 0047 fixed the ids; this makes the page survive the next one regardless.
- */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-/** The shape Next hands a page: a repeated parameter arrives as an array, one as a string. */
+/** The shape Next hands a page. */
 export type RawFeedParams = {
   cursor?: string;
   q?: string;
-  tag?: string | string[];
   evidence?: string;
   years?: string;
   sort?: string;
@@ -63,27 +45,21 @@ export type RawFeedParams = {
 
 export type ParsedFeedFilters = {
   q?: string;
-  tags: string[];
   evidence?: (typeof FEED_EVIDENCE)[number];
   years?: number;
   sort?: FeedSortValue;
   /**
-   * Did this URL ask for anything?
+   * Has this URL asked a question?
    *
-   * `f` alone counts: it is how Apply says "this URL is the whole truth", so clearing the
-   * panel clears the feed rather than silently restoring the member's saved settings.
+   * ⚠️ **This is what decides whether My Research shows anything at all.** The screen starts
+   * empty with the panel open; only an Apply fills it. `f` alone counts, because an Apply
+   * with every field left empty is still a request — for the whole corpus — and must not be
+   * mistaken for an untouched visit.
    */
   asked: boolean;
 };
 
 export function parseFeedFilters(params: RawFeedParams): ParsedFeedFilters {
-  // Express gives one repeated parameter as a string and several as an array; Next does the
-  // same, so both shapes have to be handled or a single tag filter silently vanishes.
-  const raw = params.tag === undefined ? [] : Array.isArray(params.tag) ? params.tag : [params.tag];
-  // Deduplicated as well as filtered: a repeated tag is harmless to the query and noise in
-  // the URL, and it would inflate the "n on" count the panel shows.
-  const tags = [...new Set(raw.filter((value) => UUID.test(value)))];
-
   const q = params.q?.trim() || undefined;
   const evidence = FEED_EVIDENCE.find((value) => value === params.evidence);
   const sort = FEED_SORTS.find((value) => value === params.sort);
@@ -94,12 +70,10 @@ export function parseFeedFilters(params: RawFeedParams): ParsedFeedFilters {
 
   /*
    * ⚠️ Deliberately asks whether the *raw* parameters were present, not whether they
-   * survived. A URL carrying only rubbish has still asked to be filtered, and answering it
-   * with the member's saved settings would silently ignore what they typed.
+   * survived. A URL carrying only rubbish has still asked a question, and answering it with
+   * an empty screen that looks untouched would silently ignore what the member typed.
    */
-  const asked = Boolean(
-    params.f || q || raw.length > 0 || params.evidence || params.years || params.sort,
-  );
+  const asked = Boolean(params.f || q || params.evidence || params.years || params.sort);
 
-  return { q, tags, evidence, years: period, sort, asked };
+  return { q, evidence, years: period, sort, asked };
 }
