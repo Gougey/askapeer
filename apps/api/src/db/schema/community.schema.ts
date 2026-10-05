@@ -748,7 +748,7 @@ export const feedPreferences = community.table('feed_preferences', {
   /** Years back from now; null for no period filter. 1–5, checked in the database too. */
   periodYears: integer('period_years'),
   /** `recommended` | `newest` | `relevance`. Relevance needs a keyword; the API falls back. */
-  sort: text('sort').notNull().default('recommended'),
+  sort: text('sort').notNull().default('newest'),
   /** A standing keyword, if the member wants one. Usually null. */
   query: text('query'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

@@ -107,7 +107,7 @@ export default async function FeedPage({
         >
           <ul className="flex flex-col" style={{ gap: 'var(--space-3)' }}>
             {page.articles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
+              <ArticleCard key={article.id} article={article} showTags={false} />
             ))}
           </ul>
         </InfiniteList>

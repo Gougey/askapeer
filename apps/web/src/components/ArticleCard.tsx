@@ -18,8 +18,15 @@ function evidenceStyle(type: EvidenceType): { color: string; background: string 
   return { color: 'var(--color-muted)', background: 'transparent' };
 }
 
-/** One row of the Feed (screen B1). */
-export async function ArticleCard({ article }: { article: FeedArticle }) {
+/** One row of the Feed (screen B1), or of the papers tab in search. */
+export async function ArticleCard({
+  article,
+  showTags = true,
+}: {
+  article: FeedArticle;
+  /** Off where the screen has asked nothing of the taxonomy — see the chips below. */
+  showTags?: boolean;
+}) {
   const [t, format] = await Promise.all([getTranslations('feed'), getFormatter()]);
   const evidence = evidenceStyle(article.evidenceType);
 
@@ -62,11 +69,13 @@ export async function ArticleCard({ article }: { article: FeedArticle }) {
         )}
 
         {/*
-          The classifier's working, shown rather than asserted — the same explainability the
-          prototype proved out. Once interests exist these become "because you follow X";
-          until then they answer "why is this in my feed at all".
+          The classifier's working, shown rather than asserted: the chips answer "why did this
+          match?".
+          ⚠️ **Off in My Research**, which no longer asks anything of the taxonomy — a row of
+          clinical chips under every result was evidence for a match the member had not asked
+          for. Search keeps them, because there a tag *is* one of the filters.
         */}
-        {article.tags.length > 0 && (
+        {showTags && article.tags.length > 0 && (
           <ul className="flex flex-wrap" style={{ gap: 'var(--space-2)' }}>
             {article.tags.map((tag) => (
               <li

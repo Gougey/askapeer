@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import type { Queue } from 'bullmq';
 import { Transform } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
@@ -88,42 +88,15 @@ export class FeedQueryDto {
   /**
    * "This URL is a search" — set by Apply, even when every field was left empty.
    *
-   * ⚠️ **The API ignores it; the screen does not.** My Research shows nothing until something
-   * is asked, so the page needs to tell an untouched visit from a deliberate Apply with no
-   * criteria. It is declared here only because the validator rejects unknown parameters, and
-   * a request carrying it would otherwise 400.
+   * It does two jobs. The screen needs it to tell an untouched visit (which shows nothing)
+   * from a deliberate Apply with no criteria (which shows everything). And **the API uses it
+   * as the signal to remember these criteria** as the member's last-used set, so the panel
+   * comes back filled in next time — see `list`.
    */
   @IsOptional()
   @IsString()
   @MaxLength(1)
   f?: string;
-}
-
-/**
- * Saving the panel as standing settings.
- *
- * ⚠️ These **seed** the panel on a later visit; they do not run themselves. An unfiltered
- * visit to My Research is an empty screen with the panel open, by design.
- */
-export class FeedPreferencesDto {
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  query?: string;
-
-  @IsOptional()
-  @IsIn(EVIDENCE_TYPES)
-  evidence?: (typeof EVIDENCE_TYPES)[number];
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(5)
-  periodYears?: number;
-
-  @IsOptional()
-  @IsIn(FEED_SORTS)
-  sort?: (typeof FEED_SORTS)[number];
 }
 
 export class FeedSearchDto {
@@ -136,6 +109,10 @@ export class FeedSearchDto {
    * vocabulary, not forum vocabulary. Articles are classified against the very same
    * taxonomy, so "everything under Achilles tendinopathy" is a question both corpora can
    * answer — it was only ever the *category* that could not cross.
+   *
+   * ⚠️ Search keeps this after My Research dropped its own tag row. The two screens ask
+   * different questions: this one reaches the whole corpus, including the parts a member
+   * would never think to browse, and a tag is often the only way to express what you want.
    *
    * Mirrors `SearchDto`: repeated rather than comma-joined, normalised to an array, and any
    * UUID version because the taxonomy is seeded with deterministic uuid5 ids.
@@ -188,46 +165,37 @@ export class ResearchFeedController {
    * does not call this until there is something to ask.
    */
   @Get()
-  list(@Query() query: FeedQueryDto) {
-    return this.feed.list(query.cursor, undefined, {
+  async list(@Query() query: FeedQueryDto, @Req() req: Request & { member: AuthedMember }) {
+    const filters = {
       query: query.q,
       evidence: query.evidence,
       periodYears: query.years,
       sort: query.sort,
-    });
+    };
+
+    /*
+     * **Remember what was asked, so the panel comes back filled in.** This replaced a "Save as
+     * my settings" button: saving criteria is not a decision worth making, it is just what you
+     * were last looking at, and a button for it was one more thing to press.
+     *
+     * ⚠️ A write on a GET, which deserves its justification. `f` is only ever set by Apply, so
+     * this records a deliberate search and nothing else — paging carries a cursor, and the
+     * screen's own links out of here are plain anchors that nothing prefetches. It is an
+     * upsert of exactly what the member just asked for, so running it twice is the same as
+     * running it once, and a failure must never cost them their results: the remembering is
+     * best-effort and the page is returned either way.
+     */
+    if (query.f && !query.cursor) {
+      await this.preferences.save(req.member.handleId!, filters).catch(() => undefined);
+    }
+
+    return this.feed.list(query.cursor, undefined, filters);
   }
 
   /** The standing criteria, used to seed the panel when the URL carries none. */
   @Get('preferences')
   myPreferences(@Req() req: Request & { member: AuthedMember }) {
     return this.preferences.get(req.member.handleId!);
-  }
-
-  @Put('preferences')
-  savePreferences(@Body() dto: FeedPreferencesDto, @Req() req: Request & { member: AuthedMember }) {
-    return this.preferences.save(req.member.handleId!, dto);
-  }
-
-  @Delete('preferences')
-  async clearPreferences(@Req() req: Request & { member: AuthedMember }) {
-    await this.preferences.clear(req.member.handleId!);
-    return { cleared: true };
-  }
-
-  @Get('interests')
-  myInterests(@Req() req: Request & { member: AuthedMember }) {
-    return this.interests.list(req.member.handleId!);
-  }
-
-  @Put('interests')
-  async setInterests(
-    @Body() dto: InterestsDto,
-    @Req() req: Request & { member: AuthedMember },
-  ) {
-    // Filter to tags that exist rather than letting a stale id take the request down on a
-    // foreign key — a picker held open while an administrator retires a tag is ordinary.
-    const valid = await this.interests.existingTagIds(dto.tagIds);
-    return this.interests.replace(req.member.handleId!, valid);
   }
 
   /**

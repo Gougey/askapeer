@@ -519,9 +519,6 @@
     "sortRelevance": "Relevance (needs a keyword)",
     "applyFilters": "Apply",
     "clearFilters": "Clear",
-    "saveCriteria": "Save as my settings",
-    "savingCriteria": "Saving…",
-    "criteriaSaved": "Saved. These will be filled in for you next time.",
     "setCriteria": "Set your criteria above and press Apply to search the literature.",
     "sortRecommended": "Recommended"
   },

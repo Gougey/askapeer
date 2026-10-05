@@ -37,7 +37,7 @@ export class FeedPreferencesService {
       query: row?.query ?? undefined,
       evidence: (row?.evidence as FeedFilters["evidence"]) ?? undefined,
       periodYears: row?.periodYears ?? undefined,
-      sort: (row?.sort as FeedFilters["sort"]) ?? "recommended",
+      sort: (row?.sort as FeedFilters["sort"]) ?? "newest",
     };
   }
 
@@ -51,7 +51,7 @@ export class FeedPreferencesService {
       query: criteria.query?.trim() || null,
       evidence: criteria.evidence ?? null,
       periodYears: criteria.periodYears ?? null,
-      sort: criteria.sort ?? "recommended",
+      sort: criteria.sort ?? "newest",
       updatedAt: new Date(),
     };
     await this.db

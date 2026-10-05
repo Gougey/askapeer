@@ -81,7 +81,9 @@ export function feedFilterParams(filters: FeedFilters = {}): URLSearchParams {
   if (filters.q?.trim()) params.set('q', filters.q.trim());
   if (filters.evidence) params.set('evidence', filters.evidence);
   if (filters.years) params.set('years', String(filters.years));
-  if (filters.sort && filters.sort !== 'recommended') params.set('sort', filters.sort);
+  // Always carried, never omitted as "the default": the default moved once already, and a
+  // URL that leaves it out silently re-reads whatever the default happens to be that week.
+  if (filters.sort) params.set('sort', filters.sort);
   if (filters.applied) params.set('f', '1');
   return params;
 }
@@ -101,7 +103,7 @@ export async function fetchFeed(
 /** The standing criteria, used to seed the panel when the URL carries none. */
 export async function fetchFeedCriteria(token: string): Promise<FeedCriteria> {
   const res = await apiGet<FeedCriteria>('/research-feed/preferences', token);
-  return res ?? { sort: 'recommended' };
+  return res ?? { sort: 'newest' };
 }
 
 /** S16 — full-text search over the corpus, independent of the member's interests. */

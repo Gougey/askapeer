@@ -81,6 +81,7 @@ export type FeedFilters = {
   evidence?: EvidenceType;
   /** Years back from now. Relative, never a pair of dates — a stored absolute range rots. */
   periodYears?: number;
+  /** Defaults to `newest` — the baseline a cleared panel returns to. */
   sort?: 'recommended' | 'newest' | 'relevance';
 };
 
@@ -185,9 +186,7 @@ export class FeedService {
      * for the member who saved `relevance` with a keyword and later cleared the keyword.
      */
     const sort =
-      filters.sort === 'relevance' && query === ''
-        ? 'recommended'
-        : (filters.sort ?? 'recommended');
+      filters.sort === 'relevance' && query === '' ? 'newest' : (filters.sort ?? 'newest');
     const ordering =
       sort === 'newest'
         ? sql`a.published_date desc nulls last, a.intrinsic_score desc`
