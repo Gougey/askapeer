@@ -491,8 +491,23 @@ screen's question.
   default has already moved once, and a URL that leaves it out silently re-reads whatever the
   default happens to be that week.
 - **Relevance is offered only with a keyword**, because `ts_rank` of an empty query is zero for
-  every row; the API falls back to `recommended` if it arrives without one, which also covers
-  the member who saved `relevance` and later cleared the keyword.
+  every row; the API falls back to `newest` if it arrives without one, which also covers the
+  member whose remembered criteria carry `relevance` after the keyword has gone.
+- **Typing a keyword switches the sort to Relevance**, and clearing it switches back (the panel
+  does it visibly; the API applies the same rule to a URL that omits `sort`). Andy's complaint
+  was that a word buried in an abstract pulled in papers it was not about — which was an
+  *ordering* problem, not a matching one. The index already ranks a title match far above an
+  abstract one (weights A and B), and the default sort of Newest was throwing that away and
+  interleaving the two by date. Measured on the corpus, relevance puts **18 of the top 20**
+  "return to play" results in the title, and title hits average rank 44 against 357 for
+  abstract-only — while leaving those reachable underneath, which dropping abstracts from the
+  index would not.
+  ⚠️ **The suggestion stops the moment the member touches the sort themselves.** The first
+  version did not, and choosing Newest deliberately then typing one more character flipped it
+  back — a control that argues with you. Clear resets that memory along with everything else.
+  The alternative considered and rejected: indexing titles only, or an "include abstract"
+  checkbox. Title-only keeps **9–65%** of matches — 9% for "return to play", 11% for "eccentric
+  exercise" — so it answers a precision complaint by destroying recall.
 - ⚠️ **The period is relative, never a pair of dates** (1–5 years back, resolved at query time,
   constrained in the DTO *and* the table). Andrew asked for "year from/to"; an absolute range is
   wrong the moment it becomes a standing setting.

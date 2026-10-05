@@ -185,8 +185,19 @@ export class FeedService {
      * when a keyword is present; this is the matching guard for a hand-rolled request, and
      * for the member who saved `relevance` with a keyword and later cleared the keyword.
      */
+    /*
+     * Relevance ranks words, so without a keyword it is not an ordering at all — `ts_rank` of
+     * an empty query is zero for every row, and the request falls back.
+     *
+     * And the mirror of that: **a keyword with no sort asked for means relevance**, matching
+     * what the panel does when you type one. A title match ranks well above a passing mention
+     * in an abstract, which is the whole answer to "the keyword was buried somewhere
+     * irrelevant" — the ordering, not the matching, was what made those look equal.
+     */
     const sort =
-      filters.sort === 'relevance' && query === '' ? 'newest' : (filters.sort ?? 'newest');
+      filters.sort === 'relevance' && query === ''
+        ? 'newest'
+        : (filters.sort ?? (query === '' ? 'newest' : 'relevance'));
     const ordering =
       sort === 'newest'
         ? sql`a.published_date desc nulls last, a.intrinsic_score desc`

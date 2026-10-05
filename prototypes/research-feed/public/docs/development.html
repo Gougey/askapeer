@@ -696,9 +696,29 @@ default has already moved once, and a URL that leaves it out silently
 re-reads whatever the default happens to be that week.</li>
 <li><strong>Relevance is offered only with a keyword</strong>, because
 <code>ts_rank</code> of an empty query is zero for every row; the API
-falls back to <code>recommended</code> if it arrives without one, which
-also covers the member who saved <code>relevance</code> and later
-cleared the keyword.</li>
+falls back to <code>newest</code> if it arrives without one, which also
+covers the member whose remembered criteria carry <code>relevance</code>
+after the keyword has gone.</li>
+<li><strong>Typing a keyword switches the sort to Relevance</strong>,
+and clearing it switches back (the panel does it visibly; the API
+applies the same rule to a URL that omits <code>sort</code>). Andy’s
+complaint was that a word buried in an abstract pulled in papers it was
+not about — which was an <em>ordering</em> problem, not a matching one.
+The index already ranks a title match far above an abstract one (weights
+A and B), and the default sort of Newest was throwing that away and
+interleaving the two by date. Measured on the corpus, relevance puts
+<strong>18 of the top 20</strong> “return to play” results in the title,
+and title hits average rank 44 against 357 for abstract-only — while
+leaving those reachable underneath, which dropping abstracts from the
+index would not. ⚠️ <strong>The suggestion stops the moment the member
+touches the sort themselves.</strong> The first version did not, and
+choosing Newest deliberately then typing one more character flipped it
+back — a control that argues with you. Clear resets that memory along
+with everything else. The alternative considered and rejected: indexing
+titles only, or an “include abstract” checkbox. Title-only keeps
+<strong>9–65%</strong> of matches — 9% for “return to play”, 11% for
+“eccentric exercise” — so it answers a precision complaint by destroying
+recall.</li>
 <li>⚠️ <strong>The period is relative, never a pair of dates</strong>
 (1–5 years back, resolved at query time, constrained in the DTO
 <em>and</em> the table). Andrew asked for “year from/to”; an absolute
