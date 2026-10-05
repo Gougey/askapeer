@@ -504,8 +504,6 @@
       "other": "Journal article"
     },
     "noMatches": "Nothing matches those criteria. Try widening them.",
-    "filter": "Filter",
-    "filterCount": "Filter ({count} on)",
     "keywordLabel": "Keyword",
     "keywordPlaceholder": "e.g. hamstring rehabilitation",
     "evidenceLabel": "Type of paper",
@@ -520,7 +518,9 @@
     "applyFilters": "Apply",
     "clearFilters": "Clear",
     "setCriteria": "Set your criteria above and press Apply to search the literature.",
-    "sortRecommended": "Recommended"
+    "sortRecommended": "Recommended",
+    "search": "Search",
+    "searchAmend": "New Search or Amend"
   },
   "interests": {
     "heading": "Your clinical interests",

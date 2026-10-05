@@ -648,11 +648,32 @@ classified against it on ingest, which is what puts the chips on a card,
 what the magnifier search narrows by, and what the “placeable at all”
 bonus in the default ordering rewards. Only the <em>member-relative</em>
 half has gone.</li>
-<li>⚠️ <strong>Nothing is shown until something is asked</strong>, and
-the page — not the API — enforces it: <code>asked</code> gates whether
-the feed is fetched at all. An untouched visit is an empty screen with
-the panel open; Apply fills it and folds the panel back to its summary
-line.</li>
+<li>⚠️ <strong>Coming back resumes; arriving with nothing
+prompts.</strong> A bare <code>/feed</code> reapplies the criteria last
+used, so leaving for Discussions and returning does not throw away what
+you were reading. Only a member with <em>no</em> criteria gets the empty
+screen, and for them the panel opens itself, because there is nothing
+else on the page to do. An explicit Apply always closes the panel, even
+one with no criteria set. An earlier build cleared on every arrival;
+Adrian after using it: “you may well want to enter criteria and start
+browsing the content but need to do something else and return
+later.”</li>
+<li>⚠️ <strong>Resuming is not a write.</strong> The API records
+criteria only when <code>f=1</code> is present, which only Apply sets —
+so a bare <code>/feed</code> reapplying them cannot overwrite what it is
+resuming.</li>
+<li>⚠️ <strong><code>f</code> is stripped from
+<code>storageKey</code>.</strong> The same criteria must produce the
+same key whether they arrived through Apply (<code>?f=1&amp;q=…</code>)
+or through resuming a bare <code>/feed</code>; otherwise leaving the tab
+and coming back lands on a different scroll history and the pages the
+member had loaded are not replayed — which is the whole point of
+resuming.</li>
+<li><strong>The summary says “Search”, not “Filter”.</strong> Filtering
+is what it did when this screen had a feed of its own to narrow, and it
+has not had one since interests came out. Two labels, because the
+control does two jobs: <strong>“Search”</strong> with nothing set,
+<strong>“New Search or Amend”</strong> once something is.</li>
 <li>⚠️ <strong><code>?f=1</code> is load-bearing and the API ignores
 it.</strong> It is how Apply says “this URL is a search”, so an Apply
 with every field left empty — meaning <em>the whole corpus</em> — is
