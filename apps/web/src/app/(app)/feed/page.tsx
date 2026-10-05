@@ -1,9 +1,7 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArticleCard } from '@/components/ArticleCard';
 import { InfiniteList } from '@/components/InfiniteList';
 import { parseFeedFilters, type RawFeedParams } from '@/lib/feed-filters';
-import { fetchVocabulary } from '@/lib/forum';
 import {
   fetchFeed,
   fetchFeedCriteria,
@@ -15,31 +13,27 @@ import { FilterPanel } from './FilterPanel';
 import { loadMoreArticles } from './load-more';
 
 /**
- * My Research (screen B1) — research scored against the clinical taxonomy, and since
- * Andrew's review item 6, filterable in place.
+ * My Research (screen B1) — the literature, answering the criteria you set.
  *
- * **The filters live in the URL, not in component state.** A filtered feed is then a real
- * link: bookmarkable, shareable, and undone by the back button — and this stays a server
- * component with no client copy of the results to drift from the server's. It is the same
- * choice search made.
+ * ⚠️ **No personalisation, by decision.** This screen was built around a member's stored
+ * clinical interests: it ranked on them, the panel carried a tag row that overrode them, and
+ * saving the panel wrote the tags back as interests. Testing changed that thinking. Interests
+ * now play **no part** in what appears here. Two members asking the same question get the
+ * same page.
  *
- * ⚠️ **An empty URL is not the same as no filters.** A member can save standing criteria,
- * so arriving with nothing asked for means "give me my settings", while `?f=1` means "this
- * URL is the whole truth, including the parts of it that are empty". Without that
- * distinction, clearing the panel would silently restore the saved criteria.
+ * The taxonomy is untouched and still earns its keep — articles are classified against it on
+ * ingest, which is what puts the chips on a card, what the magnifier search narrows by, and
+ * what the "placeable at all" bonus in the default ordering rewards. What has gone is the
+ * member-relative half.
+ *
+ * ⚠️ **Nothing is shown until something is asked.** An untouched visit is an empty screen with
+ * the panel open, which is the whole shape of the redesign: say what you want, press Apply.
+ * The feed is not even fetched until then — `asked` is what gates it.
  */
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    cursor?: string;
-    q?: string;
-    tag?: string | string[];
-    evidence?: string;
-    years?: string;
-    sort?: string;
-    f?: string;
-  }>;
+  searchParams: Promise<RawFeedParams>;
 }) {
   const params = await searchParams;
   const token = await requireAccessToken();
@@ -47,30 +41,21 @@ export default async function FeedPage({
   /*
    * ⚠️ **Parsed, not read.** The API validates its query parameters strictly and answers a
    * bad one with a 400, which `apiGet` throws and Next renders as an error page — so a value
-   * it would refuse must never leave here. `?tag=` did, once: an empty tag reached the API
-   * as `each value in tag must be a UUID` and took the whole screen down. The parser is a
-   * pure module so the rule can be pinned by `npm run verify:feed-filters -w apps/web`
-   * rather than found on live a second time.
+   * it would refuse must never leave here. The rule is pinned by
+   * `npm run verify:feed-filters -w apps/web` rather than relearned on live.
    */
-  const url = parseFeedFilters(params as RawFeedParams);
+  const url = parseFeedFilters(params);
   const { asked } = url;
 
-  const [t, { tags }, saved] = await Promise.all([
+  const [t, saved] = await Promise.all([
     getTranslations('feed'),
-    fetchVocabulary(token),
-    // Only worth a round trip when the URL has not already answered the question.
+    // Standing criteria seed the panel; they never run themselves. Only worth a round trip
+    // when the URL has not already said what to ask.
     asked ? Promise.resolve(null) : fetchFeedCriteria(token),
   ]);
 
   const filters: FeedFilters = asked
-    ? {
-        q: url.q,
-        tags: url.tags,
-        evidence: url.evidence,
-        years: url.years,
-        sort: url.sort,
-        applied: true,
-      }
+    ? { q: url.q, evidence: url.evidence, years: url.years, sort: url.sort, applied: true }
     : {
         q: saved?.query || undefined,
         evidence: saved?.evidence,
@@ -78,33 +63,16 @@ export default async function FeedPage({
         sort: saved?.sort,
       };
 
-  /*
-   * ⚠️ **The saved tags are shown but not sent.** They *are* the member's clinical interests,
-   * which the feed already applies — resending them as a tag *override* would produce the
-   * same articles under the wrong name: the API would call the page `filtered`, and the
-   * screen would stop offering "choose your interests" to the very people who have none set
-   * up properly. The panel shows them because they are genuinely what is shaping the page.
-   */
-  const panelFilters: FeedFilters = asked ? filters : { ...filters, tags: saved?.tagIds ?? [] };
-
-  const { articles, nextCursor, mode } = await fetchFeed(token, params.cursor, filters);
+  const page = asked ? await fetchFeed(token, params.cursor, filters) : null;
 
   /*
-   * ⚠️ **The infinite-scroll history is per filter set.** `InfiniteList` replays the cursors
-   * it saved under `storageKey`, and a cursor is only an offset into one particular result
-   * set — replaying yesterday's offsets against a newly filtered feed splices pages of a
-   * different list into this one. Keying the store by the filters means a change starts a
-   * fresh history and going back to a previous filter finds its own.
+   * ⚠️ **The infinite-scroll history is keyed by the criteria.** `InfiniteList` replays the
+   * cursors it saved under `storageKey`, and a cursor is only an offset into one particular
+   * result set — replaying one search's offsets against another splices in pages of a
+   * different list. A change of criteria therefore starts a fresh history, and going back to
+   * an earlier search finds its own.
    */
   const filterKey = feedFilterParams(filters).toString();
-  // Counted from what is *sent*, not from what the panel shows — see `active` on the panel.
-  const active =
-    (filters.q ? 1 : 0) +
-    (filters.tags?.length ? 1 : 0) +
-    (filters.evidence ? 1 : 0) +
-    (filters.years ? 1 : 0) +
-    (filters.sort && filters.sort !== 'for_you' ? 1 : 0);
-  const storageKey = filterKey ? `feed?${filterKey}` : 'feed';
   const moreHref = (cursor: string) => {
     const next = feedFilterParams(filters);
     next.set('cursor', cursor);
@@ -115,53 +83,30 @@ export default async function FeedPage({
     <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
       <h1 className="text-xl font-semibold">{t('heading')}</h1>
 
-      <FilterPanel tags={tags} filters={panelFilters} active={active} />
-
       {/*
-        Say which feed this is, and only when it is not the one the member chose. A
-        personalised feed needs no explanation; a general or fallback one does, or it looks
-        like the interests were ignored. A *filtered* one needs none either — the panel above
-        is the explanation, and it is open.
+        Open until a question has been asked, closed once it has. Arriving is the moment the
+        controls matter and there is nothing else on screen to look at; after Apply the
+        results are what was wanted, and the panel folds back to its summary line.
       */}
-      {(mode === 'general' || mode === 'fallback') && (
-        <div
-          className="flex flex-col border"
-          style={{
-            gap: 'var(--space-2)',
-            padding: 'var(--space-3)',
-            borderColor: 'var(--color-border)',
-            borderRadius: 'var(--radius)',
-            background: 'var(--color-navy-tint-2)',
-          }}
-        >
-          <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-            {mode === 'fallback' ? t('fallbackNote') : t('generalNote')}
-          </p>
-          <Link
-            href="/settings/interests"
-            className="self-start text-sm font-medium"
-            style={{ color: 'var(--color-accent)' }}
-          >
-            {t('personalise')}
-          </Link>
-        </div>
-      )}
+      <FilterPanel filters={filters} open={!asked} />
 
-      {articles.length === 0 ? (
+      {page === null ? (
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-          {/* A filtered feed that matches nothing has a different answer from an empty one:
-              the corpus is fine, the question was narrow. */}
-          {mode === 'filtered' ? t('noMatches') : t('empty')}
+          {t('setCriteria')}
+        </p>
+      ) : page.articles.length === 0 ? (
+        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+          {t('noMatches')}
         </p>
       ) : (
         <InfiniteList
-          initialCursor={nextCursor}
+          initialCursor={page.nextCursor}
           loadMore={loadMoreArticles.bind(null, filters)}
-          storageKey={storageKey}
-          fallbackHref={nextCursor ? moreHref(nextCursor) : null}
+          storageKey={filterKey ? `feed?${filterKey}` : 'feed'}
+          fallbackHref={page.nextCursor ? moreHref(page.nextCursor) : null}
         >
           <ul className="flex flex-col" style={{ gap: 'var(--space-3)' }}>
-            {articles.map((article) => (
+            {page.articles.map((article) => (
               <ArticleCard key={article.id} article={article} />
             ))}
           </ul>

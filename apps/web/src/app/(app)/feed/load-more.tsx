@@ -8,10 +8,9 @@ import { getAccessToken } from '@/lib/session';
 /**
  * Next page, already rendered — same pattern as the Discussions list.
  *
- * ⚠️ **The filters are bound in by the page**, not read from the URL here: a server action
- * has no URL. Without them page two of a filtered feed is page two of the *unfiltered* one,
- * which is worse than no filtering at all — it looks like the filter stopped working
- * halfway down.
+ * ⚠️ **The criteria are bound in by the page**, not read from the URL here: a server action
+ * has no URL. Without them page two of a search is page two of the *whole corpus*, which is
+ * worse than no filtering at all — it looks like the criteria stopped working halfway down.
  */
 export async function loadMoreArticles(
   filters: FeedFilters,

@@ -1,57 +1,34 @@
 'use client';
 
-import { useActionState, useCallback, useRef, useState, useTransition } from 'react';
+import { useActionState, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { TagPicker } from '@/components/TagPicker';
 import { EVIDENCE_TYPES } from '@/lib/evidence';
-import type { Tag } from '@/lib/forum';
 import type { FeedFilters } from '@/lib/research-feed';
 import { saveFeedCriteriaAction, type CriteriaState } from './actions';
-
-/** Matches the API's cap, which is also the interests cap — saving writes these through. */
-const MAX_TAGS = 100;
 
 /** Relative, never a pair of dates: an absolute range saved as a setting is wrong next year. */
 const PERIODS = [1, 2, 3, 5] as const;
 
 /**
- * The Research filter panel (Andrew's review item 6).
+ * The My Research criteria panel.
  *
- * **A panel, not a modal.** Filtering is an adjustment to what you are already reading, and
- * a modal makes it an errand — so this slides down in place, above the cards it changes.
- * The magnifier search is untouched and still answers a different question: search reaches
- * the whole corpus because the reason to type a word is usually that it is *outside* what
- * you follow, while this narrows the feed that is already yours.
+ * **A panel, not a modal**, and the only thing that decides what this screen shows. It slides
+ * down in place above the results it changes; Apply is a navigation, so a set of criteria is a
+ * real URL — bookmarkable, sendable to a colleague, and undone by the back button — and the
+ * page around it stays a server component with no client copy of the results to drift.
  *
- * **A plain GET form.** Apply is a navigation, so a filtered feed is a real URL — it can be
- * bookmarked, sent to a colleague, and undone with the back button — and the whole screen
- * stays a server component with no client copy of the results to drift. The same choice
- * search made, for the same reasons.
+ * ⚠️ **There is no clinical-areas row any more.** The panel used to carry a tag picker that
+ * overrode the member's stored interests for a view, and saving wrote those tags back as the
+ * interests. After testing, Adrian took interests out of this screen altogether: My Research
+ * answers the keyword, type of paper, period and sort, and nothing else. The corpus is still
+ * classified against the taxonomy — that is what puts the chips on a card and what the
+ * magnifier search narrows by — but no part of a member's profile reaches this page.
  *
- * ⚠️ **Tags here *replace* the member's clinical interests for this view**, rather than
- * narrowing within them. That is Andrew's "change tags on that page rather than clinic
- * interests" read literally: the panel is a way to look somewhere else for a moment without
- * disturbing what you follow. Clearing the tag row returns the feed to the standing
- * interests — which is also why an empty row must never be saved as "no interests".
+ * ⚠️ **It opens on arrival and closes on Apply.** Arriving is the moment the controls matter,
+ * because there is nothing else on screen yet; once a question has been asked the results are
+ * the point, so the panel folds back to its summary line rather than standing over them.
  */
-export function FilterPanel({
-  tags,
-  filters,
-  active,
-}: {
-  tags: Tag[];
-  /** Whatever the URL asked for, or the standing settings when it asked for nothing. */
-  filters: FeedFilters;
-  /**
-   * How many of these are actually narrowing *this* view.
-   *
-   * Counted by the page rather than from `filters`, because the two differ in one case that
-   * matters: the chip row shows a member's standing interests, since they are genuinely what
-   * is shaping the page — but they are not a filter, and counting them would label every
-   * ordinary visit "Filter (1 on)".
-   */
-  active: number;
-}) {
+export function FilterPanel({ filters, open }: { filters: FeedFilters; open: boolean }) {
   const t = useTranslations('feed');
   const form = useRef<HTMLFormElement>(null);
   const [state, save, saving] = useActionState<CriteriaState, FormData>(saveFeedCriteriaAction, {
@@ -60,17 +37,16 @@ export function FilterPanel({
   const [, startTransition] = useTransition();
 
   /*
-   * Only two things need client state, and both because a *control* depends on them rather
-   * than the results: relevance is not an ordering without words to rank by, and the
-   * overwrite warning only applies when tags have actually been chosen.
+   * One thing needs client state, and only because a *control* depends on it: relevance is
+   * not an ordering without words to rank by.
    */
   const [query, setQuery] = useState(filters.q ?? '');
-  const [chosenTags, setChosenTags] = useState<string[]>(filters.tags ?? []);
-  const [confirming, setConfirming] = useState(false);
-  const onSelectionChange = useCallback((ids: string[]) => {
-    setChosenTags(ids);
-    setConfirming(false);
-  }, []);
+
+  const active =
+    (filters.q ? 1 : 0) +
+    (filters.evidence ? 1 : 0) +
+    (filters.years ? 1 : 0) +
+    (filters.sort && filters.sort !== 'recommended' ? 1 : 0);
 
   const field = {
     background: 'var(--color-surface)',
@@ -84,27 +60,13 @@ export function FilterPanel({
    * two buttons read one set of controls and cannot disagree about what is on screen.
    */
   const onSave = () => {
-    if (chosenTags.length > 0 && !confirming) {
-      setConfirming(true);
-      return;
-    }
-    setConfirming(false);
     const data = new FormData(form.current!);
     startTransition(() => save(data));
   };
 
   return (
-    /*
-     * **Always starts closed, including on a feed that is filtered.**
-     *
-     * It used to open itself whenever the URL carried filters, on the reasoning that a short
-     * list with no visible explanation looks broken. That reasoning was wrong twice over.
-     * Pressing Apply is a request to *see the results*, and leaving the panel standing over
-     * them is the control refusing to get out of the way — so it now shrinks back the moment
-     * it has done its job. And the explanation was never the open panel: it is the count on
-     * the summary, which says "Filter (2 on)" while taking one line instead of a screenful.
-     */
     <details
+      open={open}
       className="border"
       style={{ borderColor: 'var(--color-border)', borderRadius: 'var(--radius)' }}
     >
@@ -127,10 +89,13 @@ export function FilterPanel({
           style={{ gap: 'var(--space-3)' }}
           /*
            * Keep empty fields out of the URL — a GET form submits every control it owns, and
-           * `/feed?q=&evidence=` is a dangling parameter on a URL someone may paste. Disabled
-           * controls are not submitted, so emptying them an instant before submit is enough.
-           * Same trick as the search form, and equally an enhancement: without JavaScript the
-           * parameters reappear and the page treats an empty value as absent.
+           * `/feed?q=&evidence=` is both a dangling parameter on a URL someone may paste and,
+           * worse, a value the API refuses outright. Disabled controls are not submitted, so
+           * emptying them an instant before submit is enough; they are re-enabled immediately
+           * in case the navigation is cancelled.
+           *
+           * An enhancement, not a requirement: with no JavaScript the parameters reappear and
+           * `parseFeedFilters` drops them, which is why that function exists.
            */
           onSubmit={(event) => {
             const el = event.currentTarget;
@@ -147,10 +112,10 @@ export function FilterPanel({
           }}
         >
           {/*
-            "This URL is the whole truth", sent even when every other control is empty.
-            Without it the API cannot tell *nothing asked for* from *deliberately cleared*,
-            and a member who saved standing criteria and then cleared the panel would watch
-            the saved criteria come straight back.
+            "This URL is a search", sent even when every other control is empty — which is
+            exactly the case it exists for. My Research shows nothing until something is
+            asked, so an Apply with no criteria (meaning: the whole corpus) has to be
+            distinguishable from an untouched visit.
           */}
           <input type="hidden" name="f" value="1" />
 
@@ -170,28 +135,17 @@ export function FilterPanel({
           </label>
 
           {/*
-            The tag picker is itself a bottom sheet, so it stays a chip row that *opens* the
-            sheet rather than being inlined here — a sheet over a panel is one layer too many,
-            and this control already knows how to do the drill-down and the type-ahead.
+            The three dropdowns share a line, as asked. They are narrow at phone width and the
+            selects truncate their options rather than wrap, which is the trade the single row
+            buys: all three choices visible at once without scrolling the panel.
           */}
-          <TagPicker
-            tags={tags}
-            max={MAX_TAGS}
-            fieldName="tag"
-            initialSelectedIds={filters.tags ?? []}
-            heading={t('tagsLabel')}
-            hint={t('tagsHint')}
-            addLabel={t('addTags')}
-            onSelectionChange={onSelectionChange}
-          />
-
-          <div className="grid grid-cols-2" style={{ gap: 'var(--space-3)' }}>
-            <label className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+          <div className="grid grid-cols-3" style={{ gap: 'var(--space-2)' }}>
+            <label className="flex min-w-0 flex-col" style={{ gap: 'var(--space-1)' }}>
               <span className="text-sm font-medium">{t('evidenceLabel')}</span>
               <select
                 name="evidence"
                 defaultValue={filters.evidence ?? ''}
-                className="border px-3 py-2 text-base"
+                className="w-full border px-2 py-2 text-base"
                 style={field}
               >
                 <option value="">{t('anyEvidence')}</option>
@@ -203,12 +157,12 @@ export function FilterPanel({
               </select>
             </label>
 
-            <label className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+            <label className="flex min-w-0 flex-col" style={{ gap: 'var(--space-1)' }}>
               <span className="text-sm font-medium">{t('periodLabel')}</span>
               <select
                 name="years"
                 defaultValue={filters.years ? String(filters.years) : ''}
-                className="border px-3 py-2 text-base"
+                className="w-full border px-2 py-2 text-base"
                 style={field}
               >
                 <option value="">{t('anyPeriod')}</option>
@@ -219,41 +173,49 @@ export function FilterPanel({
                 ))}
               </select>
             </label>
+
+            <label className="flex min-w-0 flex-col" style={{ gap: 'var(--space-1)' }}>
+              <span className="text-sm font-medium">{t('sortLabel')}</span>
+              <select
+                name="sort"
+                defaultValue={filters.sort ?? 'recommended'}
+                className="w-full border px-2 py-2 text-base"
+                style={field}
+              >
+                {/*
+                  "Recommended", not "For you": the ordering is evidence weight, recency decay
+                  and a nudge for being placeable in the taxonomy — a judgement about the
+                  paper, identical for every member. The interest-match term that earned the
+                  old name is gone with the interests.
+                */}
+                <option value="recommended">{t('sortRecommended')}</option>
+                <option value="newest">{t('sortNewest')}</option>
+                {/*
+                  Relevance ranks words, so without a keyword it is not an ordering at all —
+                  `ts_rank` of an empty query is zero for every row. Offered only once there is
+                  something to rank by; the API falls back if it arrives anyway.
+                */}
+                <option value="relevance" disabled={query.trim() === ''}>
+                  {t('sortRelevance')}
+                </option>
+              </select>
+            </label>
           </div>
 
           {/*
             Said on the control rather than in a release note. Every article in the corpus is
-            from 2026 — the ingest began in August and only fetches forward — so this cannot
-            narrow anything yet. Without the line it looks broken rather than early.
+            from this year — the ingest began in August and only fetches forward — so the
+            period cannot narrow anything yet. Without the line it looks broken rather than
+            early.
           */}
           <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
             {t('periodNote')}
           </p>
 
-          <fieldset className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
-            <legend className="text-sm font-medium">{t('sortLabel')}</legend>
-            <select
-              name="sort"
-              defaultValue={filters.sort ?? 'for_you'}
-              className="border px-3 py-2 text-base"
-              style={field}
-            >
-              <option value="for_you">{t('sortForYou')}</option>
-              <option value="newest">{t('sortNewest')}</option>
-              {/*
-                Relevance ranks words, so without a keyword it is not an ordering at all —
-                `ts_rank` of an empty query is zero for every row. Offered only once there is
-                something to rank by; the API falls back to "For you" if it arrives anyway.
-              */}
-              <option value="relevance" disabled={query.trim() === ''}>
-                {t('sortRelevance')}
-              </option>
-            </select>
-          </fieldset>
-
           <div className="flex" style={{ gap: 'var(--space-2)' }}>
+            {/* Back to the empty screen, which is where a visit starts. */}
             <a
-              href="/feed?f=1"
+              href="/feed"
               className="flex-1 border px-3 py-2 text-center text-sm font-medium"
               style={{ borderColor: 'var(--color-border-strong)', borderRadius: 'var(--radius)' }}
             >
@@ -268,24 +230,12 @@ export function FilterPanel({
             </button>
           </div>
 
-          {/*
-            ⚠️ Saving with tags chosen **overwrites** the member's clinical interests, because
-            interests have exactly one home and a second copy would let the Settings screen and
-            this panel disagree. So the first press asks, and the second one does it — a
-            confirmation in the page rather than a browser dialogue, which is dismissible by
-            reflex and says nothing about what is at stake.
-          */}
-          {confirming && (
-            <p className="text-sm font-medium" role="status" style={{ color: 'var(--color-accent)' }}>
-              {t('saveOverwritesInterests')}
-            </p>
-          )}
           {state.status === 'error' && (
             <p className="text-sm" role="alert" style={{ color: 'var(--color-bad)' }}>
               {state.message}
             </p>
           )}
-          {state.status === 'saved' && !confirming && (
+          {state.status === 'saved' && (
             <p className="text-sm" role="status" style={{ color: 'var(--color-ok)' }}>
               {t('criteriaSaved')}
             </p>
@@ -302,7 +252,7 @@ export function FilterPanel({
               color: 'var(--color-accent)',
             }}
           >
-            {saving ? t('savingCriteria') : confirming ? t('confirmSaveCriteria') : t('saveCriteria')}
+            {saving ? t('savingCriteria') : t('saveCriteria')}
           </button>
         </form>
       </div>

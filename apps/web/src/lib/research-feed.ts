@@ -30,43 +30,42 @@ export type ArticleDetail = FeedArticle & {
   doi: string | null;
 };
 
-/** How the page was ranked — see `mode` on the API. */
-export type FeedMode = 'personalised' | 'general' | 'fallback' | 'filtered';
-
 /** The three orderings the filter panel offers. Relevance needs a keyword. */
-export type FeedSort = 'for_you' | 'newest' | 'relevance';
+export type FeedSort = 'recommended' | 'newest' | 'relevance';
 
 /**
- * What the filter panel asks for (Andrew's review item 6).
+ * What the filter panel asks for.
  *
- * `tags` **replace** the member's clinical interests for that view rather than narrowing
- * within them; everything else narrows.
+ * ⚠️ **No clinical tags.** The panel used to carry a tag row that overrode the member's
+ * stored interests; after testing, interests were taken out of My Research entirely. The
+ * corpus is still classified against the taxonomy — that is what puts the chips on a card
+ * and what the magnifier search narrows by — but this screen asks only these questions.
  */
 export type FeedFilters = {
   q?: string;
-  tags?: string[];
   evidence?: string;
   /** Years back from now, 1–5. Relative, never a pair of dates. */
   years?: number;
   sort?: FeedSort;
   /**
-   * "This URL is the whole truth" — set by Apply, including when the panel was cleared.
-   * Without it the API cannot tell *nothing asked for* from *deliberately cleared*, and a
-   * member who cleared the panel would watch their saved criteria come straight back.
+   * "This URL is a search" — set by Apply, even when every field was left empty.
+   *
+   * ⚠️ My Research shows nothing until something is asked, so this is what separates a
+   * deliberate Apply with no criteria (the whole corpus) from an untouched visit (an empty
+   * screen with the panel open).
    */
   applied?: boolean;
 };
 
-/** The criteria a member has saved as their standing settings. Tags live in the interests. */
+/** The criteria a member has saved as their standing settings. They seed the panel only. */
 export type FeedCriteria = {
-  tagIds: string[];
   query?: string;
   evidence?: EvidenceType;
   periodYears?: number;
   sort?: FeedSort;
 };
 
-export type FeedPage = { articles: FeedArticle[]; nextCursor: string | null; mode: FeedMode };
+export type FeedPage = { articles: FeedArticle[]; nextCursor: string | null };
 
 /** Search has no ranking `mode` — relevance is the ordering, and it carries a real total. */
 export type FeedSearchPage = {
@@ -80,11 +79,9 @@ export type FeedSearchPage = {
 export function feedFilterParams(filters: FeedFilters = {}): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.q?.trim()) params.set('q', filters.q.trim());
-  // Repeated rather than comma-joined, matching search and the API's own contract.
-  for (const tag of filters.tags ?? []) params.append('tag', tag);
   if (filters.evidence) params.set('evidence', filters.evidence);
   if (filters.years) params.set('years', String(filters.years));
-  if (filters.sort && filters.sort !== 'for_you') params.set('sort', filters.sort);
+  if (filters.sort && filters.sort !== 'recommended') params.set('sort', filters.sort);
   if (filters.applied) params.set('f', '1');
   return params;
 }
@@ -98,13 +95,13 @@ export async function fetchFeed(
   if (cursor) params.set('cursor', cursor);
   const query = params.toString() ? `?${params}` : '';
   const page = await apiGet<FeedPage>(`/research-feed${query}`, token);
-  return page ?? { articles: [], nextCursor: null, mode: 'general' };
+  return page ?? { articles: [], nextCursor: null };
 }
 
 /** The standing criteria, used to seed the panel when the URL carries none. */
 export async function fetchFeedCriteria(token: string): Promise<FeedCriteria> {
   const res = await apiGet<FeedCriteria>('/research-feed/preferences', token);
-  return res ?? { tagIds: [], sort: 'for_you' };
+  return res ?? { sort: 'recommended' };
 }
 
 /** S16 — full-text search over the corpus, independent of the member's interests. */

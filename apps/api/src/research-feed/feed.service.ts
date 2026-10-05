@@ -45,18 +45,16 @@ export type FeedSearchPage = {
   total: number;
 };
 
+/**
+ * **No `mode` any more.** It said how the page had been ranked — `personalised`, `general`,
+ * `fallback` — back when the feed was built around a member's stored clinical interests.
+ * After testing, Adrian took those out of this screen entirely: My Research answers the
+ * criteria in the filter panel and nothing else, so every page is ranked the same way and
+ * there is no longer anything for the screen to explain or apologise for.
+ */
 export type FeedPage = {
   articles: FeedArticle[];
   nextCursor: string | null;
-  /**
-   * How this page was ranked, so the screen can be honest about it: `personalised` when it
-   * matched the member's interests, `general` when they have none, `fallback` when they
-   * have interests but nothing in the corpus matched them yet, and `filtered` when the
-   * panel asked for something specific — which suppresses the fallback, because answering
-   * "systematic reviews about the elbow" with the general feed tells the member something
-   * false about their own query.
-   */
-  mode: 'personalised' | 'general' | 'fallback' | 'filtered';
 };
 
 /**
@@ -70,32 +68,21 @@ export type FeedPage = {
  * here: the classification it needs is already stored per article.
  */
 /**
- * What the Research filter panel can ask for (Andrew's review item 6).
+ * What the Research filter panel can ask for.
  *
- * `tagIds` **replaces** the member's interests rather than narrowing within them — Andrew's
- * "change tags on that page rather than clinic interests", read literally. Everything else
- * narrows.
+ * ⚠️ **Clinical tags are deliberately absent.** The panel used to carry a tag row that
+ * overrode the member's stored interests; after testing, Adrian removed interests from this
+ * screen altogether. The corpus is still classified against the taxonomy — that is what puts
+ * the chips on a card and what search narrows by — but *what My Research shows* is decided
+ * here and only here.
  */
 export type FeedFilters = {
-  /** Replaces the member's interests for this view; empty means "use my interests". */
-  tagIds?: string[];
   query?: string;
   evidence?: EvidenceType;
   /** Years back from now. Relative, never a pair of dates — a stored absolute range rots. */
   periodYears?: number;
-  sort?: 'for_you' | 'newest' | 'relevance';
+  sort?: 'recommended' | 'newest' | 'relevance';
 };
-
-/**
- * Does this ask for something narrower than "my feed"?
- *
- * Tags are excluded on purpose: they re-aim the feed rather than narrowing it, so a tag
- * override still deserves the empty-interest fallback. A keyword, an evidence type or a
- * period is a claim about what should come back.
- */
-function hasNarrowing(f: FeedFilters): boolean {
-  return Boolean(f.query?.trim()) || Boolean(f.evidence) || Boolean(f.periodYears);
-}
 
 @Injectable()
 export class FeedService {
@@ -123,92 +110,28 @@ export class FeedService {
         select c.id, r.region from community.tags c join tag_region r on c.parent_id = r.id
       )`;
 
+  /**
+   * The corpus, narrowed by whatever the filter panel asked for.
+   *
+   * **One path, and no personalisation.** There used to be three — a personalised ranking, a
+   * general one, and a fallback between them — all turning on the member's stored interests.
+   * They are gone: every caller gets the same query, and an empty filter set means the whole
+   * corpus rather than somebody's profile.
+   */
   async list(
     cursor?: string,
     limit = DEFAULT_PAGE_SIZE,
-    interestTagIds: string[] = [],
-    handleId?: string,
     filters: FeedFilters = {},
   ): Promise<FeedPage> {
     const offset = Number.parseInt(cursor ?? '0', 10) || 0;
-
-    /*
-     * **Chosen tags replace the member's interests; they do not narrow them.** The panel is
-     * a way to look somewhere else for a moment without disturbing what you follow, and
-     * clearing them returns the feed to the standing interests.
-     */
-    const override = filters.tagIds ?? [];
-    const scoping = override.length > 0 ? override : interestTagIds;
-
-    /*
-     * The fallback exists so a narrow interest set does not produce an empty screen that
-     * looks broken. It must not apply to an explicit filter: a filtered feed with no matches
-     * returns empty and says so, rather than quietly showing something else.
-     */
-    const explicit = override.length > 0 || hasNarrowing(filters);
-
-    if (scoping.length > 0) {
-      const personalised = await this.rank(offset, limit, scoping, handleId, filters);
-      // A member with narrow interests and a young corpus would otherwise get an empty
-      // screen that looks broken. Falling back to the general ranking is better than
-      // nothing, and `mode` lets the screen say which it is rather than pretend.
-      if (personalised.articles.length > 0 || explicit) {
-        return { ...personalised, mode: explicit ? 'filtered' : 'personalised' };
-      }
-      const general = await this.rank(offset, limit, [], undefined, filters);
-      return { ...general, mode: 'fallback' };
-    }
-
-    const general = await this.rank(offset, limit, [], undefined, filters);
-    return { ...general, mode: hasNarrowing(filters) ? 'filtered' : 'general' };
+    return this.rank(offset, limit, filters);
   }
 
   private async rank(
     offset: number,
     limit: number,
-    interestTagIds: string[],
-    handleId?: string,
     filters: FeedFilters = {},
-  ): Promise<Omit<FeedPage, 'mode'>> {
-    /*
-     * **An interest covers its whole subtree**, the same way a tag filter does in search.
-     *
-     * This was a plain `tag_id in (…)`, so following *Ankle* matched only articles tagged
-     * literally "Ankle" — 17 of the 24 in its 13-node subtree, missing Lateral ankle sprain
-     * and Chronic ankle instability. Inconsistent with search, and inconsistent with the
-     * composer's picker, which drops an ancestor when a descendant is chosen *precisely
-     * because* it assumes broadening happens at query time.
-     *
-     * Weight propagates down from the interest that was actually chosen, so a future
-     * weighting UI keeps working without the member having to weight every leaf.
-     */
-    // Appended to `tagRegion` rather than opening its own WITH: one `with recursive` governs
-    // the whole list, and both of these recurse.
-    /*
-     * Seeded from the member's stored interests, or from the panel's chosen tags when it has
-     * overridden them. Both then expand down the tree identically, so the ranking does not
-     * fork — the override seeds weight 1 because the panel has no way to express degrees.
-     */
-    const override = filters.tagIds ?? [];
-    const expanded =
-      override.length > 0
-        ? sql`, expanded as (
-        select t.id, 1::real as weight
-          from community.tags t
-         where t.id in (${sql.join(override.map((id) => sql`${id}::uuid`), sql`, `)})
-        union all
-        select c.id, e.weight
-          from community.tags c join expanded e on c.parent_id = e.id
-      )`
-        : sql`, expanded as (
-        select mi.tag_id as id, mi.weight
-          from community.member_interests mi
-         where mi.handle_id = ${handleId ?? null}
-        union all
-        select c.id, e.weight
-          from community.tags c join expanded e on c.parent_id = e.id
-      )`;
-
+  ): Promise<FeedPage> {
     /*
      * The narrowing clauses. Each is absent unless asked for, so an unfiltered feed runs
      * exactly the query it ran before any of this existed.
@@ -230,44 +153,29 @@ export class FeedService {
       : sql``;
 
     /*
-     * **The composite — "For you".** Evidence weight, a gentle recency decay, and either the
-     * member-relative interest match or a flat nudge for being classifiable at all. This is
-     * the feed's own ranking and stays the default; the panel's other two orderings replace
-     * it rather than reweighting it.
+     * **The default ordering — "Recommended".** Evidence weight, a gentle recency decay, and
+     * a small bonus for being placeable in the clinical taxonomy at all.
+     *
+     * It used to carry a fourth term, the weighted match against the member's stored
+     * interests, and was called "For you" because of it. That term is gone with the interests
+     * themselves; what is left is a judgement about the *paper*, identical for every member,
+     * so the label says "Recommended" and no longer implies a personalisation that is not
+     * happening.
      */
     const composite = sql`(
          a.intrinsic_score
          + 1.0 / (1.0 + (extract(epoch from (now() - coalesce(a.published_date, a.created_at)))
                          / 86400.0) / 180.0)
          /*
-          * A small bonus for being placeable in the clinical taxonomy at all.
-          *
-          * Without it the first page was entirely *untagged* systematic reviews — top-ranked
+          * Without this the first page was entirely *untagged* systematic reviews — top-ranked
           * on evidence and recency alone, with nothing on the card to show they had anything
           * to do with sports medicine ("Pure Cognitive Training on Gait and Balance in Older
           * Adults" led the feed). That the classifier could place an article is real evidence
-          * it belongs here, and capped low so it nudges rather than decides.
+          * it belongs here, and capped low so it nudges rather than decides. This is the half
+          * of the taxonomy work that survives the interests being removed.
           */
-         ${
-           interestTagIds.length > 0
-             ? /*
-                * The member-relative half of the score, and the reason the classification is
-                * precomputed: this is a join and a sum, not a text match. Weight comes from
-                * `member_interests`, so degrees of interest are already wired even though the
-                * picker currently sets everything to 1. Confidence multiplies in, so a tag
-                * found in a title counts for more than one mentioned in an abstract.
-                */
-               sql`+ coalesce((
-                   select sum(x.weight * at.confidence)
-                     from research.article_tags at
-                     join expanded x on x.id = at.tag_id
-                    where at.article_id = a.id
-                 ), 0)`
-             : // No interests: a flat nudge for being placeable in the taxonomy at all,
-               // which is what keeps unclassifiable articles off the first page.
-               sql`+ least(0.45, 0.15 * (select count(*) from research.article_tags at
-                                          where at.article_id = a.id))`
-         }
+         + least(0.45, 0.15 * (select count(*) from research.article_tags at
+                                where at.article_id = a.id))
        )`;
 
     /*
@@ -277,7 +185,9 @@ export class FeedService {
      * for the member who saved `relevance` with a keyword and later cleared the keyword.
      */
     const sort =
-      filters.sort === 'relevance' && query === '' ? 'for_you' : (filters.sort ?? 'for_you');
+      filters.sort === 'relevance' && query === ''
+        ? 'recommended'
+        : (filters.sort ?? 'recommended');
     const ordering =
       sort === 'newest'
         ? sql`a.published_date desc nulls last, a.intrinsic_score desc`
@@ -287,7 +197,7 @@ export class FeedService {
           : sql`${composite} desc, a.published_date desc nulls last`;
 
     const { rows } = await this.db.execute<FeedRow>(sql`
-      ${this.tagRegion}${interestTagIds.length > 0 ? expanded : sql``}
+      ${this.tagRegion}
       select a.id, a.title, a.abstract, a.journal, a.published_date, a.evidence_type,
              a.open_access, a.url,
              (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name,
@@ -308,15 +218,6 @@ export class FeedService {
              ) as tags
         from research.articles a
        where a.retracted_at is null
-         ${
-           interestTagIds.length > 0
-             ? sql`and exists (
-                 select 1 from research.article_tags m
-                   join expanded x on x.id = m.tag_id
-                  where m.article_id = a.id
-               )`
-             : sql``
-         }
          ${keyword}
          ${evidence}
          ${period}

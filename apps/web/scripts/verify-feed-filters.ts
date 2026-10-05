@@ -28,42 +28,12 @@ function check(name: string, fn: () => void): void {
   }
 }
 
-check('an empty tag parameter never reaches the API — the crash this exists for', () => {
-  const parsed = parseFeedFilters({ f: '1', tag: '' });
-  assert.deepEqual(parsed.tags, []);
-  assert.equal(parsed.asked, true, 'an empty tag still means the URL asked to be filtered');
-});
-
-check('a tag that is not a UUID is dropped, and its siblings survive', () => {
-  const good = '2777a125-7524-5837-8fb4-9c2fe3df3f4b';
-  assert.deepEqual(parseFeedFilters({ tag: ['', good, 'not-a-uuid'] }).tags, [good]);
-});
-
-check('uuid5 ids are accepted — the taxonomy has no v4 in it', () => {
-  // Version nibble 5, exactly as migration 0010 derives them.
-  assert.equal(parseFeedFilters({ tag: '13817ae4-4642-5c85-97c8-8636221345cb' }).tags.length, 1);
-});
-
-check('an id the API would refuse is dropped, variant nibble and all', () => {
-  // `Hand joints` as migration 0045 wrote it: the fourth group starts `d`, which is not a
-  // legal RFC 4122 variant, so `@IsUUID` refuses it and the page must not forward it.
-  assert.deepEqual(parseFeedFilters({ tag: '8e5293b4-af61-5032-d375-61aea0802c55' }).tags, []);
-  // …and as migration 0047 re-keyed it.
-  assert.equal(parseFeedFilters({ tag: 'f77b8e1a-65a8-5ef2-bb35-7470b6ef0ee6' }).tags.length, 1);
-});
-
-check('a repeated tag is deduplicated', () => {
-  const id = 'a30aa659-e562-5f1e-9272-f418e2987a60';
-  assert.deepEqual(parseFeedFilters({ tag: [id, id] }).tags, [id]);
-});
-
-check('one tag arrives as a string, several as an array', () => {
-  const id = 'a30aa659-e562-5f1e-9272-f418e2987a60';
-  assert.deepEqual(parseFeedFilters({ tag: id }).tags, [id]);
-});
-
-check('empty evidence, years and sort are dropped rather than forwarded', () => {
-  // The shape a browser submits before hydration, or with JavaScript off.
+check('an empty value never reaches the API — the crash this exists for', () => {
+  /*
+   * The shape a browser submits before hydration, or with JavaScript off. An empty value is
+   * not "no filter" to the API: `evidence=` is refused outright, and `years=` fails the
+   * minimum. Each one is a 400 and an error page unless it is dropped here.
+   */
   const parsed = parseFeedFilters({ f: '1', q: '', evidence: '', years: '', sort: '' });
   assert.equal(parsed.q, undefined);
   assert.equal(parsed.evidence, undefined);
@@ -98,8 +68,18 @@ check('an untouched URL has asked for nothing, so the saved settings apply', () 
   assert.equal(parseFeedFilters({ cursor: '20' }).asked, false);
 });
 
-check('f alone means the panel was cleared, which is not the same as untouched', () => {
+check('f alone is an Apply with no criteria — the whole corpus, not an untouched screen', () => {
+  // ⚠️ Load-bearing: My Research shows nothing until something is asked, so "applied with
+  // every field empty" has to be distinguishable from "just arrived".
   assert.equal(parseFeedFilters({ f: '1' }).asked, true);
+});
+
+check('a URL of pure rubbish has still asked, so the member is not shown an empty screen', () => {
+  const parsed = parseFeedFilters({ evidence: 'meta_analysis', years: '99', sort: 'kudos' });
+  assert.equal(parsed.asked, true);
+  assert.equal(parsed.evidence, undefined);
+  assert.equal(parsed.years, undefined);
+  assert.equal(parsed.sort, undefined);
 });
 
 if (failures > 0) {

@@ -8,19 +8,17 @@ import { getAccessToken } from '@/lib/session';
 export type CriteriaState = { status: 'idle' | 'saved' | 'error'; message?: string };
 
 /**
- * Make what is in the filter panel the member's standing settings (Andrew's review item 6).
+ * Make what is in the panel the member's standing criteria.
  *
- * ⚠️ **Chosen tags overwrite the clinical interests.** Interests have exactly one home —
- * `community.member_interests` — and a second copy behind the feed would let the Settings
- * screen and this panel disagree about what the member follows. The panel warns before it
- * gets here; this action is where the overwrite actually happens.
+ * ⚠️ **These seed the panel on a later visit; they do not run themselves.** My Research starts
+ * empty with the panel open, by design — saving spares the retyping, it does not put results
+ * on a screen nobody has asked a question of.
  *
- * An *empty* tag row is left alone rather than treated as "I have no interests": pressing
- * Save on a panel whose tags were never touched must not silently delete a list the member
- * curated. The API applies the same rule.
+ * ⚠️ **Nothing here touches the member's clinical interests any more.** It used to: the panel
+ * carried a tag row, and saving wrote those tags back as the interests, with a warning. Since
+ * interests were taken out of My Research, this writes one row of its own and nothing else.
  *
- * Revalidates `/feed` because the ranking these criteria change is cached there, and
- * `/settings/interests` because this may just have rewritten it.
+ * Revalidates `/feed` because the criteria it seeds are cached there.
  */
 export async function saveFeedCriteriaAction(
   _prev: CriteriaState,
@@ -31,10 +29,10 @@ export async function saveFeedCriteriaAction(
 
   const years = Number(formData.get('years'));
   const body = {
-    tagIds: formData.getAll('tag').map(String).filter(Boolean),
     query: String(formData.get('q') ?? '').trim() || undefined,
     evidence: String(formData.get('evidence') ?? '') || undefined,
-    periodYears: Number.isInteger(years) && years > 0 ? years : undefined,
+    // Bounded both ends: the API accepts 1–5 and refuses anything else with a 400.
+    periodYears: Number.isInteger(years) && years >= 1 && years <= 5 ? years : undefined,
     sort: String(formData.get('sort') ?? '') || undefined,
   };
 
@@ -49,6 +47,5 @@ export async function saveFeedCriteriaAction(
   }
 
   revalidatePath('/feed');
-  revalidatePath('/settings/interests');
   return { status: 'saved' };
 }
