@@ -67,6 +67,18 @@ export function retryable(message: string): boolean {
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * How long a source asked us to wait, if its refusal said so.
+ *
+ * The adapter puts the number in the message rather than sleeping on it when it is long —
+ * see `MAX_BACKOFF_MS`. Two and a half hours is not a pause, it is a daily quota, and the
+ * useful thing to do with it is stop asking *this source* while the other carries on.
+ */
+export function retryAfterMs(message: string): number | null {
+  const match = /retry-after (\d+)s/i.exec(message);
+  return match ? Number(match[1]) * 1000 : null;
+}
+
+/**
  * The historical backfill (Andrew: 25 years).
  *
  * ⚠️ **Why this cannot be a setting on the existing ingest.** `fetchSince` asks each source
@@ -87,6 +99,17 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 @Injectable()
 export class BackfillService {
   private readonly log = new Logger(BackfillService.name);
+
+  /**
+   * When each source may be asked again.
+   *
+   * ⚠️ **In memory on purpose, and that is a real limitation worth naming**: a restart forgets
+   * it and the next run spends one request rediscovering the quota. That is an acceptable
+   * price for not adding a table, because the alternative — every slice of a rate-limited
+   * source taking its turn to be refused — is hundreds of pointless requests at a source that
+   * has explicitly asked us to stop.
+   */
+  private readonly coolingUntil = new Map<string, number>();
 
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
@@ -157,18 +180,33 @@ export class BackfillService {
    * looping here — one job, one bounded piece of work, which is what keeps a stall to a page.
    */
   async runNext(): Promise<{ done: boolean; slice?: string; seen: number; stored: number }> {
+    /*
+     * Sources that have told us to come back later are skipped entirely, so one exhausted
+     * quota does not stall the other source's work — which is exactly what happened the first
+     * time: OpenAlex asked for two and a half hours and Europe PMC, with plenty of headroom,
+     * sat idle behind it.
+     */
+    const resting = [...this.coolingUntil.entries()]
+      .filter(([, until]) => until > Date.now())
+      .map(([name]) => name);
+
     const [slice] = await this.db
       .select()
       .from(backfillSlices)
       .where(
-        or(
-          eq(backfillSlices.status, 'pending'),
-          // A slice abandoned mid-run — see STALE_AFTER_MINUTES. Safe to re-take: its cursor
-          // was committed per page, and the upsert behind it is idempotent either way.
-          and(
-            eq(backfillSlices.status, 'running'),
-            sql`${backfillSlices.updatedAt} < now() - (${STALE_AFTER_MINUTES} * interval '1 minute')`,
+        and(
+          or(
+            eq(backfillSlices.status, 'pending'),
+            // A slice abandoned mid-run — see STALE_AFTER_MINUTES. Safe to re-take: its
+            // cursor was committed per page, and the upsert behind it is idempotent anyway.
+            and(
+              eq(backfillSlices.status, 'running'),
+              sql`${backfillSlices.updatedAt} < now() - (${STALE_AFTER_MINUTES} * interval '1 minute')`,
+            ),
           ),
+          resting.length === 0
+            ? undefined
+            : sql`${backfillSlices.sourceName} <> all(${resting}::text[])`,
         ),
       )
       .orderBy(
@@ -246,6 +284,11 @@ export class BackfillService {
       }
     } catch (err) {
       const message = (err as Error).message;
+      const wait = retryAfterMs(message);
+      if (wait !== null) {
+        this.coolingUntil.set(slice.sourceName, Date.now() + wait);
+        this.log.warn(`${slice.sourceName} is resting for ${Math.round(wait / 1000)}s`);
+      }
       // "Not now" goes back in the queue with its cursor; only a real fault is written off.
       await this.setback(slice, message, retryable(message) ? 'pending' : 'failed');
       this.log.warn(`backfill ${label} ${retryable(message) ? 'deferred' : 'failed'}: ${message}`);

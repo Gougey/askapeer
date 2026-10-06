@@ -25,6 +25,20 @@ const RATE_LIMIT_RETRIES = 5;
 const BACKOFF_MS = 2_000;
 
 /**
+ * The longest `Retry-After` worth sitting out inside a request.
+ *
+ * ⚠️ **OpenAlex asked for 9,051 seconds — two and a half hours — and the first version
+ * obeyed.** The worker has one slot, so that single sleep stopped the entire backfill,
+ * Europe PMC included, and would have outlived its BullMQ lock many times over and been
+ * judged stalled.
+ *
+ * A short wait is a pause worth taking inside the request. A long one is not a wait at all,
+ * it is a daily quota: the honest response is to report it, let the slice go back in the
+ * queue, and stop asking this source until it says otherwise.
+ */
+const MAX_BACKOFF_MS = 60_000;
+
+/**
  * The gap left between backfill pages.
  *
  * OpenAlex's polite pool allows ten requests a second; this asks for about six, because the
@@ -155,9 +169,17 @@ export class OpenAlexSource implements ArticleSource {
           signal: controller.signal,
           headers: { Accept: 'application/json', 'User-Agent': `askapeer/0.1 (${CONTACT})` },
         });
-        if (res.status === 429 && attempt < RATE_LIMIT_RETRIES) {
+        if (res.status === 429) {
           const after = Number(res.headers.get('retry-after'));
-          const waitMs = Number.isFinite(after) && after > 0 ? after * 1000 : BACKOFF_MS * 2 ** attempt;
+          const asked = Number.isFinite(after) && after > 0 ? after * 1000 : 0;
+          // Too long to hold the worker for — hand it back with the number, so the caller can
+          // stop asking this source rather than every slice rediscovering the same quota.
+          if (asked > MAX_BACKOFF_MS || attempt >= RATE_LIMIT_RETRIES) {
+            throw new Error(
+              `OpenAlex HTTP 429 retry-after ${Math.round((asked || MAX_BACKOFF_MS) / 1000)}s`,
+            );
+          }
+          const waitMs = asked || BACKOFF_MS * 2 ** attempt;
           this.log.warn(`OpenAlex rate-limited; waiting ${waitMs}ms (attempt ${attempt + 1})`);
           clearTimeout(timer);
           await sleep(waitMs);
