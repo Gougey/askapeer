@@ -6,7 +6,7 @@ import { EVIDENCE_TYPES } from '@/lib/evidence';
 import type { FeedFilters, FeedSort } from '@/lib/research-feed';
 
 /** Relative, never a pair of dates: an absolute range saved as a setting is wrong next year. */
-const PERIODS = [1, 2, 3, 5] as const;
+const PERIODS = [1, 5, 10, 15] as const;
 
 /**
  * What Clear returns the panel to: no keyword, any type, any time, newest first.

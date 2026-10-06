@@ -600,13 +600,21 @@ screen's question.
   The alternative considered and rejected: indexing titles only, or an "include abstract"
   checkbox. Title-only keeps **9–65%** of matches — 9% for "return to play", 11% for "eccentric
   exercise" — so it answers a precision complaint by destroying recall.
-- ⚠️ **The period is relative, never a pair of dates** (1–5 years back, resolved at query time,
-  constrained in the DTO *and* the table). Andrew asked for "year from/to"; an absolute range is
-  wrong the moment it becomes a standing setting.
-- ⚠️ **The period cannot discriminate yet**: every article carries this year, because the ingest
-  began in August and only fetches forward. The screen says so under the control rather than
-  leaving it to be reported as broken. Both sources accept date ranges, so a backfill is
-  possible later — and means a much longer reclassify.
+- ⚠️ **The period is relative, never a pair of dates** (resolved at query time, constrained in
+  the DTO *and* the table). Andrew asked for "year from/to"; an absolute range is wrong the
+  moment it becomes a standing setting.
+- **The options are 1 / 5 / 10 / 15 years, with a ceiling of 15** (migration 0051). They were
+  1–5, which was generous when the whole corpus was four months old and every article carried
+  the same year — and became the thing standing between a member and the depth they had just
+  asked for, the moment the backfill started landing history.
+  ⚠️ **Four places have to agree on that ceiling**: `FEED_PERIODS` and the clamp in
+  `lib/feed-filters.ts`, `@Max` on the DTO, and the `feed_preferences_period_range` CHECK. A
+  value past it is a 400, which the page turns into an error screen, so the parser drops it —
+  `verify:feed-filters` pins exactly that.
+- **The control discriminates now.** Measured on live mid-backfill: Any time 55,592, Last 15
+  years 55,592, Last 10 years 55,592, Last 5 years 55,247, Last year 16,888. The longer ranges
+  converge because the corpus currently starts at 2020; they separate as the backfill deepens,
+  which is what the note under the control says.
 - **The last criteria used are remembered automatically**, and seed the panel next visit. They
   never *run* themselves — an unasked visit is still an empty screen — they just spare the
   retyping. This replaced a "Save as my settings" button: what you were last looking at is not

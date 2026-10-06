@@ -68,18 +68,18 @@ export class FeedQueryDto {
   evidence?: (typeof EVIDENCE_TYPES)[number];
 
   /**
-   * Years back from now — 1 to 5, never a pair of dates. Andrew asked for "year from/to";
+   * Years back from now — 1 to 15, never a pair of dates. Andrew asked for "year from/to";
    * an absolute range is wrong the moment it becomes a *standing* setting, so the control is
    * relative and resolved at query time.
    *
-   * ⚠️ It cannot discriminate yet: every article in the corpus is from 2026, because the
-   * ingest began in August and only fetches forward.
+   * The ceiling rose from 5 with the 25-year backfill: it was generous when the whole corpus
+   * was four months old and every article carried the same year.
    */
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (value === undefined ? undefined : Number(value)))
   @IsInt()
   @Min(1)
-  @Max(5)
+  @Max(15)
   years?: number;
 
   @IsOptional()

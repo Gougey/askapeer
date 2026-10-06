@@ -745,7 +745,7 @@ export const feedPreferences = community.table('feed_preferences', {
     .references(() => handles.id, { onDelete: 'cascade' }),
   /** Null is "any" — the absence of a filter, not a value. */
   evidence: text('evidence'),
-  /** Years back from now; null for no period filter. 1–5, checked in the database too. */
+  /** Years back from now; null for no period filter. 1–15, checked in the database too. */
   periodYears: integer('period_years'),
   /** `recommended` | `newest` | `relevance`. Relevance needs a keyword; the API falls back. */
   sort: text('sort').notNull().default('newest'),
