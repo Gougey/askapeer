@@ -511,7 +511,7 @@
     "periodLabel": "Published",
     "anyPeriod": "Any time",
     "periodYears": "Last {count, plural, one {year} other {# years}}",
-    "periodNote": "Everything in the feed is from this year so far — this will start to narrow once older research is loaded.",
+    "periodNote": "Older research is still being added, so the longer ranges will keep deepening.",
     "sortLabel": "Sort by",
     "sortNewest": "Newest first",
     "sortRelevance": "Relevance (needs a keyword)",

@@ -30,8 +30,14 @@ export const FEED_EVIDENCE = [
   'other',
 ] as const;
 
-/** The periods the panel offers, in years back from now. Relative, never a pair of dates. */
-export const FEED_PERIODS = [1, 2, 3, 5] as const;
+/**
+ * The periods the panel offers, in years back from now. Relative, never a pair of dates.
+ *
+ * 1 / 5 / 10 / 15 since the 25-year backfill. The old 1–5 was generous when the whole corpus
+ * was four months old; it became the thing standing between a member and the depth they asked
+ * for the moment the history started landing.
+ */
+export const FEED_PERIODS = [1, 5, 10, 15] as const;
 
 /** The shape Next hands a page. */
 export type RawFeedParams = {
@@ -65,8 +71,8 @@ export function parseFeedFilters(params: RawFeedParams): ParsedFeedFilters {
   const sort = FEED_SORTS.find((value) => value === params.sort);
   const years = Number(params.years);
   // Any whole number in range, not only the four the panel offers — an older bookmark
-  // asking for 4 years is a perfectly good question, and the API accepts 1 to 5.
-  const period = Number.isInteger(years) && years >= 1 && years <= 5 ? years : undefined;
+  // asking for 4 years is a perfectly good question, and the API accepts 1 to 15.
+  const period = Number.isInteger(years) && years >= 1 && years <= 15 ? years : undefined;
 
   /*
    * ⚠️ Deliberately asks whether the *raw* parameters were present, not whether they

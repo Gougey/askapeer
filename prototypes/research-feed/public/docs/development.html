@@ -861,14 +861,26 @@ titles only, or an “include abstract” checkbox. Title-only keeps
 “eccentric exercise” — so it answers a precision complaint by destroying
 recall.</li>
 <li>⚠️ <strong>The period is relative, never a pair of dates</strong>
-(1–5 years back, resolved at query time, constrained in the DTO
-<em>and</em> the table). Andrew asked for “year from/to”; an absolute
-range is wrong the moment it becomes a standing setting.</li>
-<li>⚠️ <strong>The period cannot discriminate yet</strong>: every
-article carries this year, because the ingest began in August and only
-fetches forward. The screen says so under the control rather than
-leaving it to be reported as broken. Both sources accept date ranges, so
-a backfill is possible later — and means a much longer reclassify.</li>
+(resolved at query time, constrained in the DTO <em>and</em> the table).
+Andrew asked for “year from/to”; an absolute range is wrong the moment
+it becomes a standing setting.</li>
+<li><strong>The options are 1 / 5 / 10 / 15 years, with a ceiling of
+15</strong> (migration 0051). They were 1–5, which was generous when the
+whole corpus was four months old and every article carried the same year
+— and became the thing standing between a member and the depth they had
+just asked for, the moment the backfill started landing history. ⚠️
+<strong>Four places have to agree on that ceiling</strong>:
+<code>FEED_PERIODS</code> and the clamp in
+<code>lib/feed-filters.ts</code>, <code>@Max</code> on the DTO, and the
+<code>feed_preferences_period_range</code> CHECK. A value past it is a
+400, which the page turns into an error screen, so the parser drops it —
+<code>verify:feed-filters</code> pins exactly that.</li>
+<li><strong>The control discriminates now.</strong> Measured on live
+mid-backfill: Any time 55,592, Last 15 years 55,592, Last 10 years
+55,592, Last 5 years 55,247, Last year 16,888. The longer ranges
+converge because the corpus currently starts at 2020; they separate as
+the backfill deepens, which is what the note under the control
+says.</li>
 <li><strong>The last criteria used are remembered
 automatically</strong>, and seed the panel next visit. They never
 <em>run</em> themselves — an unasked visit is still an empty screen —

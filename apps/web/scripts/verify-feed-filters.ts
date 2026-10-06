@@ -49,12 +49,20 @@ check('an unknown evidence type or sort is dropped', () => {
 
 check('the period is clamped to what the API accepts', () => {
   assert.equal(parseFeedFilters({ years: '0' }).years, undefined);
-  assert.equal(parseFeedFilters({ years: '6' }).years, undefined);
   assert.equal(parseFeedFilters({ years: '-1' }).years, undefined);
   assert.equal(parseFeedFilters({ years: 'two' }).years, undefined);
   assert.equal(parseFeedFilters({ years: '2.5' }).years, undefined);
+  /*
+   * ⚠️ The ceiling moved from 5 to 15 with the 25-year backfill, and four places have to agree
+   * on it: this parser, the DTO's `@Max`, the `feed_preferences` CHECK constraint, and the
+   * options the panel offers. A value past it is refused by the API with a 400, which the page
+   * turns into an error screen — so the parser must drop it rather than forward it.
+   */
+  assert.equal(parseFeedFilters({ years: '16' }).years, undefined);
+  assert.equal(parseFeedFilters({ years: '15' }).years, 15);
   // Not only the four the panel offers: an older bookmark asking for 4 is a good question.
   assert.equal(parseFeedFilters({ years: '4' }).years, 4);
+  assert.equal(parseFeedFilters({ years: '2' }).years, 2);
 });
 
 check('a whitespace-only keyword is not a keyword, and did not ask for anything', () => {
