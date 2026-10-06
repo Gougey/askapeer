@@ -39,13 +39,32 @@ const BACKOFF_MS = 2_000;
 const MAX_BACKOFF_MS = 60_000;
 
 /**
+ * How long to leave the source alone once it has run out of patience with us.
+ *
+ * Fifteen minutes is a guess at "long enough for a load spike to pass", chosen to be clearly
+ * longer than the in-request backoff and clearly shorter than a daily quota.
+ */
+const SOURCE_REST_S = 900;
+
+/**
  * The gap left between backfill pages.
  *
  * OpenAlex's polite pool allows ten requests a second; this asks for about six, because the
  * limit is a ceiling to stay under rather than a target to hit. It costs nothing — the store
  * and classify behind each page already takes longer than this.
  */
-export const OPEN_ALEX_PAGE_DELAY_MS = 150;
+/**
+ * ⚠️ **Two seconds a page — deliberately slow.**
+ *
+ * The backfill is a one-off and Adrian was explicit that it can take as long as it likes, so
+ * there is nothing to buy by hurrying. What hurrying cost was real: a burst at full speed
+ * exhausted the daily quota, and the source then spent the night answering 503 to 80 of our
+ * slices while Europe PMC beside it took 92 without a murmur.
+ *
+ * Half a request a second is far under any published limit, and the store-and-classify behind
+ * each page is doing useful work throughout — so this is latency, not idleness.
+ */
+export const OPEN_ALEX_PAGE_DELAY_MS = 2_000;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -80,6 +99,8 @@ type OpenAlexWork = {
 @Injectable()
 export class OpenAlexSource implements ArticleSource {
   readonly name = 'open-alex';
+  /** Deliberately slow — see `OPEN_ALEX_PAGE_DELAY_MS`. */
+  readonly pageDelayMs = OPEN_ALEX_PAGE_DELAY_MS;
   private readonly log = new Logger(OpenAlexSource.name);
 
   async fetchSince(cursor: string | null, queries: string[]): Promise<FetchResult> {
@@ -169,6 +190,24 @@ export class OpenAlexSource implements ArticleSource {
           signal: controller.signal,
           headers: { Accept: 'application/json', 'User-Agent': `askapeer/0.1 (${CONTACT})` },
         });
+        /*
+         * ⚠️ **5xx is the source struggling, not this slice being wrong.** 503 and 504 are
+         * load-shedding; a 500 from a public API under pressure is the same thing wearing a
+         * different number. The first version wrote all of them off as permanent failures and
+         * collected 80 dead slices overnight, which nothing retries.
+         */
+        if (res.status >= 500) {
+          if (attempt < RATE_LIMIT_RETRIES) {
+            const waitMs = BACKOFF_MS * 2 ** attempt;
+            this.log.warn(`OpenAlex HTTP ${res.status}; waiting ${waitMs}ms (attempt ${attempt + 1})`);
+            clearTimeout(timer);
+            await sleep(waitMs);
+            continue;
+          }
+          // Out of patience here — hand back a rest period so the *source* is left alone and
+          // Europe PMC carries on, rather than every remaining slice meeting the same wall.
+          throw new Error(`OpenAlex HTTP ${res.status} retry-after ${SOURCE_REST_S}s`);
+        }
         if (res.status === 429) {
           const after = Number(res.headers.get('retry-after'));
           const asked = Number.isFinite(after) && after > 0 ? after * 1000 : 0;

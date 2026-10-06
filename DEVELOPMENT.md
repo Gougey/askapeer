@@ -439,6 +439,16 @@ and the `backfill` queue job.
   period is held in memory, so a restart spends one request rediscovering it — cheaper than a
   table, and far cheaper than letting every slice of a rate-limited source take its turn to be
   refused.
+- ⚠️ **5xx is the server struggling, not the slice being wrong.** The first classification
+  wrote a 500 off permanently, reasoning that a source erroring on one query would do it again.
+  That holds for a **4xx**, which is about the request; it is wrong for a **5xx**, which is
+  about the server. After the quota burst OpenAlex answered 503 all night and **80 more slices
+  died** — while Europe PMC beside it took 92 without a murmur. 5xx now backs off in-request,
+  then rests the source and returns the slice to `pending`.
+- **The page delay is per source** (`ArticleSource.pageDelayMs`), because they are not alike.
+  Europe PMC runs at 150ms; **OpenAlex at 2 seconds** — half a request a second, far under any
+  published limit. The backfill is a one-off that may take as long as it likes, so there is
+  nothing to buy by hurrying, and hurrying has already cost two nights.
 - **Plan and run are separate calls** because planning is free and running is not. The plan is
   a row count you can look at before a single request goes out. Replanning is safe — it adds
   missing slices and never resets one that has run.

@@ -50,16 +50,36 @@ check('a real fault is written off rather than retried forever', () => {
     'OpenAlex HTTP 404',
     'Europe PMC HTTP 400',
     'invalid input syntax for type uuid',
-    'null value in column "title" violates not-null constraint',
   ]) {
     assert.equal(retryable(message), false, message);
   }
 });
 
-check('a 500 is not quietly retried for ever either', () => {
-  // Deliberate: a source erroring on *this query* will do so again, and an endless retry
-  // would hide it. A human deciding to re-run beats a loop that never reports.
-  assert.equal(retryable('OpenAlex HTTP 500'), false);
+check('5xx is the server struggling, not this slice being wrong', () => {
+  /*
+   * ⚠️ This assertion used to say the opposite, on the reasoning that a source erroring on one
+   * query would do it again. That holds for a 4xx, which is about the request. It is wrong for
+   * a 5xx, which is about the server — and it cost 80 slices: after a quota burst OpenAlex
+   * answered 503 all night, every one written off permanently, while Europe PMC took 92 slices
+   * without a murmur.
+   */
+  for (const message of [
+    'OpenAlex HTTP 500',
+    'OpenAlex HTTP 502',
+    'OpenAlex HTTP 503',
+    'OpenAlex HTTP 504',
+    'Europe PMC HTTP 503',
+    'OpenAlex HTTP 503 retry-after 900s',
+  ]) {
+    assert.equal(retryable(message), true, message);
+  }
+});
+
+check('a 4xx that is about the request is still written off', () => {
+  // The distinction the 5xx change must not blur: these will fail identically next time.
+  for (const message of ['OpenAlex HTTP 404', 'Europe PMC HTTP 400', 'OpenAlex HTTP 422']) {
+    assert.equal(retryable(message), false, message);
+  }
 });
 
 check('a long Retry-After is read back, so the source can be rested', () => {

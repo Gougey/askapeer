@@ -41,6 +41,15 @@ export type ArticlePage = {
 export interface ArticleSource {
   /** Stable key — also the primary key of its `research.ingestion_cursors` row. */
   readonly name: string;
+
+  /**
+   * How long the backfill waits between pages of this source, in milliseconds.
+   *
+   * Per source because they are not alike: Europe PMC has taken 92 slices without dropping a
+   * request, while OpenAlex rate-limited us and then shed load outright. Absent means the
+   * backfill's own default.
+   */
+  readonly pageDelayMs?: number;
   fetchSince(cursor: string | null, queries: string[]): Promise<FetchResult>;
 
   /**
