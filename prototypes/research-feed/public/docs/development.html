@@ -639,6 +639,26 @@ Europe PMC runs at 150ms; <strong>OpenAlex at 2 seconds</strong> — half
 a request a second, far under any published limit. The backfill is a
 one-off that may take as long as it likes, so there is nothing to buy by
 hurrying, and hurrying has already cost two nights.</li>
+<li>⚠️ <strong>The rested-source filter must bind as an array, and a
+hand-rolled cast does not.</strong> Written as
+<code>${column} &lt;&gt; all(${resting}::text[])</code> it bound the JS
+array as a <em>scalar</em>, Postgres got
+<code>('open-alex')::text[]</code> — an invalid array literal — and
+<strong>every</strong> <code>runNext</code> threw the moment a source
+was actually rested. BullMQ retried twice, gave up, and nothing
+re-enqueues a failed job, so the import stopped dead with 886 slices to
+go and no error anywhere a person would look. It sat at 55,592 articles
+for over an hour before anyone noticed. Use <code>notInArray</code>.
+<code>verify:backfill-query</code> pins it by inspecting the generated
+SQL, which needs no database — the only way to catch this, since a
+healthy local run never rests a source and so never executes the
+branch.</li>
+<li><strong>A dead chain is silent.</strong> Nothing re-enqueues a
+failed job by design, so “the import has stopped” looks exactly like
+“the import is between jobs”. Check
+<code>select max(updated_at) from research.backfill_slices</code>
+against the queue’s <code>failed</code> count rather than trusting that
+it is still going.</li>
 <li><strong>Plan and run are separate calls</strong> because planning is
 free and running is not. The plan is a row count you can look at before
 a single request goes out. Replanning is safe — it adds missing slices

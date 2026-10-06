@@ -16,7 +16,8 @@
     "verify:scope": "tsx scripts/verify-classifier-scope.ts",
     "verify:edit-window": "tsx scripts/verify-edit-window.ts",
     "verify:tag-ids": "tsx scripts/verify-tag-ids.ts",
-    "verify:backfill-retry": "tsx scripts/verify-backfill-retry.ts"
+    "verify:backfill-retry": "tsx scripts/verify-backfill-retry.ts",
+    "verify:backfill-query": "tsx scripts/verify-backfill-query.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",

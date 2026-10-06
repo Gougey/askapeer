@@ -74,3 +74,8 @@ jobs:
       # 67 source-years of literature, silently, because nothing retries a failure.
       - name: Backfill — a rate limit is a wait, not a failure
         run: npm run verify:backfill-retry -w apps/api
+      # The other half, and the one that killed a ten-hour import in silence: the rested-source
+      # filter bound a JS array as a scalar, so every call threw once a source was actually
+      # rested. Local runs never rest a source, so only the SQL itself can catch this.
+      - name: Backfill — the rested-source filter binds as an array
+        run: npm run verify:backfill-query -w apps/api
