@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { and, asc, desc, eq, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, notInArray, or, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { backfillSlices } from '../db/schema';
 import { IngestionService } from './ingestion.service';
@@ -213,9 +213,16 @@ export class BackfillService {
               sql`${backfillSlices.updatedAt} < now() - (${STALE_AFTER_MINUTES} * interval '1 minute')`,
             ),
           ),
-          resting.length === 0
-            ? undefined
-            : sql`${backfillSlices.sourceName} <> all(${resting}::text[])`,
+          /*
+           * ⚠️ `notInArray`, not a hand-written `<> all(…::text[])`.
+           *
+           * The hand-written version bound the JS array as a *scalar*, so Postgres was handed
+           * `('open-alex')::text[]` — an invalid array literal — and every call threw the
+           * moment a source was actually rested. The backfill died silently: BullMQ retried
+           * twice, gave up, and nothing re-enqueues a failed job, so the chain simply stopped
+           * with 886 slices to go and no error anywhere a person would look.
+           */
+          resting.length === 0 ? undefined : notInArray(backfillSlices.sourceName, resting),
         ),
       )
       .orderBy(
