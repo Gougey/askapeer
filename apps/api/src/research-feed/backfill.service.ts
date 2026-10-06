@@ -61,7 +61,16 @@ const PAGE_DELAY_MS = 150;
  * quietly went missing the first time, since nothing retries a failure.
  */
 export function retryable(message: string): boolean {
-  return /\b429\b|rate|timeout|ETIMEDOUT|ECONNRESET|socket|fetch failed|aborted/i.test(message);
+  /*
+   * ⚠️ **5xx belongs here, and learning that cost 80 slices.** The first version reasoned that
+   * a source erroring on one query would do it again, so a 500 was written off. That holds for
+   * a 4xx, which is about the request; it is wrong for a 5xx, which is about the server. After
+   * the quota burst OpenAlex answered 503 to 80 of our slices overnight — all of them marked
+   * permanently failed, while Europe PMC beside it took 92 without a murmur.
+   */
+  return /\b429\b|\b5\d\d\b|rate|timeout|ETIMEDOUT|ECONNRESET|socket|fetch failed|aborted/i.test(
+    message,
+  );
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -261,8 +270,9 @@ export class BackfillService {
           }
         }
         cursor = result.nextCursor;
-        // Politeness, not throttling of our own work — see PAGE_DELAY_MS.
-        await sleep(PAGE_DELAY_MS);
+        // Per source: they are not alike, and one of them has already told us so. See
+        // `ArticleSource.pageDelayMs`.
+        await sleep(source.pageDelayMs ?? PAGE_DELAY_MS);
 
         /*
          * Committed per page, not per run. The cursor is the only thing standing between an
