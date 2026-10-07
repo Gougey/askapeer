@@ -520,7 +520,8 @@
     "setCriteria": "Set your criteria above and press Apply to search the literature.",
     "sortRecommended": "Recommended",
     "search": "Search",
-    "searchAmend": "New Search or Amend"
+    "searchAmend": "New Search or Amend",
+    "searching": "Searching…"
   },
   "interests": {
     "heading": "Your clinical interests",

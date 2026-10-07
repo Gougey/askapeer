@@ -705,6 +705,23 @@ screen's question.
 - ⚠️ **The infinite-scroll history is keyed by the criteria**, because a cursor is only an
   offset into one particular result set; and `loadMoreArticles` takes them bound in by the
   page, because a server action has no URL.
+- **Apply shows a spinner while the results are on their way.** Apply is a real form
+  submission, so the browser keeps the current page on screen while it fetches the next one —
+  usually a virtue, nothing flashes, but a keyword search over 145,000 articles takes a second
+  or more and for that second the screen looks like it ignored the press. The button becomes
+  "Searching…" with a turning ring, announced once through `role="status"`; the ring is drawn
+  from `currentColor` so it stays clear of the token rules, and reduced motion gets a ring that
+  does not turn rather than nothing at all.
+  ⚠️ **The pending flag is React state, never `button.disabled`**: disabling a submit button
+  from inside its own submit handler cancels the submission in some browsers, while a state
+  update lands after the handler returns, by which time the navigation has begun.
+  ⚠️ **It is cleared on `pageshow` with `persisted`**, or going back lands on a document that
+  was mid-submit when it was frozen, and the member returns to a button spinning for a
+  navigation that finished long ago.
+  ⚠️ **It cannot be seen locally.** The dev server answers faster than the state can paint —
+  three attempts to catch it read the *new* page and reported nothing. It only shows if the
+  navigation is blocked (`e.preventDefault()` from a listener added after React's) or genuinely
+  slow, as live is. Do not conclude from a local run that it is broken.
 - **A `<details>` and a GET form, not a modal and not client state.** Apply is a navigation, so
   a search is a real link — bookmarkable, sendable, undone by the back button — and the page
   stays a server component. `<details>` gives the keyboard, the disclosure semantics and the
