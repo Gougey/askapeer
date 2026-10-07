@@ -113,6 +113,29 @@ export const articles = research.table(
     tsv: tsvector('tsv').generatedAlwaysAs(
       sql`setweight(to_tsvector('english', coalesce(title, '')), 'A') || setweight(to_tsvector('english', coalesce(abstract, '')), 'B')`,
     ),
+    /**
+     * The title alone, for **ranking** — matching stays on `tsv`.
+     *
+     * ⚠️ Ranking on `tsv` means detoasting it per row: it averages 1,705 bytes, 235 MB across
+     * the corpus, past the size Postgres keeps inline. This is about a tenth of that and stays
+     * in the heap. Recall is untouched, which matters — title-only *matching* keeps as little
+     * as 9% of results for a phrase like "return to play" — and ranking by title is what
+     * Andrew asked for anyway: titles about the thing first, the rest falling back to newest.
+     */
+    tsvTitle: tsvector('tsv_title').generatedAlwaysAs(
+      sql`to_tsvector('english', coalesce(title, ''))`,
+    ),
+    /**
+     * How many taxonomy tags the classifier placed on this article.
+     *
+     * ⚠️ Denormalised deliberately. The default ordering gives a small bonus for being
+     * placeable at all, and as a correlated `count(*)` that was one index search per article
+     * per query — `loops=144587` in the plan, 52 seconds for one page of feed. Maintained
+     * where tags are written and recomputed by every reclassify, which is also the repair if
+     * an admin tag merge leaves it adrift: a ranking bonus briefly off by one is a far smaller
+     * problem than a subquery per row.
+     */
+    tagCount: integer('tag_count').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

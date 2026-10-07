@@ -172,11 +172,15 @@ export class FeedService {
           * on evidence and recency alone, with nothing on the card to show they had anything
           * to do with sports medicine ("Pure Cognitive Training on Gait and Balance in Older
           * Adults" led the feed). That the classifier could place an article is real evidence
-          * it belongs here, and capped low so it nudges rather than decides. This is the half
-          * of the taxonomy work that survives the interests being removed.
+          * it belongs here, and capped low so it nudges rather than decides.
+          *
+          * ⚠️ **Reads a stored count, and must keep doing so.** Written as a correlated
+          * count over article_tags it was one index search per article *in the table* every
+          * time the feed was ordered — loops=144587 in the plan, and 52 seconds for a single
+          * page once the backfill had grown the corpus. (No backticks in here: this comment
+          * lives inside a template literal, and one of them ends the query.)
           */
-         + least(0.45, 0.15 * (select count(*) from research.article_tags at
-                                where at.article_id = a.id))
+         + least(0.45, 0.15 * a.tag_count)
        )`;
 
     /*
@@ -202,7 +206,16 @@ export class FeedService {
       sort === 'newest'
         ? sql`a.published_date desc nulls last, a.intrinsic_score desc`
         : sort === 'relevance'
-          ? sql`ts_rank_cd(a.tsv, websearch_to_tsquery('english', ${query})) desc,
+          ? /*
+             * ⚠️ **Ranks `tsv_title`, matches on `tsv`.** Ranking the full vector meant
+             * detoasting 1,705 bytes per matching row — 5.8 seconds for a keyword with 19,468
+             * matches. The title vector is a tenth of the size and stays inline.
+             *
+             * Recall is untouched, because the *match* above still uses the full vector. And
+             * the ordering this produces is the one Andrew asked for: papers whose titles are
+             * about the thing first, everything else falling back to newest.
+             */
+            sql`ts_rank_cd(a.tsv_title, websearch_to_tsquery('english', ${query})) desc,
                 a.published_date desc nulls last`
           : sql`${composite} desc, a.published_date desc nulls last`;
 
