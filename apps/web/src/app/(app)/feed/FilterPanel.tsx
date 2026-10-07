@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { EVIDENCE_TYPES } from '@/lib/evidence';
 import type { FeedFilters, FeedSort } from '@/lib/research-feed';
@@ -92,6 +92,28 @@ export function FilterPanel({
    * a disabled option selected.
    */
   const [sortChosen, setSortChosen] = useState(false);
+
+  /*
+   * **Apply is a real form submission**, so the browser keeps the current page on screen while
+   * it fetches the next one. That is usually a virtue — nothing flashes — but a keyword search
+   * over 145,000 articles takes a second or more, and for that second the screen looks like it
+   * ignored the press. This is the only thing that says otherwise.
+   */
+  const [submitting, setSubmitting] = useState(false);
+
+  /*
+   * ⚠️ **Clear it when the page is restored from the back/forward cache.** Going back lands on
+   * a document that was mid-submit when it was frozen, and without this the member returns to
+   * a button spinning for a navigation that finished, or was abandoned, long ago. `pageshow`
+   * with `persisted` is the only event that fires for a bfcache restore.
+   */
+  useEffect(() => {
+    const restored = (event: PageTransitionEvent) => {
+      if (event.persisted) setSubmitting(false);
+    };
+    window.addEventListener('pageshow', restored);
+    return () => window.removeEventListener('pageshow', restored);
+  }, []);
   const onQuery = (value: string) =>
     setCriteria((current) => ({
       ...current,
@@ -147,6 +169,12 @@ export function FilterPanel({
            * `parseFeedFilters` drops them, which is why that function exists.
            */
           onSubmit={(event) => {
+            /*
+             * State, not `button.disabled`. Disabling a submit button from inside its own
+             * submit handler cancels the submission in some browsers; a React state update is
+             * applied after the handler returns, by which time the navigation has begun.
+             */
+            setSubmitting(true);
             const el = event.currentTarget;
             const emptied = [...el.elements].filter(
               (node): node is HTMLInputElement | HTMLSelectElement =>
@@ -291,10 +319,23 @@ export function FilterPanel({
             </button>
             <button
               type="submit"
-              className="flex-1 px-3 py-2 text-sm font-medium text-white"
+              disabled={submitting}
+              className="flex-1 px-3 py-2 text-sm font-medium text-white disabled:opacity-80"
               style={{ background: 'var(--color-accent)', borderRadius: 'var(--radius)' }}
             >
-              {t('applyFilters')}
+              {submitting ? (
+                <span
+                  className="inline-flex items-center justify-center"
+                  style={{ gap: 'var(--space-2)' }}
+                  /* Announced once, so a screen reader says what the spinner shows. */
+                  role="status"
+                >
+                  <span className="spinner" aria-hidden="true" />
+                  {t('searching')}
+                </span>
+              ) : (
+                t('applyFilters')
+              )}
             </button>
           </div>
 

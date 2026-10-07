@@ -288,3 +288,44 @@ details[open] > .filter-summary .filter-caret {
 .filter-summary::-webkit-details-marker {
   display: none;
 }
+
+/*
+  The one spinner in the app, for the gap between pressing Apply and the results arriving.
+
+  Apply is a real form submission, so the browser keeps showing the current page while it
+  fetches the next one. That is usually a virtue — nothing flashes — but with a corpus this
+  size a keyword search can take a second or more, during which the screen looks like it
+  ignored the press. The spinner is the only thing that says otherwise.
+
+  Drawn from `currentColor` so it inherits whatever it sits inside and needs no colour of its
+  own, which keeps it away from the token rules entirely.
+*/
+.spinner {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spinner-turn 0.6s linear infinite;
+  vertical-align: -0.1em;
+}
+
+@keyframes spinner-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+  Reduced motion gets a ring that does not turn rather than nothing at all: the label beside
+  it already says what is happening, and a silently missing indicator is worse than a still
+  one.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: currentColor;
+    opacity: 0.5;
+  }
+}
