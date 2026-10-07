@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EMAIL_PROVIDER, type EmailProvider, type OutboundEmail } from './email-provider';
 import { EmailSuppressionService } from './email-suppression.service';
+import { isUndeliverable } from './undeliverable';
 import { templates } from './templates';
 
 /**
@@ -74,6 +75,18 @@ export class EmailSender {
    * EPIC-G §6.1 makes non-optional.
    */
   private async deliver(to: string, body: Omit<OutboundEmail, 'to'>): Promise<void> {
+    /*
+     * ⚠️ **Before the suppression check, because this one needs no database and no bounce to
+     * have happened yet.** A reserved domain cannot resolve by design, so sending to one buys
+     * a guaranteed bounce — and bounces are charged against the sender, not the recipient. The
+     * seeded demo accounts at `@demo.askapeer.invalid` had put live on a 9.9% bounce rate, a
+     * whisker under the ~10% at which Postmark starts acting. Every real member's sign-in code
+     * travels on that reputation.
+     */
+    if (isUndeliverable(to)) {
+      this.log.warn(`Reserved domain, not sending "${body.subject}" to ${to}`);
+      return;
+    }
     if (await this.suppressions.isSuppressed(to)) {
       this.log.warn(`Suppressed address, not sending "${body.subject}" to ${to}`);
       return;
