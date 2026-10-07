@@ -118,6 +118,30 @@ root)</h2>
 </tbody>
 </table>
 <h2 id="paginated-lists">Paginated lists</h2>
+<p>⚠️ <strong><code>InfiniteList</code> renders the
+<code>&lt;ul&gt;</code> itself, and that is not a convenience.</strong>
+It used to be handed one, and every caller had to put it in the right
+place: <em>inside</em> the list, so appended pages joined the same
+<code>&lt;ul&gt;</code> as page one. Three callers did. The Research
+feed wrapped the <code>&lt;ul&gt;</code> in the component instead, so
+every page after the first was appended as a <strong>sibling</strong> of
+the list — eighty <code>&lt;li&gt;</code> elements adrift in
+<code>&lt;main&gt;</code>.</p>
+<p>They kept <code>display: list-item</code>, and Tailwind’s reset is
+<code>ol,ul,menu { list-style: none }</code>, which targets the
+<em>container</em> and inherits down. With no list above them they fell
+back to <code>disc</code>, so a member scrolling past article twenty saw
+a bullet appear outside every card. It was also invalid HTML, and it
+told a screen reader there were twenty items when there were a
+hundred.</p>
+<p><strong>Reported by Adrian as “small dots to the left of the
+articles”, and only found because he added that it started about twenty
+articles down</strong> — every check before that looked at page one and
+found <code>list-style-type: none</code>, which was true and useless.
+Owning the element makes the mistake unavailable rather than merely
+fixed; the sentinel and fallback link now sit outside the list, so a
+<code>&lt;ul&gt;</code> has nothing but <code>&lt;li&gt;</code>
+children.</p>
 <p>Every list API has returned a keyset <code>nextCursor</code> since
 S4. <strong>No screen read it</strong>, so each list stopped at 20 rows.
 Invisible at 13 seeded posts; the moment the corpus reached 65 the

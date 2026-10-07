@@ -144,16 +144,16 @@ export default async function FeedPage({
         </p>
       ) : (
         <InfiniteList
+          listClassName="flex flex-col"
+          listStyle={{ gap: 'var(--space-3)' }}
           initialCursor={page.nextCursor}
           loadMore={loadMoreArticles.bind(null, filters)}
           storageKey={filterKey ? `feed?${filterKey}` : 'feed'}
           fallbackHref={page.nextCursor ? moreHref(page.nextCursor) : null}
         >
-          <ul className="flex flex-col" style={{ gap: 'var(--space-3)' }}>
-            {page.articles.map((article) => (
-              <ArticleCard key={article.id} article={article} showTags={false} />
-            ))}
-          </ul>
+          {page.articles.map((article) => (
+            <ArticleCard key={article.id} article={article} showTags={false} />
+          ))}
         </InfiniteList>
       )}
     </main>

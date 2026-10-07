@@ -52,25 +52,17 @@ export default async function DiscussionsPage({
           </Link>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {/*
-            The <ul> owns the list and the loader appends into it, so every card — page one
-            and every page after — is a sibling <li>. Wrapping the extra pages in their own
-            container would nest lists and change what a screen reader announces.
-          */}
-          <InfiniteList
-            initialCursor={nextCursor}
-            loadMore={loadMorePosts}
-            storageKey="ap:list:discussions"
-            fallbackHref={
-              nextCursor ? `/discussions?cursor=${encodeURIComponent(nextCursor)}` : null
-            }
-          >
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </InfiniteList>
-        </ul>
+        <InfiniteList
+          listClassName="flex flex-col gap-3"
+          initialCursor={nextCursor}
+          loadMore={loadMorePosts}
+          storageKey="ap:list:discussions"
+          fallbackHref={nextCursor ? `/discussions?cursor=${encodeURIComponent(nextCursor)}` : null}
+        >
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
+        </InfiniteList>
       )}
     </main>
   );

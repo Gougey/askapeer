@@ -56,8 +56,9 @@ export default async function ActivityPage({
 
       {/* The inbox grows without limit, so this is the list that would have hidden the
           most over time — it just had the fewest rows to prove it today. */}
-      <ul className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
         <InfiniteList
+        listClassName="flex flex-col"
+        listStyle={{ gap: 'var(--space-1)' }}
           initialCursor={nextCursor}
           loadMore={loadMoreNotifications}
           storageKey="ap:list:activity"
@@ -67,7 +68,6 @@ export default async function ActivityPage({
             <NotificationRow key={notification.id} notification={notification} />
           ))}
         </InfiniteList>
-      </ul>
     </div>
   );
 }

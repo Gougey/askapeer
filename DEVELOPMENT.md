@@ -56,6 +56,24 @@ Open http://localhost:3000 — the home page shows live system health fetched fr
 
 ## Paginated lists
 
+⚠️ **`InfiniteList` renders the `<ul>` itself, and that is not a convenience.** It used to be
+handed one, and every caller had to put it in the right place: *inside* the list, so appended
+pages joined the same `<ul>` as page one. Three callers did. The Research feed wrapped the
+`<ul>` in the component instead, so every page after the first was appended as a **sibling** of
+the list — eighty `<li>` elements adrift in `<main>`.
+
+They kept `display: list-item`, and Tailwind's reset is `ol,ul,menu { list-style: none }`, which
+targets the *container* and inherits down. With no list above them they fell back to `disc`, so
+a member scrolling past article twenty saw a bullet appear outside every card. It was also
+invalid HTML, and it told a screen reader there were twenty items when there were a hundred.
+
+**Reported by Adrian as "small dots to the left of the articles", and only found because he
+added that it started about twenty articles down** — every check before that looked at page one
+and found `list-style-type: none`, which was true and useless. Owning the element makes the
+mistake unavailable rather than merely fixed; the sentinel and fallback link now sit outside the
+list, so a `<ul>` has nothing but `<li>` children.
+
+
 Every list API has returned a keyset `nextCursor` since S4. **No screen read it**, so each
 list stopped at 20 rows. Invisible at 13 seeded posts; the moment the corpus reached 65 the
 Discussions list was showing 20 and silently hiding 45 — content members had written that
