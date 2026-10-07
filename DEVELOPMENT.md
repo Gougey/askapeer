@@ -387,6 +387,51 @@ copying).
 `npm run verify:reclassify -w apps/api` exercises the resumability properties against a real
 database. ⚠️ It wipes the `research` schema — local only, never against the deployed database.
 
+## Feed ranking at scale (migration 0052)
+
+The 25-year backfill took the corpus from 6,498 articles to 144,538, and two things in the
+ranking that were free at the old size stopped being free. Measured on live 2026-10-07, with
+the import paused so the numbers are the queries and not contention:
+
+| Path | before | after |
+|---|---|---|
+| Newest, no keyword | 0.4 ms | 0.4 ms |
+| Newest + keyword + period | 562 ms | 480–880 ms |
+| Relevance + keyword | **5,760 ms** | ~3,400 ms |
+| Recommended + keyword | **10,240 ms** | ~3,000 ms |
+| Recommended, no keyword | **52,081 ms** | ~12,000 ms |
+
+- ⚠️ **`articles.tag_count` is denormalised, and the ordering must keep reading it.** The
+  "placeable in the taxonomy at all" bonus was a correlated `count(*)` over `article_tags` —
+  one index search per article *in the table*, `loops=144587` in the plan, every time the feed
+  was ordered. Maintained in `writeTags` and recomputed by any reclassify, which is also the
+  repair if an admin tag merge leaves it adrift. A ranking bonus briefly off by one is a much
+  smaller problem than a subquery per row.
+- ⚠️ **Relevance ranks `tsv_title`; matching stays on `tsv`.** The full vector averages 1,705
+  bytes — 235 MB across the corpus, past the size Postgres keeps inline — so ranking detoasted
+  and decompressed it per row. The title vector is 188 bytes and 26 MB, and stays in the heap.
+  **Recall is unchanged because the match still uses the full vector**, which matters: title-only
+  *matching* keeps as little as 9% of results for a phrase like "return to play".
+- **Why `newest` is so much faster than everything else, and always will be.** Ordering by date
+  lets Postgres stream `articles_rank_idx` and stop after 21 rows — 239 ms even with a keyword.
+  Any other ordering has to examine *every* match first: "acl" alone matches 19,468 articles,
+  and the bitmap heap scan over them is ~2 s before a single score is computed. That is the
+  floor for relevance and for the composite, and no index removes it.
+- ⚠️ **Adding a STORED generated column rewrites the table and takes an ACCESS EXCLUSIVE lock.**
+  0052 does exactly that for `tsv_title`. On live it ran for several minutes and blocked the
+  backfill's inserts — a member loading Research during it would have hung. **Pause the import
+  before applying it anywhere it has not already run**, and `ANALYZE` afterwards: the rewrite
+  leaves statistics and the visibility map stale, and the first measurements after it were
+  *worse* than before until that was done.
+- ⚠️ **The remaining problem is `Recommended` with no keyword: ~12 s.** It orders the entire
+  corpus by a computed score, so it is a full scan and a sort with no index that can serve it,
+  and it gets worse as the backfill grows. It is a rare path — `newest` is the baseline, and a
+  keyword cuts the candidate set — but it is not fixed, only improved. The options are a
+  periodically-refreshed stored score (the recency term changes daily, so it cannot be a plain
+  index), or capping the candidate set and accepting approximate ordering.
+- **The database machine has not grown with the data**: 1 shared CPU and 2 GB against an
+  836 MB table. Measurements swing 3–15 s under concurrent load for that reason.
+
 ## Historical backfill (`/admin/research-feed/backfill/*`)
 
 Andrew wants 25 years of literature. The twice-daily ingest cannot reach it, and the reason is

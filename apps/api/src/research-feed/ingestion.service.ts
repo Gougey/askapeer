@@ -290,6 +290,18 @@ export class IngestionService {
         })),
       )
       .onConflictDoNothing();
+
+    /*
+     * ⚠️ **Keep `articles.tag_count` in step here**, because the feed's default ordering reads
+     * it instead of counting rows per article — see the column's own note, and migration 0052.
+     * Counted from the table rather than taken from `matches.length`, so a re-run that collides
+     * with existing rows cannot inflate it.
+     */
+    await this.db.execute(sql`
+      update research.articles a
+         set tag_count = (select count(*) from research.article_tags t where t.article_id = a.id)
+       where a.id = ${articleId}
+    `);
     return matches.length;
   }
 

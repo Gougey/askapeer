@@ -550,6 +550,95 @@ generic repair worth copying).</p>
 resumability properties against a real database. ⚠️ It wipes the
 <code>research</code> schema — local only, never against the deployed
 database.</p>
+<h2 id="feed-ranking-at-scale-migration-0052">Feed ranking at scale
+(migration 0052)</h2>
+<p>The 25-year backfill took the corpus from 6,498 articles to 144,538,
+and two things in the ranking that were free at the old size stopped
+being free. Measured on live 2026-10-07, with the import paused so the
+numbers are the queries and not contention:</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>before</th>
+<th>after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Newest, no keyword</td>
+<td>0.4 ms</td>
+<td>0.4 ms</td>
+</tr>
+<tr>
+<td>Newest + keyword + period</td>
+<td>562 ms</td>
+<td>480–880 ms</td>
+</tr>
+<tr>
+<td>Relevance + keyword</td>
+<td><strong>5,760 ms</strong></td>
+<td>~3,400 ms</td>
+</tr>
+<tr>
+<td>Recommended + keyword</td>
+<td><strong>10,240 ms</strong></td>
+<td>~3,000 ms</td>
+</tr>
+<tr>
+<td>Recommended, no keyword</td>
+<td><strong>52,081 ms</strong></td>
+<td>~12,000 ms</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>⚠️ <strong><code>articles.tag_count</code> is denormalised, and the
+ordering must keep reading it.</strong> The “placeable in the taxonomy
+at all” bonus was a correlated <code>count(*)</code> over
+<code>article_tags</code> — one index search per article <em>in the
+table</em>, <code>loops=144587</code> in the plan, every time the feed
+was ordered. Maintained in <code>writeTags</code> and recomputed by any
+reclassify, which is also the repair if an admin tag merge leaves it
+adrift. A ranking bonus briefly off by one is a much smaller problem
+than a subquery per row.</li>
+<li>⚠️ <strong>Relevance ranks <code>tsv_title</code>; matching stays on
+<code>tsv</code>.</strong> The full vector averages 1,705 bytes — 235 MB
+across the corpus, past the size Postgres keeps inline — so ranking
+detoasted and decompressed it per row. The title vector is 188 bytes and
+26 MB, and stays in the heap. <strong>Recall is unchanged because the
+match still uses the full vector</strong>, which matters: title-only
+<em>matching</em> keeps as little as 9% of results for a phrase like
+“return to play”.</li>
+<li><strong>Why <code>newest</code> is so much faster than everything
+else, and always will be.</strong> Ordering by date lets Postgres stream
+<code>articles_rank_idx</code> and stop after 21 rows — 239 ms even with
+a keyword. Any other ordering has to examine <em>every</em> match first:
+“acl” alone matches 19,468 articles, and the bitmap heap scan over them
+is ~2 s before a single score is computed. That is the floor for
+relevance and for the composite, and no index removes it.</li>
+<li>⚠️ <strong>Adding a STORED generated column rewrites the table and
+takes an ACCESS EXCLUSIVE lock.</strong> 0052 does exactly that for
+<code>tsv_title</code>. On live it ran for several minutes and blocked
+the backfill’s inserts — a member loading Research during it would have
+hung. <strong>Pause the import before applying it anywhere it has not
+already run</strong>, and <code>ANALYZE</code> afterwards: the rewrite
+leaves statistics and the visibility map stale, and the first
+measurements after it were <em>worse</em> than before until that was
+done.</li>
+<li>⚠️ <strong>The remaining problem is <code>Recommended</code> with no
+keyword: ~12 s.</strong> It orders the entire corpus by a computed
+score, so it is a full scan and a sort with no index that can serve it,
+and it gets worse as the backfill grows. It is a rare path —
+<code>newest</code> is the baseline, and a keyword cuts the candidate
+set — but it is not fixed, only improved. The options are a
+periodically-refreshed stored score (the recency term changes daily, so
+it cannot be a plain index), or capping the candidate set and accepting
+approximate ordering.</li>
+<li><strong>The database machine has not grown with the data</strong>: 1
+shared CPU and 2 GB against an 836 MB table. Measurements swing 3–15 s
+under concurrent load for that reason.</li>
+</ul>
 <h2 id="historical-backfill-adminresearch-feedbackfill">Historical
 backfill (<code>/admin/research-feed/backfill/*</code>)</h2>
 <p>Andrew wants 25 years of literature. The twice-daily ingest cannot
