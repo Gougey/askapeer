@@ -1767,6 +1767,28 @@ in one transaction, not by convention. The web action then revalidates `/admin`,
 `/admin/review` and the member page so the new status and audit entry appear without a
 refresh.
 
+## ⚠️ A deploy can roll a release back, and both runs will say "success"
+
+On 2026-09-30 GitHub did not fire the push event when #148 merged, so that deploy was
+dispatched by hand. **The event was not lost — it arrived about eighteen minutes late**, by
+which time #149 had shipped, and it deployed the older commit straight over the newer one.
+Both runs reported success. The web app silently lost a release, and it was found only by
+comparing a CSS class in the served bundle against a local build.
+
+`concurrency: cancel-in-progress` does not help: the runs never overlapped.
+
+`deploy.yml` now opens with a **guard job** that compares `github.sha` against the current tip
+of `origin/main` and skips the deploy, with a warning annotation, when they differ. Replayed
+against the real incident: `sha=cc77108 tip=7ef6e43 -> SKIP`.
+
+⚠️ It also blocks deliberately deploying an older commit from the dispatch button. That is
+intended — rolling back by re-deploying an old SHA leaves `main` disagreeing with what is live,
+which is how the original confusion started. **Revert on main and let that deploy.**
+
+**And regardless of the guard: verify a deploy by what is served**, not by the job's
+conclusion. Compare the running image id against the one the job logged, and probe for a
+string only the new build contains. See [[deploy-verify-what-is-served]] in the working notes.
+
 ## Deployed environments (Fly, prove phase)
 
 Both apps deploy to Fly (London) on merge to `main` via `.github/workflows/deploy.yml`.

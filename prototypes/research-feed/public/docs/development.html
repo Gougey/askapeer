@@ -2497,6 +2497,33 @@ without a decision row) is enforced in one transaction, not by
 convention. The web action then revalidates <code>/admin</code>,
 <code>/admin/review</code> and the member page so the new status and
 audit entry appear without a refresh.</p>
+<h2
+id="a-deploy-can-roll-a-release-back-and-both-runs-will-say-success">⚠️
+A deploy can roll a release back, and both runs will say “success”</h2>
+<p>On 2026-09-30 GitHub did not fire the push event when #148 merged, so
+that deploy was dispatched by hand. <strong>The event was not lost — it
+arrived about eighteen minutes late</strong>, by which time #149 had
+shipped, and it deployed the older commit straight over the newer one.
+Both runs reported success. The web app silently lost a release, and it
+was found only by comparing a CSS class in the served bundle against a
+local build.</p>
+<p><code>concurrency: cancel-in-progress</code> does not help: the runs
+never overlapped.</p>
+<p><code>deploy.yml</code> now opens with a <strong>guard job</strong>
+that compares <code>github.sha</code> against the current tip of
+<code>origin/main</code> and skips the deploy, with a warning
+annotation, when they differ. Replayed against the real incident:
+<code>sha=cc77108 tip=7ef6e43 -&gt; SKIP</code>.</p>
+<p>⚠️ It also blocks deliberately deploying an older commit from the
+dispatch button. That is intended — rolling back by re-deploying an old
+SHA leaves <code>main</code> disagreeing with what is live, which is how
+the original confusion started. <strong>Revert on main and let that
+deploy.</strong></p>
+<p><strong>And regardless of the guard: verify a deploy by what is
+served</strong>, not by the job’s conclusion. Compare the running image
+id against the one the job logged, and probe for a string only the new
+build contains. See [[deploy-verify-what-is-served]] in the working
+notes.</p>
 <h2 id="deployed-environments-fly-prove-phase">Deployed environments
 (Fly, prove phase)</h2>
 <p>Both apps deploy to Fly (London) on merge to <code>main</code> via
