@@ -4,6 +4,7 @@ import { InfiniteList } from '@/components/InfiniteList';
 import { parseFeedFilters, type RawFeedParams } from '@/lib/feed-filters';
 import {
   fetchFeed,
+  fetchFeedCoverage,
   fetchFeedCriteria,
   feedFilterParams,
   type FeedFilters,
@@ -52,10 +53,13 @@ export default async function FeedPage({
    */
   const url = parseFeedFilters(params);
 
-  const [t, saved] = await Promise.all([
+  const [t, saved, oldestYear] = await Promise.all([
     getTranslations('feed'),
     // Only worth a round trip when the URL has not already said what to ask.
     url.asked ? Promise.resolve(null) : fetchFeedCriteria(token),
+    // Needed on every visit, including the ones that fetch no articles: the period control
+    // shows its coverage either way. Cached server-side, so this is cheap.
+    fetchFeedCoverage(token),
   ]);
 
   const filters: FeedFilters = url.asked
@@ -107,20 +111,34 @@ export default async function FeedPage({
 
   return (
     <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
-      <h1 className="text-xl font-semibold">{t('heading')}</h1>
+      <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+        <h1 className="text-xl font-semibold">{t('heading')}</h1>
+        {/*
+          Andrew's words, near enough verbatim. A standing description lived here once and was
+          removed as saying what the screen already demonstrated — true when the page was a
+          feed of articles, and false the moment it began starting empty. A first visit is now
+          a heading, a panel and nothing else, which explains itself to nobody.
+        */}
+        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+          {t('intro')}
+        </p>
+      </div>
 
       {/*
         Open only when there is nothing to show and nothing to resume — then the panel is the
         page, and it should prompt rather than wait to be found. An explicit Apply always
         closes it, even one with no criteria, because folding away is what Apply means.
       */}
-      <FilterPanel filters={filters} open={!url.asked && !anyCriteria} anyCriteria={anyCriteria} />
+      <FilterPanel
+        filters={filters}
+        open={!url.asked && !anyCriteria}
+        anyCriteria={anyCriteria}
+        oldestYear={oldestYear}
+      />
 
-      {page === null ? (
-        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-          {t('setCriteria')}
-        </p>
-      ) : page.articles.length === 0 ? (
+      {/* No prompt when nothing is set: the line under the heading says what the page is for,
+          and the open panel is the instruction. */}
+      {page === null ? null : page.articles.length === 0 ? (
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
           {t('noMatches')}
         </p>

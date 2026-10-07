@@ -669,6 +669,20 @@ screen's question.
   `lib/feed-filters.ts`, `@Max` on the DTO, and the `feed_preferences_period_range` CHECK. A
   value past it is a 400, which the page turns into an error screen, so the parser drops it —
   `verify:feed-filters` pins exactly that.
+- ⚠️ **"Any time" states the corpus's real coverage, computed rather than written down.**
+  Andrew asked for the control to be explicit that older articles will not be found, and
+  suggested a fixed "2000 onwards". A fixed year would have been wrong on the day — the corpus
+  starts at **2001** — and wrong again every January. `GET /research-feed/coverage` reads
+  `min(published_date)`, cached for ten minutes because it moves a year at a time at most, and
+  the option reads "Any time (from 2001)". That replaced a note under the control saying older
+  research was still being added, which was the same point made worse: it would have needed
+  deleting by hand when the import finished.
+- **The page says what it is for, under the heading.** A standing description lived there once
+  and was removed as saying what the screen already demonstrated — true when this was a feed of
+  articles, and false the moment it began starting empty. A first visit is a heading, a panel
+  and nothing else, which explains itself to nobody. Andrew's wording, near enough verbatim.
+  The old "set your criteria and press Apply" prompt in the empty state went with it: the
+  heading now carries the explanation and the open panel is the instruction.
 - **The control discriminates now.** Measured on live mid-backfill: Any time 55,592, Last 15
   years 55,592, Last 10 years 55,592, Last 5 years 55,247, Last year 16,888. The longer ranges
   converge because the corpus currently starts at 2020; they separate as the backfill deepens,

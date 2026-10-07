@@ -4,6 +4,8 @@ import { DRIZZLE, type Database } from '../db/db.module';
 import type { EvidenceType } from './scoring';
 
 const DEFAULT_PAGE_SIZE = 20;
+/** How long the corpus's oldest year is trusted for. It moves a year at a time, at most. */
+const COVERAGE_TTL_MS = 10 * 60 * 1000;
 /** How many tag chips a card carries before the row stops being readable. */
 const MAX_CARD_TAGS = 4;
 
@@ -352,6 +354,33 @@ export class FeedService {
       nextCursor: rows.length > limit ? String(offset + limit) : null,
       total: Number(rows[0]?.total ?? 0),
     };
+  }
+
+  /**
+   * How far back the corpus actually reaches.
+   *
+   * ⚠️ **Computed, never written down.** Andrew asked for the period control to say that older
+   * articles will not be found, and suggested a fixed "2000 onwards". A fixed year would have
+   * been wrong on the day — the corpus starts at 2001 — and wrong again every January. This
+   * reads it from the data, so the label cannot drift from the truth.
+   *
+   * Cached briefly because it moves slowly: during a backfill it creeps a year at a time, and
+   * once the backfill is done it is static. `min(published_date)` on an indexed column is
+   * cheap, but it is on the path of every Research page render, so it should not be a query.
+   */
+  private coverageCache?: { oldestYear: number | null; at: number };
+
+  async coverage(): Promise<{ oldestYear: number | null }> {
+    const fresh = this.coverageCache && Date.now() - this.coverageCache.at < COVERAGE_TTL_MS;
+    if (fresh) return { oldestYear: this.coverageCache!.oldestYear };
+    const { rows } = await this.db.execute<{ year: number | null }>(sql`
+      select extract(year from min(a.published_date))::int as year
+        from research.articles a
+       where a.retracted_at is null
+    `);
+    const oldestYear = rows[0]?.year ?? null;
+    this.coverageCache = { oldestYear, at: Date.now() };
+    return { oldestYear };
   }
 
   /** Screen B2. The abstract is the point — see the design note on why we do not frame. */

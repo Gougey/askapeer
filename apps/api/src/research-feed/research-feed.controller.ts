@@ -206,6 +206,17 @@ export class ResearchFeedController {
     return this.feed.list(query.cursor, undefined, filters);
   }
 
+  /**
+   * How far back the corpus reaches, for the period control's "Any time" label.
+   *
+   * Its own route rather than folded into the feed, because the panel shows that label on
+   * every visit including the ones that fetch no articles at all.
+   */
+  @Get('coverage')
+  coverage() {
+    return this.feed.coverage();
+  }
+
   /** The standing criteria, used to seed the panel when the URL carries none. */
   @Get('preferences')
   myPreferences(@Req() req: Request & { member: AuthedMember }) {
