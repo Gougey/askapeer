@@ -52,8 +52,9 @@ export default async function FollowingPage({
   }
 
   return (
-    <ul className="flex flex-col" style={{ gap: 'var(--space-3)' }}>
       <InfiniteList
+      listClassName="flex flex-col"
+      listStyle={{ gap: 'var(--space-3)' }}
         initialCursor={nextCursor}
         loadMore={loadMoreFollowed}
         storageKey="ap:list:following"
@@ -65,6 +66,5 @@ export default async function FollowingPage({
           <PostCard key={post.id} post={post} />
         ))}
       </InfiniteList>
-    </ul>
   );
 }

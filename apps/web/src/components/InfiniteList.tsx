@@ -1,6 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { useTranslations } from 'next-intl';
 
 export type InfinitePage = { node: ReactNode; nextCursor: string | null };
@@ -30,6 +37,8 @@ export function InfiniteList({
   loadMore,
   storageKey,
   fallbackHref,
+  listClassName = 'flex flex-col',
+  listStyle,
 }: {
   /** Page one, server-rendered by the page that owns this list. */
   children: ReactNode;
@@ -39,6 +48,24 @@ export function InfiniteList({
   storageKey: string;
   /** The no-JS route to the next page — kept working, and used if the action fails. */
   fallbackHref: string | null;
+  /**
+   * ⚠️ **This component renders the `<ul>` itself, and that is not a convenience.**
+   *
+   * It used to be handed one, and every caller had to put it in the right place: *inside* the
+   * list, so that appended pages joined the same `<ul>` as page one. Three callers did. The
+   * Research feed wrapped the `<ul>` in this component instead, so every page after the first
+   * was appended as a *sibling* of the list — eighty `<li>` elements adrift in `<main>`.
+   *
+   * They kept `display: list-item`, and Tailwind's reset is `ol,ul,menu { list-style: none }`,
+   * which targets the container and inherits down. With no list above them they fell back to
+   * `disc`, and a member scrolling past article twenty saw a bullet appear beside every card.
+   * It is also invalid HTML, and it tells a screen reader there are twenty items when there
+   * are a hundred.
+   *
+   * Owning the element makes that mistake unavailable rather than merely fixed.
+   */
+  listClassName?: string;
+  listStyle?: CSSProperties;
 }) {
   const t = useTranslations('pagination');
   const [pages, setPages] = useState<ReactNode[]>([]);
@@ -183,8 +210,11 @@ export function InfiniteList({
 
   return (
     <>
-      {children}
-      {pages}
+      {/* One list, holding page one and everything appended after it. */}
+      <ul className={listClassName} style={listStyle}>
+        {children}
+        {pages}
+      </ul>
 
       {cursor && (
         <div ref={sentinel} className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
