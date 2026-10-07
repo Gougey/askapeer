@@ -12,8 +12,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ⚠️ Refuse to deploy a commit that is no longer the tip of main.
+  #
+  # On 2026-09-30 GitHub did not fire the push event when #148 merged, so that deploy was
+  # dispatched by hand. The event was not lost — it arrived about eighteen minutes late, by
+  # which time #149 had shipped, and it deployed the *older* commit straight over the newer
+  # one. Both runs reported success and the web app silently rolled back a release; it was
+  # found only by comparing a CSS class in the served bundle against the local build.
+  #
+  # `concurrency: cancel-in-progress` does not help, because the runs never overlapped. The
+  # only reliable test is whether the commit being deployed is still what main points at.
+  #
+  # ⚠️ This also blocks deliberately deploying an older commit from the dispatch button. That
+  # is intended: rolling back by re-deploying an old SHA leaves main disagreeing with what is
+  # live, which is how the original confusion started. Revert on main and let that deploy.
+  guard:
+    name: Is this still the tip of main?
+    runs-on: ubuntu-latest
+    outputs:
+      current: ${{ steps.check.outputs.current }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        env:
+          # The commit this run was created for; for a manual dispatch, the ref it was given.
+          SHA: ${{ github.sha }}
+        run: |
+          git fetch origin main --quiet
+          TIP="$(git rev-parse origin/main)"
+          echo "deploying : $SHA"
+          echo "tip of main: $TIP"
+          if [ "$SHA" = "$TIP" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping deploy: $SHA is behind origin/main ($TIP). A newer commit has already shipped, and deploying this one would roll it back."
+          fi
+
   deploy-api:
     name: Deploy API
+    needs: guard
+    if: needs.guard.outputs.current == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +65,9 @@ jobs:
 
   deploy-web:
     name: Deploy Web
-    needs: deploy-api
+    # Still gated on the API, and on the guard through it.
+    needs: [guard, deploy-api]
+    if: needs.guard.outputs.current == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
