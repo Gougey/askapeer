@@ -79,3 +79,8 @@ jobs:
       # rested. Local runs never rest a source, so only the SQL itself can catch this.
       - name: Backfill — the rested-source filter binds as an array
         run: npm run verify:backfill-query -w apps/api
+      # Sender reputation. The seeded demo accounts sit on reserved domains that cannot
+      # resolve, and every notification to one bounced — live was at a 9.9% bounce rate, a
+      # whisker under where Postmark starts acting. Real members' sign-in codes ride on that.
+      - name: Email — nothing is sent to a domain that cannot exist
+        run: npm run verify:undeliverable -w apps/api

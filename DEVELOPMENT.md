@@ -1614,6 +1614,31 @@ discards replies. Both branches are exercised in `templates.accountNotice`.
 > reach an in-app form. So restrict the mailbox to whoever moderates rather than sharing it,
 > and treat it as a policy question for the PRD's moderation section, not a technical one.
 
+## Sender reputation (`isUndeliverable`)
+
+⚠️ **Nothing is ever sent to a domain that cannot exist**, checked at `EmailSender.deliver`
+before the suppression lookup — it needs no database and no bounce to have happened yet.
+
+Measured on live 2026-10-07, from Postmark's own stats: **81 sent, 8 bounced — a 9.9% bounce
+rate**, with zero spam complaints. Every bounce was a seeded demo account at
+`@demo.askapeer.invalid`, of which live carries 15 against 21 real accounts. Postmark starts
+acting on a sender around 10%, and **every real member's sign-in code travels on that
+reputation**, so a demo account must not be able to spend it.
+
+- **The rule is by reserved domain, not by naming the demo one.** RFC 2606 and RFC 6761 set
+  aside `.invalid`, `.test`, `.example` and `.localhost`, plus `example.com/.net/.org`,
+  precisely so nothing resolves them. The next seed will invent a different domain; the rule
+  is the same for all of them.
+- ⚠️ **It must not be greedy**, and `verify:undeliverable` pins that: `someone@invalidate.com`
+  and `someone@notexample.com` are real addresses and must still send. A suffix check that
+  swallowed those would silently stop mail to members.
+- The 15 existing demo addresses were also written into `identity.email_suppressions`, so
+  nothing retried them in the window before this shipped.
+
+**Deleting the demo accounts was the wrong fix**: `community.handles` cascades from
+`identity.members`, so it would have taken the seeded discussions with it — and those are what
+give a new member something to read.
+
 ## Checking the email templates (`/v1/admin/email-test`)
 
 `GET /v1/admin/email-test` lists the thirteen member-facing templates and reports which

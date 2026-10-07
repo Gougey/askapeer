@@ -2306,6 +2306,41 @@ mailbox to whoever moderates rather than sharing it, and treat it as a
 policy question for the PRD’s moderation section, not a technical
 one.</p>
 </blockquote>
+<h2 id="sender-reputation-isundeliverable">Sender reputation
+(<code>isUndeliverable</code>)</h2>
+<p>⚠️ <strong>Nothing is ever sent to a domain that cannot
+exist</strong>, checked at <code>EmailSender.deliver</code> before the
+suppression lookup — it needs no database and no bounce to have happened
+yet.</p>
+<p>Measured on live 2026-10-07, from Postmark’s own stats: <strong>81
+sent, 8 bounced — a 9.9% bounce rate</strong>, with zero spam
+complaints. Every bounce was a seeded demo account at
+<code>@demo.askapeer.invalid</code>, of which live carries 15 against 21
+real accounts. Postmark starts acting on a sender around 10%, and
+<strong>every real member’s sign-in code travels on that
+reputation</strong>, so a demo account must not be able to spend it.</p>
+<ul>
+<li><strong>The rule is by reserved domain, not by naming the demo
+one.</strong> RFC 2606 and RFC 6761 set aside <code>.invalid</code>,
+<code>.test</code>, <code>.example</code> and <code>.localhost</code>,
+plus <code>example.com/.net/.org</code>, precisely so nothing resolves
+them. The next seed will invent a different domain; the rule is the same
+for all of them.</li>
+<li>⚠️ <strong>It must not be greedy</strong>, and
+<code>verify:undeliverable</code> pins that:
+<code>someone@invalidate.com</code> and
+<code>someone@notexample.com</code> are real addresses and must still
+send. A suffix check that swallowed those would silently stop mail to
+members.</li>
+<li>The 15 existing demo addresses were also written into
+<code>identity.email_suppressions</code>, so nothing retried them in the
+window before this shipped.</li>
+</ul>
+<p><strong>Deleting the demo accounts was the wrong fix</strong>:
+<code>community.handles</code> cascades from
+<code>identity.members</code>, so it would have taken the seeded
+discussions with it — and those are what give a new member something to
+read.</p>
 <h2 id="checking-the-email-templates-v1adminemail-test">Checking the
 email templates (<code>/v1/admin/email-test</code>)</h2>
 <p><code>GET /v1/admin/email-test</code> lists the thirteen
