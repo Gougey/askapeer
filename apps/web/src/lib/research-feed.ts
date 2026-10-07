@@ -100,6 +100,18 @@ export async function fetchFeed(
   return page ?? { articles: [], nextCursor: null };
 }
 
+/**
+ * How far back the corpus reaches — for the period control's "Any time" label.
+ *
+ * ⚠️ Read from the data rather than written down. Andrew asked for the control to say that
+ * older articles will not be found and suggested a fixed "2000 onwards"; a fixed year was
+ * wrong on the day, and would be wrong again every January.
+ */
+export async function fetchFeedCoverage(token: string): Promise<number | null> {
+  const res = await apiGet<{ oldestYear: number | null }>('/research-feed/coverage', token);
+  return res?.oldestYear ?? null;
+}
+
 /** The standing criteria, used to seed the panel when the URL carries none. */
 export async function fetchFeedCriteria(token: string): Promise<FeedCriteria> {
   const res = await apiGet<FeedCriteria>('/research-feed/preferences', token);

@@ -47,11 +47,20 @@ export function FilterPanel({
   filters,
   open,
   anyCriteria,
+  oldestYear,
 }: {
   filters: FeedFilters;
   open: boolean;
   /** Whether anything is actually set — decides which of the two labels the summary shows. */
   anyCriteria: boolean;
+  /**
+   * How far back the corpus reaches, for the "Any time" label.
+   *
+   * ⚠️ Passed in from the data rather than written down. Andrew asked for the control to be
+   * explicit that older articles will not be found and suggested "2000 onwards"; the corpus
+   * actually starts at 2001, and any fixed year would be wrong again every January.
+   */
+  oldestYear: number | null;
 }) {
   const t = useTranslations('feed');
 
@@ -253,7 +262,9 @@ export function FilterPanel({
                 className="w-full border px-2 py-2 text-sm" /* input-zoom-allow — see below */
                 style={field}
               >
-                <option value="">{t('anyPeriod')}</option>
+                <option value="">
+                  {oldestYear ? t('anyPeriodFrom', { year: oldestYear }) : t('anyPeriod')}
+                </option>
                 {PERIODS.map((years) => (
                   <option key={years} value={years}>
                     {t('periodYears', { count: years })}
@@ -293,16 +304,6 @@ export function FilterPanel({
               </select>
             </label>
           </div>
-
-          {/*
-            Said on the control rather than in a release note. Every article in the corpus is
-            from this year — the ingest began in August and only fetches forward — so the
-            period cannot narrow anything yet. Without the line it looks broken rather than
-            early.
-          */}
-          <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-            {t('periodNote')}
-          </p>
 
           <div className="flex" style={{ gap: 'var(--space-2)' }}>
             <button
