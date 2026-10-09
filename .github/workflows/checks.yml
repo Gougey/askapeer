@@ -79,6 +79,13 @@ jobs:
       # rested. Local runs never rest a source, so only the SQL itself can catch this.
       - name: Backfill — the rested-source filter binds as an array
         run: npm run verify:backfill-query -w apps/api
+      # The third way this import has died, and the quietest. The chain only continues while a
+      # run reports "not done", so `done` is the kill switch — and it was thrown by any moment
+      # when no slice happened to be selectable. On 2026-10-07 a rested OpenAlex plus one
+      # not-yet-stale slice ended the run with 479 slices pending; the queue was empty, nothing
+      # failed, and it was found 42 hours later by counting rows.
+      - name: Backfill — only an empty worklist ends the chain
+        run: npm run verify:backfill-chain -w apps/api
       # Sender reputation. The seeded demo accounts sit on reserved domains that cannot
       # resolve, and every notification to one bounced — live was at a 9.9% bounce rate, a
       # whisker under where Postmark starts acting. Real members' sign-in codes ride on that.

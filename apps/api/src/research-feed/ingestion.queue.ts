@@ -25,8 +25,28 @@ export const RECLASSIFY_JOB = 'reclassify';
  */
 export const BACKFILL_JOB = 'backfill';
 
+/**
+ * The watchdog over the backfill chain.
+ *
+ * ⚠️ **A self-enqueuing chain has no owner.** If one link fails to queue the next — a bug, a
+ * machine killed between the run and the `add`, a job that exhausts its attempts — nothing in
+ * the system notices: the queue is empty, which is indistinguishable from finished. That is
+ * exactly how the import stood still from 7 to 9 October with 479 slices pending. This job is
+ * the thing that asks, on a schedule, whether there is outstanding work with no chain running,
+ * and starts one if so. It is cheap and almost always a no-op.
+ */
+export const BACKFILL_SWEEP_JOB = 'backfill-sweep';
+
 /** How often the corpus refreshes. Literature does not move hourly. */
 export const INGEST_EVERY_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * How often to check the chain is alive.
+ *
+ * Fifteen minutes is far more often than the chain should ever need rescuing, and still cheap:
+ * when all is well it is one `count(*)` and one queue inspection.
+ */
+export const BACKFILL_SWEEP_EVERY_MS = 15 * 60 * 1000;
 
 /**
  * The ingestion queue (EPIC-I), on the same BullMQ infrastructure as verification and

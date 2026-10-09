@@ -6,6 +6,8 @@ import { IngestionService } from './ingestion.service';
 import { BackfillService } from './backfill.service';
 import {
   BACKFILL_JOB,
+  BACKFILL_SWEEP_EVERY_MS,
+  BACKFILL_SWEEP_JOB,
   INGESTION_QUEUE,
   INGESTION_QUEUE_NAME,
   INGEST_EVERY_MS,
@@ -33,15 +35,49 @@ export class IngestionWorker implements OnModuleInit, OnModuleDestroy {
   /**
    * One slice, then queue the next — see `BACKFILL_JOB`.
    *
-   * The chain stops when there is nothing pending, which is also how it stops when an
-   * operator empties the queue by hand: nothing re-enqueues itself from outside a run.
+   * The chain stops only when there is nothing left at all. ⚠️ It used to stop whenever
+   * `runNext` could not pick a slice *this second*, which is a different thing: a rested
+   * source or a slice abandoned nine minutes ago both read as "finished", and on 2026-10-07
+   * that ended the import with 479 slices pending. `retryInMs` is the difference — there is
+   * work, it is not available yet, come back.
    */
   private async runBackfillSlice(): Promise<unknown> {
     const result = await this.backfill.runNext();
     if (!result.done) {
-      await this.queue.add(BACKFILL_JOB, {}, { attempts: 2, removeOnComplete: true });
+      await this.queue.add(
+        BACKFILL_JOB,
+        {},
+        // `delay: undefined` is immediate, which is the ordinary page-after-page case.
+        { attempts: 2, removeOnComplete: true, delay: result.retryInMs },
+      );
     }
     return result;
+  }
+
+  /**
+   * Is the chain alive while there is work to do?
+   *
+   * ⚠️ **A self-enqueuing chain has nobody watching it.** Every link queues the next, so a
+   * link that dies between finishing and enqueuing takes the whole import with it, and leaves
+   * an empty queue — which looks exactly like success. Twice now the backfill has stopped this
+   * way and been found by counting rows rather than by anything in the system noticing.
+   *
+   * It only ever *starts* a chain, never a second one: BullMQ's concurrency here is 1, but two
+   * chains would still double the rate against two free public APIs, so a backfill job already
+   * waiting, active or delayed means there is nothing to do.
+   */
+  private async sweepBackfill(): Promise<unknown> {
+    const outstanding = await this.backfill.outstanding();
+    if (outstanding === 0) return { outstanding, started: false };
+
+    const queued = await this.queue.getJobs(['waiting', 'active', 'delayed', 'paused']);
+    if (queued.some((job) => job?.name === BACKFILL_JOB)) return { outstanding, started: false };
+
+    this.log.warn(
+      `backfill chain was not running with ${outstanding} slice(s) outstanding — starting it`,
+    );
+    await this.queue.add(BACKFILL_JOB, {}, { attempts: 2, removeOnComplete: true });
+    return { outstanding, started: true };
   }
 
   async onModuleInit(): Promise<void> {
@@ -50,6 +86,8 @@ export class IngestionWorker implements OnModuleInit, OnModuleDestroy {
       async (job) =>
         job.name === BACKFILL_JOB
           ? this.runBackfillSlice()
+          : job.name === BACKFILL_SWEEP_JOB
+          ? this.sweepBackfill()
           : job.name === RECLASSIFY_JOB
           ? this.ingestion.reclassifyAll(async (done, total) => {
               // Progress is reported for the operator, but it also renews the job's lock —
@@ -81,6 +119,17 @@ export class IngestionWorker implements OnModuleInit, OnModuleDestroy {
       INGEST_JOB,
       {},
       { repeat: { every: INGEST_EVERY_MS }, jobId: 'research-ingestion-schedule' },
+    );
+
+    // The watchdog over the self-enqueuing backfill chain. Same keying, same reason.
+    await this.queue.add(
+      BACKFILL_SWEEP_JOB,
+      {},
+      {
+        repeat: { every: BACKFILL_SWEEP_EVERY_MS },
+        jobId: 'research-backfill-sweep',
+        removeOnComplete: true,
+      },
     );
   }
 

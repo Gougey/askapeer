@@ -832,8 +832,36 @@ collected the years a member is most likely to ask for.</li>
 <li><strong>The job enqueues itself.</strong> Each run takes
 <code>PAGES_PER_RUN</code> pages and queues the next, so the work is a
 chain of short jobs rather than one long one holding the only worker
-slot. Stopping it is draining the queue; nothing re-enqueues from
-outside a run.</li>
+slot. Stopping it is draining the queue.</li>
+<li>⚠️ <strong><code>done</code> is the kill switch for the whole
+import, not a status line</strong> — the chain only continues while a
+run reports <em>not</em> done. It used to report done whenever it could
+not select a slice <strong>this second</strong>, and those are different
+questions. On <strong>2026-10-07 at 16:21</strong> OpenAlex hit its
+daily quota and went into <code>coolingUntil</code>; the slice query
+excludes a resting source; Europe PMC’s last slice (2001) was sitting in
+<code>running</code> and was not yet ten minutes stale. So a run with
+<strong>479 slices pending</strong> answered “done” and the chain
+stopped — empty queue, no failed job, nothing in the log. It stood still
+for <strong>42 hours</strong> and was found by counting rows while
+answering “where is the ingest up to?”. <code>chainNextStep</code> now
+separates the two: only an empty worklist ends the chain, and anything
+else returns a <code>retryInMs</code>. Pinned by
+<code>npm run verify:backfill-chain -w apps/api</code>, which fails six
+of seven checks against the old behaviour.</li>
+<li>⚠️ <strong>A self-enqueuing chain has nobody watching it</strong>,
+which is why <code>BACKFILL_SWEEP_JOB</code> now does: every 15 minutes
+it asks whether there is outstanding work with no backfill job waiting,
+active or delayed, and starts one if so. Two of this import’s three
+deaths were a chain that simply stopped, and both times the only symptom
+was an empty queue — indistinguishable from success. The sweep starts a
+chain and never a second one; concurrency is 1, but two chains would
+still double our request rate at two free public APIs.</li>
+<li><strong>A long cooldown is re-checked, not slept through.</strong>
+<code>MAX_RETRY_MS</code> caps a wait at ten minutes even when OpenAlex
+asks for 9,051 seconds, because <code>coolingUntil</code> is in memory
+and a deploy in the meantime clears it — the source is usable long
+before the timer says.</li>
 <li>⚠️ <strong><code>YIELD_EVERY = 5</code></strong>, for the reason the
 reclassify outage taught: work that holds the event loop stops BullMQ
 renewing the job lock, the job is judged stalled, and the retries take
