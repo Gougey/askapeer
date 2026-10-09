@@ -18,9 +18,19 @@ import { setSavedAction } from './actions';
 export function SaveButton({
   articleId,
   initialSaved,
+  block = false,
 }: {
   articleId: string;
   initialSaved: boolean;
+  /**
+   * Fill the width of the container instead of hugging the label.
+   *
+   * The article page sets it, because there this is one half of a two-button row with "Read
+   * full article" and the pair has to come out even. The saved list leaves it off: there the
+   * control sits on its own under a card, and a full-width unsave button would read as the
+   * main thing to do with an article you have just chosen to keep.
+   */
+  block?: boolean;
 }) {
   const t = useTranslations('feed');
   const [saved, setSaved] = useState(initialSaved);
@@ -39,12 +49,20 @@ export function SaveButton({
   };
 
   return (
-    <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+    <div
+      className={`flex flex-col${block ? ' min-w-0 flex-1' : ''}`}
+      style={{ gap: 'var(--space-1)' }}
+    >
       <button
         type="button"
         onClick={toggle}
         aria-pressed={saved}
-        className="flex w-fit items-center border px-3 py-2 text-sm font-medium"
+        // py-3 rather than py-2: at this font size that is the difference between a 36px
+        // target and the 44px the style guide requires (§9). It also matches the height of
+        // the link it now sits beside.
+        className={`flex items-center border px-3 py-3 text-sm font-medium ${
+          block ? 'w-full justify-center' : 'w-fit'
+        }`}
         style={{
           gap: 'var(--space-2)',
           borderRadius: 'var(--radius)',
