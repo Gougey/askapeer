@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { BackControl } from './BackControl';
+import { ScrollToTop } from './ScrollToTop';
 /**
  * Brand marks. The logo is navy, so on dark backgrounds a light variant is swapped in
  * via <picture> + prefers-color-scheme (the red "a" is preserved in both). See the
@@ -48,14 +49,25 @@ export async function AppBar() {
         It renders nothing on the four tab destinations, so the bar is unchanged there.
       */}
       <BackControl />
-      <picture>
-        <source srcSet="/brand/askapeer-mark-dark.png" media="(prefers-color-scheme: dark)" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/askapeer-mark.png" alt="" className="h-7 w-auto" />
-      </picture>
-      <span className="text-lg font-extrabold tracking-tight" style={{ fontFamily: 'var(--font-sans)' }}>
-        Ask<span style={{ color: 'var(--color-spark)' }}>a</span>Peer
-      </span>
+      {/*
+        The brand doubles as the way back to the top of the screen — see `ScrollToTop`. It is
+        wrapped here, in the shell, rather than on the one screen that asked for it, because a
+        control that works on four tabs and not the fifth is the kind of thing a member learns
+        once and then stops trusting.
+      */}
+      <ScrollToTop>
+        <picture>
+          <source srcSet="/brand/askapeer-mark-dark.png" media="(prefers-color-scheme: dark)" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/askapeer-mark.png" alt="" className="h-7 w-auto" />
+        </picture>
+        <span
+          className="text-lg font-extrabold tracking-tight"
+          style={{ fontFamily: 'var(--font-sans)' }}
+        >
+          Ask<span style={{ color: 'var(--color-spark)' }}>a</span>Peer
+        </span>
+      </ScrollToTop>
       {/*
         Search lives here, not in the bottom nav (S17).
 

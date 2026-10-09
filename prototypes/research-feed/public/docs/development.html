@@ -233,6 +233,41 @@ rather than changing screen.</li>
 <p><strong>Not done:</strong> leaving a composer with text in it
 discards silently. The case composer has “Save as draft”; the question
 composer has nothing. An unsaved-work guard is a follow-up.</p>
+<h2 id="getting-back-to-the-top-the-app-bars-brand">Getting back to the
+top (the app bar’s brand)</h2>
+<p><code>components/ScrollToTop.tsx</code> wraps the mark and wordmark
+in the <code>AppBar</code>, so <strong>tapping the brand scrolls the
+current screen to the top.</strong> Adrian’s case for it was the
+Research feed: the criteria panel is above everything, so a member fifty
+articles down has no way back to it but a long swipe.</p>
+<ul>
+<li><strong>It wraps the brand rather than adding a control.</strong> A
+floating “back to top” pill is one more thing on a screen whose design
+argument is that it holds very little. The app bar is already sticky and
+already the only thing on screen at every scroll depth, and tapping the
+title bar to go up is the convention iOS taught everybody — so this
+costs no pixels.</li>
+<li><strong>In the shell, not on the one screen that asked for
+it.</strong> A control that works on four tabs and not the fifth is the
+kind of thing a member learns once and then stops trusting.</li>
+<li>⚠️ <strong>The accessible name keeps the visible word in it</strong>
+— “AskaPeer, scroll to top”, not “Scroll to top”. WCAG 2.5.3 (Label in
+Name) is about a control whose spoken name contradicts the text on it,
+and it is not pedantry here: voice control matches what is written, so
+someone saying “tap AskaPeer” at a button named only “scroll to top”
+would find nothing.</li>
+<li><strong>Smooth, unless <code>prefers-reduced-motion</code>.</strong>
+From the bottom of a long feed this animates a very long way, which is
+the case that setting exists for.</li>
+<li>The brand is 28px tall; the target around it is 44 (style guide
+§9).</li>
+<li>It is <strong>not</strong> a link to a home screen, and the brand
+never was one — so nothing was displaced.</li>
+</ul>
+<p>Recording the position for <code>InfiniteList</code>’s replay already
+handles this: a deliberate scroll to the top is debounced like any other
+and remembered, which is right — come back and you are where you left,
+even if where you left was the top.</p>
 <h2 id="research-feed-s8-ingestion-the-research-tab">Research feed (S8 —
 ingestion + the Research tab)</h2>
 <p><code>GET /v1/research-feed</code> and
@@ -707,11 +742,18 @@ it.</li>
 <li><strong>The header count shows even at zero.</strong> A count that
 only appears once you have used the feature cannot advertise it, and
 fifteen strangers have to discover this exists.</li>
-<li><strong>The save control is on the article page only.</strong> The
-results card is a single <code>&lt;Link&gt;</code>, so a button inside
-it would be nested in an anchor; making room means restructuring the
-card, which touches search results too. Deferred so the screen the peer
-group lives in is unchanged.</li>
+<li><strong>The save control is on the article page only, at the foot of
+it.</strong> The results card is a single <code>&lt;Link&gt;</code>, so
+a button inside it would be nested in an anchor; making room means
+restructuring the card, which touches search results too. Deferred so
+the screen the peer group lives in is unchanged.</li>
+<li>⚠️ <strong>It sits <em>after</em> the abstract, paired with “Read
+full article” as one row</strong> — it was above the abstract in the
+first release. Adrian’s point on using it: you scroll down and read the
+thing before you know whether it is worth keeping, so the control
+belongs where the reading ends, beside the other decision available at
+that moment. “Read the full article” was shortened to fit. Andrew is
+being asked whether the move is right.</li>
 <li><strong>The list is ordered by when it was saved, not when it was
 published</strong> — it is a record of what you set aside, in the order
 you set it aside — and pages with a plain link rather than infinite

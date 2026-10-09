@@ -72,14 +72,6 @@ export default async function ArticlePage({
           </p>
         )}
 
-        {/*
-          Saving lives here rather than on the results card, deliberately: the card is a single
-          <Link> today, so a control inside it would be a button nested in an anchor. Making
-          room for one means restructuring the card, which touches search results too — kept
-          out of this first release so the screen the peer group lives in is unchanged.
-        */}
-        <SaveButton articleId={article.id} initialSaved={article.saved} />
-
         {article.tags.length > 0 && (
           <ul className="flex flex-wrap" style={{ gap: 'var(--space-2)' }}>
             {article.tags.map((tag) => (
@@ -134,23 +126,38 @@ export default async function ArticlePage({
           </p>
         )}
 
-        {article.url && (
-          <a
-            href={article.url}
-            target="_blank"
-            // `noopener` for the usual reason; `noreferrer` because a verified-only network
-            // has no business telling a publisher which of its pages a member came from.
-            rel="noopener noreferrer"
-            className="w-full border px-3 py-3 text-center text-sm font-medium"
-            style={{
-              borderColor: 'var(--color-border-strong)',
-              borderRadius: 'var(--radius)',
-              color: 'var(--color-accent)',
-            }}
-          >
-            {t('readFull')}
-          </a>
-        )}
+        {/*
+          Both actions sit after the abstract, as one row.
+
+          Saving was at the top of the page in the first release, above the abstract. Adrian's
+          point on using it: you scroll down and read the thing before you know whether it is
+          worth keeping, so the control belongs where the reading ends, next to the other
+          decision available at that moment. "Read the full article" shortened to fit beside it.
+
+          Saving still does not appear on the results card. The card is a single <Link>, so a
+          control inside it would be a button nested in an anchor; making room means
+          restructuring the card, which touches search results too, and is held back.
+        */}
+        <div className="flex" style={{ gap: 'var(--space-2)' }}>
+          <SaveButton articleId={article.id} initialSaved={article.saved} block />
+          {article.url && (
+            <a
+              href={article.url}
+              target="_blank"
+              // `noopener` for the usual reason; `noreferrer` because a verified-only network
+              // has no business telling a publisher which of its pages a member came from.
+              rel="noopener noreferrer"
+              className="min-w-0 flex-1 border px-3 py-3 text-center text-sm font-medium"
+              style={{
+                borderColor: 'var(--color-border-strong)',
+                borderRadius: 'var(--radius)',
+                color: 'var(--color-accent)',
+              }}
+            >
+              {t('readFull')}
+            </a>
+          )}
+        </div>
 
         {article.doi && (
           <p className="text-xs" style={{ color: 'var(--color-faint)' }}>

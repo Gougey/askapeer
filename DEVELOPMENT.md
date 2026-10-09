@@ -139,6 +139,31 @@ with no explicit exit strands the member.
 **Not done:** leaving a composer with text in it discards silently. The case composer has
 "Save as draft"; the question composer has nothing. An unsaved-work guard is a follow-up.
 
+## Getting back to the top (the app bar's brand)
+
+`components/ScrollToTop.tsx` wraps the mark and wordmark in the `AppBar`, so **tapping the brand
+scrolls the current screen to the top.** Adrian's case for it was the Research feed: the criteria
+panel is above everything, so a member fifty articles down has no way back to it but a long swipe.
+
+- **It wraps the brand rather than adding a control.** A floating "back to top" pill is one more
+  thing on a screen whose design argument is that it holds very little. The app bar is already
+  sticky and already the only thing on screen at every scroll depth, and tapping the title bar to
+  go up is the convention iOS taught everybody — so this costs no pixels.
+- **In the shell, not on the one screen that asked for it.** A control that works on four tabs and
+  not the fifth is the kind of thing a member learns once and then stops trusting.
+- ⚠️ **The accessible name keeps the visible word in it** — "AskaPeer, scroll to top", not "Scroll
+  to top". WCAG 2.5.3 (Label in Name) is about a control whose spoken name contradicts the text on
+  it, and it is not pedantry here: voice control matches what is written, so someone saying "tap
+  AskaPeer" at a button named only "scroll to top" would find nothing.
+- **Smooth, unless `prefers-reduced-motion`.** From the bottom of a long feed this animates a very
+  long way, which is the case that setting exists for.
+- The brand is 28px tall; the target around it is 44 (style guide §9).
+- It is **not** a link to a home screen, and the brand never was one — so nothing was displaced.
+
+Recording the position for `InfiniteList`'s replay already handles this: a deliberate scroll to
+the top is debounced like any other and remembered, which is right — come back and you are where
+you left, even if where you left was the top.
+
 ## Research feed (S8 — ingestion + the Research tab)
 
 `GET /v1/research-feed` and `/v1/research-feed/:articleId` (EPIC-I), screens B1 and B2. The
@@ -479,9 +504,15 @@ nothing that persists between visits except the criteria you last typed.
   silently, and a DOI added later could only cover saves made after it.
 - **The header count shows even at zero.** A count that only appears once you have used the
   feature cannot advertise it, and fifteen strangers have to discover this exists.
-- **The save control is on the article page only.** The results card is a single `<Link>`, so a
-  button inside it would be nested in an anchor; making room means restructuring the card, which
-  touches search results too. Deferred so the screen the peer group lives in is unchanged.
+- **The save control is on the article page only, at the foot of it.** The results card is a
+  single `<Link>`, so a button inside it would be nested in an anchor; making room means
+  restructuring the card, which touches search results too. Deferred so the screen the peer group
+  lives in is unchanged.
+- ⚠️ **It sits *after* the abstract, paired with "Read full article" as one row** — it was above
+  the abstract in the first release. Adrian's point on using it: you scroll down and read the
+  thing before you know whether it is worth keeping, so the control belongs where the reading
+  ends, beside the other decision available at that moment. "Read the full article" was shortened
+  to fit. Andrew is being asked whether the move is right.
 - **The list is ordered by when it was saved, not when it was published** — it is a record of what
   you set aside, in the order you set it aside — and pages with a plain link rather than infinite
   scroll: a shortlist is something you look through, not fall down.

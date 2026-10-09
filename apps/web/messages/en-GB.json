@@ -108,7 +108,9 @@
     "unreadNotifications": "{count, plural, one {# unread notification} other {# unread notifications}}",
     "back": "Back",
     "cancel": "Cancel",
-    "search": "Search"
+    "search": "Search",
+    "toTop": "AskaPeer, scroll to top",
+    "toTopShort": "Scroll to top"
   },
   "identityCheck": {
     "title": "Confirm your identity",
@@ -493,7 +495,7 @@
     "empty": "Nothing here yet. New research arrives twice a day.",
     "abstract": "Abstract",
     "noAbstract": "No abstract was published with this article.",
-    "readFull": "Read the full article",
+    "readFull": "Read full article",
     "openAccess": "Open access",
     "doi": "DOI: {doi}",
     "evidence": {
