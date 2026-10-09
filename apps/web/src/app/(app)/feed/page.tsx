@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArticleCard } from '@/components/ArticleCard';
 import { InfiniteList } from '@/components/InfiniteList';
@@ -6,6 +7,7 @@ import {
   fetchFeed,
   fetchFeedCoverage,
   fetchFeedCriteria,
+  fetchSavedCount,
   feedFilterParams,
   type FeedFilters,
 } from '@/lib/research-feed';
@@ -53,13 +55,16 @@ export default async function FeedPage({
    */
   const url = parseFeedFilters(params);
 
-  const [t, saved, oldestYear] = await Promise.all([
+  const [t, saved, oldestYear, savedCount] = await Promise.all([
     getTranslations('feed'),
     // Only worth a round trip when the URL has not already said what to ask.
     url.asked ? Promise.resolve(null) : fetchFeedCriteria(token),
     // Needed on every visit, including the ones that fetch no articles: the period control
     // shows its coverage either way. Cached server-side, so this is cheap.
     fetchFeedCoverage(token),
+    // Shown even at zero: fifteen strangers have to discover this exists, and a count that
+    // only appears once you have used the feature cannot advertise anything.
+    fetchSavedCount(token),
   ]);
 
   const filters: FeedFilters = url.asked
@@ -112,7 +117,16 @@ export default async function FeedPage({
   return (
     <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
       <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
-        <h1 className="text-xl font-semibold">{t('heading')}</h1>
+        <div className="flex items-baseline justify-between" style={{ gap: 'var(--space-3)' }}>
+          <h1 className="text-xl font-semibold">{t('heading')}</h1>
+          <Link
+            href="/feed/saved"
+            className="shrink-0 text-sm font-medium"
+            style={{ color: 'var(--color-accent)' }}
+          >
+            {t('savedLink', { count: savedCount })}
+          </Link>
+        </div>
         {/*
           Andrew's words, near enough verbatim. A standing description lived here once and was
           removed as saying what the screen already demonstrated — true when the page was a

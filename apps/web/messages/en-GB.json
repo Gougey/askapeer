@@ -521,7 +521,16 @@
     "searchAmend": "New Search or Amend",
     "searching": "Searching…",
     "intro": "Search for research on topics you want to explore.",
-    "anyPeriodFrom": "Any time (from {year})"
+    "anyPeriodFrom": "Any time (from {year})",
+    "saveLabel": "Save",
+    "savedLabel": "Saved",
+    "savedHeading": "Saved articles",
+    "savedLink": "Saved ({count})",
+    "backToResearch": "← My Research",
+    "savedEmpty": "Nothing saved yet. When an article looks worth coming back to, open it and press Save — it will wait here for you, and only you can see this list.",
+    "savedEmptyCta": "Search the literature",
+    "savedRetracted": "⚠ This article was retracted on {date}.",
+    "savedOlder": "Show older"
   },
   "interests": {
     "heading": "Your clinical interests",

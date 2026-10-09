@@ -663,6 +663,58 @@ approximate ordering.</li>
 shared CPU and 2 GB against an 836 MB table. Measurements swing 3–15 s
 under concurrent load for that reason.</li>
 </ul>
+<h2 id="saved-articles-feedsaved">Saved articles
+(<code>/feed/saved</code>)</h2>
+<p>A member’s private shortlist of articles to come back to. Migration
+0053, <code>SavedArticlesService</code>,
+<code>FeedService.listSaved</code>, and the design doc at
+<code>docs/2026-10-09-saved-articles-design.md</code>, which records the
+five decisions and the two that went against its own first
+recommendation.</p>
+<p>⚠️ <strong>This is the only durable personal surface in the research
+half of the product.</strong> My Research was rebuilt in October to show
+nothing until it is asked a question — right in itself, but it left
+nothing that persists between visits except the criteria you last
+typed.</p>
+<ul>
+<li>⚠️ <strong>Not <code>community.follows</code>, despite the
+resemblance.</strong> That table means <em>tell me when this
+changes</em>: it feeds <code>thread_activity</code> and is what unfollow
+mutes. Saving means <em>I want to read this again</em>, with no
+notification semantics at all. One table would put an exclusion clause
+in every follow query and let two meanings drift under one name — and it
+could not carry a foreign key, because <code>follows.target_id</code>
+points at two tables.</li>
+<li>⚠️ <strong>Privacy is structural, not a rule to remember.</strong>
+Every method takes the handle from the session and none accepts one as
+an argument, so another member’s list cannot be asked for. Saving fires
+no notification and writes no activity row, and moderators have no view
+of it: a reading list is close to a record of what a clinician is
+treating, and it is not evidence of a policy violation.</li>
+<li>⚠️ <strong>A retracted article stays in the list and says
+so</strong>, with its retraction date, while remaining excluded from
+search and results. Dropping it silently is the worst option available —
+a member may have saved it precisely because they were citing it.
+Verified both ways on live data: visible in the saved list, absent from
+the feed.</li>
+<li><strong>Nothing about the article is copied into the saved
+row.</strong> A DOI column was considered and declined. The accepted
+exposure: if a cleanup is ever written it will empty members’ lists
+silently, and a DOI added later could only cover saves made after
+it.</li>
+<li><strong>The header count shows even at zero.</strong> A count that
+only appears once you have used the feature cannot advertise it, and
+fifteen strangers have to discover this exists.</li>
+<li><strong>The save control is on the article page only.</strong> The
+results card is a single <code>&lt;Link&gt;</code>, so a button inside
+it would be nested in an anchor; making room means restructuring the
+card, which touches search results too. Deferred so the screen the peer
+group lives in is unchanged.</li>
+<li><strong>The list is ordered by when it was saved, not when it was
+published</strong> — it is a record of what you set aside, in the order
+you set it aside — and pages with a plain link rather than infinite
+scroll: a shortlist is something you look through, not fall down.</li>
+</ul>
 <h2 id="historical-backfill-adminresearch-feedbackfill">Historical
 backfill (<code>/admin/research-feed/backfill/*</code>)</h2>
 <p>Andrew wants 25 years of literature. The twice-daily ingest cannot

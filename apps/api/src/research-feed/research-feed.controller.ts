@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import type { Queue } from 'bullmq';
 import { Transform } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
@@ -6,6 +6,7 @@ import type { Request } from 'express';
 import type { AuthedMember } from '../auth/jwt-auth.guard';
 import { BackfillService } from './backfill.service';
 import { FeedPreferencesService } from './feed-preferences.service';
+import { SavedArticlesService } from './saved-articles.service';
 import { InterestsService } from './interests.service';
 import { AdminAccessModule } from '../admin/admin-access.module';
 import { AdminGuard } from '../admin/admin.guard';
@@ -165,6 +166,7 @@ export class ResearchFeedController {
     private readonly feed: FeedService,
     private readonly interests: InterestsService,
     private readonly preferences: FeedPreferencesService,
+    private readonly saved: SavedArticlesService,
   ) {}
 
   /**
@@ -206,6 +208,40 @@ export class ResearchFeedController {
     return this.feed.list(query.cursor, undefined, filters);
   }
 
+  /*
+   * The saved list. ⚠️ Every route here takes the handle from the session and never as a
+   * parameter — a reading list is close to a record of what a clinician is treating, and that
+   * should be impossible to ask for rather than merely not asked for. Declared above
+   * `:articleId` because Nest matches in declaration order and `saved` would otherwise be read
+   * as an article id and rejected by `ParseUUIDPipe`.
+   */
+  @Get('saved')
+  listSaved(@Query() query: FeedQueryDto, @Req() req: Request & { member: AuthedMember }) {
+    return this.saved.list(req.member.handleId!, query.cursor);
+  }
+
+  /** The number for the My Research header — shown even at zero, so it can advertise itself. */
+  @Get('saved/count')
+  savedCount(@Req() req: Request & { member: AuthedMember }) {
+    return this.saved.count(req.member.handleId!);
+  }
+
+  @Put('saved/:articleId')
+  save(
+    @Param('articleId', new ParseUUIDPipe()) articleId: string,
+    @Req() req: Request & { member: AuthedMember },
+  ) {
+    return this.saved.save(req.member.handleId!, articleId);
+  }
+
+  @Delete('saved/:articleId')
+  unsave(
+    @Param('articleId', new ParseUUIDPipe()) articleId: string,
+    @Req() req: Request & { member: AuthedMember },
+  ) {
+    return this.saved.unsave(req.member.handleId!, articleId);
+  }
+
   /**
    * How far back the corpus reaches, for the period control's "Any time" label.
    *
@@ -238,9 +274,17 @@ export class ResearchFeedController {
     return this.feed.search(query.q, query.cursor, undefined, query.tag ?? [], query.evidence);
   }
 
+  /** `saved` rides along rather than costing the screen a second request. */
   @Get(':articleId')
-  detail(@Param('articleId', new ParseUUIDPipe()) articleId: string) {
-    return this.feed.detail(articleId);
+  async detail(
+    @Param('articleId', new ParseUUIDPipe()) articleId: string,
+    @Req() req: Request & { member: AuthedMember },
+  ) {
+    const [article, saved] = await Promise.all([
+      this.feed.detail(articleId),
+      this.saved.isSaved(req.member.handleId!, articleId),
+    ]);
+    return { ...article, saved };
   }
 }
 

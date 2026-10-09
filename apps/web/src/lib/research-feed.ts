@@ -25,6 +25,8 @@ export type FeedArticle = {
 export type AbstractSection = { heading: string | null; body: string };
 
 export type ArticleDetail = FeedArticle & {
+  /** Whether this member has saved it — rides along rather than costing a second request. */
+  saved: boolean;
   abstract: string | null;
   abstractSections: AbstractSection[];
   doi: string | null;
@@ -110,6 +112,34 @@ export async function fetchFeed(
 export async function fetchFeedCoverage(token: string): Promise<number | null> {
   const res = await apiGet<{ oldestYear: number | null }>('/research-feed/coverage', token);
   return res?.oldestYear ?? null;
+}
+
+/** An article in the saved list — the feed shape, plus whether it has been retracted since. */
+export type SavedArticle = FeedArticle & { retractedAt: string | null };
+
+/**
+ * A member's saved articles, newest saved first.
+ *
+ * ⚠️ Every call here derives the handle from the session; none takes one. A reading list is
+ * close to a record of what a clinician is treating, and that is meant to be impossible to
+ * ask for rather than merely not asked for.
+ */
+export async function fetchSaved(
+  token: string,
+  cursor?: string,
+): Promise<{ articles: SavedArticle[]; nextCursor: string | null }> {
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+  const res = await apiGet<{ articles: SavedArticle[]; nextCursor: string | null }>(
+    `/research-feed/saved${query}`,
+    token,
+  );
+  return res ?? { articles: [], nextCursor: null };
+}
+
+/** The number for the My Research header. Shown even at zero, so it can advertise itself. */
+export async function fetchSavedCount(token: string): Promise<number> {
+  const res = await apiGet<{ count: number }>('/research-feed/saved/count', token);
+  return res?.count ?? 0;
 }
 
 /** The standing criteria, used to seed the panel when the URL carries none. */

@@ -357,6 +357,58 @@ export class FeedService {
   }
 
   /**
+   * A member's saved articles, newest saved first.
+   *
+   * ⚠️ **Ordered by when it was saved, not when it was published**, which is the whole point:
+   * this is a list of things you set aside, in the order you set them aside.
+   *
+   * ⚠️ **Retracted articles are included**, unlike every other query here, and carry
+   * `retractedAt` so the screen can mark them. Dropping one silently would be the worst option
+   * available — a member may have saved it precisely because they were citing it, and the
+   * retraction is the single most important thing to tell them about it.
+   */
+  async listSaved(
+    handleId: string,
+    offset: number,
+    limit: number,
+  ): Promise<{
+    articles: (FeedArticle & { retractedAt: string | null })[];
+    nextCursor: string | null;
+  }> {
+    const { rows } = await this.db.execute<FeedRow & { retracted_at: Date | null }>(sql`
+      ${this.tagRegion}
+      select a.id, a.title, a.abstract, a.journal, a.published_date, a.evidence_type,
+             a.open_access, a.url, a.retracted_at,
+             (select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name,
+                                                        'region', m.region)
+                                       order by m.confidence desc, m.name), '[]')
+                from (
+                  select distinct on (t.name) t.id, t.name, r.region, at.confidence
+                    from research.article_tags at
+                    join community.tags t on t.id = at.tag_id
+                    join tag_region r on r.id = t.id
+                   where at.article_id = a.id
+                   order by t.name, at.confidence desc
+                ) m
+             ) as tags
+        from research.saved_articles s
+        join research.articles a on a.id = s.article_id
+       where s.handle_id = ${handleId}
+       order by s.created_at desc, a.id desc
+       limit ${limit + 1} offset ${offset}
+    `);
+
+    const page = rows.slice(0, limit);
+    return {
+      articles: page.map((row) => ({
+        ...toArticle(row),
+        retractedAt: row.retracted_at ? new Date(row.retracted_at).toISOString() : null,
+      })),
+      nextCursor: rows.length > limit ? String(offset + limit) : null,
+    };
+  }
+
+  /**
    * How far back the corpus actually reaches.
    *
    * ⚠️ **Computed, never written down.** Andrew asked for the period control to say that older

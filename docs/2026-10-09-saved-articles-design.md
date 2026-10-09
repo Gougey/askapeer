@@ -1,6 +1,6 @@
 # Saved articles
 
-**Status**: **Design, for discussion.** Nothing is built.
+**Status**: **Settled 9 October 2026.** The five open questions were put to Adrian in turn and answered; Section 11 records the answers and what changed. Build in progress.
 **Date**: 9 October 2026
 **Author**: Adrian Hall (Technical Lead), drafted with Claude Code
 **Scope**: Letting a member keep a private list of research articles they want to come back to.
@@ -84,15 +84,17 @@ Two places, and they differ in cost:
 
 **The results card** is where the need actually arises — you are scanning twenty results and three look useful — but ⚠️ **the whole card is currently a single `<Link>`**. A save control inside it would be a button nested in an anchor, which is invalid HTML and behaves inconsistently. Doing this properly means restructuring the card so the link covers the text and the control sits beside it, which is a bigger change than it sounds and touches search results too.
 
-**Recommendation**: build the detail screen first and the card second, as two steps. If only one ships before the trial, the detail screen is the safer half.
+**Decided**: the detail screen only, to begin with. The results cards and search results are untouched, which is what makes this safe to put in front of the first fifteen — see Section 12. The card restructure is deferred, not cancelled.
 
 ## 5. Where you see them
 
 The bottom navigation has five tabs and no room for a sixth; it was deliberately composed (two content tabs, Create in the centre, two personal tabs). A saved list is not a sixth peer of those.
 
-**Proposed**: a **Saved** link in the My Research header, beside the title, showing a count — `Saved (12)` — leading to `/feed/saved`.
+**Decided**: a **Saved** link in the My Research header, beside the title, showing a count **at all times including zero** — `Saved (0)` on a first visit, `Saved (12)` later — leading to `/feed/saved`.
 
-That puts it where research lives, makes the count a quiet reminder that the list exists, and costs one cheap indexed query per Research render. Activity › Following is the precedent for a sub-page hanging off a tab.
+Showing the zero was the deliberate choice over hiding it. The worry was that a zero beside an unused feature reads as an empty promise; the answer is that fifteen strangers have to *discover* this exists, and a count that only appears once you have used it cannot advertise anything. It costs one indexed query per Research render, which is negligible now the database has dedicated cores.
+
+Activity › Following is the precedent for a sub-page hanging off a tab.
 
 **Alternative considered**: hanging it off Profile. Rejected — Profile is about identity and account, and a member looking for an article they saved will look where they found it.
 
@@ -101,7 +103,11 @@ That puts it where research lives, makes the count a quiet reminder that the lis
 - **Retraction.** Articles carry `retracted_at`. A saved article that is later retracted must **stay in the list and say so**, prominently. Silently dropping it would be the worst option available: a clinician may have saved it precisely because they were citing it. This is the one place the list should shout.
 - **Deletion.** Nothing deletes articles today — ingestion only inserts and merges — so the `ON DELETE CASCADE` above should never fire. It is there so that *if* a cleanup is ever written, it cannot leave dangling rows.
 - **Merging.** `upsert` merges by DOI/PMID into the existing row rather than replacing it, so ids are stable and a save cannot be orphaned by deduplication.
-- ⚠️ **Should a save survive the article?** The alternative is snapshotting title, journal, DOI and URL into the saved row, so a member's list is independent of our corpus. That is real insurance against a future cleanup, at the cost of denormalised data that can drift from the article it copies. **Recommendation: no snapshot**, on the grounds that articles are never deleted and the cascade is a backstop rather than an expected path — but it is a genuine decision and Section 11 asks it.
+- ⚠️ **Should a save survive the article? Decided: no — foreign key only, nothing copied.**
+
+A middle option was raised while the question was being put: keep the DOI alone, one text column, so a saved entry still resolves to a real paper on `doi.org` if its row ever vanished, with no title or journal to drift out of step. It was declined in favour of the simpler shape, and the reasoning holds — nothing deletes articles, ingestion only inserts and merges, so the cascade is a backstop rather than a path we expect to take.
+
+**The exposure, stated plainly**: if a cleanup is ever written, it will empty members' lists silently. A DOI column could be added later, but only for saves made after it — the ones already in the table would have nothing to backfill from. That is the cost of this decision and it is accepted knowingly.
 
 ## 7. Privacy
 
@@ -146,13 +152,23 @@ Small, and shaped by the screens rather than by the table:
 - **Email my saved list.** Anticipated, not built — and much more sensible as one email of many articles than Andrew's original one-per-article.
 - **Export to a reference manager** (RIS/BibTeX). The obvious next ask from an academic audience, and genuinely easy once the list exists. Not now.
 
-## 11. Open questions
+## 11. The five questions, answered
 
-1. **Does the save control ship on the results card, or only on the article page to begin with?** Section 4 — the card is one big link today, and fixing that properly is the larger half of this feature.
-2. **Snapshot the article into the saved row, or rely on the corpus?** Section 6. Recommendation is no, but it is the one decision that is expensive to reverse later.
-3. **Count in the header, or just a link?** The count is a nudge and costs a query per render; a plain "Saved" link costs nothing.
-4. **Is there a cap?** No technical need. A soft limit exists only to stop one member saving 100,000 articles, which no real member will do.
-5. **Does this ship before the first fifteen peers, or between phase 1 and phase 2?** Section 12.
+Put to Adrian in turn on 9 October and settled the same day.
+
+| | Question | Answer |
+|---|---|---|
+| 1 | Save control on the results card, or the article page only? | **Article page only.** Results and search untouched. |
+| 2 | Snapshot the article into the saved row? | **No.** Foreign key only. |
+| 3 | Count in the header? | **Always, including zero.** |
+| 4 | Any cap? | **None.** |
+| 5 | Ship to the first fifteen, or hold until phase 2? | **Ship to the first fifteen.** |
+
+**Two answers went against what this document first recommended, and both deserve recording:**
+
+⚠️ **Question 2 — I changed my own mind mid-question and was overruled.** Writing out the trade-off persuaded me that keeping the DOI alone was better than nothing; Adrian held to the document's original recommendation. He is right that an unused insurance column is still a column, and the exposure is now written into Section 6 rather than left implicit.
+
+⚠️ **Question 5 — the first answer changed the fifth.** This document recommended building but holding back, on the grounds that a new feature adds a variable to the trial. Once the card restructure was out of scope that argument largely dissolved: the build no longer touches the screen the peers will spend their time in. The recommendation to hold back was really an argument about the card, and it should have said so.
 
 ## 12. Build shape and timing
 
@@ -165,4 +181,15 @@ Roughly, in the order that keeps each step shippable:
 
 Steps 1–3 are a day's work and are independently useful: a member can save from an article page and see their list. Step 4 is where the real UI cost is.
 
-⚠️ **On timing**: Andrew asked for this during the final review before the trial, and said himself it was "not a necessity". The whole value of the first fifteen peers is feedback on what exists; adding a feature in the same week adds a variable to that. **Recommendation: build steps 1–3 now so it is ready, but ship it to the peer group only if the trial start slips** — otherwise it is the first thing to land in the gap between phase 1 and phase 2, when there is real usage to shape step 4 around.
+**Decided: steps 1–3 ship to the first fifteen.** Step 4 waits for real usage to shape it.
+
+What that build touches, and what it does not:
+
+| Touched | Untouched |
+|---|---|
+| New table, migration, endpoints | Results cards |
+| `/feed/saved` — a new screen | Search results |
+| `/feed/[articleId]` — one control | The criteria panel |
+| My Research header — one link | Ranking, ingestion, the corpus |
+
+⚠️ **The right-hand column is the argument.** The screen the peers will spend their time in — Research results — is not modified at all, so the risk of this landing before the trial is a new screen that nobody has to visit and one control on a page they will mostly reach from a result they already wanted to read.

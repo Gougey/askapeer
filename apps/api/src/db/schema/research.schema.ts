@@ -13,7 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { tags, tsvector } from './community.schema';
+import { handles, tags, tsvector } from './community.schema';
 
 /**
  * The `research` schema (EPIC-I) — the external literature corpus.
@@ -257,4 +257,35 @@ export const backfillSlices = research.table(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.sourceName, t.query, t.windowStart] })],
+);
+
+/**
+ * A member's private list of articles to come back to.
+ *
+ * ⚠️ **Deliberately not `community.follows`.** That table means *tell me when this changes* —
+ * it feeds notifications and is what unfollow mutes. This means *I want to read this again*,
+ * and has no notification semantics at all. Sharing one table would put an exclusion clause in
+ * every follow query and let two meanings drift under one name; it also could not carry a
+ * foreign key, because `follows.target_id` points at two different tables.
+ *
+ * ⚠️ **Nothing about the article is copied here.** See migration 0053 for the exposure that
+ * accepts, and the design doc for why a DOI column was considered and declined.
+ */
+export const savedArticles = research.table(
+  'saved_articles',
+  {
+    handleId: uuid('handle_id')
+      .notNull()
+      .references(() => handles.id, { onDelete: 'cascade' }),
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // The key is also the uniqueness rule, so saving twice is idempotent.
+    primaryKey({ columns: [t.handleId, t.articleId] }),
+    // "What have I saved", newest first — the list screen and the header count.
+    index('saved_articles_mine_idx').on(t.handleId, t.createdAt.desc()),
+  ],
 );

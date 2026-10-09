@@ -13,11 +13,13 @@
 </div>
 <main>
 <h1 id="saved-articles">Saved articles</h1>
-<p><strong>Status</strong>: <strong>Design, for discussion.</strong>
-Nothing is built. <strong>Date</strong>: 9 October 2026
-<strong>Author</strong>: Adrian Hall (Technical Lead), drafted with
-Claude Code <strong>Scope</strong>: Letting a member keep a private list
-of research articles they want to come back to.</p>
+<p><strong>Status</strong>: <strong>Settled 9 October 2026.</strong> The
+five open questions were put to Adrian in turn and answered; Section 11
+records the answers and what changed. Build in progress.
+<strong>Date</strong>: 9 October 2026 <strong>Author</strong>: Adrian
+Hall (Technical Lead), drafted with Claude Code <strong>Scope</strong>:
+Letting a member keep a private list of research articles they want to
+come back to.</p>
 <p><strong>Origin</strong>: Andrew Renshaw, testing the rebuilt Research
 screen — <em>“is it possible to add another option once a list has been
 created to ‘email this article to me’? I think if people find articles
@@ -143,20 +145,26 @@ button nested in an anchor, which is invalid HTML and behaves
 inconsistently. Doing this properly means restructuring the card so the
 link covers the text and the control sits beside it, which is a bigger
 change than it sounds and touches search results too.</p>
-<p><strong>Recommendation</strong>: build the detail screen first and
-the card second, as two steps. If only one ships before the trial, the
-detail screen is the safer half.</p>
+<p><strong>Decided</strong>: the detail screen only, to begin with. The
+results cards and search results are untouched, which is what makes this
+safe to put in front of the first fifteen — see Section 12. The card
+restructure is deferred, not cancelled.</p>
 <h2 id="where-you-see-them">5. Where you see them</h2>
 <p>The bottom navigation has five tabs and no room for a sixth; it was
 deliberately composed (two content tabs, Create in the centre, two
 personal tabs). A saved list is not a sixth peer of those.</p>
-<p><strong>Proposed</strong>: a <strong>Saved</strong> link in the My
-Research header, beside the title, showing a count —
-<code>Saved (12)</code> — leading to <code>/feed/saved</code>.</p>
-<p>That puts it where research lives, makes the count a quiet reminder
-that the list exists, and costs one cheap indexed query per Research
-render. Activity › Following is the precedent for a sub-page hanging off
-a tab.</p>
+<p><strong>Decided</strong>: a <strong>Saved</strong> link in the My
+Research header, beside the title, showing a count <strong>at all times
+including zero</strong> — <code>Saved (0)</code> on a first visit,
+<code>Saved (12)</code> later — leading to <code>/feed/saved</code>.</p>
+<p>Showing the zero was the deliberate choice over hiding it. The worry
+was that a zero beside an unused feature reads as an empty promise; the
+answer is that fifteen strangers have to <em>discover</em> this exists,
+and a count that only appears once you have used it cannot advertise
+anything. It costs one indexed query per Research render, which is
+negligible now the database has dedicated cores.</p>
+<p>Activity › Following is the precedent for a sub-page hanging off a
+tab.</p>
 <p><strong>Alternative considered</strong>: hanging it off Profile.
 Rejected — Profile is about identity and account, and a member looking
 for an article they saved will look where they found it.</p>
@@ -177,15 +185,21 @@ rows.</li>
 <li><strong>Merging.</strong> <code>upsert</code> merges by DOI/PMID
 into the existing row rather than replacing it, so ids are stable and a
 save cannot be orphaned by deduplication.</li>
-<li>⚠️ <strong>Should a save survive the article?</strong> The
-alternative is snapshotting title, journal, DOI and URL into the saved
-row, so a member’s list is independent of our corpus. That is real
-insurance against a future cleanup, at the cost of denormalised data
-that can drift from the article it copies. <strong>Recommendation: no
-snapshot</strong>, on the grounds that articles are never deleted and
-the cascade is a backstop rather than an expected path — but it is a
-genuine decision and Section 11 asks it.</li>
+<li>⚠️ <strong>Should a save survive the article? Decided: no — foreign
+key only, nothing copied.</strong></li>
 </ul>
+<p>A middle option was raised while the question was being put: keep the
+DOI alone, one text column, so a saved entry still resolves to a real
+paper on <code>doi.org</code> if its row ever vanished, with no title or
+journal to drift out of step. It was declined in favour of the simpler
+shape, and the reasoning holds — nothing deletes articles, ingestion
+only inserts and merges, so the cascade is a backstop rather than a path
+we expect to take.</p>
+<p><strong>The exposure, stated plainly</strong>: if a cleanup is ever
+written, it will empty members’ lists silently. A DOI column could be
+added later, but only for saves made after it — the ones already in the
+table would have nothing to backfill from. That is the cost of this
+decision and it is accepted knowingly.</p>
 <h2 id="privacy">7. Privacy</h2>
 <p>A saved list is a window onto what a clinician is reading, which is
 close to a window onto what they are treating. On a pseudonymous
@@ -273,24 +287,66 @@ one-per-article.</li>
 obvious next ask from an academic audience, and genuinely easy once the
 list exists. Not now.</li>
 </ul>
-<h2 id="open-questions">11. Open questions</h2>
-<ol type="1">
-<li><strong>Does the save control ship on the results card, or only on
-the article page to begin with?</strong> Section 4 — the card is one big
-link today, and fixing that properly is the larger half of this
-feature.</li>
-<li><strong>Snapshot the article into the saved row, or rely on the
-corpus?</strong> Section 6. Recommendation is no, but it is the one
-decision that is expensive to reverse later.</li>
-<li><strong>Count in the header, or just a link?</strong> The count is a
-nudge and costs a query per render; a plain “Saved” link costs
-nothing.</li>
-<li><strong>Is there a cap?</strong> No technical need. A soft limit
-exists only to stop one member saving 100,000 articles, which no real
-member will do.</li>
-<li><strong>Does this ship before the first fifteen peers, or between
-phase 1 and phase 2?</strong> Section 12.</li>
-</ol>
+<h2 id="the-five-questions-answered">11. The five questions,
+answered</h2>
+<p>Put to Adrian in turn on 9 October and settled the same day.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>Question</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Save control on the results card, or the article page only?</td>
+<td><strong>Article page only.</strong> Results and search
+untouched.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Snapshot the article into the saved row?</td>
+<td><strong>No.</strong> Foreign key only.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Count in the header?</td>
+<td><strong>Always, including zero.</strong></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Any cap?</td>
+<td><strong>None.</strong></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Ship to the first fifteen, or hold until phase 2?</td>
+<td><strong>Ship to the first fifteen.</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Two answers went against what this document first
+recommended, and both deserve recording:</strong></p>
+<p>⚠️ <strong>Question 2 — I changed my own mind mid-question and was
+overruled.</strong> Writing out the trade-off persuaded me that keeping
+the DOI alone was better than nothing; Adrian held to the document’s
+original recommendation. He is right that an unused insurance column is
+still a column, and the exposure is now written into Section 6 rather
+than left implicit.</p>
+<p>⚠️ <strong>Question 5 — the first answer changed the fifth.</strong>
+This document recommended building but holding back, on the grounds that
+a new feature adds a variable to the trial. Once the card restructure
+was out of scope that argument largely dissolved: the build no longer
+touches the screen the peers will spend their time in. The
+recommendation to hold back was really an argument about the card, and
+it should have said so.</p>
 <h2 id="build-shape-and-timing">12. Build shape and timing</h2>
 <p>Roughly, in the order that keeps each step shippable:</p>
 <ol type="1">
@@ -302,14 +358,40 @@ phase 1 and phase 2?</strong> Section 12.</li>
 <p>Steps 1–3 are a day’s work and are independently useful: a member can
 save from an article page and see their list. Step 4 is where the real
 UI cost is.</p>
-<p>⚠️ <strong>On timing</strong>: Andrew asked for this during the final
-review before the trial, and said himself it was “not a necessity”. The
-whole value of the first fifteen peers is feedback on what exists;
-adding a feature in the same week adds a variable to that.
-<strong>Recommendation: build steps 1–3 now so it is ready, but ship it
-to the peer group only if the trial start slips</strong> — otherwise it
-is the first thing to land in the gap between phase 1 and phase 2, when
-there is real usage to shape step 4 around.</p>
+<p><strong>Decided: steps 1–3 ship to the first fifteen.</strong> Step 4
+waits for real usage to shape it.</p>
+<p>What that build touches, and what it does not:</p>
+<table>
+<thead>
+<tr>
+<th>Touched</th>
+<th>Untouched</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New table, migration, endpoints</td>
+<td>Results cards</td>
+</tr>
+<tr>
+<td><code>/feed/saved</code> — a new screen</td>
+<td>Search results</td>
+</tr>
+<tr>
+<td><code>/feed/[articleId]</code> — one control</td>
+<td>The criteria panel</td>
+</tr>
+<tr>
+<td>My Research header — one link</td>
+<td>Ranking, ingestion, the corpus</td>
+</tr>
+</tbody>
+</table>
+<p>⚠️ <strong>The right-hand column is the argument.</strong> The screen
+the peers will spend their time in — Research results — is not modified
+at all, so the risk of this landing before the trial is a new screen
+that nobody has to visit and one control on a page they will mostly
+reach from a result they already wanted to read.</p>
 
 </main>
 </body>

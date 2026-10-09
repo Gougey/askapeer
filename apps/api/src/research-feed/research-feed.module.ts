@@ -4,6 +4,7 @@ import { JwtConfigModule } from '../auth/jwt-config.module';
 import { SettingsModule } from '../settings/settings.module';
 import { BackfillService } from './backfill.service';
 import { FeedPreferencesService } from './feed-preferences.service';
+import { SavedArticlesService } from './saved-articles.service';
 import { FeedService } from './feed.service';
 import { IngestionQueueModule } from './ingestion.queue';
 import { IngestionService } from './ingestion.service';
@@ -32,6 +33,7 @@ import { OpenAlexSource } from './sources/open-alex.source';
   providers: [
     FeedService,
     FeedPreferencesService,
+    SavedArticlesService,
     IngestionService,
     BackfillService,
     InterestsService,

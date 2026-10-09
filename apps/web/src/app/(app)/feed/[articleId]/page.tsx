@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { SaveButton } from '../saved/SaveButton';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { fetchArticle } from '@/lib/research-feed';
 import { requireAccessToken } from '@/lib/session';
@@ -70,6 +71,14 @@ export default async function ArticlePage({
             {meta.join(' · ')}
           </p>
         )}
+
+        {/*
+          Saving lives here rather than on the results card, deliberately: the card is a single
+          <Link> today, so a control inside it would be a button nested in an anchor. Making
+          room for one means restructuring the card, which touches search results too — kept
+          out of this first release so the screen the peer group lives in is unchanged.
+        */}
+        <SaveButton articleId={article.id} initialSaved={article.saved} />
 
         {article.tags.length > 0 && (
           <ul className="flex flex-wrap" style={{ gap: 'var(--space-2)' }}>
