@@ -19,14 +19,20 @@ export type FeedArticle = {
   url: string | null;
   /** What the classifier matched. Empty is normal — not every article is placeable. */
   tags: { id: string; name: string; region: string }[];
+  /**
+   * Whether this member has saved it.
+   *
+   * On the card as well as the detail page, since the control moved onto the card. Stamped on
+   * by the API *after* ranking, so the ranking query itself still knows nothing about the
+   * member — see `SavedArticlesService.mark`.
+   */
+  saved: boolean;
 };
 
 /** A structured abstract's blocks. Parsed server-side — never markup. */
 export type AbstractSection = { heading: string | null; body: string };
 
 export type ArticleDetail = FeedArticle & {
-  /** Whether this member has saved it — rides along rather than costing a second request. */
-  saved: boolean;
   abstract: string | null;
   abstractSections: AbstractSection[];
   doi: string | null;

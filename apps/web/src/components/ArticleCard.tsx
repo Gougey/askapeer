@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { SaveButton } from '@/app/(app)/feed/saved/SaveButton';
 import type { EvidenceType, FeedArticle } from '@/lib/research-feed';
 
 /**
@@ -31,8 +32,21 @@ export async function ArticleCard({
   const evidence = evidenceStyle(article.evidenceType);
 
   return (
+    /*
+     * ⚠️ **`relative`, and the whole card is one tap target by a stretched link.**
+     *
+     * The card used to be a single `<Link>` wrapping everything, which is why saving could not
+     * live here: a button inside an anchor is invalid, and the press is ambiguous. So the
+     * anchor now wraps the *title* — giving it a real accessible name, which an empty overlay
+     * anchor would not have — and `after:absolute after:inset-0` stretches its hit area over
+     * the card. The save button is a sibling with its own stacking context above that layer.
+     *
+     * The one thing this gives up is selecting the snippet text by dragging, which the
+     * pseudo-element swallows. On a phone, where this screen lives, long-press on a link was
+     * already the context menu rather than a selection.
+     */
     <li
-      className="border"
+      className="relative border"
       style={{
         background: 'var(--color-surface)',
         borderColor: 'var(--color-border)',
@@ -41,26 +55,40 @@ export async function ArticleCard({
         boxShadow: 'var(--shadow-card)',
       }}
     >
-      <Link
-        href={`/feed/${article.id}`}
-        className="flex flex-col"
-        style={{ gap: 'var(--space-2)' }}
-      >
-        <span className="flex flex-wrap items-center" style={{ gap: 'var(--space-2)' }}>
-          <span
-            className="px-2 py-0.5 text-xs font-medium"
-            style={{ ...evidence, borderRadius: 'var(--radius-pill)' }}
-          >
-            {t(`evidence.${article.evidenceType}`)}
-          </span>
-          {article.openAccess && (
-            <span className="text-xs" style={{ color: 'var(--color-ok)' }}>
-              {t('openAccess')}
+      <div className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
+        {/*
+          Saving sits on this row, beside the evidence pill — Adrian's placement, from using the
+          saved list: a control *between* two cards cannot say which one it belongs to, and the
+          same control inside the card also makes save-and-move-on possible straight from the
+          list, without opening the article at all.
+        */}
+        <div className="flex items-start" style={{ gap: 'var(--space-2)' }}>
+          <span className="flex flex-wrap items-center" style={{ gap: 'var(--space-2)' }}>
+            <span
+              className="px-2 py-0.5 text-xs font-medium"
+              style={{ ...evidence, borderRadius: 'var(--radius-pill)' }}
+            >
+              {t(`evidence.${article.evidenceType}`)}
             </span>
-          )}
-        </span>
+            {article.openAccess && (
+              <span className="text-xs" style={{ color: 'var(--color-ok)' }}>
+                {t('openAccess')}
+              </span>
+            )}
+          </span>
+          <span className="ml-auto">
+            <SaveButton articleId={article.id} initialSaved={article.saved} variant="compact" />
+          </span>
+        </div>
 
-        <h2 className="font-medium">{article.title}</h2>
+        <h2 className="font-medium">
+          <Link
+            href={`/feed/${article.id}`}
+            className="after:absolute after:inset-0 after:content-['']"
+          >
+            {article.title}
+          </Link>
+        </h2>
 
         {article.snippet && (
           <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
@@ -114,7 +142,7 @@ export async function ArticleCard({
             .filter(Boolean)
             .join(' · ')}
         </span>
-      </Link>
+      </div>
     </li>
   );
 }

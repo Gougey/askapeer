@@ -205,7 +205,14 @@ export class ResearchFeedController {
       await this.preferences.save(req.member.handleId!, filters).catch(() => undefined);
     }
 
-    return this.feed.list(query.cursor, undefined, filters);
+    /*
+     * ⚠️ **`saved` is stamped on afterwards, not joined in.** The ranking query stays entirely
+     * free of the member — that is what makes "two members asking the same question see the
+     * same page" a property of the code rather than a promise — and it is also the query that
+     * had to be rebuilt for performance in October. See `SavedArticlesService.mark`.
+     */
+    const page = await this.feed.list(query.cursor, undefined, filters);
+    return { ...page, articles: await this.saved.mark(req.member.handleId!, page.articles) };
   }
 
   /*
@@ -270,8 +277,17 @@ export class ResearchFeedController {
    * outside what you already follow.
    */
   @Get('search')
-  search(@Query() query: FeedSearchDto) {
-    return this.feed.search(query.q, query.cursor, undefined, query.tag ?? [], query.evidence);
+  async search(@Query() query: FeedSearchDto, @Req() req: Request & { member: AuthedMember }) {
+    const page = await this.feed.search(
+      query.q,
+      query.cursor,
+      undefined,
+      query.tag ?? [],
+      query.evidence,
+    );
+    // The papers tab renders the same card as the feed, so it needs the same flag — otherwise
+    // every search result shows as unsaved and saving one from there would look like a no-op.
+    return { ...page, articles: await this.saved.mark(req.member.handleId!, page.articles) };
   }
 
   /** `saved` rides along rather than costing the screen a second request. */
