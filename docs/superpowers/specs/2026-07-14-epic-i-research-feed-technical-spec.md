@@ -172,6 +172,12 @@ GET    /v1/me/saves?target_type=      -- powers screen E3
 
 - **Decision (Adrian, 2026-07-19): deferred to post-launch.** Saves are a retention nicety, not core to proving the thesis; the MVP ships **without** save buttons (screens B2/E3 lose that affordance at launch). The unified `community.saves` shape above is **specced and settled**, so adding it later is cheap and non-disruptive. *(Table is `community`-side even though articles are EPIC-I's, because saves are member-relationship data alongside `community.follows`.)*
 
+- ⚠️ **Superseded 9 October 2026 — built, and not in this shape.** Andrew asked for it while testing the rebuilt Research screen, and it shipped the same week. Two deliberate departures from the recommendation above, both argued in `docs/2026-10-09-saved-articles-design.md`:
+  - **`research.saved_articles (handle_id, article_id)`, not a polymorphic `community.saves`.** A unified table could carry no foreign key, because `target_id` would point at two tables; it would also put an exclusion clause in every follow-style query. Screen E3 (saved *posts*) remains unbuilt, and when it comes it gets its own table for the same reason.
+  - **Endpoints are nested under the feed**, not a top-level `/v1/saves`: `GET|PUT|DELETE /v1/research-feed/saved[/:articleId]` plus `GET /v1/research-feed/saved/count`. Every one takes the handle from the session and none accepts it as a parameter — a reading list is close to a record of what a clinician is treating, so asking for someone else's is structurally impossible rather than merely unimplemented.
+
+  The control lives **on the article card** (results, search and the saved list) as well as at the foot of screen B2.
+
 ### 10.3 Gap cross-reference
 
 | Gap | Resolution |

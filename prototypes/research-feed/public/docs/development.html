@@ -37,8 +37,8 @@ rebuilt around a criteria panel (keyword, type of paper, period and
 sort, with the last set remembered; </strong>no personalisation —
 clinical interests play no part in what it shows** — see “My Research —
 the criteria panel” below), and a private list of <strong>saved
-articles</strong> (<code>/feed/saved</code> — see “Saved articles”
-below)**.</p>
+articles</strong> (<code>/feed/saved</code>, saved from the result card
+itself — see “Saved articles” below)**.</p>
 <p><strong>Build approach:</strong> <em>prove-then-migrate</em> —
 develop locally + deploy to Fly.io (London) for the early slices;
 migrate to AWS <code>eu-west-2</code> before real practitioners. See the
@@ -783,12 +783,14 @@ abstract in the first release. Adrian’s point on using it: you scroll
 down and read the thing before you know whether it is worth keeping.
 “Read the full article” was shortened to fit. Andrew is being asked
 whether the move is right.</li>
-<li>⚠️ <strong>The glyph is a star, and that is worth
-revisiting.</strong> Kudos is the product’s one status colour and is
-<em>rendered as a gold star</em>; this is a navy outline star that
-always carries the word “Save” or “Saved” beside it, and the two never
-appear on the same card. Still two meanings for one shape. A bookmark
-was the design doc’s original call.</li>
+<li><strong>The glyph is a star — raised, and decided.</strong> Kudos is
+the product’s one status colour and is <em>rendered as a gold star</em>;
+this is a navy outline star that always carries the word “Save” or
+“Saved” beside it, and the two never appear on the same card. A bookmark
+was the design doc’s original call. <strong>Adrian’s decision, 9
+October: leave the star for now</strong>, on the basis that the label
+and the separation carry it. A one-line change if the two ever read
+alike on a device.</li>
 <li><strong>The list is ordered by when it was saved, not when it was
 published</strong> — it is a record of what you set aside, in the order
 you set it aside — and pages with a plain link rather than infinite

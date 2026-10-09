@@ -1,6 +1,8 @@
 # Saved articles
 
-**Status**: **Settled 9 October 2026.** The five open questions were put to Adrian in turn and answered; Section 11 records the answers and what changed. Build in progress.
+**Status**: **Built and live, 9 October 2026.** The five open questions were put to Adrian in turn and answered; Section 11 records the answers and what changed.
+
+⚠️ **Sections 4, 9, 11 and 12 are superseded in part — read the amendment at the end first.** They record a decision to keep the save control off the results card, which held for one afternoon. Using the saved list showed the control had to be *on* the card; it now is (PR #169), and the amendment sets out what that cost and where this document got the cost wrong.
 **Date**: 9 October 2026
 **Author**: Adrian Hall (Technical Lead), drafted with Claude Code
 **Scope**: Letting a member keep a private list of research articles they want to come back to.
@@ -86,6 +88,8 @@ Two places, and they differ in cost:
 
 **Decided**: the detail screen only, to begin with. The results cards and search results are untouched, which is what makes this safe to put in front of the first fifteen — see Section 12. The card restructure is deferred, not cancelled.
 
+⚠️ **Superseded the same day** — it was deferred by about four hours. See the amendment: a control *under* a card in the saved list cannot say which article it belongs to, which made the restructure the fix for a defect rather than an enhancement to schedule.
+
 ## 5. Where you see them
 
 The bottom navigation has five tabs and no room for a sixth; it was deliberately composed (two content tabs, Create in the centre, two personal tabs). A saved list is not a sixth peer of those.
@@ -158,7 +162,7 @@ Put to Adrian in turn on 9 October and settled the same day.
 
 | | Question | Answer |
 |---|---|---|
-| 1 | Save control on the results card, or the article page only? | **Article page only.** Results and search untouched. |
+| 1 | Save control on the results card, or the article page only? | **Article page only.** Results and search untouched. ⚠️ *Reversed the same day — see the amendment.* |
 | 2 | Snapshot the article into the saved row? | **No.** Foreign key only. |
 | 3 | Count in the header? | **Always, including zero.** |
 | 4 | Any cap? | **None.** |
@@ -182,6 +186,8 @@ Roughly, in the order that keeps each step shippable:
 Steps 1–3 are a day's work and are independently useful: a member can save from an article page and see their list. Step 4 is where the real UI cost is.
 
 **Decided: steps 1–3 ship to the first fifteen.** Step 4 waits for real usage to shape it.
+
+⚠️ **Real usage arrived immediately and step 4 shipped the same day.** See the amendment.
 
 What that build touches, and what it does not:
 
@@ -213,7 +219,7 @@ That is unanswerable. A control placed *between* two cards has no owner, and the
 - The ranking query is the one that went from 160ms to five seconds in October and had to be rebuilt (migration 0052). It is the last place to add a join for a cosmetic flag.
 - `FeedService` takes **no handle at all**. That is what makes "two members asking the same question see the same page" a property of the code rather than a promise, and a per-member join would have quietly ended it.
 
-**Two smaller departures from this document.** Section 10 specified "a bookmark control"; it shipped as a star (`☆` / `★`) with the word beside it. ⚠️ Worth revisiting — the product's one status colour is **kudos gold, rendered as a star**, and while the save star is accent navy and always carries a label, two meanings for one shape is the kind of thing that erodes. And the compact control cannot show its error message: there is no room on a card's top row, so a failure gives the optimistic revert plus a live region, where the article page gets a line of red text.
+**Two smaller departures from this document.** Section 10 specified "a bookmark control"; it shipped as a star (`☆` / `★`) with the word beside it. The collision was raised with Adrian — the product's one status colour is **kudos gold, rendered as a star**, so this is two meanings for one shape, even though the save star is accent navy and always carries a label. **Decided 9 October: leave the star for now.** It is a one-line change if the two ever read as the same thing on a device; the mitigations are that the label is always present and that kudos never appears on a research card. And the compact control cannot show its error message: there is no room on a card's top row, so a failure gives the optimistic revert plus a live region, where the article page gets a line of red text.
 
 **The touch target.** The visual is a 24px pill at the scale of the evidence chip; the hit area is taken out to 44×44 with `before:-inset-2.5`, which the style guide asks for explicitly ("even when the visual is smaller", §9). Making the visual 44px was the obvious alternative and costs 24px of height on every card in an infinite list.
 

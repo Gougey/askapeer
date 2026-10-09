@@ -286,7 +286,7 @@ POST   /v1/saves { target_type, target_id }
 DELETE /v1/saves/:target_type/:target_id
 GET    /v1/me/saves?target_type=      -- powers screen E3</code></pre>
 <ul>
-<li><strong>Decision (Adrian, 2026-07-19): deferred to
+<li><p><strong>Decision (Adrian, 2026-07-19): deferred to
 post-launch.</strong> Saves are a retention nicety, not core to proving
 the thesis; the MVP ships <strong>without</strong> save buttons (screens
 B2/E3 lose that affordance at launch). The unified
@@ -294,7 +294,30 @@ B2/E3 lose that affordance at launch). The unified
 settled</strong>, so adding it later is cheap and non-disruptive.
 <em>(Table is <code>community</code>-side even though articles are
 EPIC-I’s, because saves are member-relationship data alongside
-<code>community.follows</code>.)</em></li>
+<code>community.follows</code>.)</em></p></li>
+<li><p>⚠️ <strong>Superseded 9 October 2026 — built, and not in this
+shape.</strong> Andrew asked for it while testing the rebuilt Research
+screen, and it shipped the same week. Two deliberate departures from the
+recommendation above, both argued in
+<code>docs/2026-10-09-saved-articles-design.md</code>:</p>
+<ul>
+<li><strong><code>research.saved_articles (handle_id, article_id)</code>,
+not a polymorphic <code>community.saves</code>.</strong> A unified table
+could carry no foreign key, because <code>target_id</code> would point
+at two tables; it would also put an exclusion clause in every
+follow-style query. Screen E3 (saved <em>posts</em>) remains unbuilt,
+and when it comes it gets its own table for the same reason.</li>
+<li><strong>Endpoints are nested under the feed</strong>, not a
+top-level <code>/v1/saves</code>:
+<code>GET|PUT|DELETE /v1/research-feed/saved[/:articleId]</code> plus
+<code>GET /v1/research-feed/saved/count</code>. Every one takes the
+handle from the session and none accepts it as a parameter — a reading
+list is close to a record of what a clinician is treating, so asking for
+someone else’s is structurally impossible rather than merely
+unimplemented.</li>
+</ul>
+<p>The control lives <strong>on the article card</strong> (results,
+search and the saved list) as well as at the foot of screen B2.</p></li>
 </ul>
 <h3 id="gap-cross-reference">10.3 Gap cross-reference</h3>
 <table>
