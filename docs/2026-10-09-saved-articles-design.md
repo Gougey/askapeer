@@ -193,3 +193,32 @@ What that build touches, and what it does not:
 | My Research header — one link | Ranking, ingestion, the corpus |
 
 ⚠️ **The right-hand column is the argument.** The screen the peers will spend their time in — Research results — is not modified at all, so the risk of this landing before the trial is a new screen that nobody has to visit and one control on a page they will mostly reach from a result they already wanted to read.
+
+---
+
+## Amendment, 9 October 2026 — step 4 shipped the same day
+
+Steps 1–3 went live, were used for an afternoon, and step 4 followed immediately. "Real usage to shape it" turned out to be one session with the saved list, and what it said was not a preference but a defect:
+
+> When you view the saved list, the Saved button appears between two articles and it is not obvious whether the button is for the article above or below.
+>
+> — Adrian, after using it
+
+That is unanswerable. A control placed *between* two cards has no owner, and the layout could not say which article it would unsave. The same change fixes it and delivers what Section 4 wanted all along: the control is now **inside the card, on the top row beside the evidence pill**, so it appears on results, on search results and in the saved list, and a member can save from a list without opening the article at all.
+
+**The card restructure, as built.** Section 4 described the obstacle correctly — the whole card was one `<Link>`, so a nested button was out. The fix is the stretched-link pattern: the anchor now wraps the **title**, and `after:absolute after:inset-0` spreads its hit area over the card. The whole card still opens the article, the anchor has a real accessible name (which an empty overlay anchor would not), and the save button is a sibling with `relative z-10` so it paints above the overlay rather than under it. What it costs is dragging to select the snippet, which the pseudo-element swallows; on a phone a long-press on a link was already the context menu.
+
+⚠️ **Section 9 was wrong about the cost, and the correction matters.** It said the card "means the feed query grows a per-member join, which the feed does not currently have at all". It does not. `saved` is stamped on *after* ranking, by a single primary-key lookup over the twenty ids already in hand (`SavedArticlesService.mark`). Two reasons that is better than the join this document assumed:
+
+- The ranking query is the one that went from 160ms to five seconds in October and had to be rebuilt (migration 0052). It is the last place to add a join for a cosmetic flag.
+- `FeedService` takes **no handle at all**. That is what makes "two members asking the same question see the same page" a property of the code rather than a promise, and a per-member join would have quietly ended it.
+
+**Two smaller departures from this document.** Section 10 specified "a bookmark control"; it shipped as a star (`☆` / `★`) with the word beside it. ⚠️ Worth revisiting — the product's one status colour is **kudos gold, rendered as a star**, and while the save star is accent navy and always carries a label, two meanings for one shape is the kind of thing that erodes. And the compact control cannot show its error message: there is no room on a card's top row, so a failure gives the optimistic revert plus a live region, where the article page gets a line of red text.
+
+**The touch target.** The visual is a 24px pill at the scale of the evidence chip; the hit area is taken out to 44×44 with `before:-inset-2.5`, which the style guide asks for explicitly ("even when the visual is smaller", §9). Making the visual 44px was the obvious alternative and costs 24px of height on every card in an infinite list.
+
+| Now touched | Still untouched |
+|---|---|
+| `ArticleCard` — restructured, used by results, search and the saved list | Ranking, ingestion, the corpus |
+| `/research-feed` and `/research-feed/search` — one flag each | The criteria panel |
+| `FeedArticle` — gains `saved` | `FeedService`, which still knows nothing about the member |

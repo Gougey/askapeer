@@ -3,7 +3,6 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { ArticleCard } from '@/components/ArticleCard';
 import { fetchSaved } from '@/lib/research-feed';
 import { requireAccessToken } from '@/lib/session';
-import { SaveButton } from './SaveButton';
 
 /**
  * The saved list — a member's private shortlist of articles to come back to.
@@ -97,10 +96,14 @@ export default async function SavedArticlesPage({
                   })}
                 </p>
               )}
+              {/*
+                The unsave control is **on the card**, not under it. It was below, and from
+                using the list Adrian's objection was unanswerable: a button sitting between
+                two cards cannot say which one it belongs to.
+              */}
               <ul>
                 <ArticleCard article={article} showTags={false} />
               </ul>
-              <SaveButton articleId={article.id} initialSaved />
             </li>
           ))}
         </ul>

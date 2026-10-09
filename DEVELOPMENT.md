@@ -504,15 +504,38 @@ nothing that persists between visits except the criteria you last typed.
   silently, and a DOI added later could only cover saves made after it.
 - **The header count shows even at zero.** A count that only appears once you have used the
   feature cannot advertise it, and fifteen strangers have to discover this exists.
-- **The save control is on the article page only, at the foot of it.** The results card is a
-  single `<Link>`, so a button inside it would be nested in an anchor; making room means
-  restructuring the card, which touches search results too. Deferred so the screen the peer group
-  lives in is unchanged.
-- ⚠️ **It sits *after* the abstract, paired with "Read full article" as one row** — it was above
-  the abstract in the first release. Adrian's point on using it: you scroll down and read the
-  thing before you know whether it is worth keeping, so the control belongs where the reading
-  ends, beside the other decision available at that moment. "Read the full article" was shortened
-  to fit. Andrew is being asked whether the move is right.
+- **The save control is on the card**, on the top row beside the evidence pill, so it appears on
+  results, on search results and in the saved list — and a member can save from a list without
+  opening the article. It was under the card in the saved list for one afternoon, and Adrian's
+  objection from using it was unanswerable: a button *between* two cards cannot say which one it
+  belongs to.
+- ⚠️ **That needed the card restructured, and the pattern is load-bearing.** `ArticleCard` was one
+  `<Link>` wrapping everything, so a button inside it would have been nested in an anchor. The
+  anchor now wraps the **title** and `after:absolute after:inset-0` stretches its hit area over
+  the whole card; the save button is a sibling with `relative z-10` so it paints **above** that
+  overlay. Get the z-index wrong and every press opens the article instead of saving it. The
+  anchor wraps the title rather than being an empty overlay so that it has a real accessible
+  name. What this costs is dragging to select the snippet, which the pseudo-element swallows.
+- ⚠️ **`saved` is stamped on after ranking, never joined into it.** `SavedArticlesService.mark`
+  does one primary-key lookup over the twenty ids already in hand. The design doc assumed a
+  per-member join and that would have been wrong twice over: the ranking query is the one that
+  had to be rebuilt for performance (0052), and `FeedService` takes **no handle at all**, which
+  is what makes "two members asking the same question see the same page" structural.
+- **The compact control's visual is 24px; its hit area is 44** (`before:-inset-2.5`), which is
+  what the style guide asks for "even when the visual is smaller" (§9). A 44px *visual* adds 24px
+  to every card in an infinite list.
+- **It cannot show an error, and that is deliberate.** There is no room on a card's top row, and
+  making some would move the page under a member who mistyped a tap. A failure gives the
+  optimistic revert plus an `sr-only` live region; the article page, which has room, keeps the
+  red line.
+- **The article page keeps a full-width control at its foot**, paired with "Read full article" —
+  it was above the abstract in the first release. Adrian's point on using it: you scroll down and
+  read the thing before you know whether it is worth keeping. "Read the full article" was
+  shortened to fit. Andrew is being asked whether the move is right.
+- ⚠️ **The glyph is a star, and that is worth revisiting.** Kudos is the product's one status
+  colour and is *rendered as a gold star*; this is a navy outline star that always carries the
+  word "Save" or "Saved" beside it, and the two never appear on the same card. Still two meanings
+  for one shape. A bookmark was the design doc's original call.
 - **The list is ordered by when it was saved, not when it was published** — it is a record of what
   you set aside, in the order you set it aside — and pages with a plain link rather than infinite
   scroll: a shortlist is something you look through, not fall down.

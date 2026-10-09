@@ -139,7 +139,7 @@ export default async function ArticlePage({
           restructuring the card, which touches search results too, and is held back.
         */}
         <div className="flex" style={{ gap: 'var(--space-2)' }}>
-          <SaveButton articleId={article.id} initialSaved={article.saved} block />
+          <SaveButton articleId={article.id} initialSaved={article.saved} variant="block" />
           {article.url && (
             <a
               href={article.url}
