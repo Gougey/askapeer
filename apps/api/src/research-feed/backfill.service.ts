@@ -42,6 +42,57 @@ const YIELD_EVERY = 5;
 const STALE_AFTER_MINUTES = 10;
 
 /**
+ * The longest a chain link will wait before looking again.
+ *
+ * A cooldown can legitimately be hours — OpenAlex once asked for 9,051 seconds — and the
+ * chain does *not* sleep that long in one delayed job. It wakes sooner and re-decides, for two
+ * reasons: `coolingUntil` is in memory, so a deploy in the meantime clears it and the source is
+ * available again long before the original timer says; and a short, repeated, free check is a
+ * cheaper way to be wrong than a four-hour nap that nothing can interrupt.
+ */
+const MAX_RETRY_MS = 10 * 60 * 1000;
+
+/** Never busier than this, however soon the next thing becomes available. */
+const MIN_RETRY_MS = 30 * 1000;
+
+/**
+ * Is the chain finished, or merely unable to act this second?
+ *
+ * ⚠️ **The distinction the backfill died for.** `runNext` reported `done` whenever it could not
+ * *select* a slice, and the worker only re-enqueues itself when the answer is "not done". Those
+ * are not the same question. On 2026-10-07 at 16:21 OpenAlex hit its daily quota, the source
+ * went into `coolingUntil`, the query excluded it, and with Europe PMC's last slice sitting in
+ * `running` and not yet stale there was nothing selectable — so a run with **479 slices
+ * pending** answered "done", the chain stopped, and the import was dead for forty-two hours
+ * with an empty queue, no failed job and nothing in the log. It is the same shape as the
+ * `notInArray` defect before it: the chain ends quietly and only a person counting rows notices.
+ *
+ * Pure, so the rule can be pinned by `npm run verify:backfill-chain -w apps/api` rather than
+ * rediscovered the next time a source rests.
+ */
+export function chainNextStep(input: {
+  /** Slices still `pending` or `running` — work that exists, whatever its availability. */
+  outstanding: number;
+  /** Cooldown expiries still in force, as epoch ms. */
+  restingUntil: number[];
+  /** When the oldest non-stale `running` slice becomes reclaimable, as epoch ms. */
+  nextStaleAt: number | null;
+  now: number;
+}): { done: true } | { done: false; retryInMs: number } {
+  // The only honest "done": there is no outstanding work of any kind.
+  if (input.outstanding === 0) return { done: true };
+
+  const waits = [...input.restingUntil, ...(input.nextStaleAt === null ? [] : [input.nextStaleAt])]
+    .map((at) => at - input.now)
+    .filter((ms) => ms > 0);
+
+  // Outstanding work and nothing to wait for means the slice is selectable now; the caller
+  // asks again immediately. The floor still applies, so a selection bug cannot spin.
+  const soonest = waits.length === 0 ? MIN_RETRY_MS : Math.min(...waits);
+  return { done: false, retryInMs: Math.min(MAX_RETRY_MS, Math.max(MIN_RETRY_MS, soonest)) };
+}
+
+/**
  * The gap left between pages, whatever the source.
  *
  * ⚠️ **Added after the first live run was rate-limited.** It asked OpenAlex for pages as fast
@@ -183,12 +234,48 @@ export class BackfillService {
   }
 
   /**
+   * Slices that still represent work: `pending`, or `running` and therefore either in flight
+   * or abandoned. Deliberately *not* filtered by what is available right now — that is the
+   * whole point of the question.
+   */
+  async outstanding(): Promise<number> {
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(backfillSlices)
+      .where(or(eq(backfillSlices.status, 'pending'), eq(backfillSlices.status, 'running')));
+    return row?.count ?? 0;
+  }
+
+  /**
+   * When the oldest `running` slice becomes re-takeable, or null if none is running.
+   *
+   * A slice abandoned by a deploy forty seconds ago is not selectable and not lost — it is
+   * nine minutes from being reclaimed. Without this the chain would call that "done".
+   */
+  private async nextStaleAt(): Promise<number | null> {
+    const [row] = await this.db
+      .select({
+        at: sql<string | null>`min(${backfillSlices.updatedAt}) + (${STALE_AFTER_MINUTES} * interval '1 minute')`,
+      })
+      .from(backfillSlices)
+      .where(eq(backfillSlices.status, 'running'));
+    return row?.at ? new Date(row.at).getTime() : null;
+  }
+
+  /**
    * Take the next slice and work at it for a bounded number of pages.
    *
    * Returns whether there is more to do, so the worker can enqueue itself again rather than
    * looping here — one job, one bounded piece of work, which is what keeps a stall to a page.
    */
-  async runNext(): Promise<{ done: boolean; slice?: string; seen: number; stored: number }> {
+  async runNext(): Promise<{
+    done: boolean;
+    /** Set when there is work but none of it is available yet — see `chainNextStep`. */
+    retryInMs?: number;
+    slice?: string;
+    seen: number;
+    stored: number;
+  }> {
     /*
      * Sources that have told us to come back later are skipped entirely, so one exhausted
      * quota does not stall the other source's work — which is exactly what happened the first
@@ -237,7 +324,25 @@ export class BackfillService {
         desc(backfillSlices.windowStart),
       )
       .limit(1);
-    if (!slice) return { done: true, seen: 0, stored: 0 };
+    if (!slice) {
+      /*
+       * ⚠️ **Nothing selectable is not the same as nothing left**, and treating them as the
+       * same killed the import for forty-two hours — see `chainNextStep` for the post-mortem.
+       * Ask the database what still exists before telling the worker to stop.
+       */
+      const step = chainNextStep({
+        outstanding: await this.outstanding(),
+        restingUntil: [...this.coolingUntil.values()],
+        nextStaleAt: await this.nextStaleAt(),
+        now: Date.now(),
+      });
+      if (step.done) {
+        this.log.log('backfill complete — no slices pending or running');
+        return { done: true, seen: 0, stored: 0 };
+      }
+      this.log.log(`backfill waiting ${Math.round(step.retryInMs / 1000)}s for work to free up`);
+      return { done: false, retryInMs: step.retryInMs, seen: 0, stored: 0 };
+    }
 
     const source = this.sources.find((s) => s.name === slice.sourceName);
     const label = `${slice.sourceName} ${slice.query} ${slice.windowStart.slice(0, 4)}`;

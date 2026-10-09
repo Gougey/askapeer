@@ -2,7 +2,7 @@
   "name": "@askapeer/api",
   "version": "0.0.0",
   "private": true,
-  "description": "Askapeer API \u2014 NestJS modular monolith (module-per-epic).",
+  "description": "Askapeer API — NestJS modular monolith (module-per-epic).",
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
@@ -18,7 +18,8 @@
     "verify:tag-ids": "tsx scripts/verify-tag-ids.ts",
     "verify:backfill-retry": "tsx scripts/verify-backfill-retry.ts",
     "verify:backfill-query": "tsx scripts/verify-backfill-query.ts",
-    "verify:undeliverable": "tsx scripts/verify-undeliverable.ts"
+    "verify:undeliverable": "tsx scripts/verify-undeliverable.ts",
+    "verify:backfill-chain": "tsx scripts/verify-backfill-chain.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",

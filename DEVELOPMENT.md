@@ -567,7 +567,27 @@ and the `backfill` queue job.
   wanted after all — has then collected the years a member is most likely to ask for.
 - **The job enqueues itself.** Each run takes `PAGES_PER_RUN` pages and queues the next, so the
   work is a chain of short jobs rather than one long one holding the only worker slot. Stopping
-  it is draining the queue; nothing re-enqueues from outside a run.
+  it is draining the queue.
+- ⚠️ **`done` is the kill switch for the whole import, not a status line** — the chain only
+  continues while a run reports *not* done. It used to report done whenever it could not select
+  a slice **this second**, and those are different questions. On **2026-10-07 at 16:21** OpenAlex
+  hit its daily quota and went into `coolingUntil`; the slice query excludes a resting source;
+  Europe PMC's last slice (2001) was sitting in `running` and was not yet ten minutes stale. So
+  a run with **479 slices pending** answered "done" and the chain stopped — empty queue, no
+  failed job, nothing in the log. It stood still for **42 hours** and was found by counting rows
+  while answering "where is the ingest up to?". `chainNextStep` now separates the two: only an
+  empty worklist ends the chain, and anything else returns a `retryInMs`. Pinned by
+  `npm run verify:backfill-chain -w apps/api`, which fails six of seven checks against the old
+  behaviour.
+- ⚠️ **A self-enqueuing chain has nobody watching it**, which is why `BACKFILL_SWEEP_JOB` now
+  does: every 15 minutes it asks whether there is outstanding work with no backfill job waiting,
+  active or delayed, and starts one if so. Two of this import's three deaths were a chain that
+  simply stopped, and both times the only symptom was an empty queue — indistinguishable from
+  success. The sweep starts a chain and never a second one; concurrency is 1, but two chains
+  would still double our request rate at two free public APIs.
+- **A long cooldown is re-checked, not slept through.** `MAX_RETRY_MS` caps a wait at ten
+  minutes even when OpenAlex asks for 9,051 seconds, because `coolingUntil` is in memory and a
+  deploy in the meantime clears it — the source is usable long before the timer says.
 - ⚠️ **`YIELD_EVERY = 5`**, for the reason the reclassify outage taught: work that holds the
   event loop stops BullMQ renewing the job lock, the job is judged stalled, and the retries
   take the API with them. Measured during a live run, worst `/health` latency was **21 ms**.
