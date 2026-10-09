@@ -1316,6 +1316,17 @@ error/offline.</li>
 <li><strong>Spec-gaps</strong>: <strong>G-17</strong> — the
 <strong>article-summary list DTO</strong> (card fields) isn’t enumerated
 in EPIC-I §6; specify it.</li>
+<li>⚠️ <strong>Superseded October 2026 — this screen is no longer
+personalised at all.</strong> It was built as specified above, tested,
+and reversed: interests play <strong>no part</strong> in what it shows,
+so there is no “recommended because…” line, no interests-based ranking
+and no “no interests set” empty state. What replaced them is a
+<strong>criteria panel</strong> (keyword, type of paper, how far back,
+sort) that opens on arrival and folds away on Apply, with the criteria
+last used remembered. The screen shows nothing until it has been asked
+something. The save control is real and lives on the card. See
+<code>DEVELOPMENT.md</code> → “My Research — the criteria panel” and
+“Saved articles”, and the memory note on why the reversal happened.</li>
 </ul>
 <h4 id="b2-article-detail-feedarticleid-shell">B2 — Article detail ·
 <code>/feed/:articleId</code> · shell</h4>
@@ -1337,6 +1348,16 @@ specifies the <em>feed</em>; a <strong>single-article GET</strong> and a
 Confirm whether article detail reads from the feed payload or a
 dedicated endpoint, and where saves live (member-scoped,
 <code>community</code>-side).</li>
+<li>⚠️ <strong>G-16 closed, October 2026.</strong> A dedicated
+<code>GET /v1/research-feed/:articleId</code> exists, and saves live in
+<code>research.saved_articles</code> — <strong>not</strong>
+<code>community</code>-side, and not the polymorphic store this spec
+assumed; see EPIC-I §10.2 and
+<code>docs/2026-10-09-saved-articles-design.md</code> for why. The save
+control is at the foot of this screen beside “Read full article”, and
+also on every result card. Retraction is live rather than a
+carry-forward: a retracted paper leaves the feed but stays in a saved
+list, marked.</li>
 </ul>
 <h3 id="c-discussions-tab-the-forum-epic-cde">6.C — Discussions tab (the
 forum, EPIC-C/D/E)</h3>

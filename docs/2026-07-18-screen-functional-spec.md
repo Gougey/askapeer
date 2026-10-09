@@ -427,6 +427,7 @@ The first flow: unauthenticated → verified → handle → in-app. No bottom-na
 - **Actions → API**: open article → B2; save/bookmark → save endpoint (EPIC-I — see G-16); adjust interests → F5.
 - **States**: loading (skeleton cards); **empty — no interests set** → prompt to pick interests (→ F5/A7); error/offline.
 - **Spec-gaps**: **G-17** — the **article-summary list DTO** (card fields) isn't enumerated in EPIC-I §6; specify it.
+- ⚠️ **Superseded October 2026 — this screen is no longer personalised at all.** It was built as specified above, tested, and reversed: interests play **no part** in what it shows, so there is no "recommended because…" line, no interests-based ranking and no "no interests set" empty state. What replaced them is a **criteria panel** (keyword, type of paper, how far back, sort) that opens on arrival and folds away on Apply, with the criteria last used remembered. The screen shows nothing until it has been asked something. The save control is real and lives on the card. See `DEVELOPMENT.md` → "My Research — the criteria panel" and "Saved articles", and the memory note on why the reversal happened.
 
 #### B2 — Article detail · `/feed/:articleId` · shell
 
@@ -435,6 +436,7 @@ The first flow: unauthenticated → verified → handle → in-app. No bottom-na
 - **Data → source**: single-article read — **see G-16** (may not exist yet).
 - **Actions → API**: Open source → external URL; Save → save endpoint (G-16).
 - **Spec-gaps**: **G-16** — EPIC-I §6 specifies the *feed*; a **single-article GET** and a **save/bookmark** endpoint + store aren't enumerated. Confirm whether article detail reads from the feed payload or a dedicated endpoint, and where saves live (member-scoped, `community`-side).
+- ⚠️ **G-16 closed, October 2026.** A dedicated `GET /v1/research-feed/:articleId` exists, and saves live in `research.saved_articles` — **not** `community`-side, and not the polymorphic store this spec assumed; see EPIC-I §10.2 and `docs/2026-10-09-saved-articles-design.md` for why. The save control is at the foot of this screen beside "Read full article", and also on every result card. Retraction is live rather than a carry-forward: a retracted paper leaves the feed but stays in a saved list, marked.
 
 ### 6.C — Discussions tab (the forum, EPIC-C/D/E)
 
