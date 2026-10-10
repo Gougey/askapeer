@@ -129,6 +129,9 @@ export type SearchResults = {
   /** The tsquery matched nothing and these came from trigram similarity — the screen says
    *  so rather than presenting a fuzzy match as an exact one. */
   didYouMean: boolean;
+  /** Nothing matched the words as typed, and these are exact matches for this corrected
+   *  spelling of them instead — the screen shows it. Null when no correction was used. */
+  correctedQuery: string | null;
 };
 
 /**
@@ -150,7 +153,7 @@ export async function fetchSearch(
   for (const tag of params.tags ?? []) search.append('tag', tag);
   if (params.cursor) search.set('cursor', params.cursor);
   const res = await apiGet<SearchResults>(`/search?${search.toString()}`, token);
-  return res ?? { posts: [], nextCursor: null, didYouMean: false, total: 0 };
+  return res ?? { posts: [], nextCursor: null, didYouMean: false, correctedQuery: null, total: 0 };
 }
 
 /** The composer's two pickers, fetched together — neither is useful without the other. */

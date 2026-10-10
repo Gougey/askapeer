@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { articleTags, articles, ingestionCursors, reclassifyState } from '../db/schema';
+import { SpellingService } from '../search/spelling.service';
 import { SettingsService } from '../settings/settings.service';
 import { parseAbstract, stripInline } from './abstract';
 import { classify, prepareTaxonomy, type PreparedTag } from './classifier';
@@ -88,6 +89,7 @@ export class IngestionService {
     @Inject(DRIZZLE) private readonly db: Database,
     @Inject(ARTICLE_SOURCES) private readonly sources: ArticleSource[],
     private readonly settings: SettingsService,
+    private readonly spelling: SpellingService,
   ) {}
 
   /**
@@ -110,6 +112,9 @@ export class IngestionService {
         reports.push({ source: source.name, seen: 0, stored: 0, classified: 0, error: message });
       }
     }
+    // New titles can bring new words to correct towards, and an admin may have renamed a tag
+    // since the last run. Never throws — see `SpellingService.refresh`.
+    await this.spelling.refresh();
     return reports;
   }
 

@@ -91,3 +91,8 @@ jobs:
       # whisker under where Postmark starts acting. Real members' sign-in codes ride on that.
       - name: Email — nothing is sent to a domain that cannot exist
         run: npm run verify:undeliverable -w apps/api
+      # Search spelling correction. Trigram similarity alone corrected "ligamnet" to "liga" and
+      # "ankel" to "ankh"; edit distance then frequency is what picks the word a clinician
+      # meant, and a short word like Andrew's stray "ti" is dropped rather than guessed at.
+      - name: Search — a misspelt word is corrected to what was meant, or dropped
+        run: npm run verify:spelling -w apps/api

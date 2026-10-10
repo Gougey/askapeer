@@ -73,13 +73,22 @@ export type FeedCriteria = {
   sort?: FeedSort;
 };
 
-export type FeedPage = { articles: FeedArticle[]; nextCursor: string | null };
+/**
+ * `correctedQuery` is set when the keyword as typed matched nothing and a spelling correction
+ * of it did — the keyword these articles actually match, which the screen shows.
+ */
+export type FeedPage = {
+  articles: FeedArticle[];
+  nextCursor: string | null;
+  correctedQuery: string | null;
+};
 
 /** Search has no ranking `mode` — relevance is the ordering, and it carries a real total. */
 export type FeedSearchPage = {
   articles: FeedArticle[];
   nextCursor: string | null;
   total: number;
+  correctedQuery: string | null;
 };
 
 
@@ -105,7 +114,7 @@ export async function fetchFeed(
   if (cursor) params.set('cursor', cursor);
   const query = params.toString() ? `?${params}` : '';
   const page = await apiGet<FeedPage>(`/research-feed${query}`, token);
-  return page ?? { articles: [], nextCursor: null };
+  return page ?? { articles: [], nextCursor: null, correctedQuery: null };
 }
 
 /**
@@ -165,7 +174,7 @@ export async function fetchFeedSearch(
   if (params.evidence) search.set('evidence', params.evidence);
   if (params.cursor) search.set('cursor', params.cursor);
   const res = await apiGet<FeedSearchPage>(`/research-feed/search?${search.toString()}`, token);
-  return res ?? { articles: [], nextCursor: null, total: 0 };
+  return res ?? { articles: [], nextCursor: null, total: 0, correctedQuery: null };
 }
 
 export async function fetchArticle(token: string, articleId: string): Promise<ArticleDetail | null> {

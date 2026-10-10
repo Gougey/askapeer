@@ -157,18 +157,31 @@ export default async function FeedPage({
           {t('noMatches')}
         </p>
       ) : (
-        <InfiniteList
-          listClassName="flex flex-col"
-          listStyle={{ gap: 'var(--space-3)' }}
-          initialCursor={page.nextCursor}
-          loadMore={loadMoreArticles.bind(null, filters)}
-          storageKey={filterKey ? `feed?${filterKey}` : 'feed'}
-          fallbackHref={page.nextCursor ? moreHref(page.nextCursor) : null}
-        >
-          {page.articles.map((article) => (
-            <ArticleCard key={article.id} article={article} showTags={false} />
-          ))}
-        </InfiniteList>
+        <>
+          {/*
+            The keyword as typed found nothing and its corrected spelling did. Said once, above
+            the list, because the panel still holds what the member typed — and keeps it, so
+            the remembered criteria are theirs rather than ours. Later pages need nothing: the
+            API re-derives the same correction for every one.
+          */}
+          {page.correctedQuery && filters.q && (
+            <p className="text-sm" style={{ color: 'var(--color-muted)' }} aria-live="polite">
+              {t('corrected', { query: filters.q, corrected: page.correctedQuery })}
+            </p>
+          )}
+          <InfiniteList
+            listClassName="flex flex-col"
+            listStyle={{ gap: 'var(--space-3)' }}
+            initialCursor={page.nextCursor}
+            loadMore={loadMoreArticles.bind(null, filters)}
+            storageKey={filterKey ? `feed?${filterKey}` : 'feed'}
+            fallbackHref={page.nextCursor ? moreHref(page.nextCursor) : null}
+          >
+            {page.articles.map((article) => (
+              <ArticleCard key={article.id} article={article} showTags={false} />
+            ))}
+          </InfiniteList>
+        </>
       )}
     </main>
   );
