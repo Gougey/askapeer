@@ -49,6 +49,14 @@ STATIC_DOCS=(
   "bottom-nav-treatments|$REPO_ROOT/docs/2026-08-28-bottom-nav-treatments.html|Bottom Nav — Selected-Tab Treatments (for review)|Five ways of showing which tab you are on, each on a real 430px bar with the app's own icons — for Paul and Andy to compare after Andy found the current one too subtle. Tap the tabs; there is a light/dark switch.|Client"
 )
 
+# Pages authored as Claude Artifact fragments: real HTML, but with no doctype, head or body,
+# because the Artifact viewer supplies those. One source file therefore serves twice — published
+# as an artifact for sharing, and wrapped here to stand alone on the docs site. Copying one
+# verbatim (the STATIC_DOCS path above) would render it in quirks mode with no viewport meta.
+FRAGMENT_DOCS=(
+  "architecture-diagrams|$REPO_ROOT/docs/architecture/askapeer-architecture.html|Architecture — Three Views (diagrams)|Investor-facing architecture pack, drawn from the repository and the live database: the technical estate and the products in it, the sixteen application modules and how they talk, and the data model — thirty-six tables in four schemas, where exactly two foreign keys cross from pseudonymous activity to a real person.|Architecture"
+)
+
 for entry in "${DOCS[@]}"; do
   IFS='|' read -r slug src title desc group <<< "$entry"
   echo "Building $slug from $src"
@@ -62,6 +70,12 @@ for entry in "${STATIC_DOCS[@]}"; do
   cp "$src" "$OUT/$slug.html"
 done
 
-python3 "$(dirname "$0")/build-index.py" "$OUT/index.html" "${DOCS[@]}" "${STATIC_DOCS[@]}"
+for entry in "${FRAGMENT_DOCS[@]}"; do
+  IFS='|' read -r slug src title desc group <<< "$entry"
+  echo "Wrapping $slug from $src"
+  python3 "$(dirname "$0")/wrap-fragment.py" "$src" "$OUT/$slug.html"
+done
+
+python3 "$(dirname "$0")/build-index.py" "$OUT/index.html" "${DOCS[@]}" "${STATIC_DOCS[@]}" "${FRAGMENT_DOCS[@]}"
 
 echo "Done. Output in $OUT/"
