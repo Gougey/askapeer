@@ -6,9 +6,10 @@ import { useTranslations } from 'next-intl';
 
 /**
  * The five destinations agreed for the app shell (screen spec §1.1). Order is fixed:
- * Create sits in the centre because it's the primary action, and the two content tabs
+ * Ask sits in the centre because it's the primary action, and the two content tabs
  * flank it on the left with the two personal tabs on the right. Icons are the line set
- * from the style guide (§6.1); Create is the spark "Ask" FAB.
+ * from the style guide (§6.1); Ask is the spark FAB, and is labelled "Ask" rather than
+ * "Create" at Andrew's suggestion (2026-10-10) — the style guide's own name for it.
  */
 const ICON = {
   feed: 'M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
