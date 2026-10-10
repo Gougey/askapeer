@@ -145,7 +145,12 @@ export default async function SearchPage({
               <p className="text-sm" style={{ color: 'var(--color-muted)' }} aria-live="polite">
                 {(posts?.total ?? 0) === 0
                   ? t('noResultsDiscussions')
-                  : posts?.didYouMean
+                  : posts?.correctedQuery
+                    ? /* The words spelt right matched exactly. The box still shows what was
+                         typed, so this line is the only place the member learns what was
+                         searched instead — and that a word may have been dropped. */
+                      t('corrected', { count: posts.total, query: q, corrected: posts.correctedQuery })
+                    : posts?.didYouMean
                     ? /* Trigram fallback: nothing matched the words as typed. Saying so is
                          the difference between a helpful near-miss and results that look
                          wrong — and the count is of close matches, not exact ones. */
@@ -191,7 +196,13 @@ export default async function SearchPage({
               <p className="text-sm" style={{ color: 'var(--color-muted)' }} aria-live="polite">
                 {(papers?.total ?? 0) === 0
                   ? t('noResultsPapers')
-                  : t('papersCount', { count: papers?.total ?? 0 })}
+                  : papers?.correctedQuery
+                    ? t('correctedPapers', {
+                        count: papers.total,
+                        query: q,
+                        corrected: papers.correctedQuery,
+                      })
+                    : t('papersCount', { count: papers?.total ?? 0 })}
               </p>
 
               {/* A category is the one thing that still cannot cross, so it is the one thing

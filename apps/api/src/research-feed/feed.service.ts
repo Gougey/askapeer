@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
+import { SpellingService } from '../search/spelling.service';
 import type { EvidenceType } from './scoring';
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -45,6 +46,8 @@ export type FeedSearchPage = {
    * every match stops being free.
    */
   total: number;
+  /** See `FeedPage.correctedQuery`. */
+  correctedQuery: string | null;
 };
 
 /**
@@ -57,6 +60,13 @@ export type FeedSearchPage = {
 export type FeedPage = {
   articles: FeedArticle[];
   nextCursor: string | null;
+  /**
+   * Set when the keyword as typed matched nothing and a spelling correction of it did: the
+   * keyword these articles actually match. The screen says so and names what changed. The
+   * member's remembered criteria keep what they typed — the correction is re-derived on every
+   * page, which is also what keeps infinite scroll on the corrected list.
+   */
+  correctedQuery: string | null;
 };
 
 /**
@@ -89,7 +99,33 @@ export type FeedFilters = {
 
 @Injectable()
 export class FeedService {
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly spelling: SpellingService,
+  ) {}
+
+  /**
+   * Run a keyword search, and if it comes back empty, run it again spelt right.
+   *
+   * ⚠️ **Stateless, so paging needs no help.** Each page arrives with the keyword as typed and
+   * an offset; the empty exact page, the (deterministic) correction and the corrected page are
+   * re-derived every time. The correction is only tried when the page is empty *and* there is
+   * a keyword — an empty page caused by the evidence or period filter has nothing misspelt,
+   * and `correct` answers that with one indexed lookup.
+   */
+  private async withCorrection<P extends { articles: FeedArticle[] }>(
+    query: string,
+    run: (query: string) => Promise<P>,
+  ): Promise<P & { correctedQuery: string | null }> {
+    const exact = await run(query);
+    if (exact.articles.length > 0 || query === '') return { ...exact, correctedQuery: null };
+    const correction = await this.spelling.correct(query, 'research');
+    if (!correction) return { ...exact, correctedQuery: null };
+    const corrected = await run(correction.query);
+    return corrected.articles.length > 0
+      ? { ...corrected, correctedQuery: correction.query }
+      : { ...exact, correctedQuery: null };
+  }
 
   /**
    * **Recency is applied here, not stored.** A stored recency score describes the world on
@@ -127,14 +163,16 @@ export class FeedService {
     filters: FeedFilters = {},
   ): Promise<FeedPage> {
     const offset = Number.parseInt(cursor ?? '0', 10) || 0;
-    return this.rank(offset, limit, filters);
+    return this.withCorrection(filters.query?.trim() ?? '', (query) =>
+      this.rank(offset, limit, { ...filters, query }),
+    );
   }
 
   private async rank(
     offset: number,
     limit: number,
     filters: FeedFilters = {},
-  ): Promise<FeedPage> {
+  ): Promise<Omit<FeedPage, 'correctedQuery'>> {
     /*
      * The narrowing clauses. Each is absent unless asked for, so an unfiltered feed runs
      * exactly the query it ran before any of this existed.
@@ -269,8 +307,11 @@ export class FeedService {
    * **No trigram fallback, unlike posts.** The forum falls back to `pg_trgm` similarity when
    * a query matches no lexemes, and says so via `didYouMean`. A near-miss on a question
    * title is a plausible guess at what someone meant; a near-miss across 2,597 abstracts is
-   * mostly noise, and the honest answer to a misspelt search of the literature is that we
-   * found nothing. Revisit with real queries rather than in the abstract.
+   * mostly noise. That still holds — and it is why the misspelt search is answered by
+   * correcting the *words* instead (`withCorrection`, 2026-10-10). The first real query to
+   * test this was Andrew's "ankle ligament testing return ti sport", empty because of one
+   * stray word; corrected word by word against a dictionary and then searched exactly, it
+   * returns an exact match for a query the screen can show, not a fuzzy one.
    */
   /**
    * Search the corpus, optionally narrowed by clinical tag and evidence type.
@@ -292,8 +333,20 @@ export class FeedService {
     evidence?: EvidenceType,
   ): Promise<FeedSearchPage> {
     const query = term.trim();
-    if (query === '' && tagIds.length === 0) return { articles: [], nextCursor: null, total: 0 };
+    if (query === '' && tagIds.length === 0) {
+      return { articles: [], nextCursor: null, total: 0, correctedQuery: null };
+    }
     const offset = Number.parseInt(cursor ?? '0', 10) || 0;
+    return this.withCorrection(query, (q) => this.searchOnce(q, offset, limit, tagIds, evidence));
+  }
+
+  private async searchOnce(
+    query: string,
+    offset: number,
+    limit: number,
+    tagIds: string[],
+    evidence?: EvidenceType,
+  ): Promise<Omit<FeedSearchPage, 'correctedQuery'>> {
 
     // Each tag matches the tag *and its whole subtree*, the same expansion the forum search
     // and the personalised feed both make — picking "Lower Limb" has to find an article

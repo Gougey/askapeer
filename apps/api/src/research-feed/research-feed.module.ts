@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AdminAccessModule } from '../admin/admin-access.module';
 import { JwtConfigModule } from '../auth/jwt-config.module';
 import { SettingsModule } from '../settings/settings.module';
+import { SpellingModule } from '../search/spelling.module';
 import { BackfillService } from './backfill.service';
 import { FeedPreferencesService } from './feed-preferences.service';
 import { SavedArticlesService } from './saved-articles.service';
@@ -28,6 +29,7 @@ import { OpenAlexSource } from './sources/open-alex.source';
     SettingsModule, // AppAccessGuard's paywall read
     AdminAccessModule, // AdminGuard on the ingest-trigger routes
     IngestionQueueModule,
+    SpellingModule, // corrects a search that came back empty
   ],
   controllers: [ResearchFeedController, ResearchFeedAdminController],
   providers: [

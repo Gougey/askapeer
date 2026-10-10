@@ -3,6 +3,7 @@ import { AppAccessGuard } from '../auth/app-access.guard';
 import { JwtConfigModule } from '../auth/jwt-config.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SettingsModule } from '../settings/settings.module';
+import { SpellingModule } from '../search/spelling.module';
 import { BadgeService } from './badge.service';
 import { CommentsController } from './comments.controller';
 import { CommentsService } from './comments.service';
@@ -31,6 +32,7 @@ import { VocabularyService } from './vocabulary.service';
   imports: [
     JwtConfigModule, // JwtAuthGuard verifies the access token
     SettingsModule, // AppAccessGuard's paywall read + the badge threshold settings
+    SpellingModule, // corrects a search that came back empty
   ],
   controllers: [
     PostsController,

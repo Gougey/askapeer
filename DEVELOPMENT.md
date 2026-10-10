@@ -964,10 +964,10 @@ Things worth knowing before changing any of it:
   every filter, so the CTE only ever has to be a superset. Ordering is recency, not
   relevance: there is nothing to rank against, and kudos does not lead here for the same
   reason it only nudges above.
-- **Trigram fallback, not trigram search.** `pg_trgm` (migration `0019`) runs only when the
-  tsquery matched nothing — "achiles" is a dead end under full-text search and an obvious
-  near-match under trigrams. The response says `didYouMean: true` and the screen says so,
-  because presenting a fuzzy match as an exact one is worse than the miss.
+- **Spelling correction first, then the trigram fallback** — see "Spelling correction" below.
+  `pg_trgm` (migration `0019`) runs only when the tsquery *and* its corrected spelling both
+  matched nothing. The response says `didYouMean: true` and the screen says so, because
+  presenting a fuzzy match as an exact one is worse than the miss.
 - **Offset paging, not the keyset cursor the lists use.** A keyset cursor needs a stable
   indexed sort key; this sort is a computed relevance score, which is neither.
 - **Measured at 50,067 posts** (synthetic bulk, since removed): typical queries 5–10ms
@@ -1020,6 +1020,48 @@ working without JavaScript. The tag filter is the composer's `TagPicker`, moved 
 `components/` and reused with `fieldName="tag"` — the same type-ahead and drill-down over
 the same ~600 nodes, so a member who has tagged a post already knows how to narrow a
 search.
+
+### Spelling correction (all three keyword searches)
+
+Andrew, 2026-10-10: *"ankle ligament testing return ti sport"* found nothing, and with the
+typo fixed it "worked brilliantly". Every search ANDs its words, so one stray word empties the
+page however good the rest are. The forum search, Search's Papers tab and the My Research
+keyword now all retry an empty search with the words spelt right, and say so:
+*Nothing matched "…ti sport". Showing 12 papers for "ankle ligament testing return sport".*
+
+`apps/api/src/search/` — `spelling.ts` is the pure half that decides (guarded by
+`npm run verify:spelling -w apps/api`), `SpellingService` asks the database. Before changing it:
+
+- **It corrects words, not results.** Each unknown word is replaced by a near dictionary word
+  or dropped, and then the *ordinary* search runs on the corrected text. What comes back is an
+  exact match for a query the screen can show. That is why the research side has this but
+  still no trigram fallback (a near-miss across abstracts is noise).
+- **The dictionary is `research.spelling_dictionary`** (migration `0054`): words from paper
+  **titles** (in ≥2 titles) and **tag names and synonyms**. ⚠️ **Never add post bodies, or
+  anything else a member wrote.** A correction is displayed, so every word in the dictionary
+  can be shown to anyone who mistypes something near it. Member text would put a misspelt
+  patient detail, or a word from a removed post, one typo away from everyone. Titles rather than
+  abstracts for cost: 0.2 s against 2.9 s on 16k articles locally, on a database that has been
+  OOM-killed before.
+- **"Known" means in the dictionary by stem, not "appears in the corpus".** Across 144,000
+  abstracts almost every typo appears somewhere: Andrew's "ti" is in seven, as titanium. A
+  word that counts as known is never touched. The forum also trusts any word its own posts or
+  tags contain.
+- **Nearest, then commonest.** Trigrams only build the shortlist. Edit distance (with swapped
+  letters counted as one edit) chooses, and paper count breaks ties. Similarity alone chose
+  "liga" for "ligamnet" and "ankh" for "ankel". Words under four letters are never guessed
+  at, only dropped. Negated words (`-runner`), `or`, and codes with digits or symbols (`T2`,
+  `ACL-R`) are never touched.
+- **The forum only suggests words a discussion contains**, so a correction never trades one
+  empty page for another. That can mean a word the literature knows is dropped for the
+  forum: "propioception ankel" searches the demo posts as just "ankle".
+- **Stateless, so paging needs no help.** The pager and infinite scroll send the query as
+  typed. Every page re-derives the same correction, and the remembered My Research criteria
+  keep what the member typed. For the same reason the forum no longer returns early on an empty
+  page past the first, which had also broken *More* on every trigram result.
+- **Refreshed after every ingest run** (`IngestionService.runAll` → `SpellingService.refresh`,
+  `REFRESH … CONCURRENTLY`, never throws). A renamed tag is a correction target from the next
+  run, and is found when spelt right in the meantime.
 
 ## Demo data (`npm run seed:demo -w apps/api`)
 

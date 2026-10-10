@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
+import { SpellingService } from '../search/spelling.service';
 import type { PostCard } from './posts.service';
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -34,6 +35,12 @@ export type SearchResults = {
    * The screen says so rather than presenting a fuzzy match as an exact one.
    */
   didYouMean: boolean;
+  /**
+   * Set when the words as typed matched nothing and a spelling correction of them did — the
+   * query these results are an exact match for. The screen shows it, and names what changed.
+   * Tried before the trigram fallback above, which only runs if the correction found nothing.
+   */
+  correctedQuery: string | null;
 };
 
 export type SearchQuery = {
@@ -60,7 +67,10 @@ export type SearchQuery = {
  */
 @Injectable()
 export class SearchService {
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly spelling: SpellingService,
+  ) {}
 
   async search(query: SearchQuery): Promise<SearchResults> {
     const limit = query.limit ?? DEFAULT_PAGE_SIZE;
@@ -68,7 +78,9 @@ export class SearchService {
     const term = (query.q ?? '').trim();
     // Any one of the three controls is a search. Only *none* of them is not: an empty
     // search would be "the whole corpus, newest first", which is the Discussions list.
-    if (!term && !hasFilters(query)) return { posts: [], nextCursor: null, didYouMean: false, total: 0 };
+    if (!term && !hasFilters(query)) {
+      return { posts: [], nextCursor: null, didYouMean: false, correctedQuery: null, total: 0 };
+    }
 
     // Browse mode — filters with no words to rank against. There is no relevance to
     // compute and nothing to spell wrong, so it is one pass ordered by recency, and the
@@ -78,13 +90,28 @@ export class SearchService {
       return this.toResults(browsed.rows, limit, offset, false);
     }
 
+    /*
+     * ⚠️ **Every step is stateless, so paging works without being told.** The pager links back
+     * with the query as typed and an offset; page two of a corrected search is therefore an
+     * empty exact page, the same correction (it is deterministic), and the corrected page two.
+     * That is why an empty page past the first no longer returns early: it used to, and it
+     * broke the *More* link on every trigram result as well.
+     */
     const exact = await this.run(term, query, limit, offset, false);
-    if (exact.rows.length > 0 || offset > 0) {
-      return this.toResults(exact.rows, limit, offset, false);
+    if (exact.rows.length > 0) return this.toResults(exact.rows, limit, offset, false);
+
+    // Nothing matched as lexemes. First, the words spelt right — "return ti sport" is one
+    // stray word away from an exact match, and an exact match is the better answer.
+    const correction = await this.spelling.correct(term, 'forum');
+    if (correction) {
+      const corrected = await this.run(correction.query, query, limit, offset, false);
+      if (corrected.rows.length > 0) {
+        return this.toResults(corrected.rows, limit, offset, false, correction.query);
+      }
     }
 
-    // Nothing matched as lexemes. Before reporting no results, try trigram similarity —
-    // "achiles" is a miss under full-text search and an obvious near-match under trigrams.
+    // Then trigram similarity against titles — "achiles" is a miss under full-text search and
+    // an obvious near-match under trigrams.
     const fuzzy = await this.run(term, query, limit, offset, true);
     return this.toResults(fuzzy.rows, limit, offset, fuzzy.rows.length > 0);
   }
@@ -299,6 +326,7 @@ export class SearchService {
     limit: number,
     offset: number,
     didYouMean: boolean,
+    correctedQuery: string | null = null,
   ): Promise<SearchResults> {
     const page = rows.slice(0, limit);
     const tagsByPost = await this.tagsFor(page.map((r) => r.id));
@@ -325,6 +353,7 @@ export class SearchService {
       nextCursor: rows.length > limit ? String(offset + limit) : null,
       total: Number(rows[0]?.total ?? 0),
       didYouMean,
+      correctedQuery,
     };
   }
 
