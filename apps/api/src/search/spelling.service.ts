@@ -6,6 +6,7 @@ import {
   chooseCorrection,
   correctableWords,
   MIN_CORRECTABLE_LENGTH,
+  singleEdits,
   type Candidate,
   type Correction,
 } from './spelling';
@@ -104,14 +105,21 @@ export class SpellingService {
       await tx.execute(
         sql`select set_config('pg_trgm.similarity_threshold', ${String(SHORTLIST_SIMILARITY)}, true)`,
       );
+      // Two sources, unioned: every one-edit word, looked up exactly (see `singleEdits` — the
+      // trigram half alone lost "return" for "retrun" on live), and the trigram shortlist for
+      // anything further away.
       return tx.execute<{ word: string; ndoc: number }>(sql`
         select s.word, s.ndoc from (
           select d.word, d.ndoc
             from research.spelling_dictionary d
+           where d.word = any(array[${sql.join(singleEdits(word).map((w) => sql`${w}`), sql`, `)}]::text[])
+          union
+          (select d.word, d.ndoc
+            from research.spelling_dictionary d
            where d.word % ${word}
              and abs(length(d.word) - length(${word})) <= 3
            order by similarity(d.word, ${word}) desc, d.ndoc desc
-           limit ${CANDIDATES_PER_WORD}
+           limit ${CANDIDATES_PER_WORD})
         ) s
         ${usable}
       `);

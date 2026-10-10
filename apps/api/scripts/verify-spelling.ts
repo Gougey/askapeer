@@ -11,6 +11,7 @@ import {
   chooseCorrection,
   correctableWords,
   editDistance,
+  singleEdits,
   type Candidate,
 } from '../src/search/spelling';
 
@@ -49,6 +50,19 @@ check(
   'nothing near enough is no correction',
   chooseCorrection('zzzzzzz', [c('zygote', 3)]),
   null,
+);
+
+// --- The one-edit lookup, which is what guarantees a swap is considered at all. Live offered
+// Andrew "retro sport" for "retrun ti sport": trigrams ranked "return" outside the top ten.
+check('every swap is generated ("retrun" → return)', singleEdits('retrun').includes('return'), true);
+check('every deletion is generated ("fasciitis" ← fascitis)', singleEdits('fascitis').includes('fasciitis'), true);
+check('every substitution is generated ("ankle" ← ankla)', singleEdits('ankla').includes('ankle'), true);
+check('every insertion is generated ("ankle" ← anklee)', singleEdits('anklee').includes('ankle'), true);
+check('the word itself is not its own edit', singleEdits('return').includes('return'), false);
+check(
+  '"retrun" → return, not retro (one edit against two)',
+  chooseCorrection('retrun', [c('retro', 500), c('retrospective', 9000), c('return', 3078)]),
+  'return',
 );
 
 // --- Which tokens are words worth asking about.

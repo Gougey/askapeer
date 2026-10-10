@@ -1049,7 +1049,10 @@ keyword now all retry an empty search with the words spelt right, and say so:
   tags contain.
 - **Nearest, then commonest.** Trigrams only build the shortlist. Edit distance (with swapped
   letters counted as one edit) chooses, and paper count breaks ties. Similarity alone chose
-  "liga" for "ligamnet" and "ankh" for "ankel". Words under four letters are never guessed
+  "liga" for "ligamnet" and "ankh" for "ankel". ⚠️ **Every one-edit word is also looked up
+  exactly** (`singleEdits`), because a swap breaks most of a word's trigrams: on live, "retrun"
+  shared more with "retro" and "retrospective" than with "return", which fell outside the
+  trigram top ten, and Andrew was offered "retro sport". Words under four letters are never guessed
   at, only dropped. Negated words (`-runner`), `or`, and codes with digits or symbols (`T2`,
   `ACL-R`) are never touched.
 - **The forum only suggests words a discussion contains**, so a correction never trades one
