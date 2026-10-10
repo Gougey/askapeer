@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Askapeer Architecture</title>
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,-apple-system,"Segoe UI",sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: one centred reading column; each architecture view is a full-width figure
+     with its framing paragraph above it and its claim in the caption below. */
+  :root {
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --ink: #14212b;
+    --muted: #64757f;
+    --faint: #93a1a9;
+    --line: #e5ebee;
+    --line-2: #d7e0e4;
+    --navy: #001f52;
+    --navy-tint: #e6ebf2;
+    --spark: #ed1b24;
+    --verify: #2e8b6f;
+    --teal: #0f766e;
+    --blue: #1d4ed8;
+    --violet: #6d28d9;
+    --magenta: #a21667;
+    --warn: #9a5f0a;
+    --display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1220;
+      --surface: #111a2b;
+      --ink: #e2e8f0;
+      --muted: #94a3b8;
+      --faint: #5f7183;
+      --line: #1e2c40;
+      --line-2: #2a3a52;
+      --navy: #6f9bff;
+      --navy-tint: #16233b;
+      --spark: #ff5a5f;
+      --verify: #4bbf98;
+      --teal: #5eead4;
+      --blue: #7dd3fc;
+      --violet: #c4b5fd;
+      --magenta: #f9a8d4;
+      --warn: #e0a33a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1220;
+    --surface: #111a2b;
+    --ink: #e2e8f0;
+    --muted: #94a3b8;
+    --faint: #5f7183;
+    --line: #1e2c40;
+    --line-2: #2a3a52;
+    --navy: #6f9bff;
+    --navy-tint: #16233b;
+    --spark: #ff5a5f;
+    --verify: #4bbf98;
+    --teal: #5eead4;
+    --blue: #7dd3fc;
+    --violet: #c4b5fd;
+    --magenta: #f9a8d4;
+    --warn: #e0a33a;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1096px;
+    margin: 0 auto;
+    padding-inline: 24px;
+    padding-block: 56px 72px;
+  }
+
+  /* ---- masthead ---- */
+  .mast { display: flex; flex-direction: column; gap: 18px; }
+  .wordmark {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .wordmark i { color: var(--spark); font-style: normal; }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(34px, 6vw, 58px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: clamp(17px, 2.2vw, 20px);
+    line-height: 1.55;
+    max-width: 64ch;
+    color: var(--ink);
+    margin: 0;
+  }
+  .provenance {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--muted);
+    border-top: 1px solid var(--line-2);
+    padding-top: 14px;
+    max-width: 76ch;
+  }
+
+  /* ---- figures ---- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--line-2);
+    border: 1px solid var(--line-2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-block: 44px;
+  }
+  .stat { background: var(--surface); padding: 18px 20px; min-width: 0; }
+  .stat b {
+    display: block;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 30px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat span {
+    display: block;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+
+  section { margin-block: 72px 0; }
+  .sec-head { display: flex; flex-direction: column; gap: 10px; max-width: 72ch; }
+  .sec-num {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--navy);
+    letter-spacing: 0.04em;
+  }
+  h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(25px, 3.4vw, 34px);
+    line-height: 1.14;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .sec-head p { margin: 0; color: var(--ink); max-width: 68ch; }
+  .sec-head p + p { margin-top: 10px; }
+
+  figure {
+    margin: 32px 0 0;
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    padding: 20px 20px 4px;
+    overflow-x: auto;
+  }
+  figure svg {
+    display: block;
+    width: 100%;
+    min-width: 940px;
+    max-width: 100%;
+    height: auto;
+    color: var(--ink);
+    /* SVG `fill` defaults to black, so every <text> without a fill class rendered black —
+       invisible on the dark surface. `fill` is inherited, so setting it here once carries
+       the theme's ink to every label, and the .fill-* classes still override it. */
+    fill: currentColor;
+    font-family: var(--sans);
+  }
+  figcaption {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--muted);
+    padding: 16px 4px 18px;
+    border-top: 1px solid var(--line);
+    margin-top: 16px;
+    max-width: 92ch;
+  }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  /* SVG type roles */
+  .t-name { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+  .t-sub { font-size: 11px; }
+  .t-tiny { font-size: 10px; }
+  .t-band {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .t-edge { font-size: 10px; font-weight: 500; font-family: var(--mono); }
+  .t-tbl { font-size: 11px; font-family: var(--mono); }
+  .t-tbl-hub { font-size: 11px; font-weight: 500; font-family: var(--mono); }
+  .t-num { font-size: 11.5px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .box { fill: var(--surface); stroke: var(--line-2); stroke-width: 1.25; }
+  .box-accent { fill: var(--navy-tint); stroke: var(--navy); stroke-width: 1.25; }
+  .zone { fill: none; stroke: var(--line-2); stroke-width: 1.25; stroke-dasharray: 5 4; }
+  .chip { fill: var(--surface); stroke: var(--line-2); stroke-width: 1; }
+  .chip-hub { fill: var(--navy-tint); stroke: var(--navy); stroke-width: 1.25; }
+  .flow { fill: none; stroke: currentColor; stroke-width: 1.4; opacity: 0.75; }
+  .flow-soft { fill: none; stroke: currentColor; stroke-width: 1.1; opacity: 0.5; }
+  .rail { fill: none; stroke: var(--navy); stroke-width: 2; }
+  .rail-dash { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 4 4; }
+  .edge-identity { fill: none; stroke: var(--spark); stroke-width: 2.4; }
+  .edge-audit { fill: none; stroke: var(--warn); stroke-width: 1.8; }
+  .fill-muted { fill: var(--muted); }
+  .fill-faint { fill: var(--faint); }
+  .fill-navy { fill: var(--navy); }
+  .fill-spark { fill: var(--spark); }
+  .fill-warn { fill: var(--warn); }
+  .fill-verify { fill: var(--verify); }
+  .fill-teal { fill: var(--teal); }
+  .fill-blue { fill: var(--blue); }
+  .fill-violet { fill: var(--violet); }
+  .fill-magenta { fill: var(--magenta); }
+
+  /* ---- product table ---- */
+  .products { margin-top: 32px; border-top: 1px solid var(--line-2); }
+  .prow {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.9fr) minmax(130px, 1fr) minmax(200px, 2fr);
+    gap: 10px 24px;
+    padding: 15px 2px;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .prow > * { min-width: 0; }
+  .prow dt { font-weight: 600; font-size: 14.5px; }
+  .prow .role { font-family: var(--mono); font-size: 11.5px; color: var(--navy); }
+  .prow dd { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  @media (max-width: 640px) {
+    .prow { grid-template-columns: 1fr; gap: 4px; }
+  }
+
+  .note {
+    margin-top: 32px;
+    border-left: 3px solid var(--spark);
+    padding: 4px 0 4px 18px;
+    max-width: 70ch;
+  }
+  .note h3 {
+    font-family: var(--display);
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .note p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.6; }
+  .note p:last-child { margin-bottom: 0; }
+  .note code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--navy-tint);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  footer {
+    margin-top: 76px;
+    border-top: 1px solid var(--line-2);
+    padding-top: 20px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 80ch;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    section, .stats { animation: rise 0.5s ease-out both; }
+    @keyframes rise { from { opacity: 0.001; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <div class="wordmark">Ask<i>a</i>Peer</div>
+    <div class="eyebrow">Architecture · October 2026</div>
+    <h1>Three views of what we have built</h1>
+    <p class="standfirst">Askapeer is a verified-only, pseudonymous professional network for sports medicine
+      practitioners. Every member is a registered clinician; no one can see whether the answer came from a
+      consultant of thirty years or a first-year graduate. These three diagrams show the platform that
+      enforces that promise: the infrastructure it runs on, the modules it is made of, and the data model
+      where the pseudonymity guarantee is structural rather than a policy.</p>
+    <p class="provenance">Read from the repository at commit cd0f239 · row counts queried from the live
+      London database on 10 October 2026 · UK-first, web-first, running in production on Fly.io (lhr)</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b>152,335</b><span>research articles ingested and classified</span></div>
+    <div class="stat"><b>1,276</b><span>live clinical taxonomy tags across seven roots</span></div>
+    <div class="stat"><b>36</b><span>tables in four Postgres schemas</span></div>
+    <div class="stat"><b>54</b><span>forward-only migrations applied</span></div>
+    <div class="stat"><b>16</b><span>NestJS modules, one per domain</span></div>
+    <div class="stat"><b>15</b><span>CI guards gating every deploy</span></div>
+  </div>
+
+  <!-- ===================== 1 · TECHNICAL ===================== -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">01 / Technical architecture</div>
+      <h2>Two applications, one database, four outside services</h2>
+      <p>A deliberately small estate. The web app renders every screen on the server and holds no database
+        credentials; the API is the only thing that talks to Postgres, and the only thing that reaches
+        outside. Nothing in the diagram below is a managed abstraction we cannot inspect — when the research
+        feed slowed to five seconds, the cause was one shared CPU, and we could see it.</p>
+      <p>This is the <em>prove</em> phase: Fly.io in London, chosen for speed of iteration. The migration
+        target is AWS <code style="font-family:var(--mono);font-size:12.5px">eu-west-2</code>, timed for the
+        point we open beyond the invited peer group.</p>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 1000 600" role="img" aria-label="Technical architecture: browsers and the installed progressive web app reach the Next.js web app over HTTPS; the web app calls the NestJS API with a bearer token; the API alone reaches Postgres, Redis, and the four external services Postmark, Europe PMC, OpenAlex and the HCPC register; GitHub Actions runs fifteen guards and a tip-of-main check before deploying to Fly.io London.">
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"></path>
+          </marker>
+        </defs>
+
+        <!-- clients -->
+        <rect class="box" x="130" y="24" width="190" height="60" rx="8"></rect>
+        <text class="t-name" x="225" y="49" text-anchor="middle">Web browser</text>
+        <text class="t-sub fill-muted" x="225" y="67" text-anchor="middle">any device, UK-first</text>
+
+        <rect class="box" x="350" y="24" width="190" height="60" rx="8"></rect>
+        <text class="t-name" x="445" y="49" text-anchor="middle">Installed PWA</text>
+        <text class="t-sub fill-muted" x="445" y="67" text-anchor="middle">iOS home screen, standalone</text>
+
+        <path class="flow" d="M225 86 L225 148" marker-end="url(#a1)"></path>
+        <path class="flow" d="M445 86 L445 148" marker-end="url(#a1)"></path>
+        <text class="t-edge fill-muted" x="455" y="112" text-anchor="start">HTTPS</text>
+
+        <!-- Fly zone -->
+        <rect class="zone" x="36" y="112" width="644" height="360" rx="14"></rect>
+        <text class="t-band fill-navy" x="54" y="134">Fly.io · London (lhr)</text>
+
+        <rect class="box" x="60" y="152" width="240" height="86" rx="8"></rect>
+        <text class="t-name" x="74" y="176">askapeer-web</text>
+        <text class="t-sub fill-muted" x="74" y="194">Next.js 16 · App Router</text>
+        <text class="t-sub fill-muted" x="74" y="210">React 19 · next-intl (en-GB)</text>
+        <text class="t-tiny fill-faint" x="74" y="228">shared-cpu-1x · min 1 running</text>
+
+        <rect class="box-accent" x="390" y="152" width="260" height="86" rx="8"></rect>
+        <text class="t-name" x="404" y="176">askapeer-api</text>
+        <text class="t-sub fill-muted" x="404" y="194">NestJS 11 · Drizzle ORM</text>
+        <text class="t-sub fill-muted" x="404" y="210">BullMQ worker, in-process</text>
+        <text class="t-tiny fill-faint" x="404" y="228">shared-cpu-1x ×2 · min 1 running</text>
+
+        <path class="flow" d="M302 195 L386 195" marker-end="url(#a1)"></path>
+        <text class="t-edge fill-muted" x="344" y="186" text-anchor="middle">REST + JWT</text>
+        <text class="t-tiny fill-faint" x="344" y="214" text-anchor="middle">httpOnly cookie</text>
+
+        <rect class="box" x="60" y="300" width="240" height="86" rx="8"></rect>
+        <text class="t-name" x="74" y="324">askapeer-db</text>
+        <text class="t-sub fill-muted" x="74" y="342">Postgres 18 (flex)</text>
+        <text class="t-sub fill-muted" x="74" y="358">36 tables · 4 schemas</text>
+        <text class="t-tiny fill-faint" x="74" y="376">performance-2x · 4 GB · 1 volume</text>
+
+        <rect class="box" x="390" y="300" width="260" height="86" rx="8"></rect>
+        <text class="t-name" x="404" y="324">Upstash Redis</text>
+        <text class="t-sub fill-muted" x="404" y="342">3 BullMQ queues</text>
+        <text class="t-sub fill-muted" x="404" y="358">kudos leaderboard (ZSET)</text>
+        <text class="t-tiny fill-faint" x="404" y="376">private network only</text>
+
+        <path class="flow" d="M400 240 L256 298" marker-end="url(#a1)"></path>
+        <text class="t-edge fill-muted" x="316" y="262" text-anchor="middle">SQL</text>
+        <path class="flow" d="M520 240 L520 298" marker-end="url(#a1)"></path>
+        <text class="t-edge fill-muted" x="528" y="274" text-anchor="start">jobs</text>
+
+        <rect class="box" x="60" y="410" width="590" height="46" rx="8"></rect>
+        <text class="t-name" x="74" y="430">askapeer-research-feed</text>
+        <text class="t-sub fill-muted" x="74" y="447">the specification site — password-gated, scales to zero</text>
+
+        <!-- externals -->
+        <text class="t-band fill-muted" x="716" y="134">outbound HTTPS only</text>
+
+        <rect class="box" x="716" y="152" width="248" height="66" rx="8"></rect>
+        <text class="t-name" x="730" y="176">Postmark</text>
+        <text class="t-sub fill-muted" x="730" y="194">transactional email, 13 templates</text>
+        <text class="t-tiny fill-verify" x="730" y="209">DKIM + SPF verified</text>
+
+        <rect class="box" x="716" y="238" width="248" height="66" rx="8"></rect>
+        <text class="t-name" x="730" y="262">Europe PMC</text>
+        <text class="t-sub fill-muted" x="730" y="280">literature · REST + cursorMark</text>
+        <text class="t-tiny fill-faint" x="730" y="295">twice daily, plus 25-year backfill</text>
+
+        <rect class="box" x="716" y="324" width="248" height="66" rx="8"></rect>
+        <text class="t-name" x="730" y="348">OpenAlex</text>
+        <text class="t-sub fill-muted" x="730" y="366">literature · REST + cursor</text>
+        <text class="t-tiny fill-faint" x="730" y="381">twice daily, hard daily quota</text>
+
+        <rect class="box" x="716" y="410" width="248" height="66" rx="8"></rect>
+        <text class="t-name" x="730" y="434">HCPC register</text>
+        <text class="t-sub fill-muted" x="730" y="452">registration lookup · server GET</text>
+        <text class="t-tiny fill-faint" x="730" y="467">no public API; parsed, rate-limited</text>
+
+        <path class="flow-soft" d="M654 180 L712 182" marker-end="url(#a1)"></path>
+        <path class="flow-soft" d="M654 198 L712 262" marker-end="url(#a1)"></path>
+        <path class="flow-soft" d="M656 212 L712 348" marker-end="url(#a1)"></path>
+        <path class="flow-soft" d="M658 226 L712 434" marker-end="url(#a1)"></path>
+
+        <!-- delivery -->
+        <text class="t-band fill-navy" x="36" y="508">Delivery</text>
+        <rect class="box" x="36" y="520" width="206" height="56" rx="8"></rect>
+        <text class="t-name" x="50" y="542">git push → main</text>
+        <text class="t-sub fill-muted" x="50" y="560">branch, PR, squash</text>
+
+        <rect class="box" x="262" y="520" width="226" height="56" rx="8"></rect>
+        <text class="t-name" x="276" y="542">GitHub Actions</text>
+        <text class="t-sub fill-muted" x="276" y="560">15 guards + typecheck ×2</text>
+
+        <rect class="box" x="508" y="520" width="206" height="56" rx="8"></rect>
+        <text class="t-name" x="522" y="542">tip-of-main guard</text>
+        <text class="t-sub fill-muted" x="522" y="560">refuses a stale commit</text>
+
+        <rect class="box" x="734" y="520" width="230" height="56" rx="8"></rect>
+        <text class="t-name" x="748" y="542">flyctl deploy → lhr</text>
+        <text class="t-sub fill-muted" x="748" y="560">release runs migrations</text>
+
+        <path class="flow" d="M244 548 L258 548" marker-end="url(#a1)"></path>
+        <path class="flow" d="M490 548 L504 548" marker-end="url(#a1)"></path>
+        <path class="flow" d="M716 548 L730 548" marker-end="url(#a1)"></path>
+      </svg>
+      <figcaption><strong>The API is the only component with credentials, and the only one that reaches
+        outside.</strong> The web app holds no database connection: it renders on the server and calls the
+        API with a bearer token taken from an httpOnly cookie, so a browser never sees a long-lived secret.
+        Redis and Postgres are reachable only over Fly's private network. The tip-of-main guard exists
+        because a delayed push event once deployed an older commit over a newer one and both runs reported
+        success.</figcaption>
+    </figure>
+
+    <dl class="products">
+      <div class="prow"><dt>Fly.io</dt><div class="role">hosting · lhr</div><dd>Four apps in London: web, API, Postgres and the password-gated spec site. Machines, not containers-as-a-service, so we can read the real resource numbers.</dd></div>
+      <div class="prow"><dt>Postgres 18</dt><div class="role">system of record</div><dd>One database, four schemas. Full-text search is Postgres' own <code style="font-family:var(--mono);font-size:12px">tsvector</code> with a GIN index — no separate search cluster to keep in step.</dd></div>
+      <div class="prow"><dt>Upstash Redis</dt><div class="role">queues · counters</div><dd>Three BullMQ queues (verification, notifications, research ingestion) and the kudos leaderboard. Reachable only from inside Fly's network.</dd></div>
+      <div class="prow"><dt>Next.js 16 · React 19</dt><div class="role">web</div><dd>App Router, server components, <code style="font-family:var(--mono);font-size:12px">next-intl</code> with an en-GB catalogue. Installable to an iOS home screen and runs standalone.</dd></div>
+      <div class="prow"><dt>NestJS 11 · Drizzle</dt><div class="role">api</div><dd>A modular monolith, one module per domain, with typed SQL rather than a query builder that hides the plan. Migrations are forward-only and run by the release command.</dd></div>
+      <div class="prow"><dt>Postmark</dt><div class="role">email</div><dd>Sign-in links and codes, verification outcomes, replies, kudos and moderation notices. Bounces feed a suppression list; reserved domains are refused before sending.</dd></div>
+      <div class="prow"><dt>Europe PMC · OpenAlex</dt><div class="role">literature</div><dd>Two free public corpora, ingested twice daily and deep-paged for history. Deduplicated on DOI, classified against the clinical taxonomy on arrival.</dd></div>
+      <div class="prow"><dt>HCPC register</dt><div class="role">verification</div><dd>The UK statutory register for allied health professionals. No API, so a rate-limited parse of its own public search — the check that makes "verified-only" true.</dd></div>
+    </dl>
+  </section>
+
+  <!-- ===================== 2 · APPLICATION ===================== -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">02 / Application architecture</div>
+      <h2>Sixteen modules, two rails, and a boundary every request crosses</h2>
+      <p>One deployable, divided by domain rather than by layer: each module owns its tables, its rules and
+        its HTTP surface. The shape matters commercially — it is what lets the research feed be rebuilt
+        twice in a fortnight without touching moderation, and what makes the eventual extraction of a
+        worker service a deployment change rather than a rewrite.</p>
+      <p>Two things apply to everything, so they are drawn as rails rather than repeated as arrows: every
+        request passes the authentication and app-access guards, and every tunable threshold is read from
+        one settings table at request time.</p>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 1000 680" role="img" aria-label="Application architecture: four module groups — identity and access, community, knowledge, and platform. A left rail shows every request passing the JWT and app-access guards; a right dashed rail shows tunable settings reaching every group. Handles supply the only author identity to the forum; forum and moderation raise events into notifications.">
+        <defs>
+          <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"></path>
+          </marker>
+          <marker id="a2n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="fill-navy" d="M0 0 L10 5 L0 10 z"></path>
+          </marker>
+          <marker id="a2m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="fill-muted" d="M0 0 L10 5 L0 10 z"></path>
+          </marker>
+        </defs>
+
+        <!-- rails -->
+        <path class="rail" d="M22 96 L22 630"></path>
+        <text class="t-band fill-navy" transform="rotate(-90 13 363)" x="13" y="363" text-anchor="middle">JwtAuthGuard → AppAccessGuard</text>
+        <path class="rail" d="M22 168 L48 168" marker-end="url(#a2n)"></path>
+        <path class="rail" d="M22 312 L48 312" marker-end="url(#a2n)"></path>
+        <path class="rail" d="M22 456 L48 456" marker-end="url(#a2n)"></path>
+        <path class="rail" d="M22 592 L48 592" marker-end="url(#a2n)"></path>
+
+        <path class="rail-dash" d="M978 96 L978 630"></path>
+        <text class="t-band fill-muted" transform="rotate(90 988 363)" x="988" y="363" text-anchor="middle">config.settings · tunables</text>
+        <path class="rail-dash" d="M978 168 L952 168" marker-end="url(#a2m)"></path>
+        <path class="rail-dash" d="M978 312 L952 312" marker-end="url(#a2m)"></path>
+        <path class="rail-dash" d="M978 456 L952 456" marker-end="url(#a2m)"></path>
+        <path class="rail-dash" d="M978 592 L952 592" marker-end="url(#a2m)"></path>
+
+        <!-- band A -->
+        <text class="t-band fill-teal" x="56" y="112">Identity &amp; access</text>
+        <rect class="box" x="56" y="122" width="288" height="92" rx="8"></rect>
+        <text class="t-name" x="70" y="146">auth</text>
+        <text class="t-sub fill-muted" x="70" y="164">Magic link or six-digit code — the</text>
+        <text class="t-sub fill-muted" x="70" y="180">code is the only way into an installed</text>
+        <text class="t-sub fill-muted" x="70" y="196">app. 15-minute JWT, rotating refresh.</text>
+
+        <rect class="box" x="356" y="122" width="288" height="92" rx="8"></rect>
+        <text class="t-name" x="370" y="146">verification</text>
+        <text class="t-sub fill-muted" x="370" y="164">Register lookup, evidence, decisions.</text>
+        <text class="t-sub fill-muted" x="370" y="180">pending → approved_verified; anything</text>
+        <text class="t-sub fill-muted" x="370" y="196">else sees a holding page only.</text>
+
+        <rect class="box-accent" x="656" y="122" width="288" height="92" rx="8"></rect>
+        <text class="t-name" x="670" y="146">handles</text>
+        <text class="t-sub fill-muted" x="670" y="164">One chosen pseudonym per member,</text>
+        <text class="t-sub fill-muted" x="670" y="180">against a blocklist, with rename</text>
+        <text class="t-sub fill-muted" x="670" y="196">history. The only public identity.</text>
+
+        <!-- band B -->
+        <text class="t-band fill-blue" x="56" y="256">Community</text>
+        <rect class="box" x="56" y="266" width="213" height="92" rx="8"></rect>
+        <text class="t-name" x="68" y="290">forum</text>
+        <text class="t-sub fill-muted" x="68" y="308">Questions, answers, kudos,</text>
+        <text class="t-sub fill-muted" x="68" y="324">clinical tags, search, and a</text>
+        <text class="t-sub fill-muted" x="68" y="340">24-hour edit window.</text>
+
+        <rect class="box" x="281" y="266" width="213" height="92" rx="8"></rect>
+        <text class="t-name" x="293" y="290">cases</text>
+        <text class="t-sub fill-muted" x="293" y="308">A post type on top of forum:</text>
+        <text class="t-sub fill-muted" x="293" y="324">de-identification checklist and</text>
+        <text class="t-sub fill-muted" x="293" y="340">attestation gate before publish.</text>
+
+        <rect class="box" x="506" y="266" width="213" height="92" rx="8"></rect>
+        <text class="t-name" x="518" y="290">reports</text>
+        <text class="t-sub fill-muted" x="518" y="308">A member reports a post, a</text>
+        <text class="t-sub fill-muted" x="518" y="324">comment or a handle. Patient-</text>
+        <text class="t-sub fill-muted" x="518" y="340">information jumps the queue.</text>
+
+        <rect class="box" x="731" y="266" width="213" height="92" rx="8"></rect>
+        <text class="t-name" x="743" y="290">moderation</text>
+        <text class="t-sub fill-muted" x="743" y="308">Triage queue; remove with kudos</text>
+        <text class="t-sub fill-muted" x="743" y="324">clawback, warn, suspend, expel —</text>
+        <text class="t-sub fill-muted" x="743" y="340">and the audited identity reveal.</text>
+
+        <!-- band C -->
+        <text class="t-band fill-violet" x="56" y="400">Knowledge &amp; delivery</text>
+        <rect class="box" x="56" y="410" width="520" height="92" rx="8"></rect>
+        <text class="t-name" x="70" y="434">research-feed</text>
+        <text class="t-sub fill-muted" x="70" y="452">Ingests two public corpora twice daily and deep-pages 25 years of history.</text>
+        <text class="t-sub fill-muted" x="70" y="468">Classifies each article against community.tags, ranks on evidence quality and</text>
+        <text class="t-sub fill-muted" x="70" y="484">recency, serves a criteria panel, full-text search and a private saved list.</text>
+
+        <rect class="box" x="588" y="410" width="356" height="92" rx="8"></rect>
+        <text class="t-name" x="602" y="434">notifications</text>
+        <text class="t-sub fill-muted" x="602" y="452">In-app inbox plus per-type email preferences.</text>
+        <text class="t-sub fill-muted" x="602" y="468">Fan-in from forum, moderation and verification;</text>
+        <text class="t-sub fill-muted" x="602" y="484">a busy thread collapses to one row. → Postmark</text>
+
+        <!-- band D -->
+        <text class="t-band fill-magenta" x="56" y="544">Platform</text>
+        <rect class="box" x="56" y="554" width="288" height="76" rx="8"></rect>
+        <text class="t-name" x="70" y="578">admin</text>
+        <text class="t-sub fill-muted" x="70" y="596">Verification actions, moderation,</text>
+        <text class="t-sub fill-muted" x="70" y="612">tag vocabulary. Every action audited.</text>
+
+        <rect class="box" x="356" y="554" width="288" height="76" rx="8"></rect>
+        <text class="t-name" x="370" y="578">settings</text>
+        <text class="t-sub fill-muted" x="370" y="596">Thresholds nobody should need a</text>
+        <text class="t-sub fill-muted" x="370" y="612">deploy to change. Resolved per request.</text>
+
+        <rect class="box" x="656" y="554" width="288" height="76" rx="8"></rect>
+        <text class="t-name" x="670" y="578">health</text>
+        <text class="t-sub fill-muted" x="670" y="596">Database, Redis and migration state.</text>
+        <text class="t-sub fill-muted" x="670" y="612">Names the real failure, not a green tick.</text>
+
+        <!-- inter-module -->
+        <path class="flow" d="M800 216 L800 236 L162 236 L162 262" marker-end="url(#a2)"></path>
+        <text class="t-edge fill-muted" x="481" y="229" text-anchor="middle">handle = the only author identity on every post</text>
+
+        <path class="flow" d="M162 360 L162 382 L766 382 L766 406" marker-end="url(#a2)"></path>
+        <text class="t-edge fill-muted" x="440" y="375" text-anchor="middle">reply + kudos events</text>
+
+        <path class="flow" d="M838 360 L838 394 L872 394 L872 406" marker-end="url(#a2)"></path>
+        <text class="t-edge fill-muted" x="830" y="406" text-anchor="end">notice events</text>
+      </svg>
+      <figcaption><strong>The one arrow worth following is <code style="font-family:var(--mono);font-size:12px">handles → forum</code>.</strong>
+        Nothing in the community half of the product knows a member's name, employer, specialty or grade.
+        A post, an answer, a kudos and a report are all attributed to the handle, and the modules that could
+        resolve it — verification and moderation — sit behind separate gates and write an immutable log when
+        they do. Pseudonymity is enforced by what each module can reach, not by a flag somebody could
+        forget to check.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ===================== 3 · DATA ===================== -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">03 / Data architecture</div>
+      <h2>Four schemas, and one column between a pseudonym and a person</h2>
+      <p>The schema names are the access policy. <code style="font-family:var(--mono);font-size:12px">identity</code>
+        holds who people really are; <code style="font-family:var(--mono);font-size:12px">community</code>
+        holds everything they say, attributed only to a handle;
+        <code style="font-family:var(--mono);font-size:12px">research</code> holds the literature, which
+        belongs to nobody; <code style="font-family:var(--mono);font-size:12px">config</code> holds the
+        operational dials and the audit trail.</p>
+      <p>Children are drawn indented under their parent — that elbow is a foreign key. The two lines that
+        cross the dashed boundary are the entire surface on which a real name can be reached from
+        pseudonymous activity, and both are there by design.</p>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 1000 740" role="img" aria-label="Data architecture: thirty-six tables in four Postgres schemas. Foreign keys within a schema are shown by indentation. Two edges cross the pseudonymity boundary: community.handles references identity.members, and community.moderation_actions records the acting moderator. Research tables reference community tags and handles.">
+        <defs>
+          <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"></path>
+          </marker>
+          <marker id="a3s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path class="fill-spark" d="M0 0 L10 5 L0 10 z"></path>
+          </marker>
+          <marker id="a3w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path class="fill-warn" d="M0 0 L10 5 L0 10 z"></path>
+          </marker>
+        </defs>
+
+        <!-- legend -->
+        <path class="flow-soft" d="M36 40 L48 40 L48 28"></path>
+        <text class="t-tiny fill-muted" x="58" y="44">indent = foreign key within a schema</text>
+        <path class="edge-identity" d="M330 40 L362 40"></path>
+        <text class="t-tiny fill-muted" x="372" y="44">crosses into real identity</text>
+        <path class="edge-audit" d="M620 40 L652 40"></path>
+        <text class="t-tiny fill-muted" x="662" y="44">audited exception</text>
+
+        <!-- boundary -->
+        <path class="rail-dash" d="M346 74 L346 716"></path>
+        <text class="t-band fill-spark" transform="rotate(-90 364 400)" x="364" y="400" text-anchor="middle">pseudonymity boundary</text>
+
+        <!-- identity panel -->
+        <rect class="zone" x="30" y="96" width="300" height="394" rx="10"></rect>
+        <text class="t-band fill-teal" x="44" y="122">identity · 10 tables</text>
+        <rect class="chip-hub" x="44" y="140" width="272" height="26" rx="5"></rect>
+        <text class="t-tbl-hub" x="56" y="157">members</text>
+        <text class="t-tiny fill-faint" x="304" y="157" text-anchor="end">36</text>
+        <path class="flow-soft" d="M52 166 L52 425"></path>
+        <rect class="chip" x="60" y="174" width="256" height="26" rx="5"></rect>
+        <text class="t-tbl" x="72" y="191">magic_links</text>
+        <path class="flow-soft" d="M52 187 L60 187"></path>
+        <rect class="chip" x="60" y="208" width="256" height="26" rx="5"></rect>
+        <text class="t-tbl" x="72" y="225">refresh_tokens</text>
+        <path class="flow-soft" d="M52 221 L60 221"></path>
+        <rect class="chip" x="60" y="242" width="256" height="26" rx="5"></rect>
+        <text class="t-tbl" x="72" y="259">verification_evidence</text>
+        <path class="flow-soft" d="M52 255 L60 255"></path>
+        <rect class="chip" x="60" y="276" width="256" height="26" rx="5"></rect>
+        <text class="t-tbl" x="72" y="293">verification_decisions</text>
+        <path class="flow-soft" d="M52 289 L60 289"></path>
+        <rect class="chip" x="60" y="310" width="256" height="26" rx="5"></rect>
+        <text class="t-tbl" x="72" y="327">identity_check_sessions</text>
+        <path class="flow-soft" d="M52 323 L60 323"></path>
+        <rect class="chip" x="60" y="344" width="256" height="26" rx="5"></rect>
+        <text class="t-tbl" x="72" y="361">reapplication_attempts</text>
+        <path class="flow-soft" d="M52 357 L60 357"></path>
+        <rect class="chip" x="60" y="378" width="256" height="26" rx="5"></rect>
+        <text class="t-tbl fill-warn" x="72" y="395">identity_access_log</text>
+        <path class="flow-soft" d="M52 391 L60 391"></path>
+        <rect class="chip" x="60" y="412" width="256" height="26" rx="5"></rect>
+        <text class="t-tbl" x="72" y="429">case_attestations</text>
+        <path class="flow-soft" d="M52 425 L60 425"></path>
+        <rect class="chip" x="44" y="446" width="272" height="26" rx="5"></rect>
+        <text class="t-tbl" x="56" y="463">email_suppressions</text>
+
+        <!-- config panel -->
+        <rect class="zone" x="30" y="512" width="300" height="190" rx="10"></rect>
+        <text class="t-band fill-magenta" x="44" y="538">config · 4 tables</text>
+        <rect class="chip" x="44" y="556" width="272" height="26" rx="5"></rect>
+        <text class="t-tbl" x="56" y="573">settings</text>
+        <rect class="chip" x="44" y="590" width="272" height="26" rx="5"></rect>
+        <text class="t-tbl" x="56" y="607">handle_blocklist</text>
+        <rect class="chip" x="44" y="624" width="272" height="26" rx="5"></rect>
+        <text class="t-tbl fill-warn" x="56" y="641">admin_audit_log</text>
+        <rect class="chip" x="44" y="658" width="272" height="26" rx="5"></rect>
+        <text class="t-tbl" x="56" y="675">app_meta</text>
+
+        <!-- community panel -->
+        <rect class="zone" x="382" y="96" width="330" height="598" rx="10"></rect>
+        <text class="t-band fill-blue" x="396" y="122">community · 16 tables</text>
+        <rect class="chip" x="396" y="140" width="300" height="26" rx="5"></rect>
+        <text class="t-tbl" x="408" y="157">tags</text>
+        <text class="t-tiny fill-faint" x="684" y="157" text-anchor="end">1,276 live</text>
+        <rect class="chip" x="396" y="174" width="300" height="26" rx="5"></rect>
+        <text class="t-tbl fill-warn" x="408" y="191">moderation_actions</text>
+        <rect class="chip-hub" x="396" y="208" width="300" height="26" rx="5"></rect>
+        <text class="t-tbl-hub" x="408" y="225">handles</text>
+        <text class="t-tiny fill-faint" x="684" y="225" text-anchor="end">28</text>
+        <path class="flow-soft" d="M404 234 L404 629"></path>
+        <rect class="chip" x="412" y="242" width="284" height="26" rx="5"></rect>
+        <text class="t-tbl" x="424" y="259">handle_name_history</text>
+        <path class="flow-soft" d="M404 255 L412 255"></path>
+        <rect class="chip" x="412" y="276" width="284" height="26" rx="5"></rect>
+        <text class="t-tbl" x="424" y="293">posts</text>
+        <text class="t-tiny fill-faint" x="684" y="293" text-anchor="end">74</text>
+        <path class="flow-soft" d="M404 289 L412 289"></path>
+        <path class="flow-soft" d="M420 302 L420 391"></path>
+        <rect class="chip" x="428" y="310" width="268" height="26" rx="5"></rect>
+        <text class="t-tbl" x="440" y="327">post_tags</text>
+        <path class="flow-soft" d="M420 323 L428 323"></path>
+        <rect class="chip" x="428" y="344" width="268" height="26" rx="5"></rect>
+        <text class="t-tbl" x="440" y="361">case_details</text>
+        <path class="flow-soft" d="M420 357 L428 357"></path>
+        <rect class="chip" x="428" y="378" width="268" height="26" rx="5"></rect>
+        <text class="t-tbl" x="440" y="395">comments</text>
+        <text class="t-tiny fill-faint" x="684" y="395" text-anchor="end">272</text>
+        <path class="flow-soft" d="M420 391 L428 391"></path>
+        <rect class="chip" x="412" y="412" width="284" height="26" rx="5"></rect>
+        <text class="t-tbl" x="424" y="429">kudos</text>
+        <text class="t-tiny fill-faint" x="684" y="429" text-anchor="end">843</text>
+        <path class="flow-soft" d="M404 425 L412 425"></path>
+        <rect class="chip" x="412" y="446" width="284" height="26" rx="5"></rect>
+        <text class="t-tbl" x="424" y="463">reports</text>
+        <path class="flow-soft" d="M404 459 L412 459"></path>
+        <rect class="chip" x="412" y="480" width="284" height="26" rx="5"></rect>
+        <text class="t-tbl" x="424" y="497">follows</text>
+        <path class="flow-soft" d="M404 493 L412 493"></path>
+        <rect class="chip" x="412" y="514" width="284" height="26" rx="5"></rect>
+        <text class="t-tbl" x="424" y="531">notifications</text>
+        <path class="flow-soft" d="M404 527 L412 527"></path>
+        <rect class="chip" x="412" y="548" width="284" height="26" rx="5"></rect>
+        <text class="t-tbl" x="424" y="565">notification_preferences</text>
+        <path class="flow-soft" d="M404 561 L412 561"></path>
+        <rect class="chip" x="412" y="582" width="284" height="26" rx="5"></rect>
+        <text class="t-tbl" x="424" y="599">member_interests</text>
+        <path class="flow-soft" d="M404 595 L412 595"></path>
+        <rect class="chip" x="412" y="616" width="284" height="26" rx="5"></rect>
+        <text class="t-tbl" x="424" y="633">feed_preferences</text>
+        <path class="flow-soft" d="M404 629 L412 629"></path>
+        <rect class="chip" x="396" y="650" width="300" height="26" rx="5"></rect>
+        <text class="t-tbl" x="408" y="667">categories</text>
+
+        <!-- research panel -->
+        <rect class="zone" x="760" y="96" width="210" height="258" rx="10"></rect>
+        <text class="t-band fill-violet" x="774" y="122">research · 6</text>
+        <rect class="chip-hub" x="774" y="140" width="182" height="26" rx="5"></rect>
+        <text class="t-tbl-hub" x="786" y="157">articles</text>
+        <path class="flow-soft" d="M782 166 L782 221"></path>
+        <rect class="chip" x="790" y="174" width="166" height="26" rx="5"></rect>
+        <text class="t-tbl" x="802" y="191">article_tags</text>
+        <path class="flow-soft" d="M782 187 L790 187"></path>
+        <rect class="chip" x="790" y="208" width="166" height="26" rx="5"></rect>
+        <text class="t-tbl" x="802" y="225">saved_articles</text>
+        <path class="flow-soft" d="M782 221 L790 221"></path>
+        <rect class="chip" x="774" y="242" width="182" height="26" rx="5"></rect>
+        <text class="t-tbl" x="786" y="259">ingestion_cursors</text>
+        <rect class="chip" x="774" y="276" width="182" height="26" rx="5"></rect>
+        <text class="t-tbl" x="786" y="293">reclassify_state</text>
+        <rect class="chip" x="774" y="310" width="182" height="26" rx="5"></rect>
+        <text class="t-tbl" x="786" y="327">backfill_slices</text>
+
+        <!-- the two boundary crossings -->
+        <path class="edge-identity" d="M394 221 L322 160" marker-end="url(#a3s)"></path>
+        <circle class="fill-spark" cx="346" cy="180" r="8.5"></circle>
+        <text x="346" y="183.5" text-anchor="middle" fill="#ffffff" font-size="9.5" font-weight="700">1</text>
+
+        <path class="edge-audit" d="M394 187 L322 144" marker-end="url(#a3w)"></path>
+        <circle class="fill-warn" cx="346" cy="158" r="8.5"></circle>
+        <text x="346" y="161.5" text-anchor="middle" fill="#ffffff" font-size="9.5" font-weight="700">2</text>
+
+        <!-- research → community -->
+        <path class="flow-soft" d="M788 187 L702 155" marker-end="url(#a3)"></path>
+        <text class="t-edge fill-muted" x="745" y="146" text-anchor="middle">tag_id</text>
+        <path class="flow-soft" d="M788 221 L702 221" marker-end="url(#a3)"></path>
+        <text class="t-edge fill-muted" x="745" y="213" text-anchor="middle">handle_id</text>
+
+        <!-- live counts -->
+        <rect class="zone" x="760" y="390" width="210" height="304" rx="10"></rect>
+        <text class="t-band fill-muted" x="774" y="416">live · 10 Oct 2026</text>
+        <text class="t-tbl fill-muted" x="774" y="444">articles</text>
+        <text class="t-num" x="956" y="444" text-anchor="end">152,335</text>
+        <text class="t-tbl fill-muted" x="774" y="472">article_tags</text>
+        <text class="t-num" x="956" y="472" text-anchor="end">270,540</text>
+        <text class="t-tbl fill-muted" x="774" y="500">tags</text>
+        <text class="t-num" x="956" y="500" text-anchor="end">1,402</text>
+        <text class="t-tbl fill-muted" x="774" y="528">backfill_slices</text>
+        <text class="t-num" x="956" y="528" text-anchor="end">988</text>
+        <text class="t-tbl fill-muted" x="774" y="556">members</text>
+        <text class="t-num" x="956" y="556" text-anchor="end">36</text>
+        <text class="t-tbl fill-muted" x="774" y="584">handles</text>
+        <text class="t-num" x="956" y="584" text-anchor="end">28</text>
+        <text class="t-tbl fill-muted" x="774" y="612">posts</text>
+        <text class="t-num" x="956" y="612" text-anchor="end">74</text>
+        <text class="t-tbl fill-muted" x="774" y="640">comments</text>
+        <text class="t-num" x="956" y="640" text-anchor="end">272</text>
+        <text class="t-tbl fill-muted" x="774" y="668">kudos</text>
+        <text class="t-num" x="956" y="668" text-anchor="end">843</text>
+        <text class="t-tiny fill-faint" x="774" y="686">community rows are the seeded</text>
+        <text class="t-tiny fill-faint" x="774" y="698">stakeholder demo, pre-launch</text>
+      </svg>
+      <figcaption><strong>Thirty-six tables, and the whole privacy argument is two lines.</strong>
+        Edge 1 is <code style="font-family:var(--mono);font-size:12px">community.handles.member_id</code> —
+        every post, answer, kudos, report and saved article hangs off a handle, and this single column is the
+        only route from any of it to a person. Edge 2 is
+        <code style="font-family:var(--mono);font-size:12px">moderation_actions.moderator_member_id</code>,
+        which records who acted. The literature carries no member data at all: of six research tables, two
+        reference the community side, and only one of those names a handle.</figcaption>
+    </figure>
+
+    <div class="note">
+      <h3>Why this is the defensible part</h3>
+      <p>The product promise — that ideas win on merit because nobody knows your grade — is only as good as
+        the thing enforcing it. Here it is enforced by reachability. No community query can resolve a real
+        name, because the join does not exist in that half of the schema. The two places that can are
+        reached through separate gates, and every traversal writes an immutable row to
+        <code>identity.identity_access_log</code> with the moderator, the reason, the timestamp and the
+        action taken.</p>
+      <p>The same reasoning covers clinical safety. Case discussions are published only after a
+        de-identification checklist and a recorded attestation, and the attestation lives on the
+        <code>identity</code> side, bound to the verified person, while the case itself carries only the
+        handle. The platform never stores identifiable patient data; the legal basis is UK GDPR, the Data
+        Protection Act 2018 and the common-law duty of confidentiality.</p>
+    </div>
+  </section>
+
+  <footer>
+    Askapeer · the no-ego sports medicine network. Founding team: Adrian Hall (technical lead), Paul Gouge
+    (business and technical), Andrew Renshaw (clinical domain expert and originator).<br>
+    Drawn from the repository at commit cd0f239. Row counts read from the live London database on 10 October
+    2026; community figures are the seeded stakeholder demo, not real membership. Subscription-only: no
+    advertising, no pharmaceutical relationships, no member data sold.
+  </footer>
+
+</div>
+</body>
+</html>
