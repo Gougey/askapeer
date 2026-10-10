@@ -78,6 +78,33 @@ export function editDistance(a: string, b: string): number {
   return d[a.length][b.length];
 }
 
+/**
+ * Every word one edit away — each swap, deletion, substitution and insertion of a-z.
+ *
+ * ⚠️ **Why this exists alongside the trigram shortlist.** A swap is the commonest phone typo
+ * and the one trigrams handle worst: it breaks most of the word's trigrams. Andrew's "retrun"
+ * shares more with "retro", "retrospective" and "retrograde" than with "return", so on live
+ * "return" fell outside the top ten and he was offered "retro sport". Looking these up exactly
+ * guarantees every one-edit word is considered however crowded the trigram neighbourhood is.
+ * About 54 × length variants, checked in one indexed `= any(...)`.
+ */
+export function singleEdits(word: string): string[] {
+  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  const out = new Set<string>();
+  for (let i = 0; i <= word.length; i++) {
+    const head = word.slice(0, i);
+    const tail = word.slice(i);
+    if (tail) out.add(head + tail.slice(1));
+    if (tail.length > 1) out.add(head + tail[1] + tail[0] + tail.slice(2));
+    for (const ch of letters) {
+      if (tail) out.add(head + ch + tail.slice(1));
+      out.add(head + ch + tail);
+    }
+  }
+  out.delete(word);
+  return [...out];
+}
+
 /** How far a word may be from its correction — tighter for short words, which collide more. */
 export function maxDistance(word: string): number {
   return word.length <= 4 ? 1 : word.length <= 8 ? 2 : 3;

@@ -1539,10 +1539,14 @@ tags contain.</li>
 <li><strong>Nearest, then commonest.</strong> Trigrams only build the
 shortlist. Edit distance (with swapped letters counted as one edit)
 chooses, and paper count breaks ties. Similarity alone chose “liga” for
-“ligamnet” and “ankh” for “ankel”. Words under four letters are never
-guessed at, only dropped. Negated words (<code>-runner</code>),
-<code>or</code>, and codes with digits or symbols (<code>T2</code>,
-<code>ACL-R</code>) are never touched.</li>
+“ligamnet” and “ankh” for “ankel”. ⚠️ <strong>Every one-edit word is
+also looked up exactly</strong> (<code>singleEdits</code>), because a
+swap breaks most of a word’s trigrams: on live, “retrun” shared more
+with “retro” and “retrospective” than with “return”, which fell outside
+the trigram top ten, and Andrew was offered “retro sport”. Words under
+four letters are never guessed at, only dropped. Negated words
+(<code>-runner</code>), <code>or</code>, and codes with digits or
+symbols (<code>T2</code>, <code>ACL-R</code>) are never touched.</li>
 <li><strong>The forum only suggests words a discussion
 contains</strong>, so a correction never trades one empty page for
 another. That can mean a word the literature knows is dropped for the
