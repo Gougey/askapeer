@@ -37,7 +37,7 @@ A persistent **bottom navigation bar** (five destinations) is the app shell for 
 |---|---|---|---|
 | 1 | **Feed** | News + research feed — curated articles scored to the member's clinical interests | EPIC-I |
 | 2 | **Discussions** | The forum — personalised post feed, browse, search, threads | EPIC-C / D / E |
-| 3 | **➕ (centre)** | Create — chooser for a new **Question** or **Case discussion** | EPIC-C / E |
+| 3 | **➕ (centre)** | **Ask** (labelled "Create" until 2026-10-10, renamed at Andrew's suggestion) — chooser for a new **Question** or **Case discussion** | EPIC-C / E |
 | 4 | **Activity** | My questions/answers + notifications | EPIC-G + own content |
 | 5 | **Profile** | My account, options, news-feed (interest) choices | EPIC-B / G / H / I |
 

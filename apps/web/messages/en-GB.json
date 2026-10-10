@@ -95,7 +95,7 @@
     "primaryNav": "Primary",
     "feed": "Research",
     "discussions": "Discussions",
-    "create": "Create",
+    "create": "Ask",
     "activity": "Activity",
     "profile": "Profile",
     "profileScreen": {
@@ -483,7 +483,7 @@
     "evidenceLabel": "Filter by evidence type",
     "anyEvidence": "All evidence",
     "categoryDiscussionsOnly": "The category filter applies to discussions only.",
-    "addTags": "Add tags (optional)"
+    "addTags": "Add tags to filter by taxonomy"
   },
   "pagination": {
     "more": "Show more",
