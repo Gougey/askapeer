@@ -875,6 +875,20 @@ one.</strong> Found by killing a run during testing: the slice stayed
 <code>running</code> and nothing would ever pick it up, so the year was
 silently abandoned with its cursor committed and no error anywhere.
 Resumability that only survives a clean stop is not resumability.</li>
+<li>⚠️ <strong>OpenAlex is metered, and needs
+<code>OPENALEX_API_KEY</code></strong> (a Fly secret, found 2026-10-17).
+Without a key, every request “shares one free daily budget ($0.10) with
+everyone on your network’s IP address”, and a list page costs $0.001. On
+Fly’s shared IP the midnight ingest got in just after the reset, and the
+backfill spent the remainder within minutes. Every request after that
+was a <strong>401</strong>, which the backfill used to treat as
+permanent: 174 slices were written off between 15 and 17 October, and
+migration <code>0055</code> requeued them with their cursors kept. A key
+gets its own $1/day (about 1,000 pages). A 401 is now <strong>retryable,
+and rests OpenAlex until 00:05 UTC</strong>
+(<code>restUntilBudgetResets</code>). Every OpenAlex response’s
+<code>meta.notice</code> names the problem if the key ever goes missing,
+and the API logs a warning at boot.</li>
 <li>⚠️ <strong>A rate limit is a wait, not a failure — and 150ms is left
 between pages.</strong> The first live run asked OpenAlex for pages as
 fast as it could store them, was rate-limited within minutes, and wrote

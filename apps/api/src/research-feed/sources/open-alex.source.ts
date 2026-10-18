@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { ArticlePage, ArticleSource, FetchResult, RawArticle } from './article-source';
 
 const ENDPOINT = 'https://api.openalex.org/works';
@@ -66,6 +67,21 @@ const SOURCE_REST_S = 900;
  */
 export const OPEN_ALEX_PAGE_DELAY_MS = 2_000;
 
+/**
+ * ⚠️ **A 401 is the daily budget, not a broken slice** (found 2026-10-17).
+ *
+ * OpenAlex now meters its API. Without a key, a request "shares one free daily budget ($0.10)
+ * with everyone on your network's IP address", and a list page costs $0.001. On Fly that IP is
+ * shared with other tenants, so the twice-daily ingest got in just after the midnight reset and
+ * the backfill used up the remainder within minutes. Every request after that was a 401, and
+ * 174 slices were written off between 15 and 17 October. A key (`OPENALEX_API_KEY`) gets its own
+ * $1/day. If even that runs out, the right answer is still to stop asking until it resets.
+ */
+export function restUntilBudgetResets(now: Date): number {
+  const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 5);
+  return Math.ceil((next - now.getTime()) / 1000);
+}
+
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 type OpenAlexWork = {
@@ -102,6 +118,21 @@ export class OpenAlexSource implements ArticleSource {
   /** Deliberately slow — see `OPEN_ALEX_PAGE_DELAY_MS`. */
   readonly pageDelayMs = OPEN_ALEX_PAGE_DELAY_MS;
   private readonly log = new Logger(OpenAlexSource.name);
+  /** Its own $1/day budget rather than a share of the IP's $0.10. A Fly secret, never fly.toml. */
+  private readonly apiKey: string | null;
+
+  constructor(config: ConfigService) {
+    this.apiKey = config.get<string>('OPENALEX_API_KEY')?.trim() || null;
+    if (!this.apiKey) {
+      this.log.warn('OPENALEX_API_KEY is not set: OpenAlex requests share the IP-wide free budget and will 401 once it is spent');
+    }
+  }
+
+  /** The key and the contact address, on every request either path makes. */
+  private authorise(url: URL): void {
+    url.searchParams.set('mailto', CONTACT.replace('mailto:', ''));
+    if (this.apiKey) url.searchParams.set('api_key', this.apiKey);
+  }
 
   async fetchSince(cursor: string | null, queries: string[]): Promise<FetchResult> {
     const seen = new Map<string, RawArticle>();
@@ -118,7 +149,7 @@ export class OpenAlexSource implements ArticleSource {
       );
       url.searchParams.set('per-page', String(PAGE_SIZE));
       url.searchParams.set('sort', 'publication_date:desc');
-      url.searchParams.set('mailto', CONTACT.replace('mailto:', ''));
+      this.authorise(url);
 
       for (const work of await this.get(url, query)) {
         const article = this.normalise(work);
@@ -156,7 +187,7 @@ export class OpenAlexSource implements ArticleSource {
     );
     url.searchParams.set('per-page', String(pageSize));
     url.searchParams.set('cursor', cursor ?? '*');
-    url.searchParams.set('mailto', CONTACT.replace('mailto:', ''));
+    this.authorise(url);
 
     const body = await this.getPage(url);
     const articles: RawArticle[] = [];
@@ -223,6 +254,14 @@ export class OpenAlexSource implements ArticleSource {
           clearTimeout(timer);
           await sleep(waitMs);
           continue;
+        }
+        // Budget spent (or the key refused): rest the source until after the UTC reset, so the
+        // slice goes back in the queue with its cursor instead of being written off. Logged by
+        // the caller; a bad key shows up as a source that rests every day and never progresses.
+        if (res.status === 401) {
+          throw new Error(
+            `OpenAlex HTTP 401 (daily budget spent or API key refused) retry-after ${restUntilBudgetResets(new Date())}s`,
+          );
         }
         if (!res.ok) throw new Error(`OpenAlex HTTP ${res.status}`);
         const body = (await res.json()) as {

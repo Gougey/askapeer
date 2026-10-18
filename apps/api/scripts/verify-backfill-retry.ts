@@ -14,6 +14,7 @@
  */
 import { strict as assert } from 'node:assert';
 import { retryAfterMs, retryable } from '../src/research-feed/backfill.service';
+import { restUntilBudgetResets } from '../src/research-feed/sources/open-alex.source';
 
 let failures = 0;
 function check(name: string, fn: () => void): void {
@@ -80,6 +81,18 @@ check('a 4xx that is about the request is still written off', () => {
   for (const message of ['OpenAlex HTTP 404', 'Europe PMC HTTP 400', 'OpenAlex HTTP 422']) {
     assert.equal(retryable(message), false, message);
   }
+});
+
+check('the 401 that cost 174 slices is a rest until the budget resets, not a write-off', () => {
+  // OpenAlex's metered budget (2026-10-15 to 17): every request past it answered 401.
+  const message = `OpenAlex HTTP 401 (daily budget spent or API key refused) retry-after ${restUntilBudgetResets(new Date('2026-10-17T00:08:14Z'))}s`;
+  assert.equal(retryable(message), true);
+  // Rested until 00:05 UTC the next day — just after the reset, never before it.
+  assert.equal(retryAfterMs(message), (24 * 60 * 60 - 8 * 60 - 14 + 5 * 60) * 1000);
+});
+
+check('a rest computed just before midnight still lands after the reset', () => {
+  assert.equal(restUntilBudgetResets(new Date('2026-10-17T23:59:59Z')), 5 * 60 + 1);
 });
 
 check('a long Retry-After is read back, so the source can be rested', () => {
