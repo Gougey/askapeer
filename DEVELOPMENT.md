@@ -1238,6 +1238,20 @@ imported yet. The setting is cached for 30 s (`SettingsService`), so a manual fl
 30 s to apply. **Never commit the list.** The repo is public, and these are colleagues' email
 addresses.
 
+### The welcome guide (`/welcome`)
+
+The page Andrew's invitation links to: register, the six-digit code, choosing a handle and the
+rule, adding the app to a home screen (iPhone, Android, computer), the five tabs, and kudos. It
+is **public and outside `(app)`**, because its readers have no account yet, and it is
+`noindex`, because it describes an invitation-only pilot.
+
+Its six screenshots (`apps/web/public/guide/`) are taken from a **local** stack with the
+seeded demo corpus, never from live, so no real member's content can appear in a public page.
+To regenerate them after a screen changes, see the header of
+`docs/tools/welcome-screenshots/capture.cjs`. It signs in through the local-only dev token,
+hides Next's dev badge and the dev sign-in shortcut, and needs Playwright installed outside the
+repo.
+
 ### The tool — run it on the API machine
 
 The production image has compiled code only, and Redis is reachable only inside Fly, so it runs
