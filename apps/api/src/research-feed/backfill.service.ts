@@ -118,8 +118,11 @@ export function retryable(message: string): boolean {
    * a 4xx, which is about the request; it is wrong for a 5xx, which is about the server. After
    * the quota burst OpenAlex answered 503 to 80 of our slices overnight — all of them marked
    * permanently failed, while Europe PMC beside it took 92 without a murmur.
+   *
+   * ⚠️ **And 401, which cost 174 more.** OpenAlex answers 401 once its metered daily budget is
+   * spent (see `restUntilBudgetResets`), so for this source it means "tomorrow", not "never".
    */
-  return /\b429\b|\b5\d\d\b|rate|timeout|ETIMEDOUT|ECONNRESET|socket|fetch failed|aborted/i.test(
+  return /\b429\b|\b401\b|\b5\d\d\b|rate|timeout|ETIMEDOUT|ECONNRESET|socket|fetch failed|aborted/i.test(
     message,
   );
 }
