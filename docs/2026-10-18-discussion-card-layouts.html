@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discussion Card Layouts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Values copied from apps/web/src/app/globals.css so the cards render as the app does. */
+  :root {
+    --bg: #eef1f4; --surface: #ffffff; --fg: #14212b; --muted: #64757f;
+    --border: #e5ebee; --border-strong: #d7e0e4; --accent: #0b2a55;
+    --kudos: #d98a1f; --kudos-text: #8a5a12; --case: #0f766e; --spark: #ed1b24;
+    --shadow: 0 1px 2px rgba(20,33,43,.06), 0 4px 16px rgba(20,33,43,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1220; --surface: #111a2b; --fg: #e2e8f0; --muted: #94a3b8;
+      --border: #1e293b; --border-strong: #2b3a52; --accent: #93b4e6;
+      --kudos: #f2b45a; --kudos-text: #f2b45a; --case: #5eead4;
+      --shadow: 0 1px 2px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.24);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1220; --surface: #111a2b; --fg: #e2e8f0; --muted: #94a3b8;
+    --border: #1e293b; --border-strong: #2b3a52; --accent: #93b4e6;
+    --kudos: #f2b45a; --kudos-text: #f2b45a; --case: #5eead4;
+    --shadow: 0 1px 2px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.24);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 Inter, -apple-system, system-ui, sans-serif; }
+  h1, h2, h3 { font-family: Fraunces, Georgia, serif; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+  .intro { max-width: 720px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+  .intro p { margin: 0; }
+  .muted { color: var(--muted); }
+  .toolbar { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+  .toolbar button { font: inherit; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); cursor: pointer; }
+  .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 28px; }
+  .option { display: flex; flex-direction: column; gap: 14px; }
+  .option header { display: flex; flex-direction: column; gap: 4px; }
+  .tag-rec { align-self: flex-start; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; background: var(--accent); color: white; }
+  .phone { width: 100%; max-width: 390px; padding: 16px; background: var(--bg); border: 1px dashed var(--border-strong); border-radius: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .notes { font-size: 14px; display: flex; flex-direction: column; gap: 6px; padding-left: 18px; margin: 0; }
+
+  /* --- The card, mirroring PostCard.tsx --- */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; }
+  .card.case { border-color: var(--case); }
+  .card.case.edge { border-left-width: 4px; padding-left: 13px; }
+  .card h3 { font-size: 17px; line-height: 1.35; }
+  .snippet { margin: 0; font-size: 14px; color: var(--muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+  .tags li { font-size: 12px; padding: 1px 8px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--muted); }
+  .foot { border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+  .who { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .handle { font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stats { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .stat { display: inline-flex; align-items: center; gap: 4px; }
+  .stat svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .stat.award { color: var(--kudos-text); font-weight: 600; }
+  .stat.award svg { color: var(--kudos); }
+  .stat.zero { color: var(--muted); font-weight: 400; }
+  .stat.zero svg { color: var(--muted); }
+  .standing { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 11px; }
+  .standing .stat svg { width: 12px; height: 12px; }
+  .label { font-size: 11px; }
+  .case-mark { display: inline-flex; align-items: center; gap: 4px; color: var(--case); font-weight: 500; }
+  .case-mark svg { width: 14px; height: 14px; }
+  .dot { opacity: .55; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; margin-top: 8px; }
+  .key span { display: inline-flex; align-items: center; gap: 6px; }
+  .key svg { width: 16px; height: 16px; }
+  .questions { max-width: 720px; margin-top: 36px; display: flex; flex-direction: column; gap: 10px; }
+  .questions ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Open book: two pages from a central spine. Line style, 2px, matching the app's icon set. -->
+  <symbol id="book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 6.5C10 5 7 4.5 3 5v13c4-.5 7 0 9 1.5M12 6.5c2-1.5 5-2 9-1.5v13c-4-.5-7 0-9 1.5M12 6.5v13"/>
+  </symbol>
+  <!-- Lightbulb. -->
+  <symbol id="bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.8.6 1.1 1.4 1.1 2.2V17h5v-1c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>
+  </symbol>
+  <symbol id="bubble" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 21l1.9-4.5A8.4 8.4 0 0 1 3 11.5a8.5 8.5 0 0 1 9-8.4 8.5 8.5 0 0 1 9 8.4z"/>
+  </symbol>
+  <symbol id="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/>
+  </symbol>
+  <!-- Clipboard with a cross: "this is a case", for the cue that must not be colour alone. -->
+  <symbol id="case" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M12 10v6M9 13h6"/>
+  </symbol>
+</svg>
+
+<div class="page">
+  <div class="intro">
+    <p class="muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">For review — Adrian, Paul, Andrew · 18 October 2026</p>
+    <h1>Discussion card — two kinds of kudos</h1>
+    <p>The single gold star becomes two awards: <strong>Evidence-informed</strong> (an open book) and <strong>Practical problem solving</strong> (a lightbulb). These are the Discussions cards at real phone size (390px screen) in three arrangements, each shown as an ordinary question and as a clinical case. The footer moves to two lines in every option.</p>
+    <div class="key">
+      <span><svg style="color:var(--kudos)"><use href="#book"/></svg> Evidence-informed</span>
+      <span><svg style="color:var(--kudos)"><use href="#bulb"/></svg> Practical problem solving</span>
+      <span class="muted"><svg><use href="#bubble"/></svg> Answers</span>
+      <span class="muted"><svg><use href="#eye"/></svg> Following</span>
+      <span style="color:var(--case)"><svg><use href="#case"/></svg> Clinical case</span>
+    </div>
+    <div class="toolbar"><span class="muted">Theme:</span>
+      <button onclick="document.documentElement.dataset.theme='light'">Light</button>
+      <button onclick="document.documentElement.dataset.theme='dark'">Dark</button>
+      <button onclick="delete document.documentElement.dataset.theme">Device</button>
+    </div>
+  </div>
+
+  <div class="options">
+
+    <!-- ===================== A ===================== -->
+    <section class="option">
+      <header>
+        <span class="tag-rec">Recommended</span>
+        <h2>A · The question's awards only</h2>
+        <p class="muted" style="margin:0;font-size:14px">Who and when on the first line; how the question has done on the second. The author's own totals live on their profile, not on every card.</p>
+      </header>
+      <div class="phone">
+        <article class="card">
+          <h3>Return-to-run criteria after a grade 2 hamstring strain?</h3>
+          <p class="snippet">Using isometric strength and pain-free sprinting at 90% as my gates. What else are others measuring before the first full session?</p>
+          <ul class="tags"><li>Hamstring Muscle Group</li><li>Return to Sport</li></ul>
+          <div class="foot">
+            <div class="row"><span class="who"><span class="handle">ScrumPhysio</span><span class="dot">·</span><span>2 days ago</span></span></div>
+            <div class="row">
+              <span class="stats">
+                <span class="stat award"><svg><use href="#book"/></svg>6<span class="sr">6 evidence-informed</span></span>
+                <span class="stat award"><svg><use href="#bulb"/></svg>11<span class="sr">11 practical</span></span>
+              </span>
+              <span class="stats">
+                <span class="stat"><svg><use href="#bubble"/></svg>7</span>
+                <span class="stat"><svg><use href="#eye"/></svg>3</span>
+              </span>
+            </div>
+          </div>
+        </article>
+        <article class="card case">
+          <h3>Medial knee pain in a youth footballer, worse on cutting and pivoting, settles with rest.</h3>
+          <p class="snippet">Tried load management with partial relief. How are others staging return to pivoting in a skeletally immature athlete?</p>
+          <ul class="tags"><li>Knee Ligaments</li><li>Knee Joint</li></ul>
+          <div class="foot">
+            <div class="row"><span class="who"><span class="case-mark"><svg><use href="#case"/></svg><span class="sr">Clinical case</span></span><span class="handle">AVeryLongHandleIndeed_2026xy</span><span class="dot">·</span><span>11 Oct</span></span></div>
+            <div class="row">
+              <span class="stats">
+                <span class="stat award"><svg><use href="#book"/></svg>2</span>
+                <span class="stat zero"><svg><use href="#bulb"/></svg>0</span>
+              </span>
+              <span class="stats">
+                <span class="stat"><svg><use href="#bubble"/></svg>3</span>
+              </span>
+            </div>
+          </div>
+        </article>
+      </div>
+      <ul class="notes">
+        <li><strong>Fits at any handle length.</strong> Line one holds only the handle and the date, so even a 28-character handle (above) fits; at the 30-character maximum only the handle gives way, and nothing on line two ever has to.</li>
+        <li><strong>One book and one bulb per card</strong>, so there is never a question of whose count is whose.</li>
+        <li><strong>The case cue is the teal border plus a small clipboard</strong> before the handle — the "Clinical Case" text goes, as proposed, but the meaning is not left to colour alone.</li>
+        <li>It also matches what Andrew asked for in the kudos discussion: recognise the <em>contribution</em> publicly and keep a person's totals out of the way.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== B ===================== -->
+    <section class="option">
+      <header>
+        <h2>B · Author's totals as well, quietly</h2>
+        <p class="muted" style="margin:0;font-size:14px">Everything in the brief. The author's totals sit small and grey beside the handle; the question's own awards are gold on line two.</p>
+      </header>
+      <div class="phone">
+        <article class="card">
+          <h3>Return-to-run criteria after a grade 2 hamstring strain?</h3>
+          <p class="snippet">Using isometric strength and pain-free sprinting at 90% as my gates. What else are others measuring before the first full session?</p>
+          <ul class="tags"><li>Hamstring Muscle Group</li><li>Return to Sport</li></ul>
+          <div class="foot">
+            <div class="row">
+              <span class="who"><span class="handle">ScrumPhysio</span>
+                <span class="standing"><span class="stat zero"><svg><use href="#book"/></svg>48</span><span class="stat zero"><svg><use href="#bulb"/></svg>27</span></span>
+              </span>
+              <span style="flex-shrink:0">2 days ago</span>
+            </div>
+            <div class="row">
+              <span class="stats">
+                <span class="stat award"><svg><use href="#book"/></svg>6</span>
+                <span class="stat award"><svg><use href="#bulb"/></svg>11</span>
+              </span>
+              <span class="stats">
+                <span class="stat"><svg><use href="#bubble"/></svg>7</span>
+                <span class="stat"><svg><use href="#eye"/></svg>3</span>
+              </span>
+            </div>
+          </div>
+        </article>
+        <article class="card case">
+          <h3>Medial knee pain in a youth footballer, worse on cutting and pivoting, settles with rest.</h3>
+          <p class="snippet">Tried load management with partial relief. How are others staging return to pivoting in a skeletally immature athlete?</p>
+          <ul class="tags"><li>Knee Ligaments</li><li>Knee Joint</li></ul>
+          <div class="foot">
+            <div class="row">
+              <span class="who"><span class="case-mark"><svg><use href="#case"/></svg></span><span class="handle">AVeryLongHandleIndeed_2026xy</span>
+                <span class="standing"><span class="stat zero"><svg><use href="#book"/></svg>112</span><span class="stat zero"><svg><use href="#bulb"/></svg>9</span></span>
+              </span>
+              <span style="flex-shrink:0">11 Oct</span>
+            </div>
+            <div class="row">
+              <span class="stats">
+                <span class="stat award"><svg><use href="#book"/></svg>2</span>
+                <span class="stat zero"><svg><use href="#bulb"/></svg>0</span>
+              </span>
+              <span class="stats"><span class="stat"><svg><use href="#bubble"/></svg>3</span></span>
+            </div>
+          </div>
+        </article>
+      </div>
+      <ul class="notes">
+        <li><strong>The same two icons appear twice on one card</strong>, meaning different things — the person's lifetime totals and this question's. Grey against gold separates them, but only once you have learned the convention.</li>
+        <li>A long handle is cut much shorter, because the author's totals need room on the same line.</li>
+        <li>Puts a public "standing" next to every name — the signal the earlier kudos discussion was wary of.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== C ===================== -->
+    <section class="option">
+      <header>
+        <h2>C · Labelled awards, for the first weeks</h2>
+        <p class="muted" style="margin:0;font-size:14px">Option A with the two awards named in words. Easier to learn; costs width, so answers and followers move up to line one.</p>
+      </header>
+      <div class="phone">
+        <article class="card">
+          <h3>Return-to-run criteria after a grade 2 hamstring strain?</h3>
+          <p class="snippet">Using isometric strength and pain-free sprinting at 90% as my gates. What else are others measuring before the first full session?</p>
+          <ul class="tags"><li>Hamstring Muscle Group</li><li>Return to Sport</li></ul>
+          <div class="foot">
+            <div class="row">
+              <span class="who"><span class="handle">ScrumPhysio</span><span class="dot">·</span><span>2 days ago</span></span>
+              <span class="stats"><span class="stat"><svg><use href="#bubble"/></svg>7</span><span class="stat"><svg><use href="#eye"/></svg>3</span></span>
+            </div>
+            <div class="row" style="justify-content:flex-start;gap:14px">
+              <span class="stat award"><svg><use href="#book"/></svg>6 <span class="label">evidence-informed</span></span>
+              <span class="stat award"><svg><use href="#bulb"/></svg>11 <span class="label">practical</span></span>
+            </div>
+          </div>
+        </article>
+        <article class="card case">
+          <h3>Medial knee pain in a youth footballer, worse on cutting and pivoting, settles with rest.</h3>
+          <p class="snippet">Tried load management with partial relief. How are others staging return to pivoting in a skeletally immature athlete?</p>
+          <ul class="tags"><li>Knee Ligaments</li><li>Knee Joint</li></ul>
+          <div class="foot">
+            <div class="row">
+              <span class="who"><span class="case-mark"><svg><use href="#case"/></svg></span><span class="handle">AVeryLongHandleIndeed_2026xy</span><span class="dot">·</span><span style="flex-shrink:0">11 Oct</span></span>
+              <span class="stats"><span class="stat"><svg><use href="#bubble"/></svg>3</span></span>
+            </div>
+            <div class="row" style="justify-content:flex-start;gap:14px">
+              <span class="stat award"><svg><use href="#book"/></svg>2 <span class="label">evidence-informed</span></span>
+              <span class="stat zero"><svg><use href="#bulb"/></svg>0 <span class="label">practical</span></span>
+            </div>
+          </div>
+        </article>
+      </div>
+      <ul class="notes">
+        <li><strong>Self-explanatory</strong> to a colleague seeing it for the first time — no key needed.</li>
+        <li>Wordier on every card, for ever. Could start as C for the pilot and drop the words once people know the icons.</li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="questions">
+    <h2>Decisions this needs, beyond the layout</h2>
+    <ol>
+      <li><strong>The case cue cannot be colour alone.</strong> A 1px teal border on its own fails the accessibility rule the app is built to (WCAG 2.2, style guide §9.2): it is invisible to some colour-blind readers and faint on any screen. All three options keep the border and add the small clipboard; a thicker teal left edge is another way to do it.</li>
+      <li><strong>Gold for both awards.</strong> Kudos gold is the app's one status colour; the two awards are both kudos, so both are gold when awarded and grey at zero. That is a deliberate amendment to the style guide (§2.1 currently names the star).</li>
+      <li><strong>Where you award.</strong> Today the card only <em>shows</em> kudos — you award inside the discussion. Recommended to keep it so: tappable icons on a card that is itself one big link are easy to mis-tap on a phone.</li>
+      <li><strong>How answers are ranked.</strong> Answers are ordered by kudos now. With two awards: by their sum (simplest), or let the reader choose.</li>
+      <li><strong>Existing kudos.</strong> Today's stars can't be split after the fact. For the pilot the clear-down empties them anyway, so this is free to decide now.</li>
+    </ol>
+  </div>
+</div>
+</body>
+</html>
