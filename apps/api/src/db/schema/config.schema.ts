@@ -82,3 +82,13 @@ export const adminAuditLog = config.table(
   },
   (t) => [index('admin_audit_created_idx').on(t.createdAt.desc())],
 );
+
+/**
+ * The closed pilot's invitation list (migration 0056). An email here is admitted and approved
+ * on registration while `access.pilot_allowlist_active` is on; see `PilotAllowlistService`.
+ * Lower-cased by a check constraint, matching how `RegisterDto` normalises.
+ */
+export const pilotAllowlist = config.table('pilot_allowlist', {
+  email: text('email').primaryKey(),
+  addedAt: timestamp('added_at', { withTimezone: true }).notNull().defaultNow(),
+});

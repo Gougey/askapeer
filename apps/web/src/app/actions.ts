@@ -73,6 +73,15 @@ export async function registerAction(_prev: AuthState, formData: FormData): Prom
   if (res.status === 409) {
     return { status: 'error', message: 'An account with these details may already exist — try signing in.' };
   }
+  // The closed pilot (API migration 0056): not on the invitation list. Said plainly, with the
+  // one thing an invited colleague can get wrong — using a different address from the invite.
+  if (res.status === 403) {
+    return {
+      status: 'error',
+      message:
+        'Askapeer is in a closed pilot and registration is by invitation only. If you were invited, register with the email address your invitation was sent to.',
+    };
+  }
   if (!res.ok) return { status: 'error', message: 'Please check your details and try again.' };
   // Registered — send a sign-in link to complete onboarding.
   return requestLink(payload.email);

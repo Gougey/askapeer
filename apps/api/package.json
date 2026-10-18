@@ -20,7 +20,9 @@
     "verify:backfill-query": "tsx scripts/verify-backfill-query.ts",
     "verify:undeliverable": "tsx scripts/verify-undeliverable.ts",
     "verify:backfill-chain": "tsx scripts/verify-backfill-chain.ts",
-    "verify:spelling": "tsx scripts/verify-spelling.ts"
+    "verify:spelling": "tsx scripts/verify-spelling.ts",
+    "verify:pilot": "tsx scripts/verify-pilot.ts",
+    "pilot": "tsx src/cli/pilot.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",

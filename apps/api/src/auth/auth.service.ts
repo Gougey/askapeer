@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import {
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -16,6 +17,15 @@ import { handles, magicLinks, members, reapplicationAttempts, refreshTokens } fr
 import { AdminAccessService } from '../admin/admin-access.service';
 import { VerificationService } from '../verification/verification.service';
 import type { RegisterDto } from './auth.dto';
+import { PilotAllowlistService } from './pilot-allowlist.service';
+
+/**
+ * The `decided_by` on a pilot approval. Not `system` — the automated pipeline never ran, and an
+ * audit reader must be able to tell "the checks passed" from "we were vouched for".
+ */
+const PILOT_DECIDED_BY = 'pilot_allowlist';
+/** Read by the web, which shows the closed-pilot copy rather than "check your details". */
+export const PILOT_CLOSED_MESSAGE = 'Askapeer is in a closed pilot. Registration is by invitation only.';
 
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (sliding; G-11 makes this tunable later)
@@ -67,11 +77,17 @@ export class AuthService {
     private readonly verification: VerificationService,
     private readonly adminAccess: AdminAccessService,
     private readonly email: EmailSender,
+    private readonly pilot: PilotAllowlistService,
   ) {}
 
   async register(dto: RegisterDto) {
     const registrationCountry = dto.registrationCountry ?? 'UK';
+    // The closed pilot (migration 0056). Checked before the insert, so a refused applicant
+    // leaves nothing behind — no member row, no name, no registration number.
+    const admitted = await this.pilot.admissionFor(dto.email);
+    if (admitted === 'closed') throw new ForbiddenException(PILOT_CLOSED_MESSAGE);
     try {
+      if (admitted === 'pilot') return await this.registerPilot(dto, registrationCountry);
       const [row] = await this.db
         .insert(members)
         .values({
@@ -96,6 +112,38 @@ export class AuthService {
       }
       throw err;
     }
+  }
+
+  /**
+   * An invited applicant: inserted and approved in one transaction, through the same
+   * `applyTransition` every status change uses, so the decision row is written with it.
+   *
+   * ⚠️ **No approval email.** The web sends a sign-in code the moment registration returns,
+   * and a second email at the same instant doubles the chance a Microsoft 365 tenant files
+   * both away — which is exactly how Andrew's codes were lost in August. The decision row is
+   * the record; the member learns they are in by signing in.
+   */
+  private async registerPilot(dto: RegisterDto, registrationCountry: string) {
+    return this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(members)
+        .values({
+          legalName: dto.legalName,
+          email: dto.email,
+          professionalBody: dto.professionalBody,
+          registrationNumber: dto.registrationNumber,
+          registrationCountry,
+        })
+        .returning({ id: members.id });
+      await this.verification.applyTransition(
+        tx,
+        row.id,
+        'approved_verified',
+        PILOT_DECIDED_BY,
+        'Closed pilot: on the invitation allowlist, vouched for by the founding team. Register lookup and identity check not run.',
+      );
+      return { memberId: row.id, verificationStatus: 'approved_verified' as const };
+    });
   }
 
   /**

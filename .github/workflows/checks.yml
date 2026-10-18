@@ -96,3 +96,8 @@ jobs:
       # meant, and a short word like Andrew's stray "ti" is dropped rather than guessed at.
       - name: Search — a misspelt word is corrected to what was meant, or dropped
         run: npm run verify:spelling -w apps/api
+      # The closed pilot. Who may register fails closed, and the clear-down refuses to run
+      # against any table it has not been told to clear or keep — a table added later must
+      # stop it, not be silently emptied or silently left full of member data.
+      - name: Pilot — admission fails closed, clear-down knows every table
+        run: npm run verify:pilot -w apps/api

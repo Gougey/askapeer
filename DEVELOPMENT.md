@@ -1217,6 +1217,75 @@ pip install Pillow && python3 apps/web/scripts/generate-pwa-icons.py
 > the three of us are testing; a short numeric sign-in code is the fix, and is scheduled
 > before phase 2 (see FD-3 in the PRD).
 
+## Closed pilot — the invitation list and the clear-down (October 2026)
+
+About 15 of Andrew's colleagues are coming onto live. Two pieces make that safe:
+`config.pilot_allowlist` (migration `0056`) and the operator tool `src/cli/pilot.ts`.
+
+**⚠️ Before 0056, live registration was open to anyone with the URL.** Verification is simulated
+(below), and the stand-in identity screen lets an applicant approve themselves. While the gate is
+on (`access.pilot_allowlist_active = true` in `config.settings`, which 0056 sets), registration
+does one of three things:
+
+| Applicant | What happens |
+|---|---|
+| On the list, or in `ADMIN_EMAILS` | Inserted **and approved** in one transaction. The decision row is `decided_by = pilot_allowlist`, saying the checks were not run. No identity check opens. **No approval email**: the web sends a sign-in code at once, and two emails together double the chance an M365 tenant files both away (see the email memory) |
+| Anyone else | `403` with a closed-pilot message, and **nothing is stored** |
+| Gate off | The ordinary pipeline, exactly as before |
+
+Admins are always admitted, so the founders can't be locked out by a list that hasn't been
+imported yet. The setting is cached for 30 s (`SettingsService`), so a manual flip takes up to
+30 s to apply. **Never commit the list.** The repo is public, and these are colleagues' email
+addresses.
+
+### The tool — run it on the API machine
+
+The production image has compiled code only, and Redis is reachable only inside Fly, so it runs
+where both credentials already are:
+
+```bash
+curl -s https://askapeer-api.fly.dev/health >/dev/null   # wake the machine first
+flyctl ssh console -a askapeer-api -C "node dist/cli/pilot.js allowlist list"
+flyctl ssh console -a askapeer-api -C "node dist/cli/pilot.js allowlist add a@x.com,b@y.com"
+flyctl ssh console -a askapeer-api -C "node dist/cli/pilot.js allowlist remove a@x.com"
+flyctl ssh console -a askapeer-api -C "node dist/cli/pilot.js clear-down"   # dry run
+```
+
+Locally: `npm run pilot -w apps/api -- allowlist list`. `allowlist list` shows each email's
+verification status and **never a handle**. Email beside handle is a de-anonymisation, which
+on this platform only the audited reveal-identity action may do.
+
+### The clear-down
+
+Empties every member and everything they made; keeps the literature, the vocabulary and the
+configuration. The two lists are in `src/cli/clear-down-plan.ts`, and `npm run verify:pilot`
+pins them. The decision (Adrian, 2026-10-17) was that all member data so far was test data —
+the founders' and the seeded demo's — including the audit logs that policy otherwise treats as
+immutable. **The backup taken first is what keeps those recoverable.**
+
+- **Cleared:** all of `identity.*`, all of `community.*` except `tags` and `categories`, and
+  `research.saved_articles`. Also the `verification` and `notifications` queues, and Redis
+  `kudos:*`, which holds the leaderboard (the dual-store trap).
+- **Kept:** `research.*` (articles, their tags, ingestion and backfill state, the spelling
+  dictionary), `community.tags` and `categories`, and all of `config.*`, including the
+  invitation list and `admin_audit_log`. The audit log's `actor_member_id` will point at member
+  ids that no longer exist, by design.
+- **It refuses to run** against any table on neither list, or a listed table that has gone, so a
+  table added later stops it rather than being silently emptied or kept.
+- One `TRUNCATE` with **no `CASCADE`**: if a kept table ever gains a foreign key to a cleared one,
+  Postgres refuses rather than widening the wipe.
+- `--execute` also needs `--confirm=<db>@<host>`, exactly as the dry run prints it, so a command
+  pasted into the wrong terminal does nothing.
+
+**The run, in order:** take a Fly Postgres backup → dry run → read the counts →
+`clear-down --execute --confirm=…` → check the output says "all now 0" and "counts unchanged" →
+`allowlist list` → the founders register again. Every session ends, because `refresh_tokens` is
+cleared, so everyone signs in afresh.
+
+Rehearsed locally on 2026-10-17: 25 tables emptied (19 members, 67 posts, 819 kudos) and 13 kept
+unchanged (17,028 articles). A wrong `--confirm` was refused. After it, an invited colleague was
+approved on registration and a stranger refused.
+
 ## Verification (S2) — running without Onfido
 
 EPIC-A's pipeline needs two external providers we don't have accounts for yet: a
