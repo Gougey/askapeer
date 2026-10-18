@@ -393,6 +393,13 @@
       "when": 1789502400438,
       "tag": "0055_requeue_openalex_budget_failures",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1789506000438,
+      "tag": "0056_pilot_allowlist",
+      "breakpoints": true
     }
   ]
 }
