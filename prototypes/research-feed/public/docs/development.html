@@ -1847,6 +1847,21 @@ list that hasn’t been imported yet. The setting is cached for 30 s
 (<code>SettingsService</code>), so a manual flip takes up to 30 s to
 apply. <strong>Never commit the list.</strong> The repo is public, and
 these are colleagues’ email addresses.</p>
+<h3 id="the-welcome-guide-welcome">The welcome guide
+(<code>/welcome</code>)</h3>
+<p>The page Andrew’s invitation links to: register, the six-digit code,
+choosing a handle and the rule, adding the app to a home screen (iPhone,
+Android, computer), the five tabs, and kudos. It is <strong>public and
+outside <code>(app)</code></strong>, because its readers have no account
+yet, and it is <code>noindex</code>, because it describes an
+invitation-only pilot.</p>
+<p>Its six screenshots (<code>apps/web/public/guide/</code>) are taken
+from a <strong>local</strong> stack with the seeded demo corpus, never
+from live, so no real member’s content can appear in a public page. To
+regenerate them after a screen changes, see the header of
+<code>docs/tools/welcome-screenshots/capture.cjs</code>. It signs in
+through the local-only dev token, hides Next’s dev badge and the dev
+sign-in shortcut, and needs Playwright installed outside the repo.</p>
 <h3 id="the-tool-run-it-on-the-api-machine">The tool — run it on the API
 machine</h3>
 <p>The production image has compiled code only, and Redis is reachable

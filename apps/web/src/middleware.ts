@@ -96,5 +96,5 @@ export const config = {
    * routes are deliberately included: arriving at `/auth/verify` with an expired access
    * token and a live refresh should not be a dead end either.
    */
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|brand/|fonts/|manifest.webmanifest).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|brand/|fonts/|guide/|manifest.webmanifest).*)'],
 };
