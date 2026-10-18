@@ -109,7 +109,7 @@
       <span><svg style="color:var(--kudos)"><use href="#bulb"/></svg> Practical problem solving</span>
       <span class="muted"><svg><use href="#bubble"/></svg> Answers</span>
       <span class="muted"><svg><use href="#eye"/></svg> Following</span>
-      <span style="color:var(--case)"><svg><use href="#case"/></svg> Clinical case</span>
+      <span style="color:var(--case)">Teal border = clinical case</span>
     </div>
     <div class="toolbar"><span class="muted">Theme:</span>
       <button onclick="document.documentElement.dataset.theme='light'">Light</button>
@@ -151,7 +151,7 @@
           <p class="snippet">Tried load management with partial relief. How are others staging return to pivoting in a skeletally immature athlete?</p>
           <ul class="tags"><li>Knee Ligaments</li><li>Knee Joint</li></ul>
           <div class="foot">
-            <div class="row"><span class="who"><span class="case-mark"><svg><use href="#case"/></svg><span class="sr">Clinical case</span></span><span class="handle">AVeryLongHandleIndeed_2026xy</span><span class="dot">·</span><span>11 Oct</span></span></div>
+            <div class="row"><span class="who"><span class="handle">AVeryLongHandleIndeed_2026xy</span><span class="dot">·</span><span>11 Oct</span></span></div>
             <div class="row">
               <span class="stats">
                 <span class="stat award"><svg><use href="#book"/></svg>2</span>
@@ -167,7 +167,7 @@
       <ul class="notes">
         <li><strong>Fits at any handle length.</strong> Line one holds only the handle and the date, so even a 28-character handle (above) fits; at the 30-character maximum only the handle gives way, and nothing on line two ever has to.</li>
         <li><strong>One book and one bulb per card</strong>, so there is never a question of whose count is whose.</li>
-        <li><strong>The case cue is the teal border plus a small clipboard</strong> before the handle — the "Clinical Case" text goes, as proposed, but the meaning is not left to colour alone.</li>
+        <li><strong>A clinical case is marked by the teal border</strong>, and the "Clinical Case" line above the title goes, as proposed. See the first decision below.</li>
         <li>It also matches what Andrew asked for in the kudos discussion: recognise the <em>contribution</em> publicly and keep a person's totals out of the way.</li>
       </ul>
     </section>
@@ -208,7 +208,7 @@
           <ul class="tags"><li>Knee Ligaments</li><li>Knee Joint</li></ul>
           <div class="foot">
             <div class="row">
-              <span class="who"><span class="case-mark"><svg><use href="#case"/></svg></span><span class="handle">AVeryLongHandleIndeed_2026xy</span>
+              <span class="who"><span class="handle">AVeryLongHandleIndeed_2026xy</span>
                 <span class="standing"><span class="stat zero"><svg><use href="#book"/></svg>112</span><span class="stat zero"><svg><use href="#bulb"/></svg>9</span></span>
               </span>
               <span style="flex-shrink:0">11 Oct</span>
@@ -258,7 +258,7 @@
           <ul class="tags"><li>Knee Ligaments</li><li>Knee Joint</li></ul>
           <div class="foot">
             <div class="row">
-              <span class="who"><span class="case-mark"><svg><use href="#case"/></svg></span><span class="handle">AVeryLongHandleIndeed_2026xy</span><span class="dot">·</span><span style="flex-shrink:0">11 Oct</span></span>
+              <span class="who"><span class="handle">AVeryLongHandleIndeed_2026xy</span><span class="dot">·</span><span style="flex-shrink:0">11 Oct</span></span>
               <span class="stats"><span class="stat"><svg><use href="#bubble"/></svg>3</span></span>
             </div>
             <div class="row" style="justify-content:flex-start;gap:14px">
@@ -278,7 +278,7 @@
   <div class="questions">
     <h2>Decisions this needs, beyond the layout</h2>
     <ol>
-      <li><strong>The case cue cannot be colour alone.</strong> A 1px teal border on its own fails the accessibility rule the app is built to (WCAG 2.2, style guide §9.2): it is invisible to some colour-blind readers and faint on any screen. All three options keep the border and add the small clipboard; a thicker teal left edge is another way to do it.</li>
+      <li><strong>The case cue — to be resolved.</strong> A 1px teal border on its own fails the accessibility rule the app is built to (WCAG 2.2, style guide §9.2): it is invisible to some colour-blind readers and faint on any screen. Before this is built it needs a second cue alongside the colour — a short "Case" label before the handle is the simplest.</li>
       <li><strong>Gold for both awards.</strong> Kudos gold is the app's one status colour; the two awards are both kudos, so both are gold when awarded and grey at zero. That is a deliberate amendment to the style guide (§2.1 currently names the star).</li>
       <li><strong>Where you award.</strong> Today the card only <em>shows</em> kudos — you award inside the discussion. Recommended to keep it so: tappable icons on a card that is itself one big link are easy to mis-tap on a phone.</li>
       <li><strong>How answers are ranked.</strong> Answers are ordered by kudos now. With two awards: by their sum (simplest), or let the reader choose.</li>
