@@ -181,7 +181,3 @@ export async function fetchArticle(token: string, articleId: string): Promise<Ar
   return apiGet<ArticleDetail>(`/research-feed/${articleId}`, token);
 }
 
-export async function fetchMyInterests(token: string): Promise<string[]> {
-  const res = await apiGet<{ tagIds: string[] }>('/research-feed/interests', token);
-  return res?.tagIds ?? [];
-}

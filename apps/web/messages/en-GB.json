@@ -84,11 +84,7 @@
       "acknowledge": "I understand, and I agree not to identify myself or any other member",
       "continue": "Continue",
       "submitting": "Saving…",
-      "error": "We couldn't save that. Please try again.",
-      "interests": {
-        "heading": "Your clinical interests",
-        "body": "You'll be able to pick the areas you want in your feed once the research feed arrives. Until then your feed shows everything."
-      }
+      "error": "We couldn't save that. Please try again."
     }
   },
   "shell": {
@@ -351,8 +347,7 @@
   "settings": {
     "heading": "Settings",
     "rows": {
-      "notifications": "Notifications",
-      "interests": "Clinical interests"
+      "notifications": "Notifications"
     },
     "notifications": {
       "heading": "Notifications",
@@ -551,17 +546,6 @@
     "savedEmptyCta": "Search the literature",
     "savedRetracted": "⚠ This article was retracted on {date}.",
     "savedOlder": "Show older"
-  },
-  "interests": {
-    "heading": "Your clinical interests",
-    "body": "Choose the areas you work in.",
-    "save": "Save interests",
-    "saving": "Saving…",
-    "saved": "Saved.",
-    "pickerHeading": "Your areas",
-    "pickerHint": "Search or browse the full clinical list. Choosing a region includes everything beneath it.",
-    "unsaved": "Not saved yet — choosing closes the picker, this button saves.",
-    "saveChanges": "Save changes"
   },
   "welcome": {
     "metaTitle": "Welcome to Askapeer",

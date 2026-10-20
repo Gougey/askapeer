@@ -24,7 +24,6 @@ export default async function SettingsPage() {
   const t = await getTranslations('settings');
 
   const rows = [
-    { href: '/settings/interests', label: t('rows.interests') },
     { href: '/settings/notifications', label: t('rows.notifications') },
   ];
 
