@@ -79,9 +79,9 @@ export default async function NotificationSettingsPage() {
         <li className="text-xs" style={{ color: 'var(--color-muted)' }}>
           {t('notes.accountEmailLocked')}
         </li>
-        <li className="text-xs" style={{ color: 'var(--color-muted)' }}>
-          {t('notes.emailNotYetSending')}
-        </li>
+        {/* "Email notifications aren't being sent yet" used to sit here, unconditionally. It
+            stopped being true when Postmark went live in August, and would have told every
+            pilot colleague their email settings did nothing. */}
         {!pushAvailable && (
           <li className="text-xs" style={{ color: 'var(--color-muted)' }}>
             {t('notes.pushComingSoon')}
