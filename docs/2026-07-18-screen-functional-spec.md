@@ -154,7 +154,7 @@ Grouped by area. Routes are indicative (mobile-web PWA paths). "Shell" = whether
 | F2 | Public handle profile (another member) | `/u/:handle` | yes | EPIC-B |
 | F3 | Settings hub | `/settings` | yes | — |
 | F4 | Notification preferences (in-app/email/push — push greyed-out) | `/settings/notifications` | yes | EPIC-G |
-| F5 | News-feed / interest choices (tag interests) | `/settings/interests` | yes | EPIC-I |
+| F5 | ~~News-feed / interest choices (tag interests)~~ — removed 2026-10-20; interests play no part in the app | ~~`/settings/interests`~~ | — | EPIC-I |
 | F6 | Subscription & billing | `/settings/billing` | yes | EPIC-H |
 | F7 | Account & legal (policy, terms, sign out) | `/settings/account` | yes | EPIC-A/legal |
 | F8 | Sign-in & security (biometric / passkey management) | `/settings/security` | yes | EPIC-A/auth (§1.6) |

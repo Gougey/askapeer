@@ -22,17 +22,9 @@ export default async function OnboardingSetupPage() {
         </p>
       </section>
 
+      {/* No clinical-interests block: interests play no part in the app any more (My Research
+          answers the criteria a member sets), so promising them here was a promise to nothing. */}
       <AcknowledgeForm />
-
-      {/*
-        Interests are stubbed deliberately: the tag vocabulary is a single unified,
-        admin-managed list (EPIC-J / S13) seeded from Andrew's facet list, and inventing a
-        throwaway one here would have to be unpicked when the real feed lands (S8).
-      */}
-      <section className="space-y-1 text-sm" style={{ color: 'var(--color-muted)' }}>
-        <h2 className="font-medium">{t('interests.heading')}</h2>
-        <p>{t('interests.body')}</p>
-      </section>
     </main>
   );
 }

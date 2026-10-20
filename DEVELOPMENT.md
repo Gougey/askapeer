@@ -887,9 +887,11 @@ screen's question.
   and nothing reflows under a caret — but if it annoys on device the fix is shorter option
   labels, never a viewport lock.
 
-⚠️ **`/settings/interests` is now an orphan.** Nothing reads `community.member_interests` any
-more. The screen still writes it and its copy no longer claims to rank anything, but what it is
-*for* is an open product question — remove it, or find it a job.
+**`/settings/interests` was removed** (Adrian, 20 October 2026), along with its row in Settings
+and the onboarding line promising interests "once the research feed arrives". Nothing had read
+`community.member_interests` since My Research dropped personalisation, and on live the screen
+had begun answering "page not found". The table and the API's interest routes are left in place,
+unused, so the decision can be revisited without a migration.
 
 Verified in a real browser at phone width: an untouched visit is open with no articles and the
 "set your criteria" prompt; Apply closes the panel and returns results; Apply with nothing set
