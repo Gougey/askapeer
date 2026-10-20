@@ -73,6 +73,21 @@
   .stat.follows { color: var(--follows); font-weight: 600; }
   .stat.zero { color: var(--muted); font-weight: 400; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .case-title { display: flex; gap: 8px; align-items: flex-start; }
+  .case-title svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 4px; color: var(--case); }
+  .thread { display: flex; flex-direction: column; gap: 12px; }
+  .answer { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+  .answer .meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+  .answer p { margin: 0; }
+  .awards { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; }
+  .award { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-strong); background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+  .award svg { width: 15px; height: 15px; }
+  .award.on.insightful { color: var(--insightful); border-color: var(--insightful); background: color-mix(in srgb, var(--insightful) 12%, transparent); }
+  .award.on.useful { color: var(--useful); border-color: var(--useful); background: color-mix(in srgb, var(--useful) 14%, transparent); }
+  .award.has.insightful:not(.on) svg { color: var(--insightful); }
+  .award.has.useful:not(.on) svg { color: var(--useful); }
+  .award.own { cursor: default; }
+  .linkish { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
   .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 </style>
 </head>
@@ -90,20 +105,24 @@
   <symbol id="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/>
   </symbol>
+  <!-- A plain medical cross, filled. Teal, not red: the red cross emblem is protected in UK law. -->
+  <symbol id="cross" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>
+  </symbol>
 </svg>
 
 <div class="page">
   <div class="intro">
     <p class="label">For review — Adrian, Paul, Andrew · 20 October 2026</p>
     <h1>Discussion card — Option B, revised</h1>
-    <p>Option B with the changes from Andrew's feedback: the awards are <strong>Insightful</strong> and <strong>Useful</strong>; handles are at most <strong>20 characters</strong>; the author's own totals sit in grey beside the handle; and the card's own numbers, with the date, move to the second line — each in its own colour.</p>
+    <p>Option B with the changes from Andrew's feedback: the awards are <strong>Insightful</strong> and <strong>Useful</strong>; handles are at most <strong>20 characters</strong>; the author's own totals sit in grey beside the handle; and the card's own numbers, with the date, move to the second line — each in its own colour. <strong>Updated 20 October</strong> with the teal cross for a clinical case, and the award buttons inside a discussion (below the cards).</p>
     <div class="key">
       <span style="color:var(--insightful)"><svg><use href="#book"/></svg> Insightful</span>
       <span style="color:var(--useful)"><svg><use href="#bulb"/></svg> Useful</span>
       <span style="color:var(--answers)"><svg><use href="#bubble"/></svg> Answers</span>
       <span style="color:var(--follows)"><svg><use href="#eye"/></svg> Following</span>
       <span class="muted"><svg><use href="#book"/></svg><svg><use href="#bulb"/></svg> The author's totals</span>
-      <span style="color:var(--case)">Teal border = clinical case</span>
+      <span style="color:var(--case)"><svg><use href="#cross"/></svg> Clinical case (with the teal border)</span>
     </div>
     <div class="toolbar"><span class="muted">Theme:</span>
       <button onclick="document.documentElement.dataset.theme='light'">Light</button>
@@ -143,7 +162,7 @@
 
       <!-- A clinical case, with a handle at the new 20-character maximum. -->
       <article class="card case">
-        <h3>Medial knee pain in a youth footballer, worse on cutting and pivoting, settles with rest.</h3>
+        <h3 class="case-title"><svg aria-hidden="true"><use href="#cross"/></svg><span><span class="sr">Clinical case: </span>Medial knee pain in a youth footballer, worse on cutting and pivoting, settles with rest.</span></h3>
         <p class="snippet">Tried load management with partial relief. How are others staging return to pivoting in a skeletally immature athlete?</p>
         <ul class="tags"><li>Knee Ligaments</li><li>Knee Joint</li></ul>
         <div class="foot">
@@ -212,18 +231,75 @@
         <li>Teal stays reserved for the clinical-case border, and red for the Ask button, so neither is used for a count.</li>
       </ul>
       <div>
-        <h2 style="font-size:20px;margin-bottom:8px">Still to decide</h2>
+        <h2 style="font-size:20px;margin-bottom:8px">Decided, 20 October</h2>
         <ol>
-          <li><strong>The case cue.</strong> The teal border alone still fails the "never colour alone" rule. A short "Case" label is the simplest fix.</li>
-          <li><strong>Where you award.</strong> Recommended: inside the discussion only, as now — tappable icons on a card that is itself one big link are easy to mis-tap.</li>
-          <li><strong>How answers are ranked.</strong> By Insightful + Useful combined is the simplest.</li>
-          <li><strong>Following count.</strong> Today the eye only appears when someone is following who has not answered (otherwise it just repeats the answer count). Keep that, or always show it?</li>
-          <li><strong>Style guide.</strong> Gold stops being the single status colour; the guide's kudos rules (§2.1, §2.5, §11) need rewriting to match.</li>
-          <li><strong>Existing 30-character handles.</strong> The new 20-character limit applies to new handles. The pilot clear-down removes every existing handle, so nobody is caught by it.</li>
+          <li><strong>Clinical case:</strong> a small teal cross before the title, as well as the teal border. Screen readers hear "Clinical case:" before the title.</li>
+          <li><strong>Awarding happens inside the discussion</strong>, with the icon and the word on each button (below). The card only shows the counts.</li>
+          <li><strong>Answers are ranked</strong> by Insightful and Useful combined.</li>
+          <li><strong>Every count is always shown</strong> — grey at zero, in its colour once it is above zero. That includes Following.</li>
+          <li><strong>The style guide's kudos rules are rewritten</strong> to match: four stat colours, gold no longer the single status colour.</li>
+          <li><strong>Handles are 20 characters at most</strong> for new handles; the pilot clear-down removes every existing one.</li>
         </ol>
       </div>
     </div>
   </div>
+
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <h2 style="font-size:22px">Inside a discussion — awarding</h2>
+    <div class="layout">
+      <div class="phone">
+        <div class="thread">
+          <article class="answer">
+            <div class="meta"><span class="who"><span class="handle">ScrumPhysio</span><span class="standing"><span class="stat zero"><svg><use href="#book"/></svg>48</span><span class="stat zero"><svg><use href="#bulb"/></svg>27</span></span></span><span>2 days ago</span></div>
+            <h3 style="font-size:19px">Return-to-run criteria after a grade 2 hamstring strain?</h3>
+            <p>Using isometric strength and pain-free sprinting at 90% as my gates. What else are others measuring before the first full session?</p>
+            <div class="awards">
+              <button class="award insightful has" aria-pressed="false"><svg aria-hidden="true"><use href="#book"/></svg>6 Insightful</button>
+              <button class="award useful has on" aria-pressed="true"><svg aria-hidden="true"><use href="#bulb"/></svg>11 Useful</button>
+              <span class="linkish">Report</span>
+            </div>
+          </article>
+          <p class="label" style="margin:4px 0 0">7 answers</p>
+          <article class="answer">
+            <div class="meta"><span class="who"><span class="handle">HandTherapyH</span><span class="standing"><span class="stat zero"><svg><use href="#book"/></svg>85</span><span class="stat zero"><svg><use href="#bulb"/></svg>61</span></span></span><span>1 day ago</span></div>
+            <p>I add a repeated-sprint test at the end of a session, not the start — fatigue is when they re-injure. Askling's L-protocol criteria are a good reference.</p>
+            <div class="awards">
+              <button class="award insightful has on" aria-pressed="true"><svg aria-hidden="true"><use href="#book"/></svg>9 Insightful</button>
+              <button class="award useful has on" aria-pressed="true"><svg aria-hidden="true"><use href="#bulb"/></svg>14 Useful</button>
+              <span class="linkish">Reply</span><span class="linkish">Report</span>
+            </div>
+          </article>
+          <article class="answer">
+            <div class="meta"><span class="who"><span class="handle">NewGrad_Physio</span><span class="standing"><span class="stat zero"><svg><use href="#book"/></svg>0</span><span class="stat zero"><svg><use href="#bulb"/></svg>0</span></span></span><span>3 hours ago</span></div>
+            <p>We also check they can decelerate from full speed over a short distance without guarding.</p>
+            <div class="awards">
+              <button class="award insightful" aria-pressed="false"><svg aria-hidden="true"><use href="#book"/></svg>0 Insightful</button>
+              <button class="award useful" aria-pressed="false"><svg aria-hidden="true"><use href="#bulb"/></svg>0 Useful</button>
+              <span class="linkish">Reply</span><span class="linkish">Report</span>
+            </div>
+          </article>
+          <article class="answer">
+            <div class="meta"><span class="who"><span class="handle">You (QuietQuads)</span><span class="standing"><span class="stat zero"><svg><use href="#book"/></svg>12</span><span class="stat zero"><svg><use href="#bulb"/></svg>30</span></span></span><span>5 hours ago</span></div>
+            <p>Your own answer: the counts show, but you cannot award yourself.</p>
+            <div class="awards">
+              <span class="award own insightful has"><svg aria-hidden="true"><use href="#book"/></svg>4 Insightful</span>
+              <span class="award own useful has"><svg aria-hidden="true"><use href="#bulb"/></svg>2 Useful</span>
+              <span class="linkish">Edit</span><span class="linkish">Delete</span>
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="notes">
+        <ul>
+          <li><strong>Two buttons, each with its icon, its count and its name</strong> — "6 Insightful", "11 Useful". The names are spelled out here because this is where you choose between them; on the card, the icons alone are enough.</li>
+          <li><strong>Tap to award, tap again to take it back</strong>, as with kudos now. Either, both or neither.</li>
+          <li><strong>Three states.</strong> Not awarded by you: grey outline, icon in its colour once anyone has awarded it. Awarded by you: tinted in its colour. Your own post: the counts show, but they are not buttons.</li>
+          <li><strong>Answers are ordered by Insightful + Useful</strong>, highest first — HandTherapyH's 23 above NewGrad_Physio's 0.</li>
+          <li>The author's grey totals sit beside each handle here too, matching the card.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 </div>
 </body>
 </html>
