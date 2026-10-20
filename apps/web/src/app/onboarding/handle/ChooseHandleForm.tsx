@@ -83,6 +83,8 @@ export function ChooseHandleForm() {
           autoComplete="off"
           autoCapitalize="none"
           spellCheck={false}
+          // The API's limit (HANDLE_MAX_LENGTH): stops typing at 20 rather than refusing later.
+          maxLength={20}
           placeholder={t('placeholder')}
           className="rounded-lg border px-3 py-2"
           style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}

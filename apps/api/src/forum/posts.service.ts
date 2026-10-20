@@ -20,6 +20,7 @@ import {
   posts,
   reports,
   tags,
+  type KudosKind,
 } from '../db/schema';
 import { CHECKLIST_ITEMS } from '../cases/case-policy';
 import type { CreatePostDto, ListPostsDto, UpdatePostDto } from './forum.dto';
@@ -38,8 +39,15 @@ const SNIPPET_LENGTH = 200;
 export type AuthorBlock = {
   handleId: string;
   handleName: string;
+  /** Both kinds together; ranking and the leaderboard use it. */
   kudosTotal: number;
+  /** The author's standing by kind (migration 0057) — shown in grey beside the handle. */
+  insightfulTotal: number;
+  usefulTotal: number;
 };
+
+/** A post's or a comment's kudos by kind. `kudosCount` beside it stays their sum. */
+export type KudosCounts = { insightfulCount: number; usefulCount: number };
 
 export type TagRef = { id: string; name: string };
 
@@ -58,7 +66,7 @@ export type PostCard = {
   kudosCount: number;
   createdAt: string;
   editedAt: string | null;
-};
+} & KudosCounts;
 
 export type PostList = { posts: PostCard[]; nextCursor: string | null };
 
@@ -69,7 +77,7 @@ export type PostList = { posts: PostCard[]; nextCursor: string | null };
  * received", so it carries the thread it belongs to rather than an author block — the
  * author is always the caller, and repeating their own handle on every row is noise.
  */
-export type MyCommentCard = {
+export type MyCommentCard = KudosCounts & {
   id: string;
   snippet: string;
   kudosCount: number;
@@ -81,7 +89,7 @@ export type MyCommentCard = {
 
 export type MyCommentList = { comments: MyCommentCard[]; nextCursor: string | null };
 
-export type ThreadComment = {
+export type ThreadComment = KudosCounts & {
   id: string;
   author: AuthorBlock;
   body: string;
@@ -89,6 +97,9 @@ export type ThreadComment = {
   kudosCount: number;
   /** Whether the calling handle has awarded kudos to this comment (EPIC-C §13.1, G-3). */
   hasKudosed: boolean;
+  /** Which of the two the caller has awarded — drives each button's pressed state. */
+  hasInsightful: boolean;
+  hasUseful: boolean;
   /** The caller authored this comment — drives the self-delete affordance and the fact
    *  that a handle can't kudos its own contribution, without a second round-trip. */
   isMine: boolean;
@@ -143,6 +154,9 @@ export type Thread = {
      */
     canEditPost: boolean;
     hasKudosedPost: boolean;
+    /** Which of the two the caller has awarded the question. */
+    hasInsightfulPost: boolean;
+    hasUsefulPost: boolean;
     /** Whether the caller is subscribed to this thread (S15). Drives the Follow control,
      *  and is the same row that decides whether they are notified about it at all. */
     isFollowing: boolean;
@@ -339,9 +353,13 @@ export class PostsService {
         handleId: handles.id,
         handleName: handles.handleName,
         kudosTotal: handles.kudosTotal,
+        insightfulTotal: handles.insightfulTotal,
+        usefulTotal: handles.usefulTotal,
         answerCount: answerCountSql,
         watcherCount: watcherCountSql,
         kudosCount: postKudosCountSql,
+        insightfulCount: postKindCountSql('insightful'),
+        usefulCount: postKindCountSql('useful'),
         // Null for a question — the join only matches case discussions (EPIC-E §2).
         communityQuestion: caseDetails.communityQuestion,
       })
@@ -373,6 +391,8 @@ export class PostsService {
         postTitle: posts.title,
         postType: posts.type,
         kudosCount: commentKudosCountSql,
+        insightfulCount: commentKindCountSql('insightful'),
+        usefulCount: commentKindCountSql('useful'),
       })
       .from(comments)
       .innerJoin(posts, eq(posts.id, comments.postId))
@@ -399,6 +419,8 @@ export class PostsService {
         id: row.id,
         snippet: snippet(row.body),
         kudosCount: Number(row.kudosCount),
+        insightfulCount: Number(row.insightfulCount),
+        usefulCount: Number(row.usefulCount),
         createdAt: row.createdAt.toISOString(),
         editedAt: row.editedAt?.toISOString() ?? null,
         post: { id: row.postId, title: row.postTitle, type: row.postType },
@@ -431,10 +453,14 @@ export class PostsService {
         handleId: handles.id,
         handleName: handles.handleName,
         kudosTotal: handles.kudosTotal,
+        insightfulTotal: handles.insightfulTotal,
+        usefulTotal: handles.usefulTotal,
         answerCount: answerCountSql,
         othersAnswered: othersAnsweredSql,
         watcherCount: watcherCountSql,
         kudosCount: postKudosCountSql,
+        insightfulCount: postKindCountSql('insightful'),
+        usefulCount: postKindCountSql('useful'),
       })
       .from(posts)
       .innerJoin(handles, eq(posts.handleId, handles.id))
@@ -448,11 +474,11 @@ export class PostsService {
       throw new NotFoundException('No such post.');
     }
 
-    const [tagsByPost, ranked, hasKudosedPost, isFollowing, caseDetail, reportedPosts] =
+    const [tagsByPost, ranked, mine, isFollowing, caseDetail, reportedPosts] =
       await Promise.all([
         this.tagsFor([row.id]),
         this.rankedComments(row.id, viewerHandleId),
-        this.viewerKudosedPost(row.id, viewerHandleId),
+        this.viewerKudosOnPost(row.id, viewerHandleId),
         this.viewerFollowsPost(row.id, viewerHandleId),
         row.type === 'case_discussion' ? this.caseDetailFor(row.id) : Promise.resolve(undefined),
         this.reportedTargets('post', [row.id]),
@@ -492,12 +518,21 @@ export class PostsService {
         answerCount: Number(row.answerCount),
         watcherCount: Number(row.watcherCount),
         kudosCount: Number(row.kudosCount),
+        insightfulCount: Number(row.insightfulCount),
+        usefulCount: Number(row.usefulCount),
         createdAt: row.createdAt.toISOString(),
         editedAt: row.editedAt?.toISOString() ?? null,
       },
       ...(caseDetail ? { caseDetail } : {}),
       comments: ranked,
-      viewerContext: { isAuthor, hasKudosedPost, isFollowing, canEditPost },
+      viewerContext: {
+        isAuthor,
+        hasKudosedPost: mine.insightful || mine.useful,
+        hasInsightfulPost: mine.insightful,
+        hasUsefulPost: mine.useful,
+        isFollowing,
+        canEditPost,
+      },
     };
   }
 
@@ -632,6 +667,8 @@ export class PostsService {
         handleId: handles.id,
         handleName: handles.handleName,
         kudosTotal: handles.kudosTotal,
+        insightfulTotal: handles.insightfulTotal,
+        usefulTotal: handles.usefulTotal,
       })
       .from(comments)
       .innerJoin(handles, eq(comments.handleId, handles.id))
@@ -668,6 +705,10 @@ export class PostsService {
       parentCommentId: row.parentCommentId,
       kudosCount: counts.get(row.id)?.count ?? 0,
       hasKudosed: counts.get(row.id)?.hasKudosed ?? false,
+      insightfulCount: counts.get(row.id)?.insightful ?? 0,
+      usefulCount: counts.get(row.id)?.useful ?? 0,
+      hasInsightful: counts.get(row.id)?.hasInsightful ?? false,
+      hasUseful: counts.get(row.id)?.hasUseful ?? false,
       isMine: row.handleId === viewerHandleId,
       canEdit:
         editRefusal({
@@ -685,40 +726,37 @@ export class PostsService {
     return rankAndFlatten(enriched);
   }
 
-  /** Per-comment kudos count and whether the viewer awarded it, in two indexed reads. */
+  /** Per-comment kudos by kind, and which the viewer awarded — one indexed, grouped read. */
   private async commentKudos(
     commentIds: string[],
     viewerHandleId: string,
-  ): Promise<Map<string, { count: number; hasKudosed: boolean }>> {
-    const result = new Map<string, { count: number; hasKudosed: boolean }>();
+  ): Promise<Map<string, CommentKudos>> {
+    const result = new Map<string, CommentKudos>();
+    for (const id of commentIds) result.set(id, EMPTY_KUDOS);
     if (commentIds.length === 0) return result;
 
-    const [counts, mine] = await Promise.all([
-      this.db
-        .select({ targetId: kudos.targetId, count: sql<number>`count(*)::int` })
-        .from(kudos)
-        .where(and(eq(kudos.targetType, 'comment'), inArray(kudos.targetId, commentIds)))
-        .groupBy(kudos.targetId),
-      this.db
-        .select({ targetId: kudos.targetId })
-        .from(kudos)
-        .where(
-          and(
-            eq(kudos.targetType, 'comment'),
-            inArray(kudos.targetId, commentIds),
-            eq(kudos.givenByHandleId, viewerHandleId),
-          ),
-        ),
-    ]);
+    const rows = await this.db
+      .select({
+        targetId: kudos.targetId,
+        insightful: sql<number>`count(*) filter (where ${kudos.kind} = 'insightful')::int`,
+        useful: sql<number>`count(*) filter (where ${kudos.kind} = 'useful')::int`,
+        mineInsightful: sql<boolean>`coalesce(bool_or(${kudos.kind} = 'insightful' and ${kudos.givenByHandleId} = ${viewerHandleId}), false)`,
+        mineUseful: sql<boolean>`coalesce(bool_or(${kudos.kind} = 'useful' and ${kudos.givenByHandleId} = ${viewerHandleId}), false)`,
+      })
+      .from(kudos)
+      .where(and(eq(kudos.targetType, 'comment'), inArray(kudos.targetId, commentIds)))
+      .groupBy(kudos.targetId);
 
-    const mineSet = new Set(mine.map((r) => r.targetId));
-    for (const id of commentIds) {
-      result.set(id, { count: 0, hasKudosed: mineSet.has(id) });
-    }
-    for (const row of counts) {
+    for (const row of rows) {
+      const insightful = Number(row.insightful);
+      const useful = Number(row.useful);
       result.set(row.targetId, {
-        count: Number(row.count),
-        hasKudosed: mineSet.has(row.targetId),
+        count: insightful + useful,
+        insightful,
+        useful,
+        hasInsightful: Boolean(row.mineInsightful),
+        hasUseful: Boolean(row.mineUseful),
+        hasKudosed: Boolean(row.mineInsightful) || Boolean(row.mineUseful),
       });
     }
     return result;
@@ -747,9 +785,13 @@ export class PostsService {
     return new Set(rows.map((r) => r.targetId));
   }
 
-  private async viewerKudosedPost(postId: string, viewerHandleId: string): Promise<boolean> {
-    const [row] = await this.db
-      .select({ id: kudos.id })
+  /** Which kinds of kudos the caller has given the question. */
+  private async viewerKudosOnPost(
+    postId: string,
+    viewerHandleId: string,
+  ): Promise<{ insightful: boolean; useful: boolean }> {
+    const rows = await this.db
+      .select({ kind: kudos.kind })
       .from(kudos)
       .where(
         and(
@@ -758,7 +800,10 @@ export class PostsService {
           eq(kudos.givenByHandleId, viewerHandleId),
         ),
       );
-    return row !== undefined;
+    return {
+      insightful: rows.some((r) => r.kind === 'insightful'),
+      useful: rows.some((r) => r.kind === 'useful'),
+    };
   }
 
   /** Is the caller subscribed to this thread (S15 §7)? Bundled into `viewerContext` with
@@ -845,6 +890,39 @@ const commentKudosCountSql = sql<number>`(
   where ${kudos.targetType} = 'comment' and ${kudos.targetId} = ${comments.id}
 )`;
 
+/** One kind's count on a post, beside `postKudosCountSql` (the sum). */
+function postKindCountSql(kind: KudosKind) {
+  return sql<number>`(
+    select count(*) from ${kudos}
+    where ${kudos.targetType} = 'post' and ${kudos.targetId} = ${posts.id} and ${kudos.kind} = ${kind}
+  )`;
+}
+
+/** One kind's count on a comment. */
+function commentKindCountSql(kind: KudosKind) {
+  return sql<number>`(
+    select count(*) from ${kudos}
+    where ${kudos.targetType} = 'comment' and ${kudos.targetId} = ${comments.id} and ${kudos.kind} = ${kind}
+  )`;
+}
+
+type CommentKudos = {
+  count: number;
+  insightful: number;
+  useful: number;
+  hasKudosed: boolean;
+  hasInsightful: boolean;
+  hasUseful: boolean;
+};
+const EMPTY_KUDOS: CommentKudos = {
+  count: 0,
+  insightful: 0,
+  useful: 0,
+  hasKudosed: false,
+  hasInsightful: false,
+  hasUseful: false,
+};
+
 /**
  * Ranks top-level answers by kudos (desc), earliest-first on ties, and slots each answer's
  * reply sub-tree chronologically beneath it. Depth-first so a reply always follows its
@@ -888,9 +966,13 @@ function toCard(
     handleId: string;
     handleName: string;
     kudosTotal: number;
+    insightfulTotal: number;
+    usefulTotal: number;
     answerCount: number;
     watcherCount: number;
     kudosCount: number;
+    insightfulCount: number;
+    usefulCount: number;
     communityQuestion: string | null;
   },
   tagsByPost: Map<string, TagRef[]>,
@@ -911,20 +993,26 @@ function toCard(
     answerCount: Number(row.answerCount),
     watcherCount: Number(row.watcherCount),
     kudosCount: Number(row.kudosCount),
+    insightfulCount: Number(row.insightfulCount),
+    usefulCount: Number(row.usefulCount),
     createdAt: row.createdAt.toISOString(),
     editedAt: row.editedAt?.toISOString() ?? null,
   };
 }
 
-function authorBlock(row: {
+export function authorBlock(row: {
   handleId: string;
   handleName: string;
   kudosTotal: number;
+  insightfulTotal: number;
+  usefulTotal: number;
 }): AuthorBlock {
   return {
     handleId: row.handleId,
     handleName: row.handleName,
-    kudosTotal: row.kudosTotal,
+    kudosTotal: Number(row.kudosTotal),
+    insightfulTotal: Number(row.insightfulTotal),
+    usefulTotal: Number(row.usefulTotal),
   };
 }
 

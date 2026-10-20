@@ -155,7 +155,7 @@ export function ModerationActions({
           </p>
           {action.key === 'rename_handle' && (
             <label className="flex flex-col gap-1 text-sm">
-              <span style={{ color: 'var(--color-muted)' }}>New handle name (3–30 chars: letters, numbers, _ or -)</span>
+              <span style={{ color: 'var(--color-muted)' }}>New handle name (3–20 chars: letters, numbers, _ or -)</span>
               <input
                 type="text"
                 value={newName}

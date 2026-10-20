@@ -30,6 +30,24 @@
   --color-verify-tint: #e4f2eb;
   --color-danger: #c0492f;
 
+  /*
+    Contribution stats (Adrian and Andrew, 20 October 2026). Kudos became two awards,
+    Insightful and Useful, and each count on a post has its own colour, alongside its
+    own icon so nothing depends on colour alone. Kudos gold is no longer the single status
+    colour. Every value is AA as small text on --color-surface in both themes
+    (light 5.9:1 to 7.4:1, dark 9.4:1 to 9.7:1) and on its own -tint (5.1:1 and up). The
+    -tint is the background of a button the viewer has pressed. Teal stays for the
+    clinical-case marker and spark red for the Ask button, so neither is used for a count.
+  */
+  --color-insightful: #6d28d9;
+  --color-insightful-tint: #f0eafb;
+  --color-useful: #8a5a12;
+  --color-useful-tint: #fbf0dc;
+  --color-answers: #1d4ed8;
+  --color-answers-tint: #e8edfb;
+  --color-follows: #a21667;
+  --color-follows-tint: #f6e8f0;
+
   /* Neutrals (light) */
   --color-bg: #eef1f4;
   --color-surface: #ffffff;
@@ -179,6 +197,15 @@
     --color-category-violet: #c4b5fd;
     --color-category-magenta: #f9a8d4;
     --color-category-slate: #a8b6c6;
+
+    --color-insightful: #c4b5fd;
+    --color-insightful-tint: #2e334d;
+    --color-useful: #f2b45a;
+    --color-useful-tint: #2e2413;
+    --color-answers: #93c5fd;
+    --color-answers-tint: #26354d;
+    --color-follows: #f9a8d4;
+    --color-follows-tint: #363146;
 
     --shadow-card: 0 1px 2px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.24);
     --shadow-fab: 0 6px 16px rgba(255,90,95,.35);

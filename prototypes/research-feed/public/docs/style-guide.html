@@ -65,10 +65,11 @@ any other guidance in this document when they conflict:</p>
 <ol type="1">
 <li><p><strong>Never introduce a hierarchy signal.</strong> No photos,
 no job titles, no grades, no employers, no specialties, no “verified
-expert” tiers, no follower counts. The <em>only</em> status signal in
-the entire product is <strong>kudos</strong>. If a proposed design
-implies who is senior, it is wrong — regardless of how good it
-looks.</p></li>
+expert” tiers, no follower counts on people. The <em>only</em> status
+signal in the entire product is <strong>kudos</strong> — since October
+2026 two kinds of it, <strong>Insightful</strong> and
+<strong>Useful</strong> (§8.6). If a proposed design implies who is
+senior, it is wrong — regardless of how good it looks.</p></li>
 <li><p><strong>Show anonymity, don’t just claim it.</strong> The
 interface should make a member <em>feel</em> unidentifiable: monogram
 tiles instead of avatars, handles instead of names, quiet confirmation
@@ -188,8 +189,8 @@ earned — a <strong>kudos-derived contributor band</strong> (e.g. “top
 <tbody>
 <tr>
 <td><strong>Merit over rank</strong></td>
-<td>Kudos is the only status colour and the only ranked signal. Sort by
-kudos, never by seniority.</td>
+<td>Kudos — Insightful and Useful — is the only ranked signal. Sort by
+the two combined, never by seniority.</td>
 </tr>
 <tr>
 <td><strong>Anonymity, shown</strong></td>
@@ -285,23 +286,44 @@ chips.</td>
 <td>Rare — spark-adjacent backgrounds.</td>
 </tr>
 <tr>
-<td><strong>Kudos / status</strong></td>
-<td><code>--color-kudos</code></td>
-<td><code>#d98a1f</code></td>
-<td><strong>The only status colour.</strong> Kudos counts, the star,
-contributor bands.</td>
+<td><strong>Insightful</strong></td>
+<td><code>--color-insightful</code></td>
+<td><code>#6d28d9</code></td>
+<td>The Insightful award (open book): its count, its button when
+pressed.</td>
 </tr>
 <tr>
-<td>Kudos (text)</td>
-<td><code>--color-kudos-text</code></td>
+<td><strong>Useful</strong></td>
+<td><code>--color-useful</code></td>
 <td><code>#8a5a12</code></td>
-<td>AA-safe kudos text on light (see §9).</td>
+<td>The Useful award (lightbulb).</td>
 </tr>
 <tr>
-<td>Kudos tint</td>
-<td><code>--color-kudos-tint</code></td>
-<td><code>#fbf0dc</code></td>
-<td>Kudos pills, hero chip, attestation panel.</td>
+<td><strong>Answers</strong></td>
+<td><code>--color-answers</code></td>
+<td><code>#1d4ed8</code></td>
+<td>A post’s answer count (speech bubble).</td>
+</tr>
+<tr>
+<td><strong>Following</strong></td>
+<td><code>--color-follows</code></td>
+<td><code>#a21667</code></td>
+<td>A post’s following count and the Follow button (eye).</td>
+</tr>
+<tr>
+<td>Stat tints</td>
+<td><code>--color-{insightful,useful,answers,follows}-tint</code></td>
+<td>—</td>
+<td>The background of a pressed award or Follow button.</td>
+</tr>
+<tr>
+<td>Kudos (legacy)</td>
+<td><code>--color-kudos</code> / <code>-text</code> /
+<code>-tint</code></td>
+<td><code>#d98a1f</code> / <code>#8a5a12</code> /
+<code>#fbf0dc</code></td>
+<td>The single gold star, before October 2026. Now only on old
+notification rows and the attestation panel’s tint.</td>
 </tr>
 <tr>
 <td><strong>Verify / trust</strong></td>
@@ -595,9 +617,17 @@ system font stack. Adopting this guide means: (1) set
 <li><strong>60 / 30 / 10, roughly.</strong> ~60% neutral canvas, ~30%
 surfaces and text, ~10% accent. If a screen is more than 10% saturated
 colour, something is wrong.</li>
-<li><strong>Kudos gold is sacred.</strong> Never use gold for anything
-that isn’t kudos or kudos-derived standing. It is the product’s one
-status signal.</li>
+<li><strong>Each contribution stat has its colour, and nothing else uses
+it.</strong> Insightful violet, Useful amber, Answers blue, Following
+magenta (Adrian and Andrew, 20 October 2026 — this replaced “kudos gold
+is sacred”). Each is always paired with its own icon, so nothing depends
+on colour alone. A zero is always grey: the icon still shows, but colour
+is kept for something that has happened.</li>
+<li><strong>Grey means the person, colour means the post.</strong> The
+author’s own Insightful and Useful totals sit beside the handle in grey;
+the post’s counts are in colour.</li>
+<li><strong>Teal marks a clinical case</strong> — the card border and
+the cross before the title.</li>
 <li><strong>Spark red is rationed.</strong> One spark element per screen
 at most — the Ask FAB. The wordmark’s medial <strong>a</strong> is the
 only other place it appears.</li>
@@ -1088,12 +1118,15 @@ separation.</li>
 fill so icons inherit text colour.</li>
 <li>Rendered sizes: 15px (inline stat), 18–22px (buttons/nav), 25px (tab
 icons), 26px (FAB).</li>
-<li><strong>The kudos star is the one exception</strong>: a
-<em>filled</em> star, always in <code>--color-kudos</code>. It is the
-product’s signature glyph — keep it filled and gold everywhere, never
-outlined, never recoloured.</li>
+<li><strong>The contribution icons</strong> are line icons like
+everything else: an <strong>open book</strong> (Insightful), a
+<strong>lightbulb</strong> (Useful), the <strong>speech bubble</strong>
+(answers) and an <strong>eye</strong> (following), each in its own
+colour (§2.5). The only filled glyph is the clinical-case
+<strong>cross</strong>, teal, before a case’s title — teal rather than
+red because the red cross emblem is protected in UK law.</li>
 <li>One icon family, one weight. Do not mix filled and line styles
-within a control (except the kudos star, by definition).</li>
+within a control.</li>
 </ul>
 <blockquote>
 <p><strong>Note:</strong> the production app currently uses emoji glyphs
@@ -1317,37 +1350,51 @@ Don’t: colour category tags with kudos gold or spark red.</p>
 <li><strong>Article card (Feed)</strong> — tag row · title
 (<code>--text-heading</code>) · snippet · meta row (source · read-time ·
 kudos star+count).</li>
-<li><strong>Discussion card</strong> — tag row · title · 2-line clamped
-snippet · footer with author (monogram + handle) on the left and stats
-(answers, kudos, or “Answered”/time) on the right.</li>
+<li><strong>Discussion card</strong> (Option B, 20 October 2026) — title
+(with the teal cross for a case, whose card also has a teal border) ·
+snippet · tags · a two-line footer. Line 1: the handle and the author’s
+grey Insightful and Useful totals. Line 2: the date, then the post’s
+Insightful, Useful, answers and following, icons and numbers only,
+always all four.</li>
 <li><strong>Answer card</strong> — inside a thread; author row, body,
-kudos button. The <strong>top/best answer</strong> gets a
-<code>--color-verify-tint</code> wash, a verify-tinted inset ring, and a
-<strong>Best answer</strong> badge.</li>
+the Insightful and Useful buttons, then the text links (Reply, Report,
+Report this handle, Edit, Delete) on their own line. The
+<strong>top/best answer</strong> gets a <code>--color-verify-tint</code>
+wash, a verify-tinted inset ring, and a <strong>Best answer</strong>
+badge.</li>
 </ul>
 <h3 id="author-line">8.4 Author line</h3>
-<p>Handle + kudos <strong>only</strong>. No grade, employer, or
-specialty — “a reader can weigh the contribution but not the
-contributor’s seniority” (from the code’s own comment). A kudos-derived
-<strong>top-contributor</strong> chip may appear; nothing else.</p>
+<p>Handle + the author’s Insightful and Useful totals, in grey,
+<strong>only</strong>. No grade, employer, or specialty — “a reader can
+weigh the contribution but not the contributor’s seniority” (from the
+code’s own comment). Handles are at most 20 characters, which is what
+lets the handle and both totals share one phone line.</p>
 <h3 id="monogram-tile">8.5 Monogram tile</h3>
 <p>See §6.3. Rounded square, deterministic desaturated colour, white 700
 initials. Sizes sm/default/lg.</p>
-<h3 id="kudos-control">8.6 Kudos control</h3>
-<p>The product’s signature interactive element.</p>
+<h3 id="kudos-controls-insightful-and-useful">8.6 Kudos controls —
+Insightful and Useful</h3>
+<p>The product’s signature interactive elements. Two independent awards:
+anyone but the author may give either, both or neither to a question or
+an answer.</p>
 <ul>
-<li><strong>Anatomy:</strong> pill button, filled gold star +
-count.</li>
-<li><strong>States:</strong> default (surface,
-<code>--color-border-strong</code> outline, muted) → given
-(<code>--color-kudos-tint</code> bg, gold border,
-<code>--color-kudos</code> text). Toggling updates the count
-instantly.</li>
-<li>Read-only kudos (in meta rows) = filled gold star + count, no button
-chrome.</li>
-<li><strong>Accessibility:</strong> label as “Give kudos” / “Remove
-kudos”; the count must be announced. Never rely on colour alone — the
-star shape carries it too (§9.2).</li>
+<li><strong>Anatomy:</strong> pill button, icon + count + word — “6
+Insightful”, “11 Useful”. The word is spelled out here because this is
+where a member chooses between them; on the card the icons alone are
+enough.</li>
+<li><strong>States:</strong> not awarded by you (grey outline; the icon
+in its colour once anyone has awarded it) → awarded by you (its
+<code>-tint</code> background, border and text in its colour). Toggling
+updates the count instantly. <strong>Your own post:</strong> the same
+pill without button behaviour.</li>
+<li><strong>Follow</strong> on a question is the same pill: eye + count
++ “Follow”, tinted “Following” once you follow.</li>
+<li>Read-only counts (cards, My Q&amp;A) = icon + number, coloured above
+zero, grey at zero.</li>
+<li><strong>Accessibility:</strong> label as “Mark as insightful” /
+“Mark as useful” with the count; <code>aria-pressed</code> carries the
+state. Never rely on colour alone — each icon’s shape carries it too
+(§9.2).</li>
 </ul>
 <h3 id="status-safety-badges">8.7 Status &amp; safety badges</h3>
 <table>
@@ -1459,15 +1506,17 @@ regulator referral.</li>
 mandatory and must never be bypassable.</li>
 </ul>
 <h3 id="notifications">8.13 Notifications</h3>
-<p>Row list: circular tinted icon (kudos-gold, navy, or mention-purple)
-+ text (handle in 700) + timestamp. Unread rows get a navy-tint
-background. Kudos notifications use the gold star icon; replies use the
-discussion glyph.</p>
+<p>Row list: circular tinted icon + text (handle in 700) + timestamp.
+Unread rows get a navy-tint background. An award uses its own icon and
+colour — “Your answer was marked Insightful” with the violet book,
+Useful with the amber lightbulb (rows from before October 2026 keep the
+old gold star); replies use the discussion glyph.</p>
 <h3 id="profile">8.14 Profile</h3>
 <ul>
 <li>Centred large monogram tile, handle (<code>--text-display</code>),
-“Verified member · since {year}”, and a <strong>kudos hero</strong> pill
-(gold star + total + band).</li>
+“Verified member · since {year}”, and two stat blocks: the member’s
+<strong>Insightful</strong> and <strong>Useful</strong> totals, each
+with its icon and colour.</li>
 <li>Stat block (Questions / Responses / Best answers) in a bordered
 surface.</li>
 <li><strong>Anonymity reassurance card</strong> (navy-tint): “You are
@@ -1498,11 +1547,11 @@ robustly accessible.</p>
 <li><strong>Known adjustments (use these, not the raw palette, for
 text):</strong>
 <ul>
-<li>Kudos as <strong>text</strong> must use
-<code>--color-kudos-text</code> (<code>#8a5a12</code>) — raw gold
-<code>#d98a1f</code> on white is ~2.4:1 and <strong>fails</strong>. The
-<em>star icon</em> + count may use gold (graphical, paired with shape);
-gold <em>words</em> may not.</li>
+<li>The four stat colours are AA as small text in both themes (light
+5.9:1 to 7.4:1 on white, dark 9.4:1 to 9.7:1 on <code>#111a2b</code>)
+and on their own tints. Raw kudos gold <code>#d98a1f</code> on white is
+~2.4:1 and <strong>fails</strong> as text — which is why Useful uses
+<code>#8a5a12</code>.</li>
 <li>Verify as text uses <code>--color-verify-text</code>
 (<code>#256f59</code>).</li>
 <li><code>--color-faint</code> (<code>#93a1a9</code>, ~2.6:1) is for
@@ -1517,6 +1566,11 @@ live showcase includes a contrast check.</li>
 <h3 id="never-colour-alone">9.2 Never colour alone</h3>
 <p>Every colour-coded state carries a second cue:</p>
 <table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
 <thead>
 <tr>
 <th>State</th>
@@ -1531,9 +1585,19 @@ live showcase includes a contrast check.</li>
 <td>“Best answer” label + tick + tint wash</td>
 </tr>
 <tr>
-<td>Kudos</td>
-<td>gold</td>
-<td>filled star shape + numeric count</td>
+<td>Insightful / Useful</td>
+<td>violet / amber</td>
+<td>book / lightbulb shape + count (+ the word on buttons)</td>
+</tr>
+<tr>
+<td>Answers / Following</td>
+<td>blue / magenta</td>
+<td>speech bubble / eye shape + count</td>
+</tr>
+<tr>
+<td>Clinical case</td>
+<td>teal border</td>
+<td>teal cross before the title</td>
 </tr>
 <tr>
 <td>Unread</td>
@@ -1659,6 +1723,10 @@ removal and referral to my regulator.”</em></td>
 </table>
 <h3 id="word-choices">10.3 Word choices</h3>
 <table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
 <thead>
 <tr>
 <th>Use</th>
@@ -1675,8 +1743,8 @@ removal and referral to my regulator.”</em></td>
 <td>username, screen name</td>
 </tr>
 <tr>
-<td>kudos</td>
-<td>likes, upvotes, points, karma</td>
+<td>Insightful, Useful (the two kinds of kudos)</td>
+<td>likes, upvotes, points, karma, “evidence-based”, “practical”</td>
 </tr>
 <tr>
 <td>case discussion</td>
@@ -1702,13 +1770,14 @@ removal and referral to my regulator.”</em></td>
 </table>
 <h3 id="microcopy-rules">10.4 Microcopy rules</h3>
 <ul>
-<li><strong>Buttons are verbs</strong>: “Confirm handle”, “Post”, “Give
-kudos”, “Send”.</li>
+<li><strong>Buttons are verbs</strong>: “Confirm handle”, “Post”,
+“Send”. The award buttons are the exception — “6 Insightful” — because
+the count and the name are the control.</li>
 <li><strong>Labels are nouns</strong>, uppercase-tracked, terse:
 “Handle”, “Body area”.</li>
 <li><strong>Sentence case</strong> for all UI text except the wordmark
 and micro-labels.</li>
-<li>Numbers with units unpadded: “6 min read”, “500 kudos”, “top
+<li>Numbers with units unpadded: “6 min read”, “12 Insightful”, “top
 8%”.</li>
 <li>Never blame the user in an error; always offer the next action.</li>
 </ul>
@@ -1730,8 +1799,9 @@ the profile’s <em>“You are anonymous to your peers”</em> card, the
 compose hint <em>“Posted under your handle only. No name, employer, or
 specialty is ever shown.”</em></li>
 <li><strong>Kudos is the only status.</strong> No seniority, no
-verified-expert tiers, no follower counts. Standing is expressed solely
-as kudos and kudos-derived bands.</li>
+verified-expert tiers, no follower counts on people. Standing is
+expressed solely as the two kinds of kudos — Insightful and Useful —
+shown in grey beside the handle.</li>
 </ul>
 <h3 id="the-one-rule-in-the-ui">11.2 The one rule, in the UI</h3>
 <p>Attempting to identify oneself or another member is fatal to the
@@ -1923,6 +1993,17 @@ library to replace the current emoji placeholders.</li>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.3</td>
+<td>2026-10-20</td>
+<td><strong>Two kinds of kudos.</strong> The gold star becomes
+<strong>Insightful</strong> (book) and <strong>Useful</strong>
+(lightbulb); the card footer becomes two lines (person, then post); four
+stat colours with tints replace “kudos gold is the one status colour”; a
+teal cross marks a clinical case; handles are capped at 20 characters.
+§0.1, §1.4, §2.1, §2.5, §6, §8.3, §8.4, §8.6, §8.13, §8.14, §9, §10,
+§11.</td>
+</tr>
 <tr>
 <td>0.2</td>
 <td>2026-07-25</td>

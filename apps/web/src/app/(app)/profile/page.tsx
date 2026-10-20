@@ -2,11 +2,14 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { API_ORIGIN } from '@/lib/api';
 import { requireAppAccess } from '@/lib/onboarding';
+import { STAT_COLOUR, StatIcon } from '@/components/StatIcons';
 
 type Profile = {
   handleId: string;
   handleName: string;
   kudosTotal: number;
+  insightfulTotal: number;
+  usefulTotal: number;
   memberSinceYear: number;
   status: string;
 };
@@ -35,9 +38,25 @@ export default async function ProfilePage() {
         </p>
       </div>
 
-      <div className="rounded-lg p-4" style={{ background: 'var(--color-surface)' }}>
-        <p className="text-2xl font-semibold">{profile.kudosTotal}</p>
-        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>{t('kudos')}</p>
+      {/* Standing by kind (Insightful, Useful), each in its colour once it is above zero. */}
+      <div className="grid grid-cols-2 gap-3">
+        {(
+          [
+            ['insightful', profile.insightfulTotal],
+            ['useful', profile.usefulTotal],
+          ] as const
+        ).map(([kind, total]) => (
+          <div key={kind} className="rounded-lg p-4" style={{ background: 'var(--color-surface)' }}>
+            <p
+              className="flex items-center gap-2 text-2xl font-semibold"
+              style={{ color: total > 0 ? STAT_COLOUR[kind].fg : 'var(--color-muted)' }}
+            >
+              <StatIcon kind={kind} className="size-[22px] shrink-0" />
+              {total}
+            </p>
+            <p className="text-sm" style={{ color: 'var(--color-muted)' }}>{t(kind)}</p>
+          </div>
+        ))}
       </div>
 
       <p className="text-sm" style={{ color: 'var(--color-muted)' }}>{t('identityNote')}</p>

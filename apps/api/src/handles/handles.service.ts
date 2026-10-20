@@ -19,6 +19,9 @@ export type PublicProfile = {
   handleId: string;
   handleName: string;
   kudosTotal: number;
+  /** Standing by kind (migration 0057); `kudosTotal` is their sum. */
+  insightfulTotal: number;
+  usefulTotal: number;
   memberSinceYear: number;
   status: 'active' | 'suspended' | 'expelled';
   interactable: boolean;
@@ -148,6 +151,8 @@ function toPublicProfile(row: typeof handles.$inferSelect): PublicProfile {
     handleId: row.id,
     handleName: row.handleName,
     kudosTotal: row.kudosTotal,
+    insightfulTotal: row.insightfulTotal,
+    usefulTotal: row.usefulTotal,
     memberSinceYear: new Date(row.memberSince).getUTCFullYear(),
     status: row.status,
     // Suspended and expelled handles keep their profile and history — removing them

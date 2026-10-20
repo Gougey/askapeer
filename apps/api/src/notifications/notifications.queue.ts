@@ -76,8 +76,10 @@ export class NotificationEvents {
     targetType: 'post' | 'comment',
     targetId: string,
     actorHandleId: string,
+    kind: 'insightful' | 'useful',
   ): Promise<void> {
-    await this.enqueue('kudos_received', { targetType, targetId, actorHandleId });
+    // `kind` rides along so the notice can say which (Insightful or Useful).
+    await this.enqueue('kudos_received', { targetType, targetId, actorHandleId, kind });
   }
 
   /**

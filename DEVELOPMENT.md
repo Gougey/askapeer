@@ -1740,6 +1740,36 @@ verification notice the holding page that explains it); `present()` in `Notifica
 returns a **nullable** `href` for exactly this, and `openNotificationAction` redirects only
 when one is given. Don't "restore" the link.
 
+## Two kinds of kudos — Insightful and Useful (migration 0057)
+
+Agreed by Adrian and Andrew on 20 October 2026, replacing the single gold star. The design is
+the "Discussion Card — Option B, Revised" page on the docs site.
+
+- **A kudos row has a `kind`** (`insightful` | `useful`). A handle may give a target one of each,
+  so the unique index is `(target_type, target_id, given_by_handle_id, kind)`.
+- **`handles.kudos_total` is generated** as `insightful_total + useful_total`. It still serves
+  answer ranking (by the combined score, as agreed), the Redis leaderboard and the profile. Write
+  the per-kind totals instead: Drizzle's types make a write to `kudosTotal` a compile error, which
+  is how award, retract and the moderation clawback were all found.
+- **Existing kudos were split at random** between the two kinds, because all of it was test data
+  (Adrian, 20 October). The per-kind totals were recomputed from the rows, and locally they summed
+  to exactly the old totals (977 = 488 + 489).
+- **Routes:** `POST|DELETE /posts/:id/kudos/:kind` and `/comments/:id/kudos/:kind`. Every read
+  DTO carries `insightfulCount` / `usefulCount` beside `kudosCount` (their sum), and `AuthorBlock`
+  carries `insightfulTotal` / `usefulTotal`.
+- **Routes are per kind only.** The un-kinded `/posts/:id/kudos` routes were removed in the same
+  change, because the API and the screens shipped together. `kudosCount` / `hasKudosed` stay on
+  read DTOs as the combined score and "either", which ranking and the edit window use.
+- **The kudos notification carries `kind`, and its dedupe key includes it**, so Insightful and
+  then Useful from the same member are two notices rather than one swallowed.
+- **Screens** (same change): the card is Option B (handle and grey author totals, then the date
+  and the post's four counts, always shown, grey at zero); the thread's question has Insightful,
+  Useful and Follow pills, answers the two awards, and every text link sits on its own line; a
+  case has a teal border and a teal cross. Icons and colours live in `components/StatIcons.tsx`,
+  and the colours are design tokens ("Contribution stats" in `packages/design-tokens`).
+- **Handles are 3–20 characters** (`HANDLE_MAX_LENGTH`, was 30), so the handle and both totals
+  fit one phone line. New handles only; the pilot clear-down removes every existing one.
+
 ## Following a discussion (S15)
 
 Design doc: `docs/2026-08-06-post-follow-design.md`. Four things about it are easy to

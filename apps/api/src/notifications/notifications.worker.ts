@@ -32,6 +32,9 @@ export class NotificationsWorker implements OnModuleInit, OnModuleDestroy {
               job.data.targetType as 'post' | 'comment',
               job.data.targetId as string,
               job.data.actorHandleId as string,
+              // A job queued before 0057 deployed has no kind; it was the old single kudos,
+              // which the bridge routes now record as Useful.
+              (job.data.kind as 'insightful' | 'useful' | undefined) ?? 'useful',
             );
           case 'account_notice':
             return this.notifications.handleAccountNotice(

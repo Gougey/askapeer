@@ -119,8 +119,7 @@ async function shot(page, name) {
     await page.goto(`${WEB}/search?q=${encodeURIComponent(THREAD_TITLE)}`);
     await page.getByText(THREAD_TITLE).first().click();
     await page.waitForURL(/\/discussions\/[0-9a-f-]+/);
-    await page.mouse.wheel(0, 520);
-    await page.waitForTimeout(400);
+    // The top of the thread: the question with its Insightful, Useful and Follow buttons.
     await shot(page, 'thread.png');
 
     await page.goto(`${WEB}/feed?f=1&q=${encodeURIComponent('hamstring rehabilitation')}`);

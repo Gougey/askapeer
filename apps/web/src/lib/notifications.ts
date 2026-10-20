@@ -16,7 +16,13 @@ export type ReplyPayload = {
 
 /** No actor: nothing in the product reveals who awarded kudos, and the inbox is not
  *  where that would start. */
-export type KudosReceivedPayload = { targetType: 'post' | 'comment'; postId: string; postTitle: string };
+export type KudosReceivedPayload = {
+  targetType: 'post' | 'comment';
+  postId: string;
+  postTitle: string;
+  /** Which award (API 0057). Absent on rows written before it — the old single kudos. */
+  kind?: 'insightful' | 'useful';
+};
 
 /**
  * An account-status notice: a verification decision, or one of EPIC-F's member-affecting
@@ -106,6 +112,8 @@ export type MyCommentCard = {
   id: string;
   snippet: string;
   kudosCount: number;
+  insightfulCount: number;
+  usefulCount: number;
   createdAt: string;
   editedAt: string | null;
   post: { id: string; title: string; type: 'question' | 'case_discussion' };

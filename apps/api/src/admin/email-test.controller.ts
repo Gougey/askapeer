@@ -110,10 +110,10 @@ export class EmailTestController {
         await this.sender.reply(dto.to, 'MrFixit', title, postId);
         break;
       case 'kudos-post':
-        await this.sender.kudosReceived(dto.to, 'post', title, postId);
+        await this.sender.kudosReceived(dto.to, 'post', title, postId, 'insightful');
         break;
       case 'kudos-comment':
-        await this.sender.kudosReceived(dto.to, 'comment', title, postId);
+        await this.sender.kudosReceived(dto.to, 'comment', title, postId, 'useful');
         break;
       default: {
         // The notice templates differ only by event, so they share one branch rather than

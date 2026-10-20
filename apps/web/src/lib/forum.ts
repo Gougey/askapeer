@@ -5,8 +5,15 @@ import type { CaseDetail } from './cases';
 export type AuthorBlock = {
   handleId: string;
   handleName: string;
+  /** Both kinds together. */
   kudosTotal: number;
+  /** The author's standing by kind — shown in grey beside the handle. */
+  insightfulTotal: number;
+  usefulTotal: number;
 };
+
+/** The two kinds of kudos (API migration 0057). */
+export type KudosKind = 'insightful' | 'useful';
 
 export type TagRef = { id: string; name: string };
 
@@ -28,6 +35,8 @@ export type PostCard = {
   /** Followers who have not written in the thread — the card shows it only when non-zero. */
   watcherCount: number;
   kudosCount: number;
+  insightfulCount: number;
+  usefulCount: number;
   createdAt: string;
   editedAt: string | null;
 };
@@ -39,6 +48,10 @@ export type ThreadComment = {
   parentCommentId: string | null;
   kudosCount: number;
   hasKudosed: boolean;
+  insightfulCount: number;
+  usefulCount: number;
+  hasInsightful: boolean;
+  hasUseful: boolean;
   isMine: boolean;
   /** Whether the edit window is still open on this comment — the server's answer, not ours. */
   canEdit: boolean;
@@ -56,6 +69,8 @@ export type Thread = {
   viewerContext: {
     isAuthor: boolean;
     hasKudosedPost: boolean;
+    hasInsightfulPost: boolean;
+    hasUsefulPost: boolean;
     isFollowing: boolean;
     /**
      * Whether the post itself can still be corrected. True for a case as well as a question —

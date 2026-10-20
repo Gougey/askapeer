@@ -55,8 +55,9 @@ export class EmailSender {
     targetType: 'post' | 'comment',
     postTitle: string,
     postId: string,
+    kind?: 'insightful' | 'useful',
   ): Promise<void> {
-    await this.deliver(to, templates.kudosReceived(this.ctx, targetType, postTitle, postId));
+    await this.deliver(to, templates.kudosReceived(this.ctx, targetType, postTitle, postId, kind));
   }
 
   async accountNotice(

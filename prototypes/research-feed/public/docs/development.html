@@ -2503,6 +2503,54 @@ notice the holding page that explains it); <code>present()</code> in
 <code>href</code> for exactly this, and
 <code>openNotificationAction</code> redirects only when one is given.
 Don’t “restore” the link.</p>
+<h2 id="two-kinds-of-kudos-insightful-and-useful-migration-0057">Two
+kinds of kudos — Insightful and Useful (migration 0057)</h2>
+<p>Agreed by Adrian and Andrew on 20 October 2026, replacing the single
+gold star. The design is the “Discussion Card — Option B, Revised” page
+on the docs site.</p>
+<ul>
+<li><strong>A kudos row has a <code>kind</code></strong>
+(<code>insightful</code> | <code>useful</code>). A handle may give a
+target one of each, so the unique index is
+<code>(target_type, target_id, given_by_handle_id, kind)</code>.</li>
+<li><strong><code>handles.kudos_total</code> is generated</strong> as
+<code>insightful_total + useful_total</code>. It still serves answer
+ranking (by the combined score, as agreed), the Redis leaderboard and
+the profile. Write the per-kind totals instead: Drizzle’s types make a
+write to <code>kudosTotal</code> a compile error, which is how award,
+retract and the moderation clawback were all found.</li>
+<li><strong>Existing kudos were split at random</strong> between the two
+kinds, because all of it was test data (Adrian, 20 October). The
+per-kind totals were recomputed from the rows, and locally they summed
+to exactly the old totals (977 = 488 + 489).</li>
+<li><strong>Routes:</strong>
+<code>POST|DELETE /posts/:id/kudos/:kind</code> and
+<code>/comments/:id/kudos/:kind</code>. Every read DTO carries
+<code>insightfulCount</code> / <code>usefulCount</code> beside
+<code>kudosCount</code> (their sum), and <code>AuthorBlock</code>
+carries <code>insightfulTotal</code> / <code>usefulTotal</code>.</li>
+<li><strong>Routes are per kind only.</strong> The un-kinded
+<code>/posts/:id/kudos</code> routes were removed in the same change,
+because the API and the screens shipped together.
+<code>kudosCount</code> / <code>hasKudosed</code> stay on read DTOs as
+the combined score and “either”, which ranking and the edit window
+use.</li>
+<li><strong>The kudos notification carries <code>kind</code>, and its
+dedupe key includes it</strong>, so Insightful and then Useful from the
+same member are two notices rather than one swallowed.</li>
+<li><strong>Screens</strong> (same change): the card is Option B (handle
+and grey author totals, then the date and the post’s four counts, always
+shown, grey at zero); the thread’s question has Insightful, Useful and
+Follow pills, answers the two awards, and every text link sits on its
+own line; a case has a teal border and a teal cross. Icons and colours
+live in <code>components/StatIcons.tsx</code>, and the colours are
+design tokens (“Contribution stats” in
+<code>packages/design-tokens</code>).</li>
+<li><strong>Handles are 3–20 characters</strong>
+(<code>HANDLE_MAX_LENGTH</code>, was 30), so the handle and both totals
+fit one phone line. New handles only; the pilot clear-down removes every
+existing one.</li>
+</ul>
 <h2 id="following-a-discussion-s15">Following a discussion (S15)</h2>
 <p>Design doc: <code>docs/2026-08-06-post-follow-design.md</code>. Four
 things about it are easy to break by accident.</p>

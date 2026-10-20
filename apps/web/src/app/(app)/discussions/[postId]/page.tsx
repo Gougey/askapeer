@@ -3,16 +3,16 @@ import { getTranslations } from 'next-intl/server';
 import { fetchThread, type ThreadComment } from '@/lib/forum';
 import { fetchCasePolicy, formatOnset } from '@/lib/cases';
 import { requireAccessToken } from '@/lib/session';
-import { categoryColour } from '@/lib/category-colour';
 import { PostedAt } from '@/components/PostedAt';
 import { AuthorLine, TagList } from '@/components/PostCard';
+import { CaseCross } from '@/components/StatIcons';
 import { CaseBody } from './CaseBody';
 import { EditableCommentBody, EditableQuestionBody } from './EditAffordance';
 import { EditableCaseBody } from './EditCaseAffordance';
 import { AnswerComposer, ReplyAffordance } from './AnswerComposer';
 import { OwnThreadUpdate } from './OwnThreadUpdate';
 import { DeleteCommentButton } from './DeleteCommentButton';
-import { KudosButton } from './KudosButton';
+import { AwardButton } from './AwardButton';
 import { FollowButton } from './FollowButton';
 import { ExclusivePanels } from './ExclusivePanels';
 import { ReportButton } from './ReportButton';
@@ -50,9 +50,6 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
   return (
     <main className="flex flex-col gap-4 px-4 py-6">
       <article className="flex flex-col gap-3">
-        <span className="text-xs" style={{ color: categoryColour(post.category.colour) }}>
-          {post.category.name}
-        </span>
         {/*
           A case discussion's `title` is a truncation of its presenting condition, derived
           for list surfaces — printing it here would state the first field twice, once cut
@@ -73,13 +70,17 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
             policy={casePolicy ?? null}
             canEdit={viewerContext.canEditPost}
           >
-            <h1 className="text-xl font-semibold">
-              {t('caseHeading', {
-                age: t(`caseAge.${thread.caseDetail.ageBand}`),
-                onset: formatOnset(thread.caseDetail.onsetDays),
-              })}
+            {/* The teal cross marks a case here as on its card (Option B, 20 October). */}
+            <h1 className="flex items-start gap-2 text-xl font-semibold">
+              <CaseCross label={t('clinicalCase')} />
+              <span>
+                {t('caseHeading', {
+                  age: t(`caseAge.${thread.caseDetail.ageBand}`),
+                  onset: formatOnset(thread.caseDetail.onsetDays),
+                })}
+              </span>
             </h1>
-            <AuthorLine author={post.author} />
+            <AuthorAndDate author={post.author} createdAt={post.createdAt} editedAt={post.editedAt} />
             {/* A case discussion renders its structured template (EPIC-E §7), not `post.body`
                 — that column is the flattened projection built for the search index. */}
             <CaseBody detail={thread.caseDetail} disclaimer={casePolicy?.disclaimer ?? ''} />
@@ -92,31 +93,43 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
             canEdit={viewerContext.canEditPost}
           >
             <h1 className="text-xl font-semibold">{post.title}</h1>
-            <AuthorLine author={post.author} />
+            <AuthorAndDate author={post.author} createdAt={post.createdAt} editedAt={post.editedAt} />
             {/* Member-authored prose: rendered as text, newlines preserved. No HTML or
                 markdown is interpreted, so a post can't inject markup into anyone's page. */}
             <p className="whitespace-pre-wrap text-sm">{post.body}</p>
           </EditableQuestionBody>
         )}
         <TagList tags={post.tags} />
-        <div className="flex items-center gap-3">
-          {viewerContext.isAuthor ? (
-            <StaticKudos label={t('kudos', { count: post.kudosCount })} />
-          ) : (
-            <KudosButton
-              target="post"
-              targetId={post.id}
-              initialCount={post.kudosCount}
-              initialHasKudosed={viewerContext.hasKudosedPost}
-            />
-          )}
-          <PostedAt iso={post.createdAt} editedIso={post.editedAt} />
-        </div>
-        {/* The subscription control (S15). Sits on its own row rather than beside kudos:
-            the two mean different things — one is a judgement about the content, the
-            other is about your own inbox — and at 390px they would wrap into each other. */}
-        <div className="flex items-center">
-          <FollowButton postId={post.id} initialFollowing={viewerContext.isFollowing} />
+        {/*
+          The question's three pills (Option B, 20 October 2026): Insightful, Useful and
+          Follow, each with icon, count and word. They fit on one line at 390px and wrap
+          cleanly when they do not. The author sees the two awards as counts, not buttons —
+          a handle cannot award itself — but Follow stays a button, so a busy thread of your
+          own can still be muted.
+        */}
+        <div className="flex flex-wrap items-center gap-2">
+          <AwardButton
+            kind="insightful"
+            target="post"
+            targetId={post.id}
+            initialCount={post.insightfulCount}
+            initialAwarded={viewerContext.hasInsightfulPost}
+            own={viewerContext.isAuthor}
+          />
+          <AwardButton
+            kind="useful"
+            target="post"
+            targetId={post.id}
+            initialCount={post.usefulCount}
+            initialAwarded={viewerContext.hasUsefulPost}
+            own={viewerContext.isAuthor}
+          />
+          <FollowButton
+            postId={post.id}
+            initialFollowing={viewerContext.isFollowing}
+            initialCount={post.watcherCount}
+            countsMe={!viewerContext.isAuthor && !thread.comments.some((c) => c.isMine)}
+          />
         </div>
         {/* Reporting the question and — for the anonymity/off-platform case that may not
             attach to any one post — its author's handle (EPIC-F §2, screen X1). Not shown
@@ -193,7 +206,6 @@ async function Answer({
   comment: ThreadComment;
   isReply?: boolean;
 }) {
-  const t = await getTranslations('discussions');
   return (
     <div
       className="rounded-xl border p-3"
@@ -202,10 +214,7 @@ async function Answer({
       {/* Author and date on one line: on a thread it matters whether an answer arrived an
           hour after the question or a year later — clinical advice reads differently either
           side of a guideline change, and without a date there was no way to tell. */}
-      <span className="flex flex-wrap items-center justify-between gap-2">
-        <AuthorLine author={comment.author} />
-        <PostedAt iso={comment.createdAt} editedIso={comment.editedAt} />
-      </span>
+      <AuthorAndDate author={comment.author} createdAt={comment.createdAt} editedAt={comment.editedAt} />
       {/* Same rule as the post: editing replaces the text rather than appearing beneath it. */}
       <EditableCommentBody
         postId={postId}
@@ -215,24 +224,34 @@ async function Answer({
       >
         <p className="mt-2 whitespace-pre-wrap text-sm">{comment.body}</p>
       </EditableCommentBody>
+      {/* The two awards, then every text link on its own line beneath (Option B). */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <AwardButton
+          kind="insightful"
+          target="comment"
+          targetId={comment.id}
+          initialCount={comment.insightfulCount}
+          initialAwarded={comment.hasInsightful}
+          own={comment.isMine}
+        />
+        <AwardButton
+          kind="useful"
+          target="comment"
+          targetId={comment.id}
+          initialCount={comment.usefulCount}
+          initialAwarded={comment.hasUseful}
+          own={comment.isMine}
+        />
+      </div>
       <div className="mt-2 flex flex-wrap items-center gap-3">
-        {comment.isMine ? (
-          <StaticKudos label={t('kudos', { count: comment.kudosCount })} />
-        ) : (
-          <KudosButton
-            target="comment"
-            targetId={comment.id}
-            initialCount={comment.kudosCount}
-            initialHasKudosed={comment.hasKudosed}
-          />
-        )}
-        {/* Reply and Report both expand in place into this row, so they are grouped: while
-            one is open the other's trigger is hidden rather than squeezed alongside it. */}
+        {/* Reply and the two reports all expand in place into this row, so they are grouped:
+            while one is open the others' triggers are hidden rather than squeezed alongside. */}
         <ExclusivePanels>
           {/* Replies are chronological conversation, so they don't sprout further nesting
               controls in S5 — only top-level answers can be replied to. */}
           {!isReply && <ReplyAffordance postId={postId} parentCommentId={comment.id} />}
           {!comment.isMine && <ReportButton target="comment" targetId={comment.id} />}
+          {!comment.isMine && <ReportButton target="handle" targetId={comment.author.handleId} />}
         </ExclusivePanels>
         {comment.isMine && <DeleteCommentButton postId={postId} commentId={comment.id} />}
       </div>
@@ -240,28 +259,24 @@ async function Answer({
   );
 }
 
-/** Own content shows the count but no toggle — a handle can't kudos itself. */
-function StaticKudos({ label }: { label: string }) {
+/**
+ * The handle with its grey standing, and the date on the right. On a thread it matters
+ * whether an answer arrived an hour after the question or a year later — clinical advice
+ * reads differently either side of a guideline change.
+ */
+function AuthorAndDate({
+  author,
+  createdAt,
+  editedAt,
+}: {
+  author: ThreadComment['author'];
+  createdAt: string;
+  editedAt: string | null;
+}) {
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold"
-      style={{ borderColor: 'var(--color-border-strong)', color: 'var(--color-muted)' }}
-    >
-      {/* Kudos gold is the one status colour (style guide §2.1); the static own-content
-          count matches the un-kudosed KudosButton so a thread reads uniformly — just
-          without the toggle, since a handle can't kudos itself. */}
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden
-        className="size-[15px]"
-        style={{ color: 'var(--color-kudos)' }}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.6}
-      >
-        <path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z" />
-      </svg>
-      <span>{label}</span>
+    <span className="flex items-center justify-between gap-2">
+      <AuthorLine author={author} />
+      <PostedAt iso={createdAt} editedIso={editedAt} className="shrink-0 text-xs" />
     </span>
   );
 }
