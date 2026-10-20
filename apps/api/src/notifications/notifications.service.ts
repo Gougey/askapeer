@@ -257,6 +257,7 @@ export class NotificationsService {
     targetType: 'post' | 'comment',
     targetId: string,
     actorHandleId: string,
+    kind: 'insightful' | 'useful',
   ): Promise<void> {
     const target =
       targetType === 'post'
@@ -268,6 +269,7 @@ export class NotificationsService {
 
     const payload: KudosReceivedPayload = {
       targetType,
+      kind,
       postId: target.postId,
       postTitle: target.postTitle,
     };
@@ -275,7 +277,9 @@ export class NotificationsService {
       target.authorHandleId,
       'kudos_received',
       payload,
-      `kudos:${targetType}:${targetId}:${actorHandleId}`,
+      // The kind is part of the key: Insightful and then Useful from the same member are two
+      // awards and two notices, where the pre-0057 key would have swallowed the second.
+      `kudos:${targetType}:${targetId}:${actorHandleId}:${kind}`,
     );
   }
 
@@ -542,7 +546,7 @@ export class NotificationsService {
     }
     if (type === 'kudos_received') {
       const p = payload as KudosReceivedPayload;
-      await this.email.kudosReceived(row.email, p.targetType, p.postTitle, p.postId);
+      await this.email.kudosReceived(row.email, p.targetType, p.postTitle, p.postId, p.kind);
       return;
     }
     if (type === 'verification_status_change') {

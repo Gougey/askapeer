@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { PostCard } from '@/components/PostCard';
+import { Stat } from '@/components/StatIcons';
 import { fetchMyContributions, type MyCommentCard } from '@/lib/notifications';
 import { requireAccessToken } from '@/lib/session';
 import { BackToStart, LoadMore } from '@/components/LoadMore';
@@ -12,6 +13,7 @@ import { BackToStart, LoadMore } from '@/components/LoadMore';
  */
 async function MyAnswerCard({ comment }: { comment: MyCommentCard }) {
   const t = await getTranslations('activity');
+  const td = await getTranslations('discussions');
   const format = await getFormatter();
 
   return (
@@ -31,20 +33,18 @@ async function MyAnswerCard({ comment }: { comment: MyCommentCard }) {
           {t('mine.onThread', { title: comment.post.title })}
         </span>
         <span className="flex items-center justify-between text-xs" style={{ color: 'var(--color-muted)' }}>
-          <span
-            className="flex items-center gap-1 font-semibold"
-            style={{ color: 'var(--color-kudos-text)' }}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden
-              className="size-[15px]"
-              style={{ color: 'var(--color-kudos)' }}
-            >
-              <path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z" />
-            </svg>
-            {comment.kudosCount}
+          {/* How the answer was received, by kind — the same two stats as a card. */}
+          <span className="flex items-center gap-3" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            <Stat
+              kind="insightful"
+              count={comment.insightfulCount}
+              label={td('insightful', { count: comment.insightfulCount })}
+            />
+            <Stat
+              kind="useful"
+              count={comment.usefulCount}
+              label={td('useful', { count: comment.usefulCount })}
+            />
           </span>
           <span>{format.relativeTime(new Date(comment.createdAt))}</span>
         </span>

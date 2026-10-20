@@ -4,10 +4,16 @@
  */
 
 export const HANDLE_MIN_LENGTH = 3;
-export const HANDLE_MAX_LENGTH = 30;
+/**
+ * 20, down from 30 (Adrian and Andrew, 20 October 2026). With the author's two kudos totals now
+ * beside the handle on every card, 20 is what lets the longest handle and three-digit totals
+ * share one line on a phone. Applies to new handles; the pilot clear-down removes every
+ * existing one, so nobody is caught by it. Moderator renames use the same rule.
+ */
+export const HANDLE_MAX_LENGTH = 20;
 
-/** 3–30 characters, alphanumeric plus underscore/hyphen (agreed 2026-07-17). */
-const FORMAT = /^[A-Za-z0-9_-]{3,30}$/;
+/** 3–20 characters, alphanumeric plus underscore/hyphen. Built from the two limits above. */
+const FORMAT = new RegExp(`^[A-Za-z0-9_-]{${HANDLE_MIN_LENGTH},${HANDLE_MAX_LENGTH}}$`);
 
 export type HandleRejection = 'invalid_format' | 'taken' | 'blocklisted';
 

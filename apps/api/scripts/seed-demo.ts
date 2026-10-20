@@ -373,7 +373,7 @@ async function main(): Promise<void> {
   await db.delete(comments);
   await db.delete(caseAttestations);
   await db.delete(posts); // cascades: case_details, post_tags
-  await db.update(handles).set({ kudosTotal: 0 });
+  await db.update(handles).set({ insightfulTotal: 0, usefulTotal: 0 });
 
   // ---- authors -------------------------------------------------------------------------
   /*
@@ -547,9 +547,10 @@ async function main(): Promise<void> {
   console.log(`${CASES.length} case discussions (1 draft, 1 needs_correction).`);
 
   // ---- answers, replies, kudos -------------------------------------------------------------
-  const kudosTally = new Map<string, number>();
+  /** Per handle, per kind (migration 0057). `kudos_total` is their sum, computed by Postgres. */
+  const kudosTally = new Map<string, { insightful: number; useful: number }>();
   /**
-   * `kudos_one_per_handle_unique` means a handle can award a given target only once, and
+   * `kudos_one_per_handle_kind_unique` means a handle can award a given target each kind once, and
    * the later "concentrate on three handles" pass deliberately revisits posts that already
    * have kudos. So conflicts are ignored and the tally counts what actually landed —
    * counting the *attempts* would drift `handles.kudos_total` away from the rows, which is
@@ -558,13 +559,24 @@ async function main(): Promise<void> {
   const addKudos = async (targetType: 'post' | 'comment', targetId: string, ownerHandleId: string, n: number) => {
     const givers = pickN(authors.filter((a) => a.id !== ownerHandleId), n);
     if (!givers.length) return;
+    // Each giver awards one kind, chosen by the seeded generator — a realistic mix that stays
+    // the same from run to run.
     const inserted = await db
       .insert(kudos)
-      .values(givers.map((g) => ({ givenByHandleId: g.id, targetType, targetId })))
+      .values(
+        givers.map((g) => ({
+          givenByHandleId: g.id,
+          targetType,
+          targetId,
+          kind: (rand() < 0.5 ? 'insightful' : 'useful') as 'insightful' | 'useful',
+        })),
+      )
       .onConflictDoNothing()
-      .returning({ id: kudos.id });
+      .returning({ kind: kudos.kind });
     if (inserted.length) {
-      kudosTally.set(ownerHandleId, (kudosTally.get(ownerHandleId) ?? 0) + inserted.length);
+      const tally = kudosTally.get(ownerHandleId) ?? { insightful: 0, useful: 0 };
+      for (const row of inserted) tally[row.kind] += 1;
+      kudosTally.set(ownerHandleId, tally);
     }
   };
 
@@ -607,22 +619,29 @@ async function main(): Promise<void> {
   }
 
   // Authoritative totals in Postgres…
-  for (const [handleId, total] of kudosTally) {
-    await db.update(handles).set({ kudosTotal: total }).where(sql`${handles.id} = ${handleId}`);
+  for (const [handleId, t] of kudosTally) {
+    await db
+      .update(handles)
+      .set({ insightfulTotal: t.insightful, usefulTotal: t.useful })
+      .where(sql`${handles.id} = ${handleId}`);
   }
   // …mirrored into the Redis leaderboard the badge reads. Skipping this is the dual-store
   // trap: totals would look right on every profile while no badge ever appeared.
   if (redis) {
     await redis.del('kudos:leaderboard');
-    for (const [handleId, total] of kudosTally) {
-      await redis.zadd('kudos:leaderboard', total, handleId);
+    for (const [handleId, t] of kudosTally) {
+      await redis.zadd('kudos:leaderboard', t.insightful + t.useful, handleId);
     }
     console.log(`Kudos leaderboard synced for ${kudosTally.size} handles.`);
   } else {
     console.warn('REDIS_URL not set — leaderboard NOT synced, so no top-contributor badges.');
   }
-  const totalKudos = [...kudosTally.values()].reduce((a, b) => a + b, 0);
-  console.log(`${totalKudos} kudos; top handle on ${Math.max(...kudosTally.values())}.`);
+  const sums = [...kudosTally.values()].map((t) => t.insightful + t.useful);
+  const insightful = [...kudosTally.values()].reduce((a, t) => a + t.insightful, 0);
+  const totalKudos = sums.reduce((a, b) => a + b, 0);
+  console.log(
+    `${totalKudos} kudos (${insightful} insightful, ${totalKudos - insightful} useful); top handle on ${Math.max(...sums)}.`,
+  );
 
   // ---- reports and moderation --------------------------------------------------------------
   const published = made.slice(0, 6);

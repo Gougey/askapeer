@@ -52,6 +52,27 @@ export const lightGroups = [
     ],
   },
   {
+    comment: [
+      'Contribution stats (Adrian and Andrew, 20 October 2026). Kudos became two awards,',
+      'Insightful and Useful, and each count on a post has its own colour, alongside its',
+      'own icon so nothing depends on colour alone. Kudos gold is no longer the single status',
+      'colour. Every value is AA as small text on --color-surface in both themes',
+      '(light 5.9:1 to 7.4:1, dark 9.4:1 to 9.7:1) and on its own -tint (5.1:1 and up). The',
+      '-tint is the background of a button the viewer has pressed. Teal stays for the',
+      'clinical-case marker and spark red for the Ask button, so neither is used for a count.',
+    ].join('\n'),
+    tokens: [
+      { name: 'color-insightful', value: '#6d28d9' },
+      { name: 'color-insightful-tint', value: '#f0eafb' },
+      { name: 'color-useful', value: '#8a5a12' },
+      { name: 'color-useful-tint', value: '#fbf0dc' },
+      { name: 'color-answers', value: '#1d4ed8' },
+      { name: 'color-answers-tint', value: '#e8edfb' },
+      { name: 'color-follows', value: '#a21667' },
+      { name: 'color-follows-tint', value: '#f6e8f0' },
+    ],
+  },
+  {
     comment: 'Neutrals (light)',
     tokens: [
       { name: 'color-bg', value: '#eef1f4' },
@@ -289,6 +310,19 @@ export const darkGroups = [
       { name: 'color-category-violet', value: '#c4b5fd' },
       { name: 'color-category-magenta', value: '#f9a8d4' },
       { name: 'color-category-slate', value: '#a8b6c6' },
+    ],
+  },
+  {
+    // Contribution stats on a dark ground: the light end of the same hues.
+    tokens: [
+      { name: 'color-insightful', value: '#c4b5fd' },
+      { name: 'color-insightful-tint', value: '#2e334d' },
+      { name: 'color-useful', value: '#f2b45a' },
+      { name: 'color-useful-tint', value: '#2e2413' },
+      { name: 'color-answers', value: '#93c5fd' },
+      { name: 'color-answers-tint', value: '#26354d' },
+      { name: 'color-follows', value: '#f9a8d4' },
+      { name: 'color-follows-tint', value: '#363146' },
     ],
   },
 ];

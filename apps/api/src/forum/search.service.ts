@@ -271,9 +271,13 @@ export class SearchService {
       handle_id: string;
       handle_name: string;
       kudos_total: number;
+      insightful_total: number;
+      useful_total: number;
       answer_count: number;
       watcher_count: number;
       kudos_count: number;
+      insightful_count: number;
+      useful_count: number;
       created_at: Date;
       edited_at: Date | null;
       total: string;
@@ -282,11 +286,15 @@ export class SearchService {
       select p.id, p.type, p.title,
              coalesce(cd.community_question, p.body) as snippet,
              cat.id as category_id, cat.name as category_name, cat.colour as category_colour,
-             h.id as handle_id, h.handle_name, h.kudos_total,
+             h.id as handle_id, h.handle_name, h.kudos_total, h.insightful_total, h.useful_total,
              (select count(*) from community.comments c
                where c.post_id = p.id and c.status = 'published')::int as answer_count,
              (select count(*) from community.kudos k
                where k.target_type = 'post' and k.target_id = p.id)::int as kudos_count,
+             (select count(*) from community.kudos k
+               where k.target_type = 'post' and k.target_id = p.id and k.kind = 'insightful')::int as insightful_count,
+             (select count(*) from community.kudos k
+               where k.target_type = 'post' and k.target_id = p.id and k.kind = 'useful')::int as useful_count,
              -- Followers who have not written in the thread. See watcherCountSql in
              -- posts.service.ts for why the raw follower count is not the useful number.
              (select count(*) from community.follows f
@@ -343,10 +351,14 @@ export class SearchService {
           handleId: row.handle_id,
           handleName: row.handle_name,
           kudosTotal: Number(row.kudos_total),
+          insightfulTotal: Number(row.insightful_total),
+          usefulTotal: Number(row.useful_total),
         },
         answerCount: Number(row.answer_count),
         watcherCount: Number(row.watcher_count),
         kudosCount: Number(row.kudos_count),
+        insightfulCount: Number(row.insightful_count),
+        usefulCount: Number(row.useful_count),
         createdAt: new Date(row.created_at).toISOString(),
         editedAt: row.edited_at ? new Date(row.edited_at).toISOString() : null,
       })),

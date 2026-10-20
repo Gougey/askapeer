@@ -183,13 +183,21 @@ export const templates = {
     targetType: 'post' | 'comment',
     postTitle: string,
     postId: string,
+    /** Insightful or Useful (migration 0057); absent only for a notice queued before it. */
+    kind?: 'insightful' | 'useful',
   ): Omit<OutboundEmail, 'to'> {
+    const what = targetType === 'post' ? 'question' : 'answer';
+    const award = kind === 'insightful' ? 'Insightful' : kind === 'useful' ? 'Useful' : null;
     return {
-      subject: 'You received kudos on AskaPeer',
+      subject: award ? `Your ${what} was marked ${award} on AskaPeer` : 'You received kudos on AskaPeer',
       ...frame(ctx, {
-        heading: 'You received kudos',
+        heading: award ? `Marked ${award}` : 'You received kudos',
         // Who gave it is not named, here or anywhere else in the product.
-        lines: [`Your ${targetType === 'post' ? 'question' : 'answer'} on “${postTitle}” received kudos.`],
+        lines: [
+          award
+            ? `A member marked your ${what} on “${postTitle}” as ${award}.`
+            : `Your ${what} on “${postTitle}” received kudos.`,
+        ],
         cta: { label: 'Open the thread', path: `/discussions/${postId}` },
         settingsLink: true,
       }),

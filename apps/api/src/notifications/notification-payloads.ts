@@ -60,6 +60,11 @@ export type ReplyPayload = {
  */
 export type KudosReceivedPayload = {
   targetType: 'post' | 'comment';
+  /**
+   * Which award (migration 0057). Optional only because rows written before it have none;
+   * every new row carries it, and the screen reads a missing one as the old single kudos.
+   */
+  kind?: 'insightful' | 'useful';
   /** Always the thread to open — a comment's kudos deep-links to its post. */
   postId: string;
   postTitle: string;

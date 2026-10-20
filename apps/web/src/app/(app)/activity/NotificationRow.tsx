@@ -2,8 +2,16 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import type { Notification } from '@/lib/notifications';
 import { openNotificationAction } from './actions';
 
-/** §8.13 — kudos rows carry the gold star; replies carry the discussion glyph. */
+/**
+ * §8.13 — a kudos row carries its award's icon (the book for Insightful, the lightbulb for
+ * Useful) in that award's colour; a row from before kudos had two kinds keeps the old star.
+ * Replies carry the discussion glyph.
+ */
 const GLYPH = {
+  insightful:
+    'M12 6.5C10 5 7 4.5 3 5v13c4-.5 7 0 9 1.5M12 6.5c2-1.5 5-2 9-1.5v13c-4-.5-7 0-9 1.5M12 6.5v13',
+  useful:
+    'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.8.6 1.1 1.4 1.1 2.2V17h5v-1c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z',
   reply:
     'M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 21l1.9-4.5A8.4 8.4 0 0 1 3 11.5a8.5 8.5 0 0 1 9-8.4 8.5 8.5 0 0 1 9 8.4z',
   kudos: 'M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 8.9l6.9-.6z',
@@ -33,12 +41,14 @@ function present(n: Notification): {
        * returns nothing. Tapping marks it read, which is the only thing left to do with it.
        */
       href: null,
-      glyph: GLYPH.kudos,
-      // Kudos gold is the product's one status colour and this is a kudos event — the
-      // single place outside the kudos control itself where it is correct to use it.
-      tint: 'var(--color-kudos-tint)',
-      ink: 'var(--color-kudos)',
-      filled: true,
+      ...(n.payload.kind
+        ? {
+            glyph: GLYPH[n.payload.kind],
+            tint: `var(--color-${n.payload.kind}-tint)`,
+            ink: `var(--color-${n.payload.kind})`,
+            filled: false,
+          }
+        : { glyph: GLYPH.kudos, tint: 'var(--color-kudos-tint)', ink: 'var(--color-kudos)', filled: true }),
     };
   }
   if (n.type === 'reply' || n.type === 'thread_activity') {
@@ -154,7 +164,13 @@ export async function NotificationRow({ notification }: { notification: Notifica
                   title: notification.payload.postTitle,
                 })}
               {notification.type === 'kudos_received' &&
-                t(notification.payload.targetType === 'post' ? 'kudosOnPost' : 'kudosOnComment')}
+                t(
+                  notification.payload.kind
+                    ? `${notification.payload.targetType === 'post' ? 'kudosOnPost' : 'kudosOnComment'}_${notification.payload.kind}`
+                    : notification.payload.targetType === 'post'
+                      ? 'kudosOnPost'
+                      : 'kudosOnComment',
+                )}
               {notification.type === 'verification_status_change' &&
                 t(NOTICE_KEY[notification.payload.event] ?? 'statusChanged', {
                   handle: notification.payload.newHandleName ?? '',

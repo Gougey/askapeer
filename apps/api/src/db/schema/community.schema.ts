@@ -44,8 +44,17 @@ export const handles = community.table(
       .unique()
       .references(() => members.id, { onDelete: 'cascade' }),
     handleName: text('handle_name').notNull(),
-    // Written by EPIC-D (S5). Read-only here.
-    kudosTotal: integer('kudos_total').notNull().default(0),
+    // Written by EPIC-D (S5). Read-only here. One per kind of kudos (migration 0057).
+    insightfulTotal: integer('insightful_total').notNull().default(0),
+    usefulTotal: integer('useful_total').notNull().default(0),
+    /**
+     * Both kinds together — what answers are ranked by and the leaderboard holds. Computed by
+     * Postgres, so it cannot drift from its parts, and Drizzle refuses a write to it: change
+     * `insightfulTotal` or `usefulTotal` instead.
+     */
+    kudosTotal: integer('kudos_total')
+      .notNull()
+      .generatedAlwaysAs(sql`insightful_total + useful_total`),
     // Full date stored for internal/KPI use; the API only ever exposes the year —
     // a precise join date is a correlation vector back to a real person (EPIC-B §4).
     memberSince: date('member_since').notNull().defaultNow(),
@@ -386,6 +395,13 @@ export const comments = community.table(
 export const kudosTargetType = community.enum('kudos_target_type', ['post', 'comment']);
 
 /**
+ * The two kinds of kudos (migration 0057): **Insightful** (an open book) and **Useful** (a
+ * lightbulb). Independent — a handle may give either, both or neither to the same target.
+ */
+export const kudosKind = community.enum('kudos_kind', ['insightful', 'useful']);
+export type KudosKind = (typeof kudosKind.enumValues)[number];
+
+/**
  * A single kudos from one handle to one post or comment (EPIC-D §2, architecture §4.2).
  * Kudos is the platform's one merit signal — the mechanism behind "ideas win, not rank"
  * — so the model is deliberately spare: one row per (handle, target), no weighting.
@@ -410,10 +426,17 @@ export const kudos = community.table(
     givenByHandleId: uuid('given_by_handle_id')
       .notNull()
       .references(() => handles.id),
+    kind: kudosKind('kind').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('kudos_one_per_handle_unique').on(t.targetType, t.targetId, t.givenByHandleId),
+    // One of each kind per handle per target (0057; it was one in all).
+    uniqueIndex('kudos_one_per_handle_kind_unique').on(
+      t.targetType,
+      t.targetId,
+      t.givenByHandleId,
+      t.kind,
+    ),
     // Counting a target's kudos, and the clawback's "delete all kudos for this target".
     index('kudos_target_idx').on(t.targetType, t.targetId),
   ],

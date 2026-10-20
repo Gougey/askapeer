@@ -6,7 +6,14 @@ import { API_ORIGIN } from '@/lib/api';
 import { getAccessToken } from '@/lib/session';
 
 type KudosTarget = 'post' | 'comment';
-export type KudosResult = { kudosCount: number; hasKudosed: boolean };
+type KudosKind = 'insightful' | 'useful';
+/** A target's kudos after a toggle: both kinds, and which the caller now holds. */
+export type KudosResult = {
+  insightfulCount: number;
+  usefulCount: number;
+  hasInsightful: boolean;
+  hasUseful: boolean;
+};
 
 async function authedToken(): Promise<string> {
   const token = await getAccessToken();
@@ -15,19 +22,21 @@ async function authedToken(): Promise<string> {
 }
 
 /**
- * Toggle kudos on a post or comment (EPIC-D). The caller passes the *current* state and
- * this flips it: awarded → retract, not-awarded → award. The API is idempotent either
- * way, so a double-tap or a stale toggle can't wedge the count.
+ * Toggle one kind of kudos — Insightful or Useful — on a post or comment (EPIC-D, API
+ * migration 0057). The caller passes the *current* state and this flips it: awarded →
+ * retract, not-awarded → award. The two kinds are independent, and the API is idempotent
+ * either way, so a double-tap or a stale toggle can't wedge a count.
  */
 export async function toggleKudosAction(
   target: KudosTarget,
   targetId: string,
-  currentlyKudosed: boolean,
+  kind: KudosKind,
+  currentlyAwarded: boolean,
 ): Promise<KudosResult> {
   const token = await authedToken();
-  const path = target === 'post' ? `posts/${targetId}/kudos` : `comments/${targetId}/kudos`;
+  const path = `${target === 'post' ? 'posts' : 'comments'}/${targetId}/kudos/${kind}`;
   const res = await fetch(`${API_ORIGIN}/v1/${path}`, {
-    method: currentlyKudosed ? 'DELETE' : 'POST',
+    method: currentlyAwarded ? 'DELETE' : 'POST',
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
   });

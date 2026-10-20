@@ -433,7 +433,7 @@ export class ModerationService {
   /** Same availability rules as handle creation (EPIC-B §3) — format, blocklist, ever-used. */
   private async assertNameAvailable(name: string): Promise<void> {
     if (!isValidFormat(name)) {
-      throw new BadRequestException('Handle must be 3–30 characters: letters, numbers, _ or -.');
+      throw new BadRequestException('Handle must be 3–20 characters: letters, numbers, _ or -.');
     }
     const terms = await this.db
       .select({ term: handleBlocklist.term, matchMode: handleBlocklist.matchMode })
@@ -491,12 +491,18 @@ export class ModerationService {
       const removed = await tx
         .delete(kudos)
         .where(and(eq(kudos.targetType, contentType), eq(kudos.targetId, report.targetId)))
-        .returning({ id: kudos.id });
+        .returning({ id: kudos.id, kind: kudos.kind });
       let clawed: { handleId: string; total: number } | null = null;
       if (removed.length > 0) {
+        // Each kind comes back off its own total (0057); `kudos_total` is their sum.
+        const insightful = removed.filter((r) => r.kind === 'insightful').length;
+        const useful = removed.length - insightful;
         const [row] = await tx
           .update(handles)
-          .set({ kudosTotal: sql`greatest(${handles.kudosTotal} - ${removed.length}, 0)` })
+          .set({
+            insightfulTotal: sql`greatest(${handles.insightfulTotal} - ${insightful}, 0)`,
+            usefulTotal: sql`greatest(${handles.usefulTotal} - ${useful}, 0)`,
+          })
           .where(eq(handles.id, content.handleId))
           .returning({ kudosTotal: handles.kudosTotal });
         clawed = { handleId: content.handleId, total: row.kudosTotal };

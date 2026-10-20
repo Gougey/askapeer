@@ -1,12 +1,22 @@
 import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
-import { comments, handles, kudos, posts } from '../db/schema';
+import { comments, handles, kudos, posts, type KudosKind } from '../db/schema';
 import { NotificationEvents } from '../notifications/notifications.queue';
 import { BadgeService } from './badge.service';
 
 export type KudosTarget = 'post' | 'comment';
-export type KudosResult = { kudosCount: number; hasKudosed: boolean };
+/** A target's kudos after an award or a retraction: both kinds' counts, and which the caller holds. */
+export type KudosResult = {
+  insightfulCount: number;
+  usefulCount: number;
+  hasInsightful: boolean;
+  hasUseful: boolean;
+};
+
+/** The handle column each kind of kudos accrues to. */
+const TOTAL = { insightful: handles.insightfulTotal, useful: handles.usefulTotal } as const;
+const TOTAL_KEY = { insightful: 'insightfulTotal', useful: 'usefulTotal' } as const;
 
 /** The target's author handle and whether it's live enough to receive kudos. */
 type TargetRef = { authorHandleId: string; published: boolean } | undefined;
@@ -26,7 +36,12 @@ export class KudosService {
    * silent no-op returning the current count, not a 409 — "I want my kudos on this" is
    * already true, so a repeat tap isn't an error to surface (§3, resolved 2026-07-17).
    */
-  async award(viewerHandleId: string, target: KudosTarget, targetId: string): Promise<KudosResult> {
+  async award(
+    viewerHandleId: string,
+    target: KudosTarget,
+    targetId: string,
+    kind: KudosKind,
+  ): Promise<KudosResult> {
     const ref = await this.resolveTarget(target, targetId);
     // Not published (removed/draft) or absent: 404, the same answer the thread read gives.
     if (!ref?.published) throw new NotFoundException(`No such ${target}.`);
@@ -42,13 +57,13 @@ export class KudosService {
     const newTotal = await this.db.transaction(async (tx) => {
       const inserted = await tx
         .insert(kudos)
-        .values({ targetType: target, targetId, givenByHandleId: viewerHandleId })
+        .values({ targetType: target, targetId, givenByHandleId: viewerHandleId, kind })
         .onConflictDoNothing()
         .returning({ id: kudos.id });
       if (inserted.length === 0) return undefined; // already awarded — nothing changed
       const [row] = await tx
         .update(handles)
-        .set({ kudosTotal: sql`${handles.kudosTotal} + 1` })
+        .set({ [TOTAL_KEY[kind]]: sql`${TOTAL[kind]} + 1` })
         .where(eq(handles.id, ref.authorHandleId))
         .returning({ kudosTotal: handles.kudosTotal });
       return row.kudosTotal;
@@ -61,9 +76,9 @@ export class KudosService {
       // undefined exactly when the insert was a no-op — the repeat tap EPIC-D §3 makes
       // silent. A repeat tap that notified would turn an idempotent action into a way
       // to badger someone.
-      await this.events.kudosAwarded(target, targetId, viewerHandleId);
+      await this.events.kudosAwarded(target, targetId, viewerHandleId, kind);
     }
-    return { kudosCount: await this.countFor(target, targetId), hasKudosed: true };
+    return this.stateFor(target, targetId, viewerHandleId);
   }
 
   /**
@@ -71,7 +86,12 @@ export class KudosService {
    * kudos that isn't there is a no-op. The total is floored at zero so a double-retract,
    * or a clawback race, can never drive a handle's reputation negative.
    */
-  async retract(viewerHandleId: string, target: KudosTarget, targetId: string): Promise<KudosResult> {
+  async retract(
+    viewerHandleId: string,
+    target: KudosTarget,
+    targetId: string,
+    kind: KudosKind,
+  ): Promise<KudosResult> {
     const ref = await this.resolveTarget(target, targetId);
     if (!ref) throw new NotFoundException(`No such ${target}.`);
 
@@ -83,20 +103,21 @@ export class KudosService {
             eq(kudos.targetType, target),
             eq(kudos.targetId, targetId),
             eq(kudos.givenByHandleId, viewerHandleId),
+            eq(kudos.kind, kind),
           ),
         )
         .returning({ id: kudos.id });
       if (deleted.length === 0) return undefined;
       const [row] = await tx
         .update(handles)
-        .set({ kudosTotal: sql`greatest(${handles.kudosTotal} - 1, 0)` })
+        .set({ [TOTAL_KEY[kind]]: sql`greatest(${TOTAL[kind]} - 1, 0)` })
         .where(eq(handles.id, ref.authorHandleId))
         .returning({ kudosTotal: handles.kudosTotal });
       return row.kudosTotal;
     });
 
     if (newTotal !== undefined) await this.badge.setScore(ref.authorHandleId, newTotal);
-    return { kudosCount: await this.countFor(target, targetId), hasKudosed: false };
+    return this.stateFor(target, targetId, viewerHandleId);
   }
 
   private async resolveTarget(target: KudosTarget, targetId: string): Promise<TargetRef> {
@@ -114,11 +135,27 @@ export class KudosService {
     return row ? { authorHandleId: row.handleId, published: row.status === 'published' } : undefined;
   }
 
-  private async countFor(target: KudosTarget, targetId: string): Promise<number> {
+  /** Both kinds' counts for a target, and which the caller holds — one indexed read. */
+  private async stateFor(
+    target: KudosTarget,
+    targetId: string,
+    viewerHandleId: string,
+  ): Promise<KudosResult> {
     const [row] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
+      .select({
+        insightful: sql<number>`count(*) filter (where ${kudos.kind} = 'insightful')::int`,
+        useful: sql<number>`count(*) filter (where ${kudos.kind} = 'useful')::int`,
+        mineInsightful: sql<boolean>`coalesce(bool_or(${kudos.kind} = 'insightful' and ${kudos.givenByHandleId} = ${viewerHandleId}), false)`,
+        mineUseful: sql<boolean>`coalesce(bool_or(${kudos.kind} = 'useful' and ${kudos.givenByHandleId} = ${viewerHandleId}), false)`,
+      })
       .from(kudos)
       .where(and(eq(kudos.targetType, target), eq(kudos.targetId, targetId)));
-    return row?.count ?? 0;
+    return {
+      insightfulCount: Number(row?.insightful ?? 0),
+      usefulCount: Number(row?.useful ?? 0),
+      hasInsightful: Boolean(row?.mineInsightful),
+      hasUseful: Boolean(row?.mineUseful),
+    };
   }
+
 }
