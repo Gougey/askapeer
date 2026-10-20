@@ -18,9 +18,9 @@ import { toggleFollowAction } from './actions';
  * The word still carries the state, which satisfies §9.2 on its own: "Follow" and "Following"
  * are different words, not the same word in two colours.
  *
- * **The count is the card's eye**: people watching who have not answered (`watcherCount`). So
- * the caller's own toggle only moves it when they would be counted in it — not as the author,
- * and not once they have answered (`countsMe`).
+ * **The count is the card's eye**: everyone following except the author (`watcherCount`). So
+ * the caller's own toggle moves it by one — unless they are the author, whose follow is not
+ * counted (`countsMe`).
  *
  * Optimistic: it flips on tap and rolls back if the server refuses. Both directions are
  * idempotent, so a stale click cannot wedge the state.

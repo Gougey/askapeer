@@ -128,7 +128,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
             postId={post.id}
             initialFollowing={viewerContext.isFollowing}
             initialCount={post.watcherCount}
-            countsMe={!viewerContext.isAuthor && !thread.comments.some((c) => c.isMine)}
+            countsMe={!viewerContext.isAuthor}
           />
         </div>
         {/* Reporting the question and — for the anonymity/off-platform case that may not
@@ -149,13 +149,12 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
         className="flex flex-col gap-4 border-t pt-4"
         style={{ borderColor: 'var(--color-muted)' }}
       >
-        <h2 className="text-sm font-medium">{t('answers', { count: post.answerCount })}</h2>
-
-        {answers.length === 0 ? (
-          <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-            {t('noAnswers')}
-          </p>
-        ) : (
+        {/*
+          No "2 answers" heading and no "No answers yet" line (Adrian, 20 October 2026): with no
+          answers the two read "No answers" twice, and the count is already on the card. The
+          answers simply follow the rule; an empty thread goes straight to the composer.
+        */}
+        {answers.length > 0 && (
           <ul className="flex flex-col gap-3">
             {answers.map((answer) => (
               <li key={answer.id}>
@@ -181,7 +180,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
           The author gets a link, not an open box. Answering your own thread is allowed and
           useful — a case earns its keep by saying how it turned out — but being prompted to
           "share what you would do, and why" on the question you just asked reads as a
-          mistake, and an empty composer under "No answers yet" looks like an unfinished task.
+          mistake, and an empty composer under the question looks like an unfinished task.
         */}
         {viewerContext.isAuthor ? (
           <OwnThreadUpdate postId={post.id} />
