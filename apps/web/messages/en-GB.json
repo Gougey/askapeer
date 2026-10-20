@@ -64,7 +64,7 @@
       "label": "Handle",
       "placeholder": "e.g. KneeGeek_99",
       "rules": "3–20 characters. Letters, numbers, underscores and hyphens.",
-      "permanentWarning": "Your handle is permanent. You can't change it later — kudos and post history belong to it, so pick one you're happy to be known by.",
+      "permanentWarning": "Your handle is permanent. You can't change it later — your Insightful and Useful awards and your post history belong to it, so pick one you're happy to be known by.",
       "checking": "Checking…",
       "available": "{name} is available",
       "submit": "Confirm handle",
@@ -95,7 +95,6 @@
     "activity": "Activity",
     "profile": "Profile",
     "profileScreen": {
-      "kudos": "Kudos",
       "insightful": "Insightful",
       "useful": "Useful",
       "memberSince": "Member since {year}",
@@ -187,7 +186,6 @@
     "heading": "Discussions",
     "empty": "No questions yet. Be the first to ask one.",
     "emptyCta": "Ask a question",
-    "kudos": "{count, plural, one {# kudos} other {# kudos}}",
     "insightful": "{count, plural, one {# insightful} other {# insightful}}",
     "useful": "{count, plural, one {# useful} other {# useful}}",
     "insightfulButton": "{count} Insightful",
@@ -201,7 +199,6 @@
     "followButtonOn": "{count} Following",
     "clinicalCase": "Clinical case:",
     "edited": "edited",
-    "kudosAction": "Toggle kudos",
     "yourAnswer": "Your answer",
     "answerPosted": "Your answer was posted.",
     "addAnother": "Add another answer",
@@ -274,8 +271,8 @@
     "markAllRead": "Mark all as read",
     "rows": {
       "replied": "replied to you",
-      "kudosOnPost": "Your question received kudos",
-      "kudosOnComment": "Your answer received kudos",
+      "kudosOnPost": "Your question received an award",
+      "kudosOnComment": "Your answer received an award",
       "kudosOnPost_insightful": "Your question was marked Insightful",
       "kudosOnPost_useful": "Your question was marked Useful",
       "kudosOnComment_insightful": "Your answer was marked Insightful",
@@ -292,7 +289,7 @@
       "threadActivity": "{count, plural, one {# new reply} other {# new replies}} on “{title}”"
     },
     "empty": {
-      "notifications": "You're all caught up. Replies to your posts and kudos you receive will appear here.",
+      "notifications": "You're all caught up. Replies to your posts, and the Insightful and Useful awards you receive, will appear here.",
       "mine": "You haven't posted yet. Your questions and answers will appear here.",
       "mineCta": "Ask a question",
       "noMore": "Nothing older to show.",
@@ -340,7 +337,7 @@
         "other": "Other"
       },
       "yourCase": "Your case discussion",
-      "awaitingCorrection": "This case is hidden from other members until you republish it. Its answers and their kudos are safe and come back with it.",
+      "awaitingCorrection": "This case is hidden from other members until you republish it. Its answers and their Insightful and Useful awards are safe and come back with it.",
       "fixAndRepublish": "Fix and republish"
     }
   },
@@ -360,12 +357,11 @@
       "types": {
         "reply": "Replies to your posts and answers",
         "thread_activity": "New replies on discussions you follow",
-        "kudos_received": "Kudos on your contributions",
+        "kudos_received": "Insightful and Useful awards on your contributions",
         "verification_status_change": "Your account status"
       },
       "notes": {
         "accountEmailLocked": "Email about your account status cannot be turned off — you need to know if your access changes.",
-        "emailNotYetSending": "Email notifications aren't being sent yet. These settings will apply as soon as they are.",
         "pushComingSoon": "Push notifications are coming soon."
       }
     },
@@ -389,7 +385,7 @@
     "headingCorrection": "Correct your case",
     "intro": "A case discussion is de-identified before it is published. The form takes the age band and timeline for you, and you confirm the rest.",
     "resumeDrafts": "{count, plural, one {You have 1 unfinished case} other {You have # unfinished cases}}",
-    "needsCorrection": "A moderator asked for this case to be corrected. Your replies and kudos are unaffected — fix the details below, confirm the checklist again, and re-publish.",
+    "needsCorrection": "A moderator asked for this case to be corrected. Your replies and their Insightful and Useful awards are unaffected — fix the details below, confirm the checklist again, and re-publish.",
     "anonymity": "Stay anonymous — never name yourself, a colleague, an employer or a patient.",
     "category": "Category",
     "categoryPlaceholder": "Choose a category",
@@ -562,7 +558,7 @@
     "step2Body": "We email you a sign-in link and a six-digit code. Enter the code on the screen that asked for it. The code lasts 15 minutes, and only the most recent one works — so if you ask for another, use the new one.",
     "step2Junk": "Nothing arrived after a couple of minutes? Check your junk or quarantine folder, and look for mail from no-reply@mail.askapeer.co.uk. Work email systems sometimes hold mail from new senders. If it is not there, reply to your invitation and we will sort it out.",
     "step3Title": "Choose your handle",
-    "step3Body": "Your handle is the only name anyone will ever see. Pick something that says nothing about who you are or where you work. It is permanent, because your kudos and your posts belong to it.",
+    "step3Body": "Your handle is the only name anyone will ever see. Pick something that says nothing about who you are or where you work. It is permanent, because your Insightful and Useful awards and your posts belong to it.",
     "step3RuleHeading": "The one rule",
     "step3Rule": "Askapeer works because nobody knows who anyone is. Any attempt to identify yourself or another member — in a post, a reply, or by arranging it off the platform — results in immediate and permanent removal. There are no exceptions and no appeals.",
     "step4Title": "Put Askapeer on your home screen",
