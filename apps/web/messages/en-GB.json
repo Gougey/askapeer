@@ -204,8 +204,6 @@
     "followButtonOff": "{count} Follow",
     "followButtonOn": "{count} Following",
     "clinicalCase": "Clinical case:",
-    "answers": "{count, plural, =0 {No answers} one {# answer} other {# answers}}",
-    "noAnswers": "No answers yet.",
     "edited": "edited",
     "kudosAction": "Toggle kudos",
     "yourAnswer": "Your answer",
@@ -238,7 +236,6 @@
       "ariaOn": "Following this discussion — tap to stop being notified of new replies",
       "ariaOff": "Follow this discussion to be notified of new replies"
     },
-    "watching": "{count, plural, one {1 person watching who has not answered} other {# people watching who have not answered}}",
     "edit": "Edit",
     "editTitle": "Question",
     "editBody": "Details",

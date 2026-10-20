@@ -61,7 +61,7 @@ export type PostCard = {
   tags: TagRef[];
   author: AuthorBlock;
   answerCount: number;
-  /** Followers who have not written in the thread — see `watcherCountSql`. */
+  /** Everyone following the thread except its author — see `watcherCountSql`. */
   watcherCount: number;
   kudosCount: number;
   createdAt: string;
@@ -855,29 +855,25 @@ const answerCountSql = sql<number>`(
 )`;
 
 /**
- * People following this thread who have **not** written in it.
+ * Everyone following this thread **except its author** — the Following count on the card and
+ * on the Follow button.
  *
- * Not a raw follower count, because that number carries no information: authoring follows a
- * post and so does answering it, so followers are all-but-always the author plus whoever
- * replied — across the seeded corpus, 65 of 67 posts had exactly participants + 1, and not
- * one had a follower who had never posted in the thread. A card showing it would be
- * restating the answer count in a second column.
+ * ⚠️ **It used to exclude anyone who had answered too**, on the reasoning that answering
+ * follows a thread automatically, so a raw count mostly restated the answer count. In use
+ * that broke the one thing a member expects of it (Adrian, 20 October 2026): an answerer who
+ * tapped Follow saw "Following" but the number stayed put, on the button and on the card,
+ * because their follow was deliberately not counted. Tap Follow, the number goes up; that
+ * is the rule now.
  *
- * Excluding the author and everyone who commented leaves the number that means something on
- * its own: how many people are watching this without having said anything yet. Zero on most
- * threads today, which is why the card hides the stat entirely rather than printing "0".
+ * The author stays out: asking follows a thread automatically, so counting them would put
+ * every post at 1 from the start and a grey zero would never appear. Their Follow button is
+ * still a real button — it is how they mute their own thread — it just does not move the count.
  */
 const watcherCountSql = sql<number>`(
   select count(*) from ${follows} f
   where f.target_type = 'post'
     and f.target_id = ${posts.id}
     and f.follower_handle_id <> ${posts.handleId}
-    and not exists (
-      select 1 from ${comments} c
-      where c.post_id = ${posts.id}
-        and c.handle_id = f.follower_handle_id
-        and c.status = 'published'
-    )
 )`;
 
 const postKudosCountSql = sql<number>`(

@@ -119,9 +119,8 @@ export async function PostCard({ post }: { post: PostCardDto }) {
  * The post's four counts. Every one is always shown — grey at zero, in its colour once it is
  * above zero (Adrian, 20 October) — so a card never changes shape as a discussion fills up.
  *
- * Following is the eye, and it counts people watching **who have not answered**: a raw
- * follower count would restate the answer count, because asking and answering both subscribe
- * you. See `watcherCountSql` in the API.
+ * Following is the eye: everyone following the discussion except its author. See
+ * `watcherCountSql` in the API.
  */
 async function PostStats({ post }: { post: PostCardDto }) {
   const t = await getTranslations('discussions');

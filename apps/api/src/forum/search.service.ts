@@ -298,16 +298,11 @@ export class SearchService {
                where k.target_type = 'post' and k.target_id = p.id and k.kind = 'insightful')::int as insightful_count,
              (select count(*) from community.kudos k
                where k.target_type = 'post' and k.target_id = p.id and k.kind = 'useful')::int as useful_count,
-             -- Followers who have not written in the thread. See watcherCountSql in
-             -- posts.service.ts for why the raw follower count is not the useful number.
+             -- Everyone following except the author — the same rule as watcherCountSql in
+             -- posts.service.ts, which says why.
              (select count(*) from community.follows f
                where f.target_type = 'post' and f.target_id = p.id
-                 and f.follower_handle_id <> p.handle_id
-                 and not exists (
-                   select 1 from community.comments fc
-                    where fc.post_id = p.id and fc.handle_id = f.follower_handle_id
-                      and fc.status = 'published'
-                 ))::int as watcher_count,
+                 and f.follower_handle_id <> p.handle_id)::int as watcher_count,
              p.created_at, p.edited_at,
              -- How many matched in total, not how many are on this page. Carried on each
              -- row so it costs one query rather than a second round trip; the window is
