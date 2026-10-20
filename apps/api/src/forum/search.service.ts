@@ -287,8 +287,11 @@ export class SearchService {
              coalesce(cd.community_question, p.body) as snippet,
              cat.id as category_id, cat.name as category_name, cat.colour as category_colour,
              h.id as handle_id, h.handle_name, h.kudos_total, h.insightful_total, h.useful_total,
+             -- Top-level answers only, as on every other card (answerCountSql in posts.service):
+             -- counting replies made the same post read "2 answers" here and "1" in the list.
              (select count(*) from community.comments c
-               where c.post_id = p.id and c.status = 'published')::int as answer_count,
+               where c.post_id = p.id and c.status = 'published'
+                 and c.parent_comment_id is null)::int as answer_count,
              (select count(*) from community.kudos k
                where k.target_type = 'post' and k.target_id = p.id)::int as kudos_count,
              (select count(*) from community.kudos k
