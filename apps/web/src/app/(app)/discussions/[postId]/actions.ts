@@ -41,7 +41,25 @@ export async function toggleKudosAction(
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`Kudos update failed (${res.status}).`);
-  return (await res.json()) as KudosResult;
+  const result = (await res.json()) as KudosResult;
+  staleCardsEverywhere();
+  return result;
+}
+
+/**
+ * ⚠️ **The counts on this post are also on cards elsewhere** — Discussions, Search, My Q&A,
+ * Following, and the author's totals on every card and on profiles — and the app bar's Back
+ * is `router.back()`, which restores the client's cached copy of the page you came from. With
+ * nothing marking that copy stale, a member who awarded Useful and tapped Back saw the card
+ * still showing the old numbers (Adrian, 20 October 2026; reproduced: 3 Useful and 0
+ * following after Back, 4 and 1 after a reload).
+ *
+ * Revalidating the root layout drops every cached page, so the next visit to any of them is
+ * fetched fresh. The price is that the thread you are on re-renders once per tap; the pills
+ * keep their own state, so that is invisible, and a thread is one request.
+ */
+function staleCardsEverywhere(): void {
+  revalidatePath('/', 'layout');
 }
 
 export type AnswerState = { status: 'idle' | 'error'; reason?: 'empty' | 'unavailable' };
@@ -124,8 +142,8 @@ export async function deleteCommentAction(postId: string, commentId: string): Pr
  * *current* state and this flips it; both directions are idempotent server-side, so a
  * double tap or a stale toggle cannot wedge it.
  *
- * No `revalidatePath` — the control owns its own state and nothing else on the thread
- * changes. Revalidating would re-render the whole thread to move one pill.
+ * The control owns its own state, but the following count is also on this post's card, so
+ * the cached pages are marked stale exactly as for kudos — see `staleCardsEverywhere`.
  */
 export async function toggleFollowAction(
   postId: string,
@@ -144,6 +162,7 @@ export async function toggleFollowAction(
     },
   );
   if (!res.ok) throw new Error(`Could not update follow (${res.status}).`);
+  staleCardsEverywhere();
 }
 
 /**
