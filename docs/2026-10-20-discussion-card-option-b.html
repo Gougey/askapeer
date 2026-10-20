@@ -44,6 +44,8 @@
   .key svg { width: 16px; height: 16px; }
   .layout { display: grid; grid-template-columns: minmax(0, 390px) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  /* On a real phone the frame would steal 32px the app does not lose: draw the cards at true width. */
+  @media (max-width: 480px) { .page .phone { padding: 0; border: 0; background: none; } }
   .phone { width: 100%; max-width: 390px; padding: 16px; background: var(--bg); border: 1px dashed var(--border-strong); border-radius: 20px; display: flex; flex-direction: column; gap: 12px; }
   .notes { display: flex; flex-direction: column; gap: 18px; font-size: 14px; }
   .notes ul, .notes ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
@@ -87,6 +89,9 @@
   .award.has.insightful:not(.on) svg { color: var(--insightful); }
   .award.has.useful:not(.on) svg { color: var(--useful); }
   .award.own { cursor: default; }
+  .award.on.follows { color: var(--follows); border-color: var(--follows); background: color-mix(in srgb, var(--follows) 12%, transparent); }
+  .award.has.follows:not(.on) svg { color: var(--follows); }
+  .links { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; }
   .linkish { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
   .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 </style>
@@ -256,8 +261,19 @@
             <div class="awards">
               <button class="award insightful has" aria-pressed="false"><svg aria-hidden="true"><use href="#book"/></svg>6 Insightful</button>
               <button class="award useful has on" aria-pressed="true"><svg aria-hidden="true"><use href="#bulb"/></svg>11 Useful</button>
-              <span class="linkish">Report</span>
+              <button class="award follows has" aria-pressed="false"><svg aria-hidden="true"><use href="#eye"/></svg>3 Follow</button>
             </div>
+            <div class="links"><span class="linkish">Report</span><span class="linkish">Report this handle</span></div>
+          </article>
+          <article class="answer">
+            <div class="meta"><span class="who"><span class="handle">TwentyCharHandle_ABC</span><span class="standing"><span class="stat zero"><svg><use href="#book"/></svg>112</span><span class="stat zero"><svg><use href="#bulb"/></svg>139</span></span></span><span>11 Oct 2026</span></div>
+            <p class="muted" style="font-size:13px">Width check — a busy question you follow, with three-digit counts on all three buttons.</p>
+            <div class="awards">
+              <button class="award insightful has" aria-pressed="false"><svg aria-hidden="true"><use href="#book"/></svg>128 Insightful</button>
+              <button class="award useful has" aria-pressed="false"><svg aria-hidden="true"><use href="#bulb"/></svg>214 Useful</button>
+              <button class="award follows has on" aria-pressed="true"><svg aria-hidden="true"><use href="#eye"/></svg>105 Following</button>
+            </div>
+            <div class="links"><span class="linkish">Report</span><span class="linkish">Report this handle</span></div>
           </article>
           <p class="label" style="margin:4px 0 0">7 answers</p>
           <article class="answer">
@@ -266,8 +282,8 @@
             <div class="awards">
               <button class="award insightful has on" aria-pressed="true"><svg aria-hidden="true"><use href="#book"/></svg>9 Insightful</button>
               <button class="award useful has on" aria-pressed="true"><svg aria-hidden="true"><use href="#bulb"/></svg>14 Useful</button>
-              <span class="linkish">Reply</span><span class="linkish">Report</span>
             </div>
+            <div class="links"><span class="linkish">Reply</span><span class="linkish">Report</span><span class="linkish">Report this handle</span></div>
           </article>
           <article class="answer">
             <div class="meta"><span class="who"><span class="handle">NewGrad_Physio</span><span class="standing"><span class="stat zero"><svg><use href="#book"/></svg>0</span><span class="stat zero"><svg><use href="#bulb"/></svg>0</span></span></span><span>3 hours ago</span></div>
@@ -275,8 +291,8 @@
             <div class="awards">
               <button class="award insightful" aria-pressed="false"><svg aria-hidden="true"><use href="#book"/></svg>0 Insightful</button>
               <button class="award useful" aria-pressed="false"><svg aria-hidden="true"><use href="#bulb"/></svg>0 Useful</button>
-              <span class="linkish">Reply</span><span class="linkish">Report</span>
             </div>
+            <div class="links"><span class="linkish">Reply</span><span class="linkish">Report</span><span class="linkish">Report this handle</span></div>
           </article>
           <article class="answer">
             <div class="meta"><span class="who"><span class="handle">You (QuietQuads)</span><span class="standing"><span class="stat zero"><svg><use href="#book"/></svg>12</span><span class="stat zero"><svg><use href="#bulb"/></svg>30</span></span></span><span>5 hours ago</span></div>
@@ -284,13 +300,16 @@
             <div class="awards">
               <span class="award own insightful has"><svg aria-hidden="true"><use href="#book"/></svg>4 Insightful</span>
               <span class="award own useful has"><svg aria-hidden="true"><use href="#bulb"/></svg>2 Useful</span>
-              <span class="linkish">Edit</span><span class="linkish">Delete</span>
             </div>
+            <div class="links"><span class="linkish">Edit</span><span class="linkish">Delete</span></div>
           </article>
         </div>
       </div>
       <div class="notes">
         <ul>
+          <li><strong>The question has a third button, Follow</strong>, in the same style: "3 Follow" until you follow it, then tinted "3 Following". Tap again to unfollow. On your own question you follow automatically, but it stays a button, so you can still mute a busy thread.</li>
+          <li><strong>The three buttons fit on one line on a phone</strong> (measured at a 390px screen). Only when all three reach three digits does Follow drop neatly to a second line — the width-check card shows it.</li>
+          <li><strong>Every text link is on its own line below the buttons</strong> — Reply, Report, Report this handle, Edit, Delete, whichever apply.</li>
           <li><strong>Two buttons, each with its icon, its count and its name</strong> — "6 Insightful", "11 Useful". The names are spelled out here because this is where you choose between them; on the card, the icons alone are enough.</li>
           <li><strong>Tap to award, tap again to take it back</strong>, as with kudos now. Either, both or neither.</li>
           <li><strong>Three states.</strong> Not awarded by you: grey outline, icon in its colour once anyone has awarded it. Awarded by you: tinted in its colour. Your own post: the counts show, but they are not buttons.</li>
