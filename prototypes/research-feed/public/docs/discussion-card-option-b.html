@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discussion Card Option B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Neutrals copied from apps/web/src/app/globals.css so the cards render as the app does.
+     The four stat colours are new, and each is AA for small text in its theme:
+     insightful 7.1:1 / 9.4:1, useful 5.9:1 / 9.5:1, answers 6.7:1 / 9.7:1, follows 7.4:1 / 9.6:1. */
+  :root {
+    --bg: #eef1f4; --surface: #ffffff; --fg: #14212b; --muted: #64757f;
+    --border: #e5ebee; --border-strong: #d7e0e4; --accent: #0b2a55; --case: #0f766e;
+    --insightful: #6d28d9; --useful: #8a5a12; --answers: #1d4ed8; --follows: #a21667;
+    --shadow: 0 1px 2px rgba(20,33,43,.06), 0 4px 16px rgba(20,33,43,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1220; --surface: #111a2b; --fg: #e2e8f0; --muted: #94a3b8;
+      --border: #1e293b; --border-strong: #2b3a52; --accent: #93b4e6; --case: #5eead4;
+      --insightful: #c4b5fd; --useful: #f2b45a; --answers: #93c5fd; --follows: #f9a8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.24);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1220; --surface: #111a2b; --fg: #e2e8f0; --muted: #94a3b8;
+    --border: #1e293b; --border-strong: #2b3a52; --accent: #93b4e6; --case: #5eead4;
+    --insightful: #c4b5fd; --useful: #f2b45a; --answers: #93c5fd; --follows: #f9a8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.24);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 Inter, -apple-system, system-ui, sans-serif; }
+  h1, h2, h3 { font-family: Fraunces, Georgia, serif; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+  .page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; display: flex; flex-direction: column; gap: 28px; }
+  .intro { max-width: 720px; display: flex; flex-direction: column; gap: 10px; }
+  .intro p { margin: 0; }
+  .muted { color: var(--muted); }
+  .toolbar { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+  .toolbar button { font: inherit; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); cursor: pointer; }
+  .key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; }
+  .key span { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+  .key svg { width: 16px; height: 16px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 390px) minmax(0, 1fr); gap: 32px; align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  .phone { width: 100%; max-width: 390px; padding: 16px; background: var(--bg); border: 1px dashed var(--border-strong); border-radius: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .notes { display: flex; flex-direction: column; gap: 18px; font-size: 14px; }
+  .notes ul, .notes ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+  .anatomy { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 13px; }
+  .anatomy dt { font-weight: 600; white-space: nowrap; }
+  .anatomy dd { margin: 0; color: var(--muted); }
+
+  /* --- The card, mirroring PostCard.tsx --- */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; }
+  .card.case { border-color: var(--case); }
+  .card h3 { font-size: 17px; line-height: 1.35; }
+  .snippet { margin: 0; font-size: 14px; color: var(--muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+  .tags li { font-size: 12px; padding: 1px 8px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--muted); }
+  .foot { border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+  .who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .handle { font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .standing { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .stats { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .stat { display: inline-flex; align-items: center; gap: 4px; }
+  .stat svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .standing .stat svg { width: 13px; height: 13px; }
+  .stat.insightful { color: var(--insightful); font-weight: 600; }
+  .stat.useful { color: var(--useful); font-weight: 600; }
+  .stat.answers { color: var(--answers); font-weight: 600; }
+  .stat.follows { color: var(--follows); font-weight: 600; }
+  .stat.zero { color: var(--muted); font-weight: 400; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 6.5C10 5 7 4.5 3 5v13c4-.5 7 0 9 1.5M12 6.5c2-1.5 5-2 9-1.5v13c-4-.5-7 0-9 1.5M12 6.5v13"/>
+  </symbol>
+  <symbol id="bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.8.6 1.1 1.4 1.1 2.2V17h5v-1c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>
+  </symbol>
+  <symbol id="bubble" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 21l1.9-4.5A8.4 8.4 0 0 1 3 11.5a8.5 8.5 0 0 1 9-8.4 8.5 8.5 0 0 1 9 8.4z"/>
+  </symbol>
+  <symbol id="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/>
+  </symbol>
+</svg>
+
+<div class="page">
+  <div class="intro">
+    <p class="label">For review — Adrian, Paul, Andrew · 20 October 2026</p>
+    <h1>Discussion card — Option B, revised</h1>
+    <p>Option B with the changes from Andrew's feedback: the awards are <strong>Insightful</strong> and <strong>Useful</strong>; handles are at most <strong>20 characters</strong>; the author's own totals sit in grey beside the handle; and the card's own numbers, with the date, move to the second line — each in its own colour.</p>
+    <div class="key">
+      <span style="color:var(--insightful)"><svg><use href="#book"/></svg> Insightful</span>
+      <span style="color:var(--useful)"><svg><use href="#bulb"/></svg> Useful</span>
+      <span style="color:var(--answers)"><svg><use href="#bubble"/></svg> Answers</span>
+      <span style="color:var(--follows)"><svg><use href="#eye"/></svg> Following</span>
+      <span class="muted"><svg><use href="#book"/></svg><svg><use href="#bulb"/></svg> The author's totals</span>
+      <span style="color:var(--case)">Teal border = clinical case</span>
+    </div>
+    <div class="toolbar"><span class="muted">Theme:</span>
+      <button onclick="document.documentElement.dataset.theme='light'">Light</button>
+      <button onclick="document.documentElement.dataset.theme='dark'">Dark</button>
+      <button onclick="delete document.documentElement.dataset.theme">Device</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="phone">
+      <!-- An ordinary question. -->
+      <article class="card">
+        <h3>Return-to-run criteria after a grade 2 hamstring strain?</h3>
+        <p class="snippet">Using isometric strength and pain-free sprinting at 90% as my gates. What else are others measuring before the first full session?</p>
+        <ul class="tags"><li>Hamstring Muscle Group</li><li>Return to Sport</li></ul>
+        <div class="foot">
+          <div class="row">
+            <span class="who">
+              <span class="handle">ScrumPhysio</span>
+              <span class="standing">
+                <span class="stat zero"><svg><use href="#book"/></svg>48<span class="sr">ScrumPhysio has 48 insightful</span></span>
+                <span class="stat zero"><svg><use href="#bulb"/></svg>27<span class="sr">and 27 useful</span></span>
+              </span>
+            </span>
+          </div>
+          <div class="row">
+            <span>2 days ago</span>
+            <span class="stats">
+              <span class="stat insightful"><svg><use href="#book"/></svg>6<span class="sr">6 insightful</span></span>
+              <span class="stat useful"><svg><use href="#bulb"/></svg>11<span class="sr">11 useful</span></span>
+              <span class="stat answers"><svg><use href="#bubble"/></svg>7<span class="sr">7 answers</span></span>
+              <span class="stat follows"><svg><use href="#eye"/></svg>3<span class="sr">3 following</span></span>
+            </span>
+          </div>
+        </div>
+      </article>
+
+      <!-- A clinical case, with a handle at the new 20-character maximum. -->
+      <article class="card case">
+        <h3>Medial knee pain in a youth footballer, worse on cutting and pivoting, settles with rest.</h3>
+        <p class="snippet">Tried load management with partial relief. How are others staging return to pivoting in a skeletally immature athlete?</p>
+        <ul class="tags"><li>Knee Ligaments</li><li>Knee Joint</li></ul>
+        <div class="foot">
+          <div class="row">
+            <span class="who">
+              <span class="handle">TwentyCharHandle_ABC</span>
+              <span class="standing">
+                <span class="stat zero"><svg><use href="#book"/></svg>112</span>
+                <span class="stat zero"><svg><use href="#bulb"/></svg>139</span>
+              </span>
+            </span>
+          </div>
+          <div class="row">
+            <span>11 Oct 2026</span>
+            <span class="stats">
+              <span class="stat insightful"><svg><use href="#book"/></svg>2</span>
+              <span class="stat zero"><svg><use href="#bulb"/></svg>0</span>
+              <span class="stat answers"><svg><use href="#bubble"/></svg>3</span>
+              <span class="stat follows"><svg><use href="#eye"/></svg>1</span>
+            </span>
+          </div>
+        </div>
+      </article>
+
+      <!-- A new question from a new member: everything at zero. -->
+      <article class="card">
+        <h3>Anyone using blood flow restriction after ACL reconstruction?</h3>
+        <p class="snippet">Considering it from week two. Interested in protocols and any adverse events you have seen.</p>
+        <ul class="tags"><li>Anterior Cruciate Ligament</li></ul>
+        <div class="foot">
+          <div class="row">
+            <span class="who">
+              <span class="handle">NewGrad_Physio</span>
+              <span class="standing">
+                <span class="stat zero"><svg><use href="#book"/></svg>0</span>
+                <span class="stat zero"><svg><use href="#bulb"/></svg>0</span>
+              </span>
+            </span>
+          </div>
+          <div class="row">
+            <span>12 minutes ago</span>
+            <span class="stats">
+              <span class="stat zero"><svg><use href="#book"/></svg>0</span>
+              <span class="stat zero"><svg><use href="#bulb"/></svg>0</span>
+              <span class="stat zero"><svg><use href="#bubble"/></svg>0</span>
+              <span class="stat zero"><svg><use href="#eye"/></svg>0</span>
+            </span>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="notes">
+      <div>
+        <h2 style="font-size:20px;margin-bottom:8px">The footer, line by line</h2>
+        <dl class="anatomy">
+          <dt>Line 1</dt><dd>Handle, then the author's Insightful and Useful totals — all in grey</dd>
+          <dt>Line 2</dt><dd>Date on the left; this post's Insightful, Useful, Answers and Following on the right, each in its own colour</dd>
+        </dl>
+      </div>
+      <ul>
+        <li><strong>Line 1 is the person; line 2 is this post.</strong> The date moved down because it belongs to the question, not to the author, as you suggested.</li>
+        <li><strong>Grey says "the person", colour says "this post".</strong> The author's totals use the same two icons, but grey and slightly smaller; the post's are in colour. A zero is grey wherever it appears.</li>
+        <li><strong>Everything fits on a phone.</strong> With handles at 20 characters, the longest handle plus three-digit totals fits on line one (the case card above), and line two has room to spare even with a full date.</li>
+        <li><strong>Four colours, all readable.</strong> Insightful violet, Useful amber, Answers blue, Following magenta. Each passes the WCAG AA contrast needed for small text, in light and dark — and each also has its own icon, so nothing depends on colour alone.</li>
+        <li>Teal stays reserved for the clinical-case border, and red for the Ask button, so neither is used for a count.</li>
+      </ul>
+      <div>
+        <h2 style="font-size:20px;margin-bottom:8px">Still to decide</h2>
+        <ol>
+          <li><strong>The case cue.</strong> The teal border alone still fails the "never colour alone" rule. A short "Case" label is the simplest fix.</li>
+          <li><strong>Where you award.</strong> Recommended: inside the discussion only, as now — tappable icons on a card that is itself one big link are easy to mis-tap.</li>
+          <li><strong>How answers are ranked.</strong> By Insightful + Useful combined is the simplest.</li>
+          <li><strong>Following count.</strong> Today the eye only appears when someone is following who has not answered (otherwise it just repeats the answer count). Keep that, or always show it?</li>
+          <li><strong>Style guide.</strong> Gold stops being the single status colour; the guide's kudos rules (§2.1, §2.5, §11) need rewriting to match.</li>
+          <li><strong>Existing 30-character handles.</strong> The new 20-character limit applies to new handles. The pilot clear-down removes every existing handle, so nobody is caught by it.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
