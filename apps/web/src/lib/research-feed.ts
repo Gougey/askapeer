@@ -81,6 +81,8 @@ export type FeedPage = {
   articles: FeedArticle[];
   nextCursor: string | null;
   correctedQuery: string | null;
+  /** How many articles match — on the first page only, null after it. */
+  total: number | null;
 };
 
 /** Search has no ranking `mode` — relevance is the ordering, and it carries a real total. */
@@ -114,7 +116,7 @@ export async function fetchFeed(
   if (cursor) params.set('cursor', cursor);
   const query = params.toString() ? `?${params}` : '';
   const page = await apiGet<FeedPage>(`/research-feed${query}`, token);
-  return page ?? { articles: [], nextCursor: null, correctedQuery: null };
+  return page ?? { articles: [], nextCursor: null, correctedQuery: null, total: null };
 }
 
 /**

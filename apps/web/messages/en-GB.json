@@ -514,7 +514,9 @@
       "other": "Journal article"
     },
     "noMatches": "Nothing matches those criteria. Try widening them.",
-    "corrected": "Nothing matched “{query}”. Showing results for “{corrected}”.",
+    "resultsFor": "{count, plural, one {# article} other {# articles}} found for your search of “{query}”",
+    "resultsAll": "{count, plural, one {# article} other {# articles}} found",
+    "resultsCorrected": "Nothing matched “{query}”. {count, plural, one {# article} other {# articles}} found for “{corrected}” instead.",
     "keywordLabel": "Keyword",
     "keywordPlaceholder": "e.g. hamstring rehabilitation",
     "evidenceLabel": "Type of paper",

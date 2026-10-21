@@ -67,6 +67,8 @@ export type FeedPage = {
    * page, which is also what keeps infinite scroll on the corrected list.
    */
   correctedQuery: string | null;
+  /** How many articles match, on the first page only (null after it). See `list`. */
+  total: number | null;
 };
 
 /**
@@ -163,20 +165,41 @@ export class FeedService {
     filters: FeedFilters = {},
   ): Promise<FeedPage> {
     const offset = Number.parseInt(cursor ?? '0', 10) || 0;
-    return this.withCorrection(filters.query?.trim() ?? '', (query) =>
+    const page = await this.withCorrection(filters.query?.trim() ?? '', (query) =>
       this.rank(offset, limit, { ...filters, query }),
     );
+    /*
+     * The total, for "721 articles found for “Achilles rehabilitation”" (Andrew, 21 October
+     * 2026) — on the first page only, since later pages land under a line that already says it.
+     * Counted for the keyword the page actually matched, so a corrected spelling is counted as
+     * corrected. Exact rather than capped: measured on live at 298,932 articles, the largest
+     * keyword count (physiotherapy, 75,007) took 128ms and the whole corpus 178ms.
+     */
+    const total =
+      offset === 0
+        ? await this.countMatches({
+            ...filters,
+            query: page.correctedQuery ?? filters.query?.trim() ?? '',
+          })
+        : null;
+    return { ...page, total };
   }
 
-  private async rank(
-    offset: number,
-    limit: number,
-    filters: FeedFilters = {},
-  ): Promise<Omit<FeedPage, 'correctedQuery'>> {
-    /*
-     * The narrowing clauses. Each is absent unless asked for, so an unfiltered feed runs
-     * exactly the query it ran before any of this existed.
-     */
+  /** How many articles the panel's criteria match — the same narrowing `rank` applies. */
+  private async countMatches(filters: FeedFilters): Promise<number> {
+    const { rows } = await this.db.execute<{ n: string }>(sql`
+      select count(*) as n from research.articles a
+       where a.retracted_at is null
+       ${this.narrowing(filters)}
+    `);
+    return Number(rows[0]?.n ?? 0);
+  }
+
+  /**
+   * The panel's narrowing clauses, shared by the ranked page and its count so the two can never
+   * disagree about what matched. Each is absent unless asked for.
+   */
+  private narrowing(filters: FeedFilters) {
     const query = filters.query?.trim() ?? '';
     const keyword =
       query === '' ? sql`` : sql`and a.tsv @@ websearch_to_tsquery('english', ${query})`;
@@ -184,14 +207,19 @@ export class FeedService {
     /*
      * A *relative* period, resolved here rather than stored as dates — which is the whole
      * reason it is a number of years (see the `feed_preferences` migration).
-     *
-     * ⚠️ It cannot discriminate yet: every article in the corpus is from 2026, because the
-     * ingest began in August and only fetches forward. The clause is right and the data is
-     * not, until there is a backfill.
      */
     const period = filters.periodYears
       ? sql`and a.published_date >= now() - (${filters.periodYears} * interval '1 year')`
       : sql``;
+    return sql`${keyword} ${evidence} ${period}`;
+  }
+
+  private async rank(
+    offset: number,
+    limit: number,
+    filters: FeedFilters = {},
+  ): Promise<Omit<FeedPage, 'correctedQuery' | 'total'>> {
+    const query = filters.query?.trim() ?? '';
 
     /*
      * **The default ordering — "Recommended".** Evidence weight, a gentle recency decay, and
@@ -281,9 +309,7 @@ export class FeedService {
              ) as tags
         from research.articles a
        where a.retracted_at is null
-         ${keyword}
-         ${evidence}
-         ${period}
+         ${this.narrowing(filters)}
        order by ${ordering}, a.id desc
        limit ${limit + 1} offset ${offset}
     `);

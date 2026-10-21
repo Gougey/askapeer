@@ -159,14 +159,33 @@ export default async function FeedPage({
       ) : (
         <>
           {/*
-            The keyword as typed found nothing and its corrected spelling did. Said once, above
-            the list, because the panel still holds what the member typed — and keeps it, so
-            the remembered criteria are theirs rather than ours. Later pages need nothing: the
-            API re-derives the same correction for every one.
+            What was searched, and what it found (Andrew, 21 October 2026): "721 articles found
+            for your search of “Achilles rehabilitation”". Once Apply folds the panel away the
+            keyword is no longer on screen, so this line is the only place it is restated — with
+            the type of paper and period too, which the folded panel hides as well.
+
+            A corrected spelling says so here, in the same line: the panel keeps what the member
+            typed (so the remembered criteria are theirs), and the count is of the corrected
+            search the list actually shows. `total` is on the first page only; a no-JS ?cursor
+            page simply has no line.
           */}
-          {page.correctedQuery && filters.q && (
+          {page.total !== null && (
             <p className="text-sm" style={{ color: 'var(--color-muted)' }} aria-live="polite">
-              {t('corrected', { query: filters.q, corrected: page.correctedQuery })}
+              {[
+                page.correctedQuery && filters.q
+                  ? t('resultsCorrected', {
+                      count: page.total,
+                      query: filters.q,
+                      corrected: page.correctedQuery,
+                    })
+                  : filters.q
+                    ? t('resultsFor', { count: page.total, query: filters.q })
+                    : t('resultsAll', { count: page.total }),
+                filters.evidence ? t(`evidence.${filters.evidence}`) : null,
+                filters.years ? t('periodYears', { count: filters.years }) : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </p>
           )}
           <InfiniteList
