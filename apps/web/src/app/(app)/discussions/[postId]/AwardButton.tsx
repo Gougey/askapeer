@@ -28,7 +28,8 @@ export function AwardButton({
   own = false,
 }: {
   kind: Kind;
-  target: 'post' | 'comment';
+  /** Answers only (21 October 2026): questions are recognised by Follow, not awards. */
+  target: 'comment';
   targetId: string;
   initialCount: number;
   initialAwarded: boolean;

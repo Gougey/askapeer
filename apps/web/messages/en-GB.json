@@ -581,7 +581,7 @@
     "navResearch": "Research — recent sports medicine and physiotherapy papers. Set a keyword, the type of paper and how far back to look, and save anything you want to come back to.",
     "navActivity": "Activity — replies to your posts, the Insightful and Useful awards you have received, and discussions you follow.",
     "navProfile": "Profile — your handle, your Insightful and Useful totals, and your settings.",
-    "kudos": "When a question or an answer helps you, recognise it with one or both of two awards: Insightful (the book) when it changes how you think, and Useful (the lightbulb) when it helps you in practice. Answers are ranked by the two together, so the most valuable rise to the top. The grey numbers beside a handle are that member's own totals.",
+    "kudos": "When an answer helps you, recognise it with one or both of two awards: Insightful (the book) when it changes how you think, and Useful (the lightbulb) when it helps you in practice. Answers are ranked by the two together, so the most valuable rise to the top. A good question shows in how many people follow it. The grey numbers beside a handle are that member's own totals.",
     "searchTip": "The magnifying glass at the top searches both discussions and research papers at once.",
     "step6Title": "Tell us what you think",
     "step6Body": "This is a pilot, and your feedback shapes what happens next. If something is confusing, broken or missing, reply to your invitation email and tell us.",
@@ -589,7 +589,7 @@
     "shotCode": "Entering the six-digit code",
     "shotHandle": "Choosing a handle",
     "shotDiscussions": "The Discussions tab",
-    "shotThread": "A discussion: award Insightful or Useful, and follow it",
+    "shotThread": "A discussion: follow the question, and award its answers Insightful or Useful",
     "shotResearch": "The Research tab",
     "footer": "Askapeer — The No Ego Sports Medicine Network"
   }

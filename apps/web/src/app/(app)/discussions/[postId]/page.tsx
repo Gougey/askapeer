@@ -101,29 +101,12 @@ export default async function ThreadPage({ params }: { params: Promise<{ postId:
         )}
         <TagList tags={post.tags} />
         {/*
-          The question's three pills (Option B, 20 October 2026): Insightful, Useful and
-          Follow, each with icon, count and word. They fit on one line at 390px and wrap
-          cleanly when they do not. The author sees the two awards as counts, not buttons —
-          a handle cannot award itself — but Follow stays a button, so a busy thread of your
-          own can still be muted.
+          The question has Follow only. Insightful and Useful are awarded to answers, not
+          questions (Adrian and Andrew, 21 October 2026): they say whether something helped
+          you, and the signal for a good question is wanting to know the answer too. Follow
+          stays a button for the author as well, so a busy thread of your own can be muted.
         */}
         <div className="flex flex-wrap items-center gap-2">
-          <AwardButton
-            kind="insightful"
-            target="post"
-            targetId={post.id}
-            initialCount={post.insightfulCount}
-            initialAwarded={viewerContext.hasInsightfulPost}
-            own={viewerContext.isAuthor}
-          />
-          <AwardButton
-            kind="useful"
-            target="post"
-            targetId={post.id}
-            initialCount={post.usefulCount}
-            initialAwarded={viewerContext.hasUsefulPost}
-            own={viewerContext.isAuthor}
-          />
           <FollowButton
             postId={post.id}
             initialFollowing={viewerContext.isFollowing}

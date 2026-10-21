@@ -5,7 +5,8 @@ import { redirect } from 'next/navigation';
 import { API_ORIGIN } from '@/lib/api';
 import { getAccessToken } from '@/lib/session';
 
-type KudosTarget = 'post' | 'comment';
+/** Answers only — the API has no award routes for questions (migration 0059). */
+type KudosTarget = 'comment';
 type KudosKind = 'insightful' | 'useful';
 /** A target's kudos after a toggle: both kinds, and which the caller now holds. */
 export type KudosResult = {
@@ -34,7 +35,7 @@ export async function toggleKudosAction(
   currentlyAwarded: boolean,
 ): Promise<KudosResult> {
   const token = await authedToken();
-  const path = `${target === 'post' ? 'posts' : 'comments'}/${targetId}/kudos/${kind}`;
+  const path = `comments/${targetId}/kudos/${kind}`;
   const res = await fetch(`${API_ORIGIN}/v1/${path}`, {
     method: currentlyAwarded ? 'DELETE' : 'POST',
     headers: { Authorization: `Bearer ${token}` },

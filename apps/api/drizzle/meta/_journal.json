@@ -414,6 +414,13 @@
       "when": 1789513200438,
       "tag": "0058_kudos_notifications_get_a_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1789516800438,
+      "tag": "0059_awards_on_answers_only",
+      "breakpoints": true
     }
   ]
 }

@@ -96,9 +96,11 @@ export async function PostCard({ post }: { post: PostCardDto }) {
         {/*
           Two lines, because they answer different questions (Option B). The first is the
           person: the handle and their standing, in grey. The second is this post: when it was
-          asked, and how it has done — Insightful, Useful, answers and following, each in its
-          own colour, grey at zero. Icons and numbers only, in tabular figures so they line up
-          down a scrolling list.
+          asked, then its answers and following, each in its own colour, grey at zero. Icons
+          and numbers only, in tabular figures so they line up down a scrolling list.
+
+          No Insightful or Useful here: those are awarded to answers only (Adrian and Andrew,
+          21 October 2026). A question's worth shows in how many people follow it.
         */}
         <span
           className="flex flex-col gap-1.5 border-t pt-2 text-xs"
@@ -116,8 +118,9 @@ export async function PostCard({ post }: { post: PostCardDto }) {
 }
 
 /**
- * The post's four counts. Every one is always shown — grey at zero, in its colour once it is
- * above zero (Adrian, 20 October) — so a card never changes shape as a discussion fills up.
+ * The post's two counts, answers and following. Both are always shown — grey at zero, in
+ * their colour once above zero (Adrian, 20 October) — so a card never changes shape as a
+ * discussion fills up.
  *
  * Following is the eye: everyone following the discussion except its author. See
  * `watcherCountSql` in the API.
@@ -126,8 +129,6 @@ async function PostStats({ post }: { post: PostCardDto }) {
   const t = await getTranslations('discussions');
   return (
     <span className="flex shrink-0 items-center gap-3" style={{ fontVariantNumeric: 'tabular-nums' }}>
-      <Stat kind="insightful" count={post.insightfulCount} label={t('insightful', { count: post.insightfulCount })} />
-      <Stat kind="useful" count={post.usefulCount} label={t('useful', { count: post.usefulCount })} />
       <Stat kind="answers" count={post.answerCount} label={t('answersCount', { count: post.answerCount })} />
       <Stat kind="follows" count={post.watcherCount} label={t('followingCount', { count: post.watcherCount })} />
     </span>

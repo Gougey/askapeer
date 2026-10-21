@@ -581,6 +581,8 @@ async function main(): Promise<void> {
   };
 
   let answerCount = 0;
+  // Awards are for answers only (migration 0059), so the answers are what the seed awards.
+  const answersMade: { id: string; authorId: string }[] = [];
   for (const [i, post] of made.entries()) {
     // Deliberately uneven: every fifth thread stays unanswered so the empty state is real.
     const n = i % 5 === 0 ? 0 : Math.floor(rand() * 6) + 1;
@@ -592,6 +594,7 @@ async function main(): Promise<void> {
         .values({ postId: post.id, handleId: author.id, body: pick(ANSWERS), createdAt })
         .returning({ id: comments.id });
       answerCount++;
+      answersMade.push({ id: answer.id, authorId: author.id });
       await addKudos('comment', answer.id, author.id, Math.floor(rand() * 7));
 
       // A nested reply on roughly a third of answers, so the ranked-thread layout has
@@ -608,14 +611,13 @@ async function main(): Promise<void> {
         answerCount++;
       }
     }
-    await addKudos('post', post.id, post.authorId, Math.floor(rand() * 9));
   }
   console.log(`${answerCount} answers and replies.`);
 
   // Concentrate kudos on three handles so at least one clears the badge floor (50).
   for (const star of authors.slice(0, 3)) {
-    const theirPosts = made.filter((m) => m.authorId === star.id).slice(0, 6);
-    for (const p of theirPosts) await addKudos('post', p.id, star.id, 8);
+    const theirAnswers = answersMade.filter((m) => m.authorId === star.id).slice(0, 8);
+    for (const a of theirAnswers) await addKudos('comment', a.id, star.id, 8);
   }
 
   // Authoritative totals in Postgres…

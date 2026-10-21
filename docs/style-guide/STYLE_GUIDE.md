@@ -630,8 +630,8 @@ The primary content container. `--color-surface`, `1px --color-border`,
 - **Discussion card** (Option B, 20 October 2026) — title (with the teal cross
   for a case, whose card also has a teal border) · snippet · tags · a two-line
   footer. Line 1: the handle and the author's grey Insightful and Useful totals.
-  Line 2: the date, then the post's Insightful, Useful, answers and following,
-  icons and numbers only, always all four.
+  Line 2: the date, then the post's answers and following, icons and numbers
+  only, always both. No awards on the card: they are given to answers only.
 - **Answer card** — inside a thread; author row, body, the Insightful and Useful
   buttons, then the text links (Reply, Report, Report this handle, Edit, Delete)
   on their own line. The
@@ -653,7 +653,9 @@ Sizes sm/default/lg.
 ### 8.6 Kudos controls — Insightful and Useful
 
 The product's signature interactive elements. Two independent awards: anyone but
-the author may give either, both or neither to a question or an answer.
+the author may give either, both or neither to an **answer**. Questions and cases
+are not awarded (Adrian and Andrew, 21 October 2026) — the awards say whether
+something helped you, and a good question shows in how many people follow it.
 
 - **Anatomy:** pill button, icon + count + word — "6 Insightful", "11 Useful". The
   word is spelled out here because this is where a member chooses between them; on
@@ -662,7 +664,7 @@ the author may give either, both or neither to a question or an answer.
   has awarded it) → awarded by you (its `-tint` background, border and text in its
   colour). Toggling updates the count instantly. **Your own post:** the same pill
   without button behaviour.
-- **Follow** on a question is the same pill: eye + count + "Follow", tinted
+- **Follow** is the question's only pill: eye + count + "Follow", tinted
   "Following" once you follow.
 - Read-only counts (cards, My Q&A) = icon + number, coloured above zero, grey at zero.
 - **Accessibility:** label as "Mark as insightful" / "Mark as useful" with the count;
@@ -1081,6 +1083,7 @@ of changing the values, not the markup — matching the intent already stated in
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3.1 | 2026-10-21 | **Awards on answers only.** Insightful and Useful are no longer given to questions or cases; the card's second line is the date, answers and following; the question keeps Follow alone. §8.3, §8.6. |
 | 0.3 | 2026-10-20 | **Two kinds of kudos.** The gold star becomes **Insightful** (book) and **Useful** (lightbulb); the card footer becomes two lines (person, then post); four stat colours with tints replace "kudos gold is the one status colour"; a teal cross marks a clinical case; handles are capped at 20 characters. §0.1, §1.4, §2.1, §2.5, §6, §8.3, §8.4, §8.6, §8.13, §8.14, §9, §10, §11. |
 | 0.2 | 2026-07-25 | **Editorial typography pass.** Introduced a **Fraunces** (serif display) + **Inter** (sans text/UI) pairing for a WHO/Rolex register; added the eyebrow → serif title → accent-keyline pattern (§3.4) and a confident type scale. Updated §3, §12 tokens, and the live showcase. Palette, components and safety patterns unchanged — a theming pass, not a redesign. |
 | 0.1 | 2026-07-25 | Initial style guide & design system: foundations, colour, type, spacing, elevation, iconography, motion, component library, accessibility, voice & tone, anonymity/safety UX, and token reference. Codifies the mobile look-and-feel prototype. |
