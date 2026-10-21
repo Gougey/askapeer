@@ -48,7 +48,7 @@ export const handles = community.table(
     insightfulTotal: integer('insightful_total').notNull().default(0),
     usefulTotal: integer('useful_total').notNull().default(0),
     /**
-     * Both kinds together — what answers are ranked by and the leaderboard holds. Computed by
+     * Both kinds together — what answers are ranked by. Computed by
      * Postgres, so it cannot drift from its parts, and Drizzle refuses a write to it: change
      * `insightfulTotal` or `usefulTotal` instead.
      */

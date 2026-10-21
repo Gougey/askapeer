@@ -1643,10 +1643,9 @@ against a flat distribution</td>
 <td>Same reason</td>
 </tr>
 <tr>
-<td>One handle well past 50 kudos</td>
-<td><code>DEFAULT_MIN_KUDOS</code> is 50 — the leaderboard’s badge
-threshold, kept meaningful in the corpus even though the badge itself is
-currently withdrawn from the UI</td>
+<td>A few handles with high standing</td>
+<td>So the grey author totals beside a handle vary visibly across the
+corpus</td>
 </tr>
 <tr>
 <td>Unanswered threads, zero-kudos posts</td>
@@ -1673,11 +1672,12 @@ told. That tolerance hides typos, so if a tag you expect is missing from
 the corpus, check the name really exists (<code>Knee Joint</code>, not
 <code>Knee</code>; <code>Achilles tendinopathy</code>, not
 <code>Achilles tendon</code>).</p>
-<p>It syncs <code>handles.kudos_total</code> <strong>and</strong> the
-Redis <code>kudos:leaderboard</code> ZSET. Skipping the second is the
-dual-store trap: every profile would show the right total while
-everything derived from the ranking — the top-contributor badge, when it
-returns — stayed empty.</p>
+<p>It writes each handle’s <code>insightful_total</code> and
+<code>useful_total</code> (and so the generated
+<code>kudos_total</code>). It no longer touches Redis: the
+<code>kudos:leaderboard</code> mirror was removed with the
+top-contributor badge in October 2026, so Postgres is the only store of
+standing.</p>
 <h2 id="design-tokens">Design tokens</h2>
 <p><code>packages/design-tokens</code> is the source of truth for
 colour, type <strong>and geometry</strong> values (spacing, layout,
@@ -1896,8 +1896,8 @@ keeps those recoverable.</strong></p>
 <code>community.*</code> except <code>tags</code> and
 <code>categories</code>, and <code>research.saved_articles</code>. Also
 the <code>verification</code> and <code>notifications</code> queues, and
-Redis <code>kudos:*</code>, which holds the leaderboard (the dual-store
-trap).</li>
+Redis <code>kudos:*</code> — the retired leaderboard’s leftover key, if
+it is still there.</li>
 <li><strong>Kept:</strong> <code>research.*</code> (articles, their
 tags, ingestion and backfill state, the spelling dictionary),
 <code>community.tags</code> and <code>categories</code>, and all of
@@ -2520,10 +2520,10 @@ target one of each, so the unique index is
 <code>(target_type, target_id, given_by_handle_id, kind)</code>.</li>
 <li><strong><code>handles.kudos_total</code> is generated</strong> as
 <code>insightful_total + useful_total</code>. It still serves answer
-ranking (by the combined score, as agreed), the Redis leaderboard and
-the profile. Write the per-kind totals instead: Drizzle’s types make a
-write to <code>kudosTotal</code> a compile error, which is how award,
-retract and the moderation clawback were all found.</li>
+ranking (by the combined score, as agreed) and the profile. Write the
+per-kind totals instead: Drizzle’s types make a write to
+<code>kudosTotal</code> a compile error, which is how award, retract and
+the moderation clawback were all found.</li>
 <li><strong>Existing kudos were split at random</strong> between the two
 kinds, because all of it was test data (Adrian, 20 October). The
 per-kind totals were recomputed from the rows, and locally they summed
@@ -2534,6 +2534,12 @@ to exactly the old totals (977 = 488 + 489).</li>
 <code>insightfulCount</code> / <code>usefulCount</code> beside
 <code>kudosCount</code> (their sum), and <code>AuthorBlock</code>
 carries <code>insightfulTotal</code> / <code>usefulTotal</code>.</li>
+<li><strong>No Redis leaderboard</strong> (removed October 2026). It
+mirrored each member’s total for the top-contributor badge, which was
+withdrawn in August, so it was written on every award and read by
+nothing — and drifted once 0057 and 0059 recomputed totals in Postgres
+alone. If kudos “levels” come back, read the totals from Postgres; there
+is no second store to keep in step.</li>
 <li><strong>Routes are per kind only.</strong> The un-kinded
 <code>/posts/:id/kudos</code> routes were removed in the same change,
 because the API and the screens shipped together.

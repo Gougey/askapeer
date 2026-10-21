@@ -4,7 +4,6 @@ import { JwtConfigModule } from '../auth/jwt-config.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SettingsModule } from '../settings/settings.module';
 import { SpellingModule } from '../search/spelling.module';
-import { BadgeService } from './badge.service';
 import { CommentsController } from './comments.controller';
 import { CommentsService } from './comments.service';
 import { FollowsController } from './follows.controller';
@@ -21,8 +20,9 @@ import { VocabularyService } from './vocabulary.service';
 
 /**
  * EPIC-C forum + EPIC-D kudos (S4 + S5). Posting, listing and threads (S4); answering,
- * kudos and ranking (S5). RedisModule is global, so the kudos leaderboard needs no
- * explicit import here.
+ * kudos and ranking (S5). Members' kudos totals live in Postgres only: the Redis
+ * leaderboard that once mirrored them for the top-contributor badge was removed with the
+ * badge (October 2026), so there is no second store to keep in step.
  *
  * Follows (S15) live here rather than in a module of their own: the write path is
  * EPIC-B's by ownership, but every read joins `posts` and returns the forum's card DTO,
@@ -31,7 +31,7 @@ import { VocabularyService } from './vocabulary.service';
 @Module({
   imports: [
     JwtConfigModule, // JwtAuthGuard verifies the access token
-    SettingsModule, // AppAccessGuard's paywall read + the badge threshold settings
+    SettingsModule, // AppAccessGuard's paywall read
     SpellingModule, // corrects a search that came back empty
   ],
   controllers: [
@@ -47,7 +47,6 @@ import { VocabularyService } from './vocabulary.service';
     PostsService,
     CommentsService,
     KudosService,
-    BadgeService,
     VocabularyService,
     SearchService,
     FollowsService,

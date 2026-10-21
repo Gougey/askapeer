@@ -3,7 +3,6 @@ import { and, eq, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { comments, handles, kudos, posts, type KudosKind } from '../db/schema';
 import { NotificationEvents } from '../notifications/notifications.queue';
-import { BadgeService } from './badge.service';
 
 export type KudosTarget = 'post' | 'comment';
 /** A target's kudos after an award or a retraction: both kinds' counts, and which the caller holds. */
@@ -25,7 +24,6 @@ type TargetRef = { authorHandleId: string; published: boolean } | undefined;
 export class KudosService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
-    private readonly badge: BadgeService,
     private readonly events: NotificationEvents,
   ) {}
 
@@ -69,13 +67,10 @@ export class KudosService {
       return row.kudosTotal;
     });
 
-    // Leaderboard mirrors the authoritative total, outside the DB transaction (§6).
     if (newTotal !== undefined) {
-      await this.badge.setScore(ref.authorHandleId, newTotal);
-      // Both of these hang off `newTotal !== undefined` for the same reason: it is
-      // undefined exactly when the insert was a no-op — the repeat tap EPIC-D §3 makes
-      // silent. A repeat tap that notified would turn an idempotent action into a way
-      // to badger someone.
+      // `newTotal` is undefined exactly when the insert was a no-op — the repeat tap EPIC-D
+      // §3 makes silent. A repeat tap that notified would turn an idempotent action into a
+      // way to badger someone.
       await this.events.kudosAwarded(target, targetId, viewerHandleId, kind);
     }
     return this.stateFor(target, targetId, viewerHandleId);
@@ -95,7 +90,7 @@ export class KudosService {
     const ref = await this.resolveTarget(target, targetId);
     if (!ref) throw new NotFoundException(`No such ${target}.`);
 
-    const newTotal = await this.db.transaction(async (tx) => {
+    await this.db.transaction(async (tx) => {
       const deleted = await tx
         .delete(kudos)
         .where(
@@ -107,16 +102,13 @@ export class KudosService {
           ),
         )
         .returning({ id: kudos.id });
-      if (deleted.length === 0) return undefined;
-      const [row] = await tx
+      if (deleted.length === 0) return;
+      await tx
         .update(handles)
         .set({ [TOTAL_KEY[kind]]: sql`greatest(${TOTAL[kind]} - 1, 0)` })
-        .where(eq(handles.id, ref.authorHandleId))
-        .returning({ kudosTotal: handles.kudosTotal });
-      return row.kudosTotal;
+        .where(eq(handles.id, ref.authorHandleId));
     });
 
-    if (newTotal !== undefined) await this.badge.setScore(ref.authorHandleId, newTotal);
     return this.stateFor(target, targetId, viewerHandleId);
   }
 

@@ -2,7 +2,7 @@
  * Rebuild the demo corpus: wipe community content, insert a fresh, realistic one.
  *
  * Run:  npm run seed:demo -w apps/api            (local)
- *       DATABASE_URL=… REDIS_URL=… npm run seed:demo -w apps/api   (any other environment)
+ *       DATABASE_URL=… npm run seed:demo -w apps/api   (any other environment)
  *
  * **This deletes every post, answer, kudos, report and moderation action.** It does *not*
  * touch `identity.members`, `community.handles`, the categories, or the 588-node clinical
@@ -35,7 +35,6 @@ import * as dotenv from 'dotenv';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import Redis from 'ioredis';
 import {
   caseAttestations,
   caseDetails,
@@ -360,8 +359,6 @@ async function main(): Promise<void> {
       process.env.DATABASE_URL ?? 'postgres://askapeer:askapeer@localhost:5432/askapeer',
   });
   const db = drizzle(pool);
-  const redisUrl = process.env.REDIS_URL;
-  const redis = redisUrl ? new Redis(redisUrl, { maxRetriesPerRequest: 2 }) : null;
 
   // ---- wipe content, keep accounts and vocabulary -------------------------------------
   // Order matters only where a FK has no cascade; posts cascade to case_details/post_tags.
@@ -614,7 +611,7 @@ async function main(): Promise<void> {
   }
   console.log(`${answerCount} answers and replies.`);
 
-  // Concentrate kudos on three handles so at least one clears the badge floor (50).
+  // Concentrate kudos on three handles, so the corpus has some members with high standing.
   for (const star of authors.slice(0, 3)) {
     const theirAnswers = answersMade.filter((m) => m.authorId === star.id).slice(0, 8);
     for (const a of theirAnswers) await addKudos('comment', a.id, star.id, 8);
@@ -626,17 +623,6 @@ async function main(): Promise<void> {
       .update(handles)
       .set({ insightfulTotal: t.insightful, usefulTotal: t.useful })
       .where(sql`${handles.id} = ${handleId}`);
-  }
-  // …mirrored into the Redis leaderboard the badge reads. Skipping this is the dual-store
-  // trap: totals would look right on every profile while no badge ever appeared.
-  if (redis) {
-    await redis.del('kudos:leaderboard');
-    for (const [handleId, t] of kudosTally) {
-      await redis.zadd('kudos:leaderboard', t.insightful + t.useful, handleId);
-    }
-    console.log(`Kudos leaderboard synced for ${kudosTally.size} handles.`);
-  } else {
-    console.warn('REDIS_URL not set — leaderboard NOT synced, so no top-contributor badges.');
   }
   const sums = [...kudosTally.values()].map((t) => t.insightful + t.useful);
   const insightful = [...kudosTally.values()].reduce((a, t) => a + t.insightful, 0);
@@ -686,7 +672,6 @@ async function main(): Promise<void> {
   console.log(`\nDone. ${count} posts total.`);
 
   await pool.end();
-  if (redis) await redis.quit();
 }
 
 main().catch((err) => {
