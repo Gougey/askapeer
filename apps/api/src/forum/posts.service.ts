@@ -39,7 +39,7 @@ const SNIPPET_LENGTH = 200;
 export type AuthorBlock = {
   handleId: string;
   handleName: string;
-  /** Both kinds together; ranking and the leaderboard use it. */
+  /** Both kinds together; answer ranking uses it. */
   kudosTotal: number;
   /** The author's standing by kind (migration 0057) — shown in grey beside the handle. */
   insightfulTotal: number;

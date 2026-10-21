@@ -1102,7 +1102,7 @@ volume, and each property is there for a reason worth keeping if you edit it:
 | Both "ACL" and "anterior cruciate ligament"; "patellofemoral" and "runner's knee" | EPIC-C §4's planned synonym dictionary has nothing to prove against a corpus using one form |
 | Tags on 7 posts down to 1, and many on none | A filter that silently ignores its argument still looks right against a flat distribution |
 | Uneven categories (General 30 … Equipment 7) | Same reason |
-| One handle well past 50 kudos | `DEFAULT_MIN_KUDOS` is 50 — the leaderboard's badge threshold, kept meaningful in the corpus even though the badge itself is currently withdrawn from the UI |
+| A few handles with high standing | So the grey author totals beside a handle vary visibly across the corpus |
 | Unanswered threads, zero-kudos posts | An empty state is a state |
 
 **Every active handle takes part, real ones first** — the founders included. They had
@@ -1121,9 +1121,9 @@ without this file being told. That tolerance hides typos, so if a tag you expect
 missing from the corpus, check the name really exists (`Knee Joint`, not `Knee`;
 `Achilles tendinopathy`, not `Achilles tendon`).
 
-It syncs `handles.kudos_total` **and** the Redis `kudos:leaderboard` ZSET. Skipping the
-second is the dual-store trap: every profile would show the right total while everything
-derived from the ranking — the top-contributor badge, when it returns — stayed empty.
+It writes each handle's `insightful_total` and `useful_total` (and so the generated
+`kudos_total`). It no longer touches Redis: the `kudos:leaderboard` mirror was removed with
+the top-contributor badge in October 2026, so Postgres is the only store of standing.
 
 ## Design tokens
 
@@ -1281,7 +1281,7 @@ immutable. **The backup taken first is what keeps those recoverable.**
 
 - **Cleared:** all of `identity.*`, all of `community.*` except `tags` and `categories`, and
   `research.saved_articles`. Also the `verification` and `notifications` queues, and Redis
-  `kudos:*`, which holds the leaderboard (the dual-store trap).
+  `kudos:*` — the retired leaderboard's leftover key, if it is still there.
 - **Kept:** `research.*` (articles, their tags, ingestion and backfill state, the spelling
   dictionary), `community.tags` and `categories`, and all of `config.*`, including the
   invitation list and `admin_audit_log`. The audit log's `actor_member_id` will point at member
@@ -1750,7 +1750,7 @@ the "Discussion Card — Option B, Revised" page on the docs site.
 - **A kudos row has a `kind`** (`insightful` | `useful`). A handle may give a target one of each,
   so the unique index is `(target_type, target_id, given_by_handle_id, kind)`.
 - **`handles.kudos_total` is generated** as `insightful_total + useful_total`. It still serves
-  answer ranking (by the combined score, as agreed), the Redis leaderboard and the profile. Write
+  answer ranking (by the combined score, as agreed) and the profile. Write
   the per-kind totals instead: Drizzle's types make a write to `kudosTotal` a compile error, which
   is how award, retract and the moderation clawback were all found.
 - **Existing kudos were split at random** between the two kinds, because all of it was test data
@@ -1759,6 +1759,10 @@ the "Discussion Card — Option B, Revised" page on the docs site.
 - **Routes:** `POST|DELETE /posts/:id/kudos/:kind` and `/comments/:id/kudos/:kind`. Every read
   DTO carries `insightfulCount` / `usefulCount` beside `kudosCount` (their sum), and `AuthorBlock`
   carries `insightfulTotal` / `usefulTotal`.
+- **No Redis leaderboard** (removed October 2026). It mirrored each member's total for the
+  top-contributor badge, which was withdrawn in August, so it was written on every award and
+  read by nothing — and drifted once 0057 and 0059 recomputed totals in Postgres alone. If kudos
+  "levels" come back, read the totals from Postgres; there is no second store to keep in step.
 - **Routes are per kind only.** The un-kinded `/posts/:id/kudos` routes were removed in the same
   change, because the API and the screens shipped together. `kudosCount` / `hasKudosed` stay on
   read DTOs as the combined score and "either", which ranking and the edit window use.

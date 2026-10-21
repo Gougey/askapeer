@@ -21,7 +21,6 @@ import {
 } from '../db/schema';
 import { isUniqueViolation } from '../db/pg-errors';
 import { NotificationEvents } from '../notifications/notifications.queue';
-import { BadgeService } from '../forum/badge.service';
 import { findBlocklistMatch, isValidFormat } from '../handles/handle-name';
 import { VerificationService } from '../verification/verification.service';
 import type { ModerationActionDto } from './moderation.dto';
@@ -66,7 +65,6 @@ export type ReportQueueItem = {
 export class ModerationService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
-    private readonly badge: BadgeService,
     private readonly verification: VerificationService,
     private readonly events: NotificationEvents,
   ) {}
@@ -115,13 +113,11 @@ export class ModerationService {
         if (report.targetType === 'handle') {
           throw new BadRequestException('remove_content applies to a post or comment, not a handle.');
         }
-        const { authorHandleId, actionId, clawed } = await this.removeContent(
+        const { authorHandleId, actionId } = await this.removeContent(
           report,
           moderatorId,
           dto.reason,
         );
-        // Leaderboard mirrors the authoritative total, outside the DB transaction (EPIC-D §6).
-        if (clawed) await this.badge.setScore(clawed.handleId, clawed.total);
         // Removal is the one action whose effect a member could otherwise only discover by
         // noticing their own post had vanished — and any kudos it earned went with it.
         await this.events.accountNotice(
@@ -474,7 +470,7 @@ export class ModerationService {
     report: ReportRow,
     moderatorId: string,
     reason: string | undefined,
-  ): Promise<{ authorHandleId: string; actionId: string; clawed: { handleId: string; total: number } | null }> {
+  ): Promise<{ authorHandleId: string; actionId: string }> {
     // Narrowed: `act` rejects a handle target before calling here, so this is post|comment
     // — which is exactly the `kudos.target_type` domain.
     const contentType: 'post' | 'comment' = report.targetType === 'post' ? 'post' : 'comment';
@@ -492,20 +488,17 @@ export class ModerationService {
         .delete(kudos)
         .where(and(eq(kudos.targetType, contentType), eq(kudos.targetId, report.targetId)))
         .returning({ id: kudos.id, kind: kudos.kind });
-      let clawed: { handleId: string; total: number } | null = null;
       if (removed.length > 0) {
         // Each kind comes back off its own total (0057); `kudos_total` is their sum.
         const insightful = removed.filter((r) => r.kind === 'insightful').length;
         const useful = removed.length - insightful;
-        const [row] = await tx
+        await tx
           .update(handles)
           .set({
             insightfulTotal: sql`greatest(${handles.insightfulTotal} - ${insightful}, 0)`,
             usefulTotal: sql`greatest(${handles.usefulTotal} - ${useful}, 0)`,
           })
-          .where(eq(handles.id, content.handleId))
-          .returning({ kudosTotal: handles.kudosTotal });
-        clawed = { handleId: content.handleId, total: row.kudosTotal };
+          .where(eq(handles.id, content.handleId));
       }
 
       const [action] = await tx
@@ -529,7 +522,7 @@ export class ModerationService {
             eq(reports.status, 'open'),
           ),
         );
-      return { authorHandleId: content.handleId, actionId: action.id, clawed };
+      return { authorHandleId: content.handleId, actionId: action.id };
     });
   }
 
