@@ -1765,9 +1765,13 @@ the "Discussion Card — Option B, Revised" page on the docs site.
 - **The kudos notification carries `kind`, and its dedupe key includes it**, so Insightful and
   then Useful from the same member are two notices rather than one swallowed.
 - **Screens** (same change): the card is Option B (handle and grey author totals, then the date
-  and the post's four counts, always shown, grey at zero); the thread's question has Insightful,
-  Useful and Follow pills, answers the two awards, and every text link sits on its own line; a
-  case has a teal border and a teal cross. Icons and colours live in `components/StatIcons.tsx`,
+  and the post's counts, always shown, grey at zero); answers carry the two award pills, and
+  every text link sits on its own line; a case has a teal border and a teal cross.
+- **Answers only** (Adrian and Andrew, 21 October 2026, migration 0059): Insightful and Useful
+  are not given to questions or cases. The question routes are gone (a stale client gets a 404),
+  existing awards on questions and their notifications were deleted, and every member's totals
+  were recomputed from answers alone. The card's second line is the date, answers and following;
+  the question keeps Follow alone. `insightfulCount` / `usefulCount` on a post DTO are now always 0. Icons and colours live in `components/StatIcons.tsx`,
   and the colours are design tokens ("Contribution stats" in `packages/design-tokens`).
 - **Handles are 3–20 characters** (`HANDLE_MAX_LENGTH`, was 30), so the handle and both totals
   fit one phone line. New handles only; the pilot clear-down removes every existing one.

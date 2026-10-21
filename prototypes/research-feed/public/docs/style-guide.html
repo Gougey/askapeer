@@ -1354,8 +1354,8 @@ kudos star+count).</li>
 (with the teal cross for a case, whose card also has a teal border) ·
 snippet · tags · a two-line footer. Line 1: the handle and the author’s
 grey Insightful and Useful totals. Line 2: the date, then the post’s
-Insightful, Useful, answers and following, icons and numbers only,
-always all four.</li>
+answers and following, icons and numbers only, always both. No awards on
+the card: they are given to answers only.</li>
 <li><strong>Answer card</strong> — inside a thread; author row, body,
 the Insightful and Useful buttons, then the text links (Reply, Report,
 Report this handle, Edit, Delete) on their own line. The
@@ -1375,8 +1375,10 @@ initials. Sizes sm/default/lg.</p>
 <h3 id="kudos-controls-insightful-and-useful">8.6 Kudos controls —
 Insightful and Useful</h3>
 <p>The product’s signature interactive elements. Two independent awards:
-anyone but the author may give either, both or neither to a question or
-an answer.</p>
+anyone but the author may give either, both or neither to an
+<strong>answer</strong>. Questions and cases are not awarded (Adrian and
+Andrew, 21 October 2026) — the awards say whether something helped you,
+and a good question shows in how many people follow it.</p>
 <ul>
 <li><strong>Anatomy:</strong> pill button, icon + count + word — “6
 Insightful”, “11 Useful”. The word is spelled out here because this is
@@ -1387,8 +1389,8 @@ in its colour once anyone has awarded it) → awarded by you (its
 <code>-tint</code> background, border and text in its colour). Toggling
 updates the count instantly. <strong>Your own post:</strong> the same
 pill without button behaviour.</li>
-<li><strong>Follow</strong> on a question is the same pill: eye + count
-+ “Follow”, tinted “Following” once you follow.</li>
+<li><strong>Follow</strong> is the question’s only pill: eye + count +
+“Follow”, tinted “Following” once you follow.</li>
 <li>Read-only counts (cards, My Q&amp;A) = icon + number, coloured above
 zero, grey at zero.</li>
 <li><strong>Accessibility:</strong> label as “Mark as insightful” /
@@ -1993,6 +1995,14 @@ library to replace the current emoji placeholders.</li>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.3.1</td>
+<td>2026-10-21</td>
+<td><strong>Awards on answers only.</strong> Insightful and Useful are
+no longer given to questions or cases; the card’s second line is the
+date, answers and following; the question keeps Follow alone. §8.3,
+§8.6.</td>
+</tr>
 <tr>
 <td>0.3</td>
 <td>2026-10-20</td>
