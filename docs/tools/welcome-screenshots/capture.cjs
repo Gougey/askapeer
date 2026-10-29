@@ -119,7 +119,8 @@ async function shot(page, name) {
     await page.goto(`${WEB}/search?q=${encodeURIComponent(THREAD_TITLE)}`);
     await page.getByText(THREAD_TITLE).first().click();
     await page.waitForURL(/\/discussions\/[0-9a-f-]+/);
-    // The top of the thread: the question with its Insightful, Useful and Follow buttons.
+    // The top of the thread: the question with its Follow button, and answers with their
+    // Insightful and Useful awards (answers only, since #194).
     await shot(page, 'thread.png');
 
     await page.goto(`${WEB}/feed?f=1&q=${encodeURIComponent('hamstring rehabilitation')}`);
