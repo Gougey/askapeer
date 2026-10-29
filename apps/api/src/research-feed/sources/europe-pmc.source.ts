@@ -1,5 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { ArticlePage, ArticleSource, FetchResult, RawArticle } from './article-source';
+import {
+  queryFailureOutcome,
+  type ArticlePage,
+  type ArticleSource,
+  type FetchResult,
+  type QueryFailure,
+  type RawArticle,
+} from './article-source';
 
 const ENDPOINT = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search';
 const PAGE_SIZE = 100;
@@ -52,6 +59,7 @@ export class EuropePmcSource implements ArticleSource {
 
   async fetchSince(cursor: string | null, queries: string[]): Promise<FetchResult> {
     const seen = new Map<string, RawArticle>();
+    const failures: QueryFailure[] = [];
     const from = windowStart(cursor);
 
     for (const query of queries) {
@@ -65,7 +73,17 @@ export class EuropePmcSource implements ArticleSource {
       url.searchParams.set('pageSize', String(PAGE_SIZE));
       url.searchParams.set('sort', 'P_PDATE_D desc');
 
-      const results = await this.get(url, query);
+      let results: EuropePmcResult[];
+      try {
+        results = await this.get(url);
+      } catch (err) {
+        // One failing query must not lose the whole run, but it must be counted: see
+        // `queryFailureOutcome` for what a run of failures used to look like.
+        const message = (err as Error).message;
+        this.log.warn(`Europe PMC query "${query}" failed: ${message}`);
+        failures.push({ query, message });
+        continue;
+      }
       for (const raw of results) {
         const article = this.normalise(raw);
         if (!article) continue;
@@ -76,7 +94,9 @@ export class EuropePmcSource implements ArticleSource {
       }
     }
 
-    return { articles: [...seen.values()], nextCursor: today() };
+    const outcome = queryFailureOutcome(queries.length, failures);
+    if (outcome.fatal) throw new Error(`Europe PMC: ${outcome.message}`);
+    return { articles: [...seen.values()], nextCursor: today(), partialError: outcome.message };
   }
 
   /**
@@ -142,7 +162,7 @@ export class EuropePmcSource implements ArticleSource {
     }
   }
 
-  private async get(url: URL, query: string): Promise<EuropePmcResult[]> {
+  private async get(url: URL): Promise<EuropePmcResult[]> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
@@ -153,11 +173,6 @@ export class EuropePmcSource implements ArticleSource {
       if (!res.ok) throw new Error(`Europe PMC HTTP ${res.status}`);
       const body = (await res.json()) as { resultList?: { result?: EuropePmcResult[] } };
       return body.resultList?.result ?? [];
-    } catch (err) {
-      // One failing query must not lose the whole run — the other queries, and the other
-      // source, still have useful work to do.
-      this.log.warn(`Europe PMC query "${query}" failed: ${(err as Error).message}`);
-      return [];
     } finally {
       clearTimeout(timer);
     }

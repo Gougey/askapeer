@@ -1,6 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { ArticlePage, ArticleSource, FetchResult, RawArticle } from './article-source';
+import {
+  queryFailureOutcome,
+  type ArticlePage,
+  type ArticleSource,
+  type FetchResult,
+  type QueryFailure,
+  type RawArticle,
+} from './article-source';
 
 const ENDPOINT = 'https://api.openalex.org/works';
 const PAGE_SIZE = 100;
@@ -136,6 +143,7 @@ export class OpenAlexSource implements ArticleSource {
 
   async fetchSince(cursor: string | null, queries: string[]): Promise<FetchResult> {
     const seen = new Map<string, RawArticle>();
+    const failures: QueryFailure[] = [];
     const from = windowStart(cursor);
 
     for (const query of queries) {
@@ -151,7 +159,17 @@ export class OpenAlexSource implements ArticleSource {
       url.searchParams.set('sort', 'publication_date:desc');
       this.authorise(url);
 
-      for (const work of await this.get(url, query)) {
+      let works: OpenAlexWork[];
+      try {
+        works = await this.get(url);
+      } catch (err) {
+        // Counted, not swallowed — see `queryFailureOutcome`.
+        const message = (err as Error).message;
+        this.log.warn(`OpenAlex query "${query}" failed: ${message}`);
+        failures.push({ query, message });
+        continue;
+      }
+      for (const work of works) {
         const article = this.normalise(work);
         if (!article) continue;
         const key = article.doi ?? article.title.toLowerCase();
@@ -159,7 +177,13 @@ export class OpenAlexSource implements ArticleSource {
       }
     }
 
-    return { articles: [...seen.values()], nextCursor: isoDay(new Date()) };
+    const outcome = queryFailureOutcome(queries.length, failures);
+    if (outcome.fatal) throw new Error(`OpenAlex: ${outcome.message}`);
+    return {
+      articles: [...seen.values()],
+      nextCursor: isoDay(new Date()),
+      partialError: outcome.message,
+    };
   }
 
   /**
@@ -275,7 +299,7 @@ export class OpenAlexSource implements ArticleSource {
     }
   }
 
-  private async get(url: URL, query: string): Promise<OpenAlexWork[]> {
+  private async get(url: URL): Promise<OpenAlexWork[]> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
@@ -286,9 +310,6 @@ export class OpenAlexSource implements ArticleSource {
       if (!res.ok) throw new Error(`OpenAlex HTTP ${res.status}`);
       const body = (await res.json()) as { results?: OpenAlexWork[] };
       return body.results ?? [];
-    } catch (err) {
-      this.log.warn(`OpenAlex query "${query}" failed: ${(err as Error).message}`);
-      return [];
     } finally {
       clearTimeout(timer);
     }

@@ -21,6 +21,7 @@
     "verify:undeliverable": "tsx scripts/verify-undeliverable.ts",
     "verify:backfill-chain": "tsx scripts/verify-backfill-chain.ts",
     "verify:spelling": "tsx scripts/verify-spelling.ts",
+    "verify:source-failures": "tsx scripts/verify-source-failures.ts",
     "verify:pilot": "tsx scripts/verify-pilot.ts",
     "pilot": "tsx src/cli/pilot.ts"
   },

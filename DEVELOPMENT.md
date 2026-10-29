@@ -220,6 +220,14 @@ everyone. That is deliberate (see below).
   silently drops everything indexed after the run that should have caught it. Re-covering is
   free because the upsert is idempotent — and the cursor only advances *after* the batch
   commits.
+- **A run whose every query fails has failed, not found nothing** (`queryFailureOutcome`,
+  guarded by `npm run verify:source-failures -w apps/api`). Both sources used to catch each
+  failed request and carry on with an empty list, so on 29 October 2026 Europe PMC recorded
+  "0 seen", no error, and moved its cursor on, while the same window held 56 papers for
+  "physiotherapy" alone. Now all failing throws (the error is recorded and the cursor stays
+  put), and some failing is kept as `last_error` ("3 of 19 queries failed; first: …"), which
+  `/admin/research-feed` shows in red. ⚠️ Don't reintroduce a `catch` that returns `[]` in a
+  source: Fly keeps 100 log lines, so a warning is not a record.
 - **Source abstracts are markup, not text, and are parsed at ingestion.** Europe PMC returns
   JATS-flavoured HTML in `abstractText`: 507 of the first 1,198 abstracts carried tags, mostly
   `<h4>` section headings (2,075 of them). Rendered as text those print literally; rendered as
