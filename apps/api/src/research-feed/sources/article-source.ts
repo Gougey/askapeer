@@ -25,7 +25,43 @@ export type FetchResult = {
   articles: RawArticle[];
   /** Where the next run should resume. Null means "start from the window again". */
   nextCursor: string | null;
+  /**
+   * Set when some of the run's queries failed but not all — recorded as the source's
+   * `last_error`, so the admin feed page shows it. See `queryFailureOutcome`.
+   */
+  partialError?: string | null;
 };
+
+export type QueryFailure = { query: string; message: string };
+
+/**
+ * What a run should make of the queries that failed.
+ *
+ * ⚠️ **Every query failing is a failed run, not an empty one.** Each source used to catch a
+ * failed request, log a warning and carry on with nothing, so a run in which *every* request
+ * failed recorded "0 seen", no error, and moved its cursor on as if it had worked. Europe PMC
+ * did exactly that on 29 October 2026, while the same window returned 56 papers for
+ * "physiotherapy" alone, and the warnings were gone from Fly's 100-line log buffer before
+ * anyone looked. The 14-day overlap re-covers a missed run, so the danger was a source
+ * failing for a fortnight with nobody told.
+ *
+ * - All failed: `fatal`. The source throws, so the run records the error and **keeps the
+ *   cursor** (`IngestionService.recordFailure`).
+ * - Some failed: the run keeps what it got and records which failed. The cursor advances,
+ *   since the next run re-covers the overlap.
+ * - None: nothing to record, which also clears an earlier error.
+ */
+export function queryFailureOutcome(
+  total: number,
+  failures: QueryFailure[],
+): { fatal: boolean; message: string | null } {
+  if (failures.length === 0) return { fatal: false, message: null };
+  const [first] = failures;
+  const example = `first: "${first.query}": ${first.message}`;
+  return failures.length >= total
+    ? { fatal: true, message: `all ${total} queries failed; ${example}` }
+    : { fatal: false, message: `${failures.length} of ${total} queries failed; ${example}` };
+}
 
 /**
  * A literature source. The same shape as `PaymentProvider` and the identity-check

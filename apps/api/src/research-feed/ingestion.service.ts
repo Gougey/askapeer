@@ -128,7 +128,7 @@ export class IngestionService {
       .from(ingestionCursors)
       .where(eq(ingestionCursors.sourceName, source.name));
 
-    const { articles: fetched, nextCursor } = await source.fetchSince(
+    const { articles: fetched, nextCursor, partialError } = await source.fetchSince(
       cursorRow?.lastCursor ?? null,
       queries,
     );
@@ -149,7 +149,8 @@ export class IngestionService {
         sourceName: source.name,
         lastCursor: nextCursor,
         lastRunAt: new Date(),
-        lastError: null,
+        // Null clears an earlier failure; a partial one is kept so the admin page shows it.
+        lastError: partialError ?? null,
         articlesSeen: fetched.length,
         articlesStored: stored,
       })
@@ -158,14 +159,23 @@ export class IngestionService {
         set: {
           lastCursor: nextCursor,
           lastRunAt: new Date(),
-          lastError: null,
+          lastError: partialError ?? null,
           articlesSeen: fetched.length,
           articlesStored: stored,
         },
       });
 
-    this.log.log(`${source.name}: ${fetched.length} seen, ${stored} new, ${classified} tag matches`);
-    return { source: source.name, seen: fetched.length, stored, classified };
+    this.log.log(
+      `${source.name}: ${fetched.length} seen, ${stored} new, ${classified} tag matches` +
+        (partialError ? ` (${partialError})` : ''),
+    );
+    return {
+      source: source.name,
+      seen: fetched.length,
+      stored,
+      classified,
+      ...(partialError ? { error: partialError } : {}),
+    };
   }
 
   /**
