@@ -12,7 +12,8 @@
       "Bash(pkill node)",
       "Bash(flyctl version *)",
       "Bash(flyctl status *)",
-      "Bash(flyctl auth whoami)"
+      "Bash(flyctl auth whoami)",
+      "Bash(scripts/live-db-read.sh *)"
     ]
   }
 }
