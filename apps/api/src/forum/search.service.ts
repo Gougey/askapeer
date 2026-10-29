@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
+import { searchQuery } from '../search/query';
 import { SpellingService } from '../search/spelling.service';
 import type { PostCard } from './posts.service';
 
@@ -186,11 +187,11 @@ export class SearchService {
       : sql`
           select p.id from community.posts p
            where p.status = 'published'
-             and p.tsv @@ websearch_to_tsquery('english', ${term})
+             and p.tsv @@ ${searchQuery(term)}
           union
           select pt.post_id from community.post_tags pt
             join community.tags t on t.id = pt.tag_id
-           where to_tsvector('english', ${TAG_TEXT}) @@ websearch_to_tsquery('english', ${term})`;
+           where to_tsvector('english', ${TAG_TEXT}) @@ ${searchQuery(term)}`;
 
     /*
      * The re-check that makes negation behave — applied **only when the query negates**.
@@ -214,7 +215,7 @@ export class SearchService {
                    join community.tags t on t.id = pt.tag_id
                    where pt.post_id = p.id
                  ), '')), 'C')
-            ) @@ websearch_to_tsquery('english', ${term})`,
+            ) @@ ${searchQuery(term)}`,
           ]
         : [];
 
@@ -226,12 +227,12 @@ export class SearchService {
       : fuzzy
       ? sql`similarity(p.title, ${term}) desc, p.created_at desc, h.kudos_total desc, p.id desc`
       : sql`(
-          ts_rank_cd(p.tsv, websearch_to_tsquery('english', ${term}))
+          ts_rank_cd(p.tsv, ${searchQuery(term)})
           + case when exists (
               select 1 from community.post_tags pt
               join community.tags t on t.id = pt.tag_id
               where pt.post_id = p.id
-                and to_tsvector('english', ${TAG_TEXT}) @@ websearch_to_tsquery('english', ${term})
+                and to_tsvector('english', ${TAG_TEXT}) @@ ${searchQuery(term)}
             ) then 0.15 else 0 end
         )`;
 

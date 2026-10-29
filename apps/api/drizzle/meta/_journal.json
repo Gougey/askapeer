@@ -421,6 +421,13 @@
       "when": 1789516800438,
       "tag": "0059_awards_on_answers_only",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1789520400438,
+      "tag": "0060_search_abbreviations",
+      "breakpoints": true
     }
   ]
 }

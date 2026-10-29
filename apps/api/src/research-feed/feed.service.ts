@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
+import { searchQuery } from '../search/query';
 import { SpellingService } from '../search/spelling.service';
 import type { EvidenceType } from './scoring';
 
@@ -202,7 +203,7 @@ export class FeedService {
   private narrowing(filters: FeedFilters) {
     const query = filters.query?.trim() ?? '';
     const keyword =
-      query === '' ? sql`` : sql`and a.tsv @@ websearch_to_tsquery('english', ${query})`;
+      query === '' ? sql`` : sql`and a.tsv @@ ${searchQuery(query)}`;
     const evidence = filters.evidence ? sql`and a.evidence_type = ${filters.evidence}` : sql``;
     /*
      * A *relative* period, resolved here rather than stored as dates — which is the whole
@@ -283,7 +284,7 @@ export class FeedService {
              * the ordering this produces is the one Andrew asked for: papers whose titles are
              * about the thing first, everything else falling back to newest.
              */
-            sql`ts_rank_cd(a.tsv_title, websearch_to_tsquery('english', ${query})) desc,
+            sql`ts_rank_cd(a.tsv_title, ${searchQuery(query)}) desc,
                 a.published_date desc nulls last`
           : sql`${composite} desc, a.published_date desc nulls last`;
 
@@ -390,11 +391,11 @@ export class FeedService {
     );
     const tagFilter = tagPredicates.length > 0 ? sql.join(tagPredicates, sql` `) : sql``;
     // With no words to rank by, a tag-only search falls back to the feed's own ordering.
-    const textFilter = query === '' ? sql`` : sql`and a.tsv @@ websearch_to_tsquery('english', ${query})`;
+    const textFilter = query === '' ? sql`` : sql`and a.tsv @@ ${searchQuery(query)}`;
     const ranking =
       query === ''
         ? sql`a.intrinsic_score desc`
-        : sql`ts_rank_cd(a.tsv, websearch_to_tsquery('english', ${query})) desc`;
+        : sql`ts_rank_cd(a.tsv, ${searchQuery(query)}) desc`;
 
     const { rows } = await this.db.execute<FeedRow & { total: string }>(sql`
       ${this.tagRegion}

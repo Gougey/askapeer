@@ -1,6 +1,6 @@
 # Development
 
-The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off), search over the literature feed and in the app bar across both corpora (S16, S17), and Andrew's clinical vocabulary Parts 1 and 2 loaded into the taxonomy (S18b — now 1,230 live tags across seven roots, 175 carrying search synonyms), and editing your own contributions (a question, an answer or a published case, until something responds to it and within 24 hours — see "The edit window" below), and My Research rebuilt around a criteria panel (keyword, type of paper, period and sort, with the last set remembered; **no personalisation — clinical interests play no part in what it shows** — see "My Research — the criteria panel" below), and a private list of **saved articles** (`/feed/saved`, saved from the result card itself — see "Saved articles" below), and **spelling correction** on every keyword search (see "Spelling correction" below), and **two kinds of kudos, Insightful and Useful** (see "Two kinds of kudos" below), and **invitation-only registration for the closed pilot** with an operator tool for the invitation list and the pre-pilot clear-down (see "Closed pilot" below)**.
+The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off), search over the literature feed and in the app bar across both corpora (S16, S17), and Andrew's clinical vocabulary Parts 1 and 2 loaded into the taxonomy (S18b — now 1,230 live tags across seven roots, 175 carrying search synonyms), and editing your own contributions (a question, an answer or a published case, until something responds to it and within 24 hours — see "The edit window" below), and My Research rebuilt around a criteria panel (keyword, type of paper, period and sort, with the last set remembered; **no personalisation — clinical interests play no part in what it shows** — see "My Research — the criteria panel" below), and a private list of **saved articles** (`/feed/saved`, saved from the result card itself — see "Saved articles" below), and **spelling correction** on every keyword search (see "Spelling correction" below), and **search abbreviations** — *rehab* finds *rehabilitation*, *ACL* finds *anterior cruciate ligament* (see "Search abbreviations" below), and **two kinds of kudos, Insightful and Useful** (see "Two kinds of kudos" below), and **invitation-only registration for the closed pilot** with an operator tool for the invitation list and the pre-pilot clear-down (see "Closed pilot" below)**.
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
@@ -1076,6 +1076,46 @@ keyword now all retry an empty search with the words spelt right, and say so:
 - **Refreshed after every ingest run** (`IngestionService.runAll` → `SpellingService.refresh`,
   `REFRESH … CONCURRENTLY`, never throws). A renamed tag is a correction target from the next
   run, and is found when spelt right in the meantime.
+
+### Search abbreviations (all three keyword searches)
+
+Andrew, 2026-10-21: *"Achilles rehab"* found 8 papers and *"Achilles rehabilitation"* 721.
+Words match by stem, and "rehab" is not a stem of "rehabilitation". The 285 pairs Andrew's
+draft marked Include (`docs/2026-10-21-search-abbreviations-draft.md`, which now lists only the
+rows still waiting for him) live in `community.search_abbreviations` (migration `0060`), and
+every keyword search rewrites its query through them. Locally: *Achilles rehab* 0 → 65 papers,
+*ACL rehab* 7 → 462, *physio* 14 → 4,284.
+
+- **Use `searchQuery(term)`** (`apps/api/src/search/query.ts`) wherever a keyword search would
+  write `websearch_to_tsquery('english', term)`. It is `(select community.search_tsquery(term))`,
+  which is `ts_rewrite` over the view `community.search_rewrites`. ⚠️ Keep the scalar subquery:
+  it makes the rewrite an InitPlan that runs once and can still drive the GIN index. Called bare,
+  it can re-run the whole rule table for each row a recheck touches.
+- **An abbreviation is one-way, a pair of names is two-way** (`two_way`). *ACL* also finds
+  "anterior cruciate ligament". The reverse is off, because case is gone by the time a word is a
+  lexeme: linking TENS back made the full term find every "tens of thousands", and PASS would
+  have found every "pass". The reverse was worth about 3% anyway, since papers spell an
+  abbreviation out beside it. *Patrick's test ↔ FABER test* has no such collision and goes both
+  ways.
+- **Targets are parsed like a member's query, alternatives as phrases.** An unquoted "return to
+  play" is `'return' & 'play'`, so that is the target, and it is recognised inside a longer
+  query. What gets added is the phrase, so it is no looser than the term it stands for. Hyphens
+  and dashes count as spaces on both sides: the phrase `single leg squat` matches both
+  "single-leg squat" and "single leg squat". A quoted phrase is not rewritten.
+- **Rewrites chain.** A term added by one rule can be rewritten by a later one, so a member
+  gets the closure of the links (`physiotherapist → physio → physiotherapy`). That is safe while
+  two-way pairs stay between names for the same thing. Don't make a two-way pair of a term and
+  a *place* it is tested at: that is why *Tinel's sign ↔ cubital tunnel* was held back.
+- **A negated word is expanded too**, so `knee -ACL` now also excludes papers that only say
+  "anterior cruciate ligament".
+- **It costs what the bigger search costs.** Ranking *physio* on the Papers tab took 240 ms
+  locally against 110 ms for *physiotherapy*, because it now matches and ranks more papers.
+  The rewrite itself is about 5 ms.
+- **Spelling correction runs less often.** It only runs when the exact search is empty, and an
+  expanded query is empty less often. *"rehab ti sport"* now finds the one paper with "rehab",
+  "ti" and "sport" instead of correcting to "rehab sport".
+- **Adding a pair is an insert** into `community.search_abbreviations`; it takes effect on the
+  next search, with nothing to reindex. There is no admin screen for it yet.
 
 ## Demo data (`npm run seed:demo -w apps/api`)
 

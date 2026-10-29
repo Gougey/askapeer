@@ -1,0 +1,362 @@
+-- Search abbreviations (Andrew searched "Achilles rehab" and got 8 papers; "Achilles
+-- rehabilitation" found 721). Search matches words by stem, and "rehab" is not a stem of
+-- "rehabilitation", so a clinician's shorthand never meets the literature's full term. This
+-- table links the two, and every keyword search — Discussions, Papers and My Research — rewrites
+-- its query through it (`community.search_tsquery`).
+--
+-- The rows are the ones marked Include in the draft Andrew was sent
+-- (docs/2026-10-21-search-abbreviations-draft.md, 29 October 2026). Rows still awaiting him are
+-- not here; a decision on one is an insert, not a code change.
+--
+-- **An abbreviation is one-way; an alternative name is two-way** (`two_way`). Typing ACL also
+-- finds "anterior cruciate ligament" — that is the whole point. The reverse would make typing
+-- "transcutaneous electrical nerve stimulation" also match every abstract that says "tens of
+-- thousands", and "Pain Anxiety Symptoms Scale" every one that says "pass": case is gone by the
+-- time a word is a lexeme, so a short form is only ever as specific as the commonest word it
+-- spells. Papers define an abbreviation beside its full term, so the reverse direction was worth
+-- about 3% (ACL: 42,594 → 43,954) and carried all of the noise. A pair of *names* — Patrick's
+-- test and the FABER test — has no such collision and goes both ways.
+--
+-- **The query is rewritten, the documents are not.** `ts_rewrite` changes what is asked for, so
+-- nothing is reindexed and a new row takes effect on the next search. The memory note on
+-- synonyms explains why this, not a thesaurus dictionary: a dictionary file needs filesystem
+-- access the managed Postgres we migrate to will not give.
+CREATE TABLE "community"."search_abbreviations" (
+  "short_form" text NOT NULL,
+  "full_term" text NOT NULL,
+  "two_way" boolean NOT NULL DEFAULT false,
+  "created_at" timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY ("short_form", "full_term")
+);--> statement-breakpoint
+-- One rule per thing a member might type, its substitute every term that should also match.
+--
+-- The *target* is parsed exactly as a member's query is (`websearch_to_tsquery`), so an
+-- unquoted "return to play" — which that parses as 'return' & 'play' — is recognised inside a
+-- longer query. The *alternatives* are phrases, so "return to play" is only added as those words
+-- in that order: an alternative is ours, and should not be looser than what it stands for.
+--
+-- **Hyphens and dashes are read as spaces.** The parser keeps "single-leg" as a compound beside
+-- its parts, so the phrase 'single-leg squat' only matches text that hyphenates it, while
+-- 'single leg squat' matches both "single-leg squat" and "single leg squat". Targets are
+-- registered both ways, since a member may type either.
+--
+-- A substituted term can itself be rewritten by a later rule (rehab → rehabilitation →
+-- rehab), so a member gets the closure of what is linked here, not just the direct pairs.
+-- Every two-way pair is between names for the same thing, so the closure stays inside it.
+CREATE VIEW "community"."search_rewrites" AS
+WITH pairs AS (
+  SELECT short_form AS typed, full_term AS also FROM community.search_abbreviations
+  UNION
+  SELECT full_term, short_form FROM community.search_abbreviations WHERE two_way
+), unhyphenated AS (
+  SELECT typed, also FROM pairs
+  UNION
+  SELECT translate(typed, '-–', '  '), also FROM pairs
+), rules AS (
+  SELECT DISTINCT websearch_to_tsquery('english', typed) AS target,
+         phraseto_tsquery('english', translate(also, '-–', '  ')) AS alternative
+    FROM unhyphenated
+)
+SELECT target,
+       (target::text || ' | ' || string_agg(DISTINCT '( ' || alternative::text || ' )', ' | '))::tsquery
+         AS substitute
+  FROM rules
+ WHERE numnode(target) > 0 AND numnode(alternative) > 0
+ GROUP BY target;--> statement-breakpoint
+-- The member's words as a tsquery, with every linked term added. Used in place of
+-- `websearch_to_tsquery('english', q)`, and always as a scalar subquery
+-- (`searchQuery()` in apps/api/src/search/query.ts) so it runs once per search rather than once
+-- per row a recheck touches.
+CREATE FUNCTION "community"."search_tsquery"(q text) RETURNS tsquery
+  LANGUAGE sql STABLE
+  AS $$
+    SELECT ts_rewrite(websearch_to_tsquery('english', q),
+                      'SELECT target, substitute FROM community.search_rewrites')
+  $$;--> statement-breakpoint
+INSERT INTO "community"."search_abbreviations" ("short_form", "full_term", "two_way") VALUES
+  ('rehab', 'rehabilitation', true),
+  ('physio', 'physiotherapy', true),
+  ('physio', 'physiotherapist', true),
+  ('RTP', 'return to play', false),
+  ('RTS', 'return to sport', false),
+  ('RTR', 'return to running', false),
+  ('ACLR', 'anterior cruciate ligament reconstruction', false),
+  ('ACL', 'anterior cruciate ligament', false),
+  ('PCL', 'posterior cruciate ligament', false),
+  ('MCL', 'medial collateral ligament', false),
+  ('LCL', 'lateral collateral ligament', false),
+  ('ATFL', 'anterior talofibular ligament', false),
+  ('PFP', 'patellofemoral pain', false),
+  ('PFPS', 'patellofemoral pain syndrome', false),
+  ('ITB', 'iliotibial band', false),
+  ('ITBS', 'iliotibial band syndrome', false),
+  ('GTPS', 'greater trochanteric pain syndrome', false),
+  ('FAI', 'femoroacetabular impingement', false),
+  ('MTSS', 'medial tibial stress syndrome', false),
+  ('LBP', 'low back pain', false),
+  ('NSLBP', 'non-specific low back pain', false),
+  ('OA', 'osteoarthritis', false),
+  ('MSK', 'musculoskeletal', false),
+  ('HSR', 'heavy slow resistance', false),
+  ('DOMS', 'delayed onset muscle soreness', false),
+  ('ROM', 'range of motion', false),
+  ('BFR', 'blood flow restriction', false),
+  ('PRP', 'platelet-rich plasma', false),
+  ('ESWT', 'extracorporeal shockwave therapy', false),
+  ('RCT', 'randomised controlled trial', false),
+  ('RCT', 'randomized controlled trial', false),
+  ('TKA', 'total knee arthroplasty', false),
+  ('TKR', 'total knee replacement', false),
+  ('THA', 'total hip arthroplasty', false),
+  ('THR', 'total hip replacement', false),
+  ('SAPS', 'subacromial pain syndrome', false),
+  ('CAI', 'chronic ankle instability', false),
+  ('UCL', 'ulnar collateral ligament', false),
+  ('TFCC', 'triangular fibrocartilage complex', false),
+  ('SIJ', 'sacroiliac joint', false),
+  ('MRI', 'magnetic resonance imaging', false),
+  ('NMES', 'neuromuscular electrical stimulation', false),
+  ('TENS', 'transcutaneous electrical nerve stimulation', false),
+  ('HIIT', 'high-intensity interval training', false),
+  ('RPE', 'rating of perceived exertion', false),
+  ('ACWR', 'acute chronic workload ratio', false),
+  ('CMJ', 'countermovement jump', false),
+  ('VAS', 'Visual Analogue Scale', false),
+  ('NRS', 'Numeric Rating Scale', false),
+  ('NPRS', 'Numeric Rating Scale', false),
+  ('VRS', 'Verbal Rating Scale', false),
+  ('Body Chart', 'Pain Drawing', true),
+  ('Pain Map', 'Pain Drawing', true),
+  ('PPT', 'Pressure Pain Threshold', false),
+  ('MPT', 'Mechanical Pain Threshold', false),
+  ('CSI', 'Central Sensitisation Inventory', false),
+  ('AROM', 'Active Range of Motion', false),
+  ('PROM', 'Passive Range of Motion', false),
+  ('AAROM', 'Active-Assisted Range of Motion', false),
+  ('Goniometric ROM', 'Goniometry', false),
+  ('Digital Inclinometer', 'Inclinometry', true),
+  ('Lasègue Test', 'Straight-Leg Raise', true),
+  ('Slump Neural Tension Test', 'Slump Test', true),
+  ('MMT', 'Manual Muscle Testing', false),
+  ('HHD', 'Hand-Held Dynamometry', false),
+  ('1RM', 'One-Repetition Maximum', false),
+  ('3RM', 'Three-Repetition Maximum', false),
+  ('5RM', 'Five-Repetition Maximum', false),
+  ('10RM', 'Ten-Repetition Maximum', false),
+  ('MVIC', 'Maximal Voluntary Isometric Contraction', false),
+  ('MVC', 'Maximal Voluntary Isometric Contraction', false),
+  ('TUG', 'Timed Up and Go', false),
+  ('5xSTS', 'Five Times Sit-to-Stand', false),
+  ('5STS', 'Five Times Sit-to-Stand', false),
+  ('30sSTS', '30-Second Sit-to-Stand', false),
+  ('30CST', '30-Second Sit-to-Stand', false),
+  ('6MWT', '6-Minute Walk Test', false),
+  ('2MWT', '2-Minute Walk Test', false),
+  ('10MWT', '10-Metre Walk Test', false),
+  ('400MWT', '400-Metre Walk Test', false),
+  ('SCT', 'Stair Climb Test', false),
+  ('SCPT', 'Stair-Climb Power Test', false),
+  ('BBS', 'Berg Balance Scale', false),
+  ('FRT', 'Functional Reach Test', false),
+  ('SLS', 'Single-Leg Stance', false),
+  ('YBT', 'Y-Balance Test', false),
+  ('SEBT', 'Star Excursion Balance Test', false),
+  ('JPS', 'Joint Position Sense', false),
+  ('JRE', 'Joint Repositioning Error', false),
+  ('BESS', 'Balance Error Scoring System', false),
+  ('FMS', 'Functional Movement Screen', false),
+  ('SFMA', 'Selective Functional Movement Assessment', false),
+  ('MCA', 'Movement Competency Assessment', false),
+  ('SLS', 'Single-Leg Squat Assessment', false),
+  ('DLS', 'Double-Leg Squat Assessment', false),
+  ('OGA', 'Observational Gait Analysis', false),
+  ('FCE', 'Functional Capacity Evaluation', false),
+  ('WCE', 'Work Capacity Evaluation', false),
+  ('Neer Sign', 'Neer Impingement Test', true),
+  ('Hawkins Test', 'Hawkins-Kennedy Test', true),
+  ('Painful Arc Sign', 'Painful Arc Test', true),
+  ('Jobe Test', 'Empty Can Test', true),
+  ('Codman Drop-Arm Test', 'Drop Arm Test', true),
+  ('ERLS', 'External Rotation Lag Sign', false),
+  ('IRLS', 'Internal Rotation Lag Sign', false),
+  ('Gerber Lift-Off Test', 'Lift-Off Test', true),
+  ('Napoleon Test', 'Belly-Press Test', true),
+  ('Active Compression Test', 'O''Brien''s Test', true),
+  ('Jobe Relocation Test', 'Relocation Test', true),
+  ('Release Test', 'Surprise Test', true),
+  ('Scarf Test', 'Cross-Body Adduction Test', true),
+  ('Resisted Middle-Finger Extension Test', 'Maudsley''s Test', true),
+  ('Medial Stress Test', 'Valgus Stress Test', true),
+  ('Lateral Stress Test', 'Varus Stress Test', true),
+  ('Prayer Test', 'Reverse Phalen''s Test', true),
+  ('Carpal Compression Test', 'Durkan''s Test', true),
+  ('Scaphoid Shift Test', 'Watson Test', true),
+  ('CMC Grind Test', 'Grind Test', false),
+  ('Patrick''s Test', 'FABER Test', true),
+  ('Quadrant Test', 'Scour Test', true),
+  ('Trendelenburg Sign', 'Trendelenburg Test', true),
+  ('Resisted Straight-Leg Raise', 'Stinchfield Test', true),
+  ('Ryder Test', 'Craig''s Test', true),
+  ('Godfrey Test', 'Posterior Sag Sign', true),
+  ('Apley Grind Test', 'Apley''s Compression Test', true),
+  ('Bulge Sign', 'Sweep Test', true),
+  ('Patellar Grind Test', 'Clarke''s Sign', true),
+  ('Ankle Anterior Drawer', 'Anterior Drawer Test', true),
+  ('Inversion Stress Test', 'Talar Tilt Test', true),
+  ('External Rotation Stress Test', 'Kleiger Test', true),
+  ('Tibiofibular Squeeze Test', 'Squeeze Test', true),
+  ('Simmonds-Thompson Test', 'Thompson Test', true),
+  ('Matles Sign', 'Matles Test', true),
+  ('Jack Test', 'Windlass Test', true),
+  ('SLHR', 'Single-Leg Heel Raise', false),
+  ('FPI', 'Foot Posture Index', false),
+  ('Foraminal Compression Test', 'Spurling Test', true),
+  ('Traction Test', 'Cervical Distraction Test', true),
+  ('ULTT', 'Upper Limb Tension Test', false),
+  ('Median Nerve Bias', 'ULTT1', true),
+  ('Median Nerve Bias', 'ULTT2a', true),
+  ('Radial Nerve Bias', 'ULTT2b', true),
+  ('Ulnar Nerve Bias', 'ULTT3', true),
+  ('Shoulder Abduction Sign', 'Bakody Sign', true),
+  ('FRT', 'Cervical Flexion-Rotation Test', false),
+  ('Well-Leg SLR', 'Crossed Straight-Leg Raise', false),
+  ('Prone Knee Bend', 'Femoral Nerve Stretch Test', true),
+  ('PIT', 'Prone Instability Test', false),
+  ('RMT', 'Repeated Movement Testing', false),
+  ('ASLR', 'Active Straight-Leg Raise', false),
+  ('Posterior Shear Test', 'Thigh Thrust Test', true),
+  ('Stork Test', 'Gillet Test', true),
+  ('PSFS', 'Patient-Specific Functional Scale', false),
+  ('NPRS', 'Numeric Pain Rating Scale', false),
+  ('PGIC', 'Patient Global Impression of Change', false),
+  ('GROC', 'Global Rating of Change', false),
+  ('PROMIS', 'Patient-Reported Outcomes Measurement Information System', false),
+  ('PROMIS-PF', 'PROMIS Physical Function', false),
+  ('SF-36', 'Short Form-36', false),
+  ('EQ-5D', 'EuroQol 5-Dimension', false),
+  ('ODI', 'Oswestry Disability Index', false),
+  ('RMDQ', 'Roland-Morris Disability Questionnaire', false),
+  ('RMD', 'Roland-Morris Disability Questionnaire', false),
+  ('NDI', 'Neck Disability Index', false),
+  ('QBPDS', 'Quebec Back Pain Disability Scale', false),
+  ('FABQ', 'Fear-Avoidance Beliefs Questionnaire', false),
+  ('DASH', 'Disabilities of the Arm, Shoulder and Hand', false),
+  ('SPADI', 'Shoulder Pain and Disability Index', false),
+  ('ASES', 'American Shoulder and Elbow Surgeons Score', false),
+  ('CMS', 'Constant-Murley Score', false),
+  ('OSS', 'Oxford Shoulder Score', false),
+  ('WORC', 'Western Ontario Rotator Cuff Index', false),
+  ('SDQ', 'Shoulder Disability Questionnaire', false),
+  ('UCLA Shoulder Score', 'University of California Los Angeles Shoulder Score', false),
+  ('PRTEE', 'Patient-Rated Tennis Elbow Evaluation', false),
+  ('OES', 'Oxford Elbow Score', false),
+  ('MEPS', 'Mayo Elbow Performance Score', false),
+  ('PRWE', 'Patient-Rated Wrist Evaluation', false),
+  ('MHQ', 'Michigan Hand Outcomes Questionnaire', false),
+  ('BCTQ', 'Boston Carpal Tunnel Questionnaire', false),
+  ('CTSAQ', 'Carpal Tunnel Syndrome Assessment Questionnaire', false),
+  ('HOOS', 'Hip Disability and Osteoarthritis Outcome Score', false),
+  ('HOS', 'Hip Outcome Score', false),
+  ('HHS', 'Harris Hip Score', false),
+  ('mHHS', 'Modified Harris Hip Score', false),
+  ('KOOS', 'Knee Injury and Osteoarthritis Outcome Score', false),
+  ('IKDC', 'International Knee Documentation Committee', false),
+  ('OKS', 'Oxford Knee Score', false),
+  ('AKPS', 'Kujala Anterior Knee Pain Scale', false),
+  ('FAAM', 'Foot and Ankle Ability Measure', false),
+  ('FFI', 'Foot Function Index', false),
+  ('AOFAS', 'American Orthopaedic Foot & Ankle Society Score', false),
+  ('FHSQ', 'Foot Health Status Questionnaire', false),
+  ('MOXFQ', 'Manchester-Oxford Foot Questionnaire', false),
+  ('CAIT', 'Cumberland Ankle Instability Tool', false),
+  ('Victorian Institute of Sport Assessment–Achilles', 'VISA-A', true),
+  ('Victorian Institute of Sport Assessment–Patella', 'VISA-P', true),
+  ('Victorian Institute of Sport Assessment–Hamstring', 'VISA-H', true),
+  ('Victorian Institute of Sport Assessment–Gluteal', 'VISA-G', true),
+  ('Victorian Institute of Sport Assessment–Shoulder', 'VISA-S', true),
+  ('Proprioceptive Neuromuscular Facilitation', 'PNF Stretching', true),
+  ('PRT', 'Progressive Resistance Training', false),
+  ('NMT', 'Neuromuscular Training', false),
+  ('MCE', 'Motor Control Exercise', false),
+  ('RTR', 'Return-to-Running Programme', false),
+  ('RTP', 'Return-to-Play', false),
+  ('RTW', 'Return-to-Work', false),
+  ('Plyos', 'Plyometric Training', true),
+  ('COD', 'Change-of-Direction Training', false),
+  ('PNE', 'Pain Neuroscience Education', false),
+  ('CFT', 'Cognitive Functional Therapy', false),
+  ('CBT', 'Cognitive Behavioural Therapy', false),
+  ('SMT', 'Spinal Manipulation', false),
+  ('PAM', 'Passive Accessory Mobilisation', false),
+  ('MWM', 'Mobilisation With Movement', false),
+  ('HVLA', 'High-Velocity Low-Amplitude Manipulation', false),
+  ('STM', 'Soft-Tissue Mobilisation', false),
+  ('STT', 'Soft-Tissue Therapy', false),
+  ('MFR', 'Myofascial Release', false),
+  ('IASTM', 'Instrument-Assisted Soft-Tissue Mobilisation', false),
+  ('MLD', 'Manual Lymphatic Drainage', false),
+  ('FES', 'Functional Electrical Stimulation', false),
+  ('IFC', 'Interferential Current', false),
+  ('IFT', 'Interferential Current', false),
+  ('LLLT', 'Low-Level Laser Therapy', false),
+  ('PBM', 'Photobiomodulation', false),
+  ('rESWT', 'Radial Shockwave Therapy', false),
+  ('fESWT', 'Focused Shockwave Therapy', false),
+  ('SWD', 'Shortwave Diathermy', false),
+  ('PSWD', 'Pulsed Shortwave Diathermy', false),
+  ('IPC', 'Intermittent Pneumatic Compression', false),
+  ('EMG-BF', 'Electromyographic Biofeedback', false),
+  ('VR Rehab', 'Virtual Reality Rehabilitation', false),
+  ('Telerehab', 'Telerehabilitation', true),
+  ('Kinesiotape', 'Kinesiology Tape', true),
+  ('ETT', 'Elastic Therapeutic Tape', false),
+  ('SI Belt', 'Sacroiliac Belt', false),
+  ('AFO', 'Ankle-Foot Orthosis', false),
+  ('KAFO', 'Knee-Ankle-Foot Orthosis', false),
+  ('HHD', 'Hand-Held Dynamometer', false),
+  ('UBE', 'Upper-Body Ergometer', false),
+  ('EMG', 'Electromyography', false),
+  ('sEMG', 'Surface Electromyography', false),
+  ('IMU', 'Inertial Measurement Unit', false),
+  ('MSK-US', 'Musculoskeletal Ultrasound', false),
+  ('SLS', 'Single-Leg Squat', false),
+  ('DLS', 'Double-Leg Squat', false),
+  ('SLH', 'Single-Leg Hop', false),
+  ('SHD', 'Single Hop for Distance', false),
+  ('THD', 'Triple Hop for Distance', false),
+  ('TCH', 'Triple Crossover Hop', false),
+  ('6MTH', '6-Metre Timed Hop', false),
+  ('LSD', 'Lateral Step-Down Test', false),
+  ('SLHR', 'Single-Leg Heel-Rise Test', false),
+  ('HRET', 'Heel-Rise Endurance Test', false),
+  ('Multistage Shuttle Run Test', 'Beep Test', true),
+  ('MCE', 'Motor-Control Exercise', false),
+  ('MDT', 'McKenzie Method', false),
+  ('DNF', 'Deep Neck Flexor Training', false),
+  ('CCF', 'Cranio-Cervical Flexion Training', false),
+  ('PROM', 'Passive ROM', false),
+  ('AAROM', 'Active-Assisted ROM', false),
+  ('AROM', 'Active ROM', false),
+  ('CKC', 'Closed-Kinetic-Chain Exercise', false),
+  ('OKC', 'Open-Kinetic-Chain Exercise', false),
+  ('RTS', 'Return-to-Sport', false),
+  ('RTR', 'Return-to-Running', false),
+  ('NHE', 'Nordic Hamstring Exercise', false),
+  ('CAE', 'Copenhagen Adduction Exercise', false),
+  ('RTW', 'Return-to-Work Rehabilitation', false),
+  ('TSK', 'Tampa Scale for Kinesiophobia', false),
+  ('PCS', 'Pain Catastrophizing Scale', false),
+  ('PSEQ', 'Pain Self-Efficacy Questionnaire', false),
+  ('PHQ-9', 'Patient Health Questionnaire-9', false),
+  ('GAD-7', 'Generalised Anxiety Disorder-7', false),
+  ('ÖMPSQ', 'Örebro Musculoskeletal Pain Screening Questionnaire', false),
+  ('CPAQ', 'Chronic Pain Acceptance Questionnaire', false),
+  ('PASS', 'Pain Anxiety Symptoms Scale', false),
+  ('PIPS', 'Psychological Inflexibility in Pain Scale', false),
+  ('PVAQ', 'Pain Vigilance and Awareness Questionnaire', false),
+  ('PDI', 'Pain Disability Index', false),
+  ('BPI', 'Brief Pain Inventory', false),
+  ('DN4', 'Douleur Neuropathique 4', false),
+  ('LANSS', 'Leeds Assessment of Neuropathic Symptoms and Signs', false),
+  ('S-LANSS', 'Self-Administered Leeds Assessment of Neuropathic Symptoms and Signs', false)
+;
