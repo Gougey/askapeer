@@ -34,7 +34,7 @@ if [ -n "$BAD" ]; then echo "$BAD" >&2; echo "refused: read-only queries only" >
 
 curl -s https://askapeer-api.fly.dev/health >/dev/null || true   # wake the API machine
 URL="$(flyctl ssh console -a askapeer-api -C "printenv DATABASE_URL" 2>/dev/null \
-  | grep -o 'postgres://[^[:space:]]*' | sed -E 's#@[^/]+/#@host.docker.internal:15432/#')"
+  | grep -o 'postgres://[^[:space:]]*' | sed -E 's#@[^/]+/#@host.docker.internal:15432/#' || true)"
 [ -n "$URL" ] || { echo "could not read DATABASE_URL from askapeer-api" >&2; exit 1; }
 
 flyctl proxy 15432:5432 -a askapeer-db >/dev/null 2>&1 &
