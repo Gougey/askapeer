@@ -40,11 +40,13 @@ the criteria panel” below), and a private list of <strong>saved
 articles</strong> (<code>/feed/saved</code>, saved from the result card
 itself — see “Saved articles” below), and <strong>spelling
 correction</strong> on every keyword search (see “Spelling correction”
-below), and <strong>two kinds of kudos, Insightful and Useful</strong>
-(see “Two kinds of kudos” below), and <strong>invitation-only
-registration for the closed pilot</strong> with an operator tool for the
-invitation list and the pre-pilot clear-down (see “Closed pilot”
-below)**.</p>
+below), and <strong>search abbreviations</strong> — <em>rehab</em> finds
+<em>rehabilitation</em>, <em>ACL</em> finds <em>anterior cruciate
+ligament</em> (see “Search abbreviations” below), and <strong>two kinds
+of kudos, Insightful and Useful</strong> (see “Two kinds of kudos”
+below), and <strong>invitation-only registration for the closed
+pilot</strong> with an operator tool for the invitation list and the
+pre-pilot clear-down (see “Closed pilot” below)**.</p>
 <p><strong>Build approach:</strong> <em>prove-then-migrate</em> —
 develop locally + deploy to Fly.io (London) for the early slices;
 migrate to AWS <code>eu-west-2</code> before real practitioners. See the
@@ -1585,6 +1587,65 @@ trigram result.</li>
 <code>REFRESH … CONCURRENTLY</code>, never throws). A renamed tag is a
 correction target from the next run, and is found when spelt right in
 the meantime.</li>
+</ul>
+<h3 id="search-abbreviations-all-three-keyword-searches">Search
+abbreviations (all three keyword searches)</h3>
+<p>Andrew, 2026-10-21: <em>“Achilles rehab”</em> found 8 papers and
+<em>“Achilles rehabilitation”</em> 721. Words match by stem, and “rehab”
+is not a stem of “rehabilitation”. The 285 pairs Andrew’s draft marked
+Include (<code>docs/2026-10-21-search-abbreviations-draft.md</code>,
+which now lists only the rows still waiting for him) live in
+<code>community.search_abbreviations</code> (migration
+<code>0060</code>), and every keyword search rewrites its query through
+them. Locally: <em>Achilles rehab</em> 0 → 65 papers, <em>ACL rehab</em>
+7 → 462, <em>physio</em> 14 → 4,284.</p>
+<ul>
+<li><strong>Use <code>searchQuery(term)</code></strong>
+(<code>apps/api/src/search/query.ts</code>) wherever a keyword search
+would write <code>websearch_to_tsquery('english', term)</code>. It is
+<code>(select community.search_tsquery(term))</code>, which is
+<code>ts_rewrite</code> over the view
+<code>community.search_rewrites</code>. ⚠️ Keep the scalar subquery: it
+makes the rewrite an InitPlan that runs once and can still drive the GIN
+index. Called bare, it can re-run the whole rule table for each row a
+recheck touches.</li>
+<li><strong>An abbreviation is one-way, a pair of names is
+two-way</strong> (<code>two_way</code>). <em>ACL</em> also finds
+“anterior cruciate ligament”. The reverse is off, because case is gone
+by the time a word is a lexeme: linking TENS back made the full term
+find every “tens of thousands”, and PASS would have found every “pass”.
+The reverse was worth about 3% anyway, since papers spell an
+abbreviation out beside it. <em>Patrick’s test ↔︎ FABER test</em> has no
+such collision and goes both ways.</li>
+<li><strong>Targets are parsed like a member’s query, alternatives as
+phrases.</strong> An unquoted “return to play” is
+<code>'return' &amp; 'play'</code>, so that is the target, and it is
+recognised inside a longer query. What gets added is the phrase, so it
+is no looser than the term it stands for. Hyphens and dashes count as
+spaces on both sides: the phrase <code>single leg squat</code> matches
+both “single-leg squat” and “single leg squat”. A quoted phrase is not
+rewritten.</li>
+<li><strong>Rewrites chain.</strong> A term added by one rule can be
+rewritten by a later one, so a member gets the closure of the links
+(<code>physiotherapist → physio → physiotherapy</code>). That is safe
+while two-way pairs stay between names for the same thing. Don’t make a
+two-way pair of a term and a <em>place</em> it is tested at: that is why
+<em>Tinel’s sign ↔︎ cubital tunnel</em> was held back.</li>
+<li><strong>A negated word is expanded too</strong>, so
+<code>knee -ACL</code> now also excludes papers that only say “anterior
+cruciate ligament”.</li>
+<li><strong>It costs what the bigger search costs.</strong> Ranking
+<em>physio</em> on the Papers tab took 240 ms locally against 110 ms for
+<em>physiotherapy</em>, because it now matches and ranks more papers.
+The rewrite itself is about 5 ms.</li>
+<li><strong>Spelling correction runs less often.</strong> It only runs
+when the exact search is empty, and an expanded query is empty less
+often. <em>“rehab ti sport”</em> now finds the one paper with “rehab”,
+“ti” and “sport” instead of correcting to “rehab sport”.</li>
+<li><strong>Adding a pair is an insert</strong> into
+<code>community.search_abbreviations</code>; it takes effect on the next
+search, with nothing to reindex. There is no admin screen for it
+yet.</li>
 </ul>
 <h2 id="demo-data-npm-run-seeddemo--w-appsapi">Demo data
 (<code>npm run seed:demo -w apps/api</code>)</h2>
