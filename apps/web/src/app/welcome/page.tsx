@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { BrandLockup } from '@/components/Brand';
 
@@ -119,13 +118,33 @@ export default async function WelcomePage() {
         <Panel>
           <p>{t('pilot')}</p>
         </Panel>
-        <Link
+        <Panel>
+          <h2 className="flex items-center text-base" style={{ gap: 'var(--space-2)' }}>
+            <PhoneGlyph />
+            {t('mobileTitle')}
+          </h2>
+          <p>{t('mobileBody')}</p>
+        </Panel>
+        {/*
+          A new tab, so the guide stays open beside the app: it is read while registering, and
+          following the link in place left nothing to come back to for steps 2 to 5.
+        */}
+        <a
           href="/register"
-          className="self-start px-4 py-2 text-sm font-medium"
-          style={{ background: 'var(--color-accent)', color: 'white', borderRadius: 'var(--radius-pill)' }}
+          target="_blank"
+          rel="noopener"
+          className="inline-flex items-center self-start px-4 py-2 text-sm font-medium"
+          style={{
+            gap: 'var(--space-2)',
+            background: 'var(--color-accent)',
+            color: 'white',
+            borderRadius: 'var(--radius-pill)',
+          }}
         >
           {t('start')}
-        </Link>
+          <NewTabGlyph />{' '}
+          <span className="sr-only">{t('opensNewTab')}</span>
+        </a>
       </header>
 
       <nav aria-label={t('contents')} className="flex flex-col text-sm" style={{ gap: 'var(--space-1)' }}>
@@ -249,6 +268,43 @@ function MenuGlyph() {
       <circle cx="12" cy="5" r="1.8" />
       <circle cx="12" cy="12" r="1.8" />
       <circle cx="12" cy="19" r="1.8" />
+    </svg>
+  );
+}
+
+/** A phone outline, for the "use it on your phone" note. */
+function PhoneGlyph() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className="h-5 w-5 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="6" y="2" width="12" height="20" rx="2" />
+      <path d="M11 18h2" />
+    </svg>
+  );
+}
+
+/** The usual "opens elsewhere" arrow, so the new tab is not a surprise. */
+function NewTabGlyph() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
     </svg>
   );
 }
