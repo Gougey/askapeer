@@ -25,9 +25,8 @@ import { loadMoreArticles } from './load-more';
  * same page.
  *
  * The taxonomy is untouched and still earns its keep — articles are classified against it on
- * ingest, which is what puts the chips on a card, what the magnifier search narrows by, and
- * what the "placeable at all" bonus in the default ordering rewards. What has gone is the
- * member-relative half.
+ * ingest, which is what puts the chips on a card and what the "placeable at all" bonus in the
+ * default ordering rewards. What has gone is the member-relative half.
  *
  * ⚠️ **Coming back resumes; arriving with nothing prompts.** Returning to this tab reapplies
  * the criteria you last used, so leaving to answer something in Discussions and coming back

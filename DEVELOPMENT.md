@@ -1,6 +1,6 @@
 # Development
 
-The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off), search over the literature feed and in the app bar across both corpora (S16, S17), and Andrew's clinical vocabulary Parts 1 and 2 loaded into the taxonomy (S18b — now 1,230 live tags across seven roots, 175 carrying search synonyms), and editing your own contributions (a question, an answer or a published case, until something responds to it and within 24 hours — see "The edit window" below), and My Research rebuilt around a criteria panel (keyword, type of paper, period and sort, with the last set remembered; **no personalisation — clinical interests play no part in what it shows** — see "My Research — the criteria panel" below), and a private list of **saved articles** (`/feed/saved`, saved from the result card itself — see "Saved articles" below), and **spelling correction** on every keyword search (see "Spelling correction" below), and **search abbreviations** — *rehab* finds *rehabilitation*, *ACL* finds *anterior cruciate ligament* (see "Search abbreviations" below), and **two kinds of kudos, Insightful and Useful** (see "Two kinds of kudos" below), and **invitation-only registration for the closed pilot** with an operator tool for the invitation list and the pre-pilot clear-down (see "Closed pilot" below)**.
+The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off), **a search panel at the top of Discussions** (keyword, tags, type and sort — see "Search and tag filtering" below; the combined magnifying-glass search is gone), and Andrew's clinical vocabulary Parts 1 and 2 loaded into the taxonomy (S18b — now 1,230 live tags across seven roots, 175 carrying search synonyms), and editing your own contributions (a question, an answer or a published case, until something responds to it and within 24 hours — see "The edit window" below), and My Research rebuilt around a criteria panel (keyword, type of paper, period and sort, with the last set remembered; **no personalisation — clinical interests play no part in what it shows** — see "My Research — the criteria panel" below), and a private list of **saved articles** (`/feed/saved`, saved from the result card itself — see "Saved articles" below), and **spelling correction** on every keyword search (see "Spelling correction" below), and **search abbreviations** — *rehab* finds *rehabilitation*, *ACL* finds *anterior cruciate ligament* (see "Search abbreviations" below), and **two kinds of kudos, Insightful and Useful** (see "Two kinds of kudos" below), and **invitation-only registration for the closed pilot** with an operator tool for the invitation list and the pre-pilot clear-down (see "Closed pilot" below)**.
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
@@ -739,9 +739,9 @@ clearing returns to `general`.
 ## My Research — the criteria panel (Andrew's review item 6, redesigned after testing)
 
 My Research carries a **criteria panel** — keyword, type of paper, period and sort — and shows
-**nothing until something is asked**. The magnifier search is untouched: it reaches both
-corpora at once, because the reason to type a word there is usually that it is *outside* this
-screen's question.
+**nothing until something is asked**. Since November 2026 it is the only way to search the
+literature: the magnifying-glass search over both corpora was removed, and Discussions has its
+own panel (see "Search and tag filtering").
 
 `community.feed_preferences` (migrations 0046 and 0048, one row per handle), `FeedFilters` on
 `FeedService.list`, `GET/PUT/DELETE /v1/research-feed/preferences`,
@@ -753,7 +753,7 @@ screen's question.
   My Research displays.** Two members asking the same question now get the same page, and
   `FeedService.list` takes no handle at all.
 - **The taxonomy still earns its keep.** Articles are classified against it on ingest, which is
-  what puts the chips on a card, what the magnifier search narrows by, and what the "placeable
+  what puts the chips on a card and what the "placeable
   at all" bonus in the default ordering rewards. Only the *member-relative* half has gone.
 - ⚠️ **Coming back resumes; arriving with nothing prompts.** A bare `/feed` reapplies the
   criteria last used, so leaving for Discussions and returning does not throw away what you
@@ -940,8 +940,33 @@ without reading every label. Values and the palette rationale are in the style g
 
 ## Search and tag filtering (S7, part)
 
-`GET /v1/search?q=&category=&tag=&cursor=` (EPIC-C §4) plus screen C3 at `/search`. The
-personalised feed and `community.follows` — the rest of S7 — are **not** built.
+`GET /v1/search?q=&tag=&type=&sort=&cursor=` (EPIC-C §4), used by the Search panel on
+`/discussions` (`discussions/SearchPanel.tsx`, `lib/discussion-filters.ts`). The personalised
+feed — the rest of S7 — is **not** built.
+
+**One search per tab (Adrian and Andrew, November 2026).** There used to be a combined screen at
+`/search`, behind a magnifying glass in the app bar, with Discussions and Papers tabs. Andrew's
+testing showed its tag filter working against him on papers: "medial tibial stress syndrome"
+found 194 papers, and picking Leg (Posterior) and Leg (Anterior) cut that to 10, none of them
+systematic reviews. Papers' tags are machine-assigned and 39% of papers have none, and My
+Research had become the better way to search the literature anyway. So the combined screen went:
+
+- **`/search` is now only a redirect**, to `/discussions` or, for `?in=papers`, `/feed`, because a
+  search was always a URL and members may have one saved. `GET /v1/research-feed/search` and
+  its tag filter are gone.
+- ⚠️ **Several tags mean either, not both.** Andrew added a second tag to widen a search and it
+  narrowed instead. Each tag still includes its subtree.
+- **The panel matches My Research with three deliberate differences:** it carries tags (an
+  author chose them here, where a classifier did on papers), it stays shut until asked (this
+  page has a list to show), and nothing is remembered (reapplying an old search on returning
+  would replace the list of what is new). It has no period control, because the forum is young.
+- **The tags load when the panel opens** (`loadTags`). The vocabulary is 272 KB, and this is the
+  page members land on most. A page already showing a search has them from the server.
+- ⚠️ **The URL is parsed, not read** (`parseDiscussionFilters`, guarded by
+  `npm run verify:discussion-filters -w apps/web`): a value the API refuses is an error page.
+  Unlike My Research, a URL whose criteria don't survive is the plain list, not an empty search.
+- **Infinite scroll is keyed by the criteria**, as on My Research: a search pages by offset and
+  the list by keyset, and replaying one's cursors against the other splices in the wrong pages.
 
 **Tags are half the recall, not a filter bolted on the side.** The corpus says "knee" in 4
 posts while 10 are *tagged* somewhere under the knee; folding tag and category names into
@@ -1040,12 +1065,12 @@ working without JavaScript. The tag filter is the composer's `TagPicker`, moved 
 the same ~600 nodes, so a member who has tagged a post already knows how to narrow a
 search.
 
-### Spelling correction (all three keyword searches)
+### Spelling correction (both keyword searches)
 
 Andrew, 2026-10-10: *"ankle ligament testing return ti sport"* found nothing, and with the
 typo fixed it "worked brilliantly". Every search ANDs its words, so one stray word empties the
-page however good the rest are. The forum search, Search's Papers tab and the My Research
-keyword now all retry an empty search with the words spelt right, and say so:
+page however good the rest are. The Discussions search and the My Research
+keyword both retry an empty search with the words spelt right, and say so:
 *Nothing matched "…ti sport". Showing 12 papers for "ankle ligament testing return sport".*
 
 `apps/api/src/search/` — `spelling.ts` is the pure half that decides (guarded by
@@ -1085,7 +1110,7 @@ keyword now all retry an empty search with the words spelt right, and say so:
   `REFRESH … CONCURRENTLY`, never throws). A renamed tag is a correction target from the next
   run, and is found when spelt right in the meantime.
 
-### Search abbreviations (all three keyword searches)
+### Search abbreviations (both keyword searches)
 
 Andrew, 2026-10-21: *"Achilles rehab"* found 8 papers and *"Achilles rehabilitation"* 721.
 Words match by stem, and "rehab" is not a stem of "rehabilitation". The 285 pairs Andrew's
@@ -1116,7 +1141,7 @@ every keyword search rewrites its query through them. Locally: *Achilles rehab* 
   a *place* it is tested at: that is why *Tinel's sign ↔ cubital tunnel* was held back.
 - **A negated word is expanded too**, so `knee -ACL` now also excludes papers that only say
   "anterior cruciate ligament".
-- **It costs what the bigger search costs.** Ranking *physio* on the Papers tab took 240 ms
+- **It costs what the bigger search costs.** Ranking *physio* over full abstracts took 240 ms
   locally against 110 ms for *physiotherapy*, because it now matches and ranks more papers.
   The rewrite itself is about 5 ms.
 - **Spelling correction runs less often.** It only runs when the exact search is empty, and an

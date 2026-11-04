@@ -31,8 +31,8 @@ const BLANK = { q: '', evidence: '', years: '', sort: 'newest' as FeedSort };
  * overrode the member's stored interests for a view, and saving wrote those tags back as the
  * interests. After testing, Adrian took interests out of this screen altogether: My Research
  * answers the keyword, type of paper, period and sort, and nothing else. The corpus is still
- * classified against the taxonomy — that is what puts the chips on a card and what the
- * magnifier search narrows by — but no part of a member's profile reaches this page.
+ * classified against the taxonomy — that is what puts the chips on a card — but no part
+ * of a member's profile reaches this page.
  *
  * ⚠️ **It opens only when there is nothing to show**, and closes on Apply. A member with no
  * criteria has nothing else on the page to do, so the panel prompts them; a member returning
