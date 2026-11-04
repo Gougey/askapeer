@@ -116,8 +116,9 @@ async function shot(page, name) {
     await shot(page, 'discussions.png');
 
     // Found by search rather than on the first page of the list, which changes as posts age.
-    await page.goto(`${WEB}/search?q=${encodeURIComponent(THREAD_TITLE)}`);
-    await page.getByText(THREAD_TITLE).first().click();
+    await page.goto(`${WEB}/discussions?q=${encodeURIComponent(THREAD_TITLE)}`);
+    // Within the results: the line above them repeats what was searched for.
+    await page.locator('main li').getByText(THREAD_TITLE).first().click();
     await page.waitForURL(/\/discussions\/[0-9a-f-]+/);
     // The top of the thread: the question with its Follow button, and answers with their
     // Insightful and Useful awards (answers only, since #194).

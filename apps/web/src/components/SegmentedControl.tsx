@@ -7,10 +7,9 @@ export type Segment = {
   href: string;
   label: string;
   /**
-   * Set when the two panes are the *same* route with different query strings — search
-   * results are `/search?in=discussions` and `/search?in=papers`, so comparing `pathname`
-   * alone marks both inactive. The caller already knows which is showing, and it is a
-   * server component, so it says so rather than making this read the query string.
+   * Set when the panes are the *same* route with different query strings, where comparing
+   * `pathname` alone marks all of them inactive. The caller knows which is showing, so it
+   * says so rather than making this read the query string.
    */
   active?: boolean;
 };

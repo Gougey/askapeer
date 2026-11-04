@@ -1,6 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { Transform } from 'class-transformer';
-import { ArrayMaxSize, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { AppAccessGuard } from '../auth/app-access.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SearchService } from './search.service';
@@ -39,13 +39,21 @@ export class SearchDto {
   tag?: string[];
 
   @IsOptional()
+  @IsIn(['question', 'case_discussion'])
+  type?: 'question' | 'case_discussion';
+
+  @IsOptional()
+  @IsIn(['relevance', 'newest'])
+  sort?: 'relevance' | 'newest';
+
+  @IsOptional()
   @IsString()
   @MaxLength(20)
   cursor?: string;
 }
 
 /**
- * EPIC-C §4 search, screen C3. Behind the same two gates as the rest of the forum: search
+ * EPIC-C §4 search, now the Search panel on Discussions. Behind the same two gates as the rest of the forum: search
  * reaches community content, so it is for verified members with an active handle only.
  */
 @Controller('search')
@@ -59,6 +67,8 @@ export class SearchController {
       q: query.q,
       category: query.category,
       tags: query.tag,
+      type: query.type,
+      sort: query.sort,
       cursor: query.cursor,
     });
   }

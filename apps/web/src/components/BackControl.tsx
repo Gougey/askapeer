@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl';
  *
  * **History first, parent second.** `router.back()` is what a member means by "back" —
  * it returns them to the list they came from, at the scroll position and, crucially, with
- * the query they typed. A search is a URL (`/search?q=knee&tag=…`), so history back
+ * the query they typed. A search is a URL (`/discussions?q=knee&tag=…`), so history back
  * restores the whole result set for free; an "up" link to a fixed parent would drop the
  * query and quietly reset the search.
  *
@@ -40,7 +40,6 @@ const PARENTS: [RegExp, string][] = [
   [/^\/create\/case$/, '/create'],
   [/^\/create$/, '/discussions'],
   [/^\/discussions\/[^/]+$/, '/discussions'],
-  [/^\/search$/, '/discussions'],
   [/^\/activity\/notices\/[^/]+$/, '/activity'],
   [/^\/activity\/(mine|drafts)$/, '/activity'],
   [/^\/settings\/notifications$/, '/settings'],

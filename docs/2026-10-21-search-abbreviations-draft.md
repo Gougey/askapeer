@@ -2,7 +2,7 @@
 
 **For:** Andrew to review · **Drafted:** 21 October 2026 · **Revised:** 29 October 2026 · **Status:** the agreed pairs are built; the rows below are waiting for you
 
-You were sent 324 short form ↔ full term pairs. Of the 291 we proposed to include, 285 are now **built into the app** (the other six are in section 1): typing *rehab* finds papers that say *rehabilitation*, *ACL* finds *anterior cruciate ligament*, and so on, in Discussions, Papers and My Research. This page now shows only the **36 rows that need a decision from you**.
+You were sent 324 short form ↔ full term pairs. Of the 291 we proposed to include, 285 are now **built into the app** (the other six are in section 1): typing *rehab* finds papers that say *rehabilitation*, *ACL* finds *anterior cruciate ligament*, and so on, in Discussions and My Research. This page now shows only the **36 rows that need a decision from you**.
 
 **One change from the draft.** The draft said searching either form would find papers using either. That is still true for alternative *names* (Patrick’s test ↔ FABER test), but an *abbreviation* now works one way only: typing **ACL** also finds “anterior cruciate ligament”, while typing *anterior cruciate ligament* is unchanged. The other direction added almost nothing, because papers spell an abbreviation out beside it, and it was where the wrong matches came from: search ignores capitals, so linking TENS back made *transcutaneous electrical nerve stimulation* also find every paper that says “tens of thousands”. So the question for each row below is just: **should typing the short form also find papers on the full term?**
 
