@@ -46,8 +46,8 @@ export type FeedSort = 'recommended' | 'newest' | 'relevance';
  *
  * ⚠️ **No clinical tags.** The panel used to carry a tag row that overrode the member's
  * stored interests; after testing, interests were taken out of My Research entirely. The
- * corpus is still classified against the taxonomy — that is what puts the chips on a card
- * and what the magnifier search narrows by — but this screen asks only these questions.
+ * corpus is still classified against the taxonomy — that is what puts the chips on a card —
+ * but this screen asks only these questions.
  */
 export type FeedFilters = {
   q?: string;
@@ -84,15 +84,6 @@ export type FeedPage = {
   /** How many articles match — on the first page only, null after it. */
   total: number | null;
 };
-
-/** Search has no ranking `mode` — relevance is the ordering, and it carries a real total. */
-export type FeedSearchPage = {
-  articles: FeedArticle[];
-  nextCursor: string | null;
-  total: number;
-  correctedQuery: string | null;
-};
-
 
 /** The panel's state as URL parameters — the one place the shape is written down. */
 export function feedFilterParams(filters: FeedFilters = {}): URLSearchParams {
@@ -163,20 +154,6 @@ export async function fetchSavedCount(token: string): Promise<number> {
 export async function fetchFeedCriteria(token: string): Promise<FeedCriteria> {
   const res = await apiGet<FeedCriteria>('/research-feed/preferences', token);
   return res ?? { sort: 'newest' };
-}
-
-/** S16 — full-text search over the corpus, independent of the member's interests. */
-export async function fetchFeedSearch(
-  token: string,
-  params: { q: string; tags?: string[]; evidence?: string; cursor?: string },
-): Promise<FeedSearchPage> {
-  const search = new URLSearchParams({ q: params.q });
-  // Repeated rather than comma-joined, matching the forum search and the API's own contract.
-  for (const tag of params.tags ?? []) search.append('tag', tag);
-  if (params.evidence) search.set('evidence', params.evidence);
-  if (params.cursor) search.set('cursor', params.cursor);
-  const res = await apiGet<FeedSearchPage>(`/research-feed/search?${search.toString()}`, token);
-  return res ?? { articles: [], nextCursor: null, total: 0, correctedQuery: null };
 }
 
 export async function fetchArticle(token: string, articleId: string): Promise<ArticleDetail | null> {

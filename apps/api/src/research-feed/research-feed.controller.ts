@@ -114,43 +114,6 @@ export class BackfillPlanDto {
   toYear!: number;
 }
 
-export class FeedSearchDto {
-  @IsString()
-  @MaxLength(200)
-  q!: string;
-
-  /**
-   * The same tag filter the forum search takes, and for the same reason: a tag is clinical
-   * vocabulary, not forum vocabulary. Articles are classified against the very same
-   * taxonomy, so "everything under Achilles tendinopathy" is a question both corpora can
-   * answer — it was only ever the *category* that could not cross.
-   *
-   * ⚠️ Search keeps this after My Research dropped its own tag row. The two screens ask
-   * different questions: this one reaches the whole corpus, including the parts a member
-   * would never think to browse, and a tag is often the only way to express what you want.
-   *
-   * Mirrors `SearchDto`: repeated rather than comma-joined, normalised to an array, and any
-   * UUID version because the taxonomy is seeded with deterministic uuid5 ids.
-   */
-  @IsOptional()
-  @Transform(({ value }: { value: unknown }) =>
-    value === undefined ? undefined : Array.isArray(value) ? value : [value],
-  )
-  @IsUUID('all', { each: true })
-  @ArrayMaxSize(3)
-  tag?: string[];
-
-  /** Post-search refinement, applied on the results themselves. */
-  @IsOptional()
-  @IsIn(EVIDENCE_TYPES)
-  evidence?: (typeof EVIDENCE_TYPES)[number];
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  cursor?: string;
-}
-
 /**
  * The research feed (EPIC-I §6, screens B1 and B2).
  *
@@ -264,30 +227,6 @@ export class ResearchFeedController {
   @Get('preferences')
   myPreferences(@Req() req: Request & { member: AuthedMember }) {
     return this.preferences.get(req.member.handleId!);
-  }
-
-  /**
-   * Search the corpus (S16).
-   *
-   * **Declared above `:articleId` deliberately.** Nest matches routes in declaration order,
-   * so with these the other way round `/research-feed/search` is read as an article id and
-   * `ParseUUIDPipe` rejects it with a 400 — a confusing failure for a route that exists.
-   *
-   * Not scoped to the member's interests: the reason to type a word is usually that it is
-   * outside what you already follow.
-   */
-  @Get('search')
-  async search(@Query() query: FeedSearchDto, @Req() req: Request & { member: AuthedMember }) {
-    const page = await this.feed.search(
-      query.q,
-      query.cursor,
-      undefined,
-      query.tag ?? [],
-      query.evidence,
-    );
-    // The papers tab renders the same card as the feed, so it needs the same flag — otherwise
-    // every search result shows as unsaved and saving one from there would look like a no-op.
-    return { ...page, articles: await this.saved.mark(req.member.handleId!, page.articles) };
   }
 
   /** `saved` rides along rather than costing the screen a second request. */

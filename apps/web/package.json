@@ -11,7 +11,8 @@
     "lint:tokens": "node scripts/check-design-tokens.mjs",
     "lint:inputs": "node scripts/check-input-zoom.mjs",
     "lint:boundary": "node scripts/check-client-boundary.mjs",
-    "verify:feed-filters": "tsx scripts/verify-feed-filters.ts"
+    "verify:feed-filters": "tsx scripts/verify-feed-filters.ts",
+    "verify:discussion-filters": "tsx scripts/verify-discussion-filters.ts"
   },
   "dependencies": {
     "@askapeer/design-tokens": "*",

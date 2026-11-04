@@ -48,8 +48,17 @@ export type SearchQuery = {
   /** Absent or empty when the member searched on filters alone — see `search()`. */
   q?: string;
   category?: string;
-  /** Tag ids. Each is expanded to its subtree; several are ANDed. */
+  /**
+   * Tag ids. Each is expanded to its subtree, and **several mean either**, not both: Andrew
+   * picked Leg (Posterior) and Leg (Anterior) to widen a search and it narrowed from 194 papers
+   * to 10, because a post had to sit under both. A member adding a second tag is adding a place
+   * to look.
+   */
   tags?: string[];
+  /** Questions or case discussions; absent means both. */
+  type?: 'question' | 'case_discussion';
+  /** Relevance by default when there are words to rank; newest otherwise. */
+  sort?: 'relevance' | 'newest';
   cursor?: string;
   limit?: number;
 };
@@ -160,19 +169,26 @@ export class SearchService {
      * via `post_tags_tag_idx`, otherwise the category via `posts_category_idx`. The outer
      * WHERE still applies every filter, so this only ever has to be a superset.
      */
+    const subtree = sql`
+      with recursive subtree as (
+        select id from community.tags
+         where id in (${sql.join(tagFilters.map((id) => sql`${id}`), sql`, `)})
+        union all
+        select c.id from community.tags c join subtree s on c.parent_id = s.id
+      )`;
     const browse =
       tagFilters.length > 0
         ? sql`
-          with recursive subtree as (
-            select id from community.tags where id = ${tagFilters[0]}
-            union all
-            select c.id from community.tags c join subtree s on c.parent_id = s.id
-          )
+          ${subtree}
           select pt.post_id as id from community.post_tags pt
            where pt.tag_id in (select id from subtree)`
-        : sql`
+        : query.category
+          ? sql`
           select p.id from community.posts p
-           where p.status = 'published' and p.category_id = ${query.category}`;
+           where p.status = 'published' and p.category_id = ${query.category}`
+          : sql`
+          select p.id from community.posts p
+           where p.status = 'published' and p.type = ${query.type}`;
 
     const candidates = !term
       ? browse
@@ -222,7 +238,7 @@ export class SearchService {
     // Newest first when there is no text to rank by — the only honest order for "show me
     // everything tagged X". Kudos deliberately does not lead here either, for the same
     // reason it only nudges above: it would turn a filter into a popularity chart.
-    const ordering = !term
+    const ordering = !term || query.sort === 'newest'
       ? sql`p.created_at desc, p.id desc`
       : fuzzy
       ? sql`similarity(p.title, ${term}) desc, p.created_at desc, h.kudos_total desc, p.id desc`
@@ -236,28 +252,28 @@ export class SearchService {
             ) then 0.15 else 0 end
         )`;
 
-    // Each tag filter matches the tag *and its whole subtree*. Picking "Lower Limb" must
-    // find a post tagged "Achilles tendinopathy" — the composer's picker drops an ancestor
-    // when a descendant is chosen precisely because it assumes this happens here.
-    const tagPredicates = tagFilters.map(
-      (tagId) => sql`exists (
-        with recursive subtree as (
-          select id from community.tags where id = ${tagId}
-          union all
-          select c.id from community.tags c join subtree s on c.parent_id = s.id
-        )
-        select 1 from community.post_tags pt
-        where pt.post_id = p.id and pt.tag_id in (select id from subtree)
-      )`,
-    );
+    // A tag filter matches the tag *and its whole subtree*. Picking "Lower Limb" must find a
+    // post tagged "Achilles tendinopathy" — the composer's picker drops an ancestor when a
+    // descendant is chosen precisely because it assumes this happens here.
+    const tagPredicate =
+      tagFilters.length > 0
+        ? [
+            sql`exists (
+              ${subtree}
+              select 1 from community.post_tags pt
+              where pt.post_id = p.id and pt.tag_id in (select id from subtree)
+            )`,
+          ]
+        : [];
 
     const conditions = [
       sql`p.status = 'published'`,
       // A suspended or expelled member's content leaves the community surfaces (EPIC-F).
       sql`h.status = 'active'`,
       query.category ? sql`p.category_id = ${query.category}` : sql`true`,
+      query.type ? sql`p.type = ${query.type}` : sql`true`,
       ...negationGuard,
-      ...tagPredicates,
+      ...tagPredicate,
     ];
     const where = conditions.reduce((acc, c, i) => (i === 0 ? c : sql`${acc} and ${c}`));
 
@@ -387,9 +403,11 @@ export class SearchService {
   }
 }
 
-/** A category or at least one tag — either makes a search that needs no words. */
+/** A category, a type or a tag — any of them makes a search that needs no words. */
 function hasFilters(query: SearchQuery): boolean {
-  return Boolean(query.category) || (query.tags ?? []).filter(Boolean).length > 0;
+  return (
+    Boolean(query.category) || Boolean(query.type) || (query.tags ?? []).filter(Boolean).length > 0
+  );
 }
 
 /** Enough of the text to judge a result by, not enough to replace opening it. */
