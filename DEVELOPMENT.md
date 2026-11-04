@@ -1124,6 +1124,9 @@ every keyword search rewrites its query through them. Locally: *Achilles rehab* 
   "ti" and "sport" instead of correcting to "rehab sport".
 - **Adding a pair is an insert** into `community.search_abbreviations`; it takes effect on the
   next search, with nothing to reindex. There is no admin screen for it yet.
+  The first two added this way came from Andrew's testing (migration `0061`): *shin splints ↔
+  medial tibial stress syndrome* and *hip replacement ↔ hip arthroplasty*. Common names like
+  these are the gap the abbreviation list did not cover, so ask for them.
 
 ## Demo data (`npm run seed:demo -w apps/api`)
 
