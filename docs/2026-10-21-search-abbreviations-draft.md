@@ -123,5 +123,6 @@ Each of these short forms also means something else, so linking it would mix unr
 
 ## 3. Nothing for you to do
 
+- **Two links added from your testing:** *shin splints ↔ medial tibial stress syndrome* and *hip replacement ↔ hip arthroplasty*, each working both ways. If other common names and formal terms should be linked like this, please add them to your reply.
 - **Three draft rows dropped as already covered:** *RTS → return-to-sport programme* and *return-to-sport rehabilitation*, and *ROM → range-of-motion exercise*. RTS is already linked to “return to sport” and ROM to “range of motion”, which find those papers too.
 - **UK and US spelling** (paediatric ↔ pediatric, tumour ↔ tumor, randomised ↔ randomized): agreed in the draft, not built yet. It comes next and needs nothing from you.
