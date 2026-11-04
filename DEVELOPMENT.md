@@ -295,6 +295,10 @@ The order matters, and step 9 is the one people skip.
    stops a stale migration silently editing the wrong tag.
 3. **Retire, never delete.** The classifier's walk stops at a retired node, so retiring a parent
    hides its whole subtree; posts and articles already carrying the tag keep it.
+   ⚠️ The picker never offers a retired tag, so a post keeping one shows a chip nobody can search
+   by: "Knee Joint" on a card, "Knee joints" (a different tag) in the picker. Migration `0062`
+   moved the test data to live parents as a one-off; once real posts exist, retiring a tag in use
+   needs the same decision.
 4. ⚠️ **Qualify the synonyms whenever you qualify a name.** A tag matches on its name *or any
    synonym*, so a bare synonym outlives the name it hung off and goes on matching everything the
    rename was meant to stop. This defeated 0038 completely — three renamed tags went on matching
