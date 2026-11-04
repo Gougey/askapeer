@@ -458,7 +458,12 @@ this; it is what stops a stale migration silently editing the wrong
 tag.</p></li>
 <li><p><strong>Retire, never delete.</strong> The classifier’s walk
 stops at a retired node, so retiring a parent hides its whole subtree;
-posts and articles already carrying the tag keep it.</p></li>
+posts and articles already carrying the tag keep it. ⚠️ The picker never
+offers a retired tag, so a post keeping one shows a chip nobody can
+search by: “Knee Joint” on a card, “Knee joints” (a different tag) in
+the picker. Migration <code>0062</code> moved the test data to live
+parents as a one-off; once real posts exist, retiring a tag in use needs
+the same decision.</p></li>
 <li><p>⚠️ <strong>Qualify the synonyms whenever you qualify a
 name.</strong> A tag matches on its name <em>or any synonym</em>, so a
 bare synonym outlives the name it hung off and goes on matching
