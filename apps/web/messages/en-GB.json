@@ -183,6 +183,7 @@
   },
   "discussions": {
     "heading": "Discussions",
+    "intro": "Search for discussions on topics you want to explore.",
     "empty": "No questions yet. Be the first to ask one.",
     "emptyCta": "Ask a question",
     "search": "Search",
