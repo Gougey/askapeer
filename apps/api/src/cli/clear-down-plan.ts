@@ -61,6 +61,8 @@ export const CLEAR = [
  */
 export const KEEP = [
   'community.categories',
+  // The search abbreviations (0060): our vocabulary, like the tags, and no member's data.
+  'community.search_abbreviations',
   'community.tags',
   'config.admin_audit_log',
   'config.app_meta',
