@@ -54,7 +54,7 @@ export default async function DiscussionsPage({
     `${base}${filterKey ? '&' : '?'}cursor=${encodeURIComponent(next)}`;
 
   return (
-    <main className="flex flex-col gap-4 px-4 py-6">
+    <main className="flex flex-col" style={{ gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
       <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
         <h1 className="text-xl font-semibold">{t('heading')}</h1>
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
