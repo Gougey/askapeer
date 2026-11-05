@@ -30,7 +30,7 @@ export default async function ProfilePage() {
   const profile = (await res.json()) as Profile;
 
   return (
-    <main className="flex min-h-dvh flex-col gap-6 px-6 py-12">
+    <main className="flex flex-col" style={{ gap: 'var(--space-6)', padding: 'var(--space-4)' }}>
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">{profile.handleName}</h1>
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
