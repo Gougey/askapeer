@@ -1359,15 +1359,17 @@ pins them. The decision (Adrian, 2026-10-17) was that all member data so far was
 the founders' and the seeded demo's — including the audit logs that policy otherwise treats as
 immutable. **The backup taken first is what keeps those recoverable.**
 
-- **Cleared:** all of `identity.*`, all of `community.*` except `tags` and `categories`, and
+- **Cleared:** all of `identity.*`, all of `community.*` except the vocabulary (below), and
   `research.saved_articles`. Also the `verification` and `notifications` queues, and Redis
   `kudos:*` — the retired leaderboard's leftover key, if it is still there.
 - **Kept:** `research.*` (articles, their tags, ingestion and backfill state, the spelling
-  dictionary), `community.tags` and `categories`, and all of `config.*`, including the
+  dictionary), `community.tags`, `categories` and `search_abbreviations`, and all of `config.*`, including the
   invitation list and `admin_audit_log`. The audit log's `actor_member_id` will point at member
   ids that no longer exist, by design.
 - **It refuses to run** against any table on neither list, or a listed table that has gone, so a
-  table added later stops it rather than being silently emptied or kept.
+  table added later stops it rather than being silently emptied or kept. ⚠️ That guard only speaks up
+  on the day it runs, so `verify:pilot` also reads the migrations: a new table has to be put on a
+  list before its PR can merge.
 - One `TRUNCATE` with **no `CASCADE`**: if a kept table ever gains a foreign key to a cleared one,
   Postgres refuses rather than widening the wipe.
 - `--execute` also needs `--confirm=<db>@<host>`, exactly as the dry run prints it, so a command

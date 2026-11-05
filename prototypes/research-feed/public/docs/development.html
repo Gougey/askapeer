@@ -2014,21 +2014,23 @@ otherwise treats as immutable. <strong>The backup taken first is what
 keeps those recoverable.</strong></p>
 <ul>
 <li><strong>Cleared:</strong> all of <code>identity.*</code>, all of
-<code>community.*</code> except <code>tags</code> and
-<code>categories</code>, and <code>research.saved_articles</code>. Also
-the <code>verification</code> and <code>notifications</code> queues, and
-Redis <code>kudos:*</code> — the retired leaderboard’s leftover key, if
-it is still there.</li>
+<code>community.*</code> except the vocabulary (below), and
+<code>research.saved_articles</code>. Also the <code>verification</code>
+and <code>notifications</code> queues, and Redis <code>kudos:*</code> —
+the retired leaderboard’s leftover key, if it is still there.</li>
 <li><strong>Kept:</strong> <code>research.*</code> (articles, their
 tags, ingestion and backfill state, the spelling dictionary),
-<code>community.tags</code> and <code>categories</code>, and all of
-<code>config.*</code>, including the invitation list and
-<code>admin_audit_log</code>. The audit log’s
-<code>actor_member_id</code> will point at member ids that no longer
-exist, by design.</li>
+<code>community.tags</code>, <code>categories</code> and
+<code>search_abbreviations</code>, and all of <code>config.*</code>,
+including the invitation list and <code>admin_audit_log</code>. The
+audit log’s <code>actor_member_id</code> will point at member ids that
+no longer exist, by design.</li>
 <li><strong>It refuses to run</strong> against any table on neither
 list, or a listed table that has gone, so a table added later stops it
-rather than being silently emptied or kept.</li>
+rather than being silently emptied or kept. ⚠️ That guard only speaks up
+on the day it runs, so <code>verify:pilot</code> also reads the
+migrations: a new table has to be put on a list before its PR can
+merge.</li>
 <li>One <code>TRUNCATE</code> with <strong>no
 <code>CASCADE</code></strong>: if a kept table ever gains a foreign key
 to a cleared one, Postgres refuses rather than widening the wipe.</li>
