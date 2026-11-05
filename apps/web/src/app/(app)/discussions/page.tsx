@@ -55,7 +55,12 @@ export default async function DiscussionsPage({
 
   return (
     <main className="flex flex-col gap-4 px-4 py-6">
-      <h1 className="text-xl font-semibold">{t('heading')}</h1>
+      <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+        <h1 className="text-xl font-semibold">{t('heading')}</h1>
+        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+          {t('intro')}
+        </p>
+      </div>
 
       {/* Keyed so that tapping the tab, which drops the criteria, gets an empty panel: the
           page's server render changes, but client state would otherwise survive it. A search
