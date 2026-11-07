@@ -1117,9 +1117,8 @@ keyword both retry an empty search with the words spelt right, and say so:
 ### Search abbreviations (both keyword searches)
 
 Andrew, 2026-10-21: *"Achilles rehab"* found 8 papers and *"Achilles rehabilitation"* 721.
-Words match by stem, and "rehab" is not a stem of "rehabilitation". The 285 pairs Andrew's
-draft marked Include (`docs/2026-10-21-search-abbreviations-draft.md`, which now lists only the
-rows still waiting for him) live in `community.search_abbreviations` (migration `0060`), and
+Words match by stem, and "rehab" is not a stem of "rehabilitation". The 291 links he
+decided (`docs/2026-10-21-search-abbreviations-draft.md`) live in `community.search_abbreviations` (migration `0060`), and
 every keyword search rewrites its query through them. Locally: *Achilles rehab* 0 → 65 papers,
 *ACL rehab* 7 → 462, *physio* 14 → 4,284.
 
