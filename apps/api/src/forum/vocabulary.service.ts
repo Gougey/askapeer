@@ -25,6 +25,8 @@ export type CategoryDto = {
 export type TagDto = {
   id: string;
   name: string;
+  /** Tells same-named tags apart on screen: "Foot (muscles)". Null when the name is unique. */
+  label: string | null;
   facet: 'region' | 'muscle' | 'structure' | 'pathology';
   /** Null for a top-level region. The composer rebuilds the tree from these. */
   parentId: string | null;
@@ -167,7 +169,8 @@ export class VocabularyService {
                select 1 from ${tags} as kid
                where kid.parent_id = tree.id and kid.retired_at is null
              ) as "hasChildren",
-             coalesce((select synonyms from ${tags} as self where self.id = tree.id), '{}') as synonyms
+             coalesce((select synonyms from ${tags} as self where self.id = tree.id), '{}') as synonyms,
+             (select label from ${tags} as self where self.id = tree.id) as label
       from tree
       order by tree.sort_order asc, tree.name asc
     `);

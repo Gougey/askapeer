@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { discussionFilterParams, parseDiscussionFilters, type RawDiscussionParams } from '@/lib/discussion-filters';
 import { fetchPosts, fetchSearch, fetchTags, type Tag } from '@/lib/forum';
 import { requireAccessToken } from '@/lib/session';
+import { tagText } from '@/lib/tag-text';
 import { PostCard } from '@/components/PostCard';
 import { BackToStart } from '@/components/LoadMore';
 import { InfiniteList } from '@/components/InfiniteList';
@@ -146,5 +147,8 @@ export default async function DiscussionsPage({
 }
 
 function tagNames(ids: string[], tags: Tag[] | null): string[] {
-  return ids.flatMap((id) => tags?.find((tag) => tag.id === id)?.name ?? []);
+  return ids.flatMap((id) => {
+    const tag = tags?.find((candidate) => candidate.id === id);
+    return tag ? [tagText(tag)] : [];
+  });
 }

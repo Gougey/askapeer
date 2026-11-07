@@ -202,6 +202,14 @@ export const tags = community.table(
      * of nearly the same name — the duplication migrations 0033–0042 removed.
      */
     navigational: boolean('navigational').notNull().default(false),
+    /**
+     * Tells same-named tags apart on screen: "Foot (muscles)". Display only, because `name` is
+     * what matches a paper, and qualifying a name can stop it matching (Knee MCL went from 25
+     * papers to 2). See `tagText` on the web.
+     */
+    label: text('label'),
+    /** Search treats every copy of this name as one area: see `SearchService`. Search only. */
+    searchArea: boolean('search_area').notNull().default(false),
     // INTERNAL ONLY — MeSH mapping for research-feed/literature interop (EPIC-I).
     // Never member-facing; deliberately not in any DTO.
     meshId: text('mesh_id'),

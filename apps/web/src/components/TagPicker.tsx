@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { Tag } from '@/lib/forum';
+import { tagText } from '@/lib/tag-text';
 
 /**
  * The composer's tag picker (screens D1/D2, FD-4).
@@ -223,7 +224,7 @@ export function TagPicker({
             if (!tag) return null;
             return (
               <li key={id}>
-                <SelectedChip tag={tag} onRemove={() => removeTag(id)} label={t('tagPicker.remove', { name: tag.name })} />
+                <SelectedChip tag={tag} onRemove={() => removeTag(id)} label={t('tagPicker.remove', { name: tagText(tag) })} />
               </li>
             );
           })}
@@ -295,7 +296,7 @@ function SelectedChip({ tag, onRemove, label }: { tag: Tag; onRemove: () => void
       className="flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-left text-xs break-words"
       style={{ borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}
     >
-      <span>{tag.name}</span>
+      <span>{tagText(tag)}</span>
       {tag.name !== tag.region && (
         <span style={{ color: 'var(--color-muted)' }}>· {tag.region}</span>
       )}
@@ -410,7 +411,11 @@ function TagSheet({
       // Synonyms are searched as well as names. An administrator can group a concept the
       // taxonomy scatters — "quadriceps" lives under three different parents — by putting
       // the word on each tag; if search ignored synonyms, that would appear not to work.
-      if (matches(tag.name, needle, words) || tag.synonyms.some((s) => matches(s, needle, words))) {
+      // The label too, so "foot muscles" finds Foot (muscles).
+      if (
+        matches(tagText(tag), needle, words) ||
+        tag.synonyms.some((s) => matches(s, needle, words))
+      ) {
         hits.push(tag);
       }
     }
@@ -539,7 +544,7 @@ function TagSheet({
                     key={id}
                     tag={tag}
                     onRemove={() => onRemove(id)}
-                    label={t('tagPicker.remove', { name: tag.name })}
+                    label={t('tagPicker.remove', { name: tagText(tag) })}
                   />
                 );
               })
@@ -618,7 +623,7 @@ function TagSheet({
                               color: picked ? 'var(--color-accent)' : 'var(--color-muted)',
                             }}
                           >
-                            <span>{tag.name}</span>
+                            <span>{tagText(tag)}</span>
                             {tag.hasChildren && (
                               <span
                                 aria-hidden
@@ -688,7 +693,7 @@ function SearchResults({
                 the whole sheet past the viewport instead of wrapping.
               */}
               <span className="flex min-w-0 flex-col">
-                <span className="text-sm font-medium break-words">{tag.name}</span>
+                <span className="text-sm font-medium break-words">{tagText(tag)}</span>
                 {trail && (
                   <span
                     className="text-[11px] break-words"

@@ -4,6 +4,8 @@ import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import { Pool } from 'pg';
 import { CLEAR, KEEP, QUEUES_TO_EMPTY, REDIS_PATTERNS, SCHEMAS, unclassified } from './clear-down-plan';
+import { classify, prepareTaxonomy } from '../research-feed/classifier';
+import { TAXONOMY_QUERY, toClassifiable, type TaxonomyRow } from '../research-feed/taxonomy-query';
 
 /**
  * The closed pilot's operator tool. Compiled into `dist/`, because the production image has no
@@ -19,6 +21,8 @@ import { CLEAR, KEEP, QUEUES_TO_EMPTY, REDIS_PATTERNS, SCHEMAS, unclassified } f
  *   allowlist remove a@x.com             uninvite (does not touch an existing account)
  *   clear-down                           dry run: what would go, what stays
  *   clear-down --execute --confirm=DB@HOST
+ *   reclassify-matching "a phrase" word  dry run: the papers mentioning any of these
+ *   reclassify-matching … --execute
  *
  * ⚠️ The list output deliberately shows **no handle**. Email next to handle is a de-anonymisation,
  * which on this platform is only ever done through the audited reveal-identity action.
@@ -36,6 +40,7 @@ async function main(): Promise<void> {
     if (command === 'allowlist' && sub === 'add') return await addAllowlist(pool, emails(rest));
     if (command === 'allowlist' && sub === 'remove') return await removeAllowlist(pool, emails(rest));
     if (command === 'clear-down') return await clearDown(pool, url, [sub, ...rest].filter(Boolean));
+    if (command === 'reclassify-matching') return await reclassifyMatching(pool, [sub, ...rest].filter(Boolean));
     usage();
   } finally {
     await pool.end();
@@ -44,7 +49,7 @@ async function main(): Promise<void> {
 
 function usage(): never {
   console.error(
-    'Usage: pilot allowlist list | allowlist add <emails> | allowlist remove <emails> | clear-down [--execute --confirm=DB@HOST]',
+    'Usage: pilot allowlist list | allowlist add <emails> | allowlist remove <emails> | clear-down [--execute --confirm=DB@HOST] | reclassify-matching <terms> [--execute]',
   );
   process.exit(2);
 }
@@ -177,6 +182,61 @@ async function clearDown(pool: Pool, url: string, args: string[]): Promise<void>
   } finally {
     redis.disconnect();
   }
+}
+
+/**
+ * Re-tags only the papers that mention the given terms, through the real classifier.
+ *
+ * For a taxonomy change that adds new wording to a few tags, where a full reclassify would be
+ * hours of the heaviest job we run for a few hundred papers (see migration 0064). Each paper is
+ * written exactly as `IngestionService.reclassifyAll` writes it. A separate process, so it
+ * cannot block the API's event loop. A dry run unless `--execute` is given.
+ */
+async function reclassifyMatching(pool: Pool, args: string[]): Promise<void> {
+  const execute = args.includes('--execute');
+  const terms = args.filter((a) => a !== '--execute');
+  if (terms.length === 0) usage();
+
+  const { rows: papers } = await pool.query<{ id: string; title: string; abstract: string | null }>(
+    `select distinct a.id, a.title, a.abstract
+       from research.articles a
+       join unnest($1::text[]) as term on a.tsv @@ websearch_to_tsquery('english', term)
+      order by a.id`,
+    [terms],
+  );
+  const { rows: tags } = await pool.query<TaxonomyRow>(TAXONOMY_QUERY);
+  const taxonomy = prepareTaxonomy(tags.map(toClassifiable));
+  console.log(`${papers.length} paper(s) mention ${terms.map((t) => `"${t}"`).join(', ')}.`);
+
+  const written = papers.map((paper) => ({ paper, matches: classify(paper, taxonomy) }));
+  console.log(`They would carry ${written.reduce((n, w) => n + w.matches.length, 0)} tag match(es).`);
+  if (!execute) {
+    console.log('Dry run: nothing changed. Add --execute to write them.');
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    for (const { paper, matches } of written) {
+      await client.query('delete from research.article_tags where article_id = $1', [paper.id]);
+      for (const m of matches) {
+        await client.query(
+          `insert into research.article_tags (article_id, tag_id, confidence, matched_in)
+           values ($1, $2, $3, $4) on conflict do nothing`,
+          [paper.id, m.tagId, m.confidence, m.matchedIn],
+        );
+      }
+      await client.query('update research.articles set tag_count = $2 where id = $1', [paper.id, matches.length]);
+    }
+    await client.query('commit');
+  } catch (err) {
+    await client.query('rollback');
+    throw err;
+  } finally {
+    client.release();
+  }
+  console.log(`Done: ${papers.length} paper(s) re-tagged.`);
 }
 
 async function scanKeys(redis: IORedis): Promise<string[]> {
