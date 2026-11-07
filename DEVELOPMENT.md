@@ -1,6 +1,6 @@
 # Development
 
-The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off), **a search panel at the top of Discussions** (keyword, tags, type and sort — see "Search and tag filtering" below; the combined magnifying-glass search is gone), and Andrew's clinical vocabulary Parts 1 and 2 loaded into the taxonomy (S18b — now 1,230 live tags across seven roots, 175 carrying search synonyms), and editing your own contributions (a question, an answer or a published case, until something responds to it and within 24 hours — see "The edit window" below), and My Research rebuilt around a criteria panel (keyword, type of paper, period and sort, with the last set remembered; **no personalisation — clinical interests play no part in what it shows** — see "My Research — the criteria panel" below), and a private list of **saved articles** (`/feed/saved`, saved from the result card itself — see "Saved articles" below), and **spelling correction** on every keyword search (see "Spelling correction" below), and **search abbreviations** — *rehab* finds *rehabilitation*, *ACL* finds *anterior cruciate ligament* (see "Search abbreviations" below), and **two kinds of kudos, Insightful and Useful** (see "Two kinds of kudos" below), and **invitation-only registration for the closed pilot** with an operator tool for the invitation list and the pre-pilot clear-down (see "Closed pilot" below)**.
+The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS API and a Next.js web app, backed by Postgres + Redis. Features land as tracer-bullet slices (see `docs/2026-07-19-tracer-bullet-slice-backlog.md` and GitHub issues); **S0–S5 are in, plus notifications and the Activity tab (S10 — in-app inbox, per-type preferences, own questions and answers), a read-only admin console (S11a) with verification actions, member reporting (S11b — report content or a handle), the moderation queue (S11c — remove content with kudos clawback / warn / dismiss), handle enforcement (S11d — suspend / expel / rename), the audited reveal-identity action (S11e), case discussions (S9 — the de-identified template, the checklist-and-attestation publish gate, and private drafts), and following a discussion (S15 — subscribe to a thread, collapsed notifications when it moves, and the mute that turns them off), **a search panel at the top of Discussions** (keyword, tags, type and sort — see "Search and tag filtering" below; the combined magnifying-glass search is gone), and Andrew's clinical vocabulary Parts 1 and 2 loaded into the taxonomy (S18b — now 1,274 live tags across seven roots, 179 carrying search synonyms), and editing your own contributions (a question, an answer or a published case, until something responds to it and within 24 hours — see "The edit window" below), and My Research rebuilt around a criteria panel (keyword, type of paper, period and sort, with the last set remembered; **no personalisation — clinical interests play no part in what it shows** — see "My Research — the criteria panel" below), and a private list of **saved articles** (`/feed/saved`, saved from the result card itself — see "Saved articles" below), and **spelling correction** on every keyword search (see "Spelling correction" below), and **search abbreviations** — *rehab* finds *rehabilitation*, *ACL* finds *anterior cruciate ligament* (see "Search abbreviations" below), and **two kinds of kudos, Insightful and Useful** (see "Two kinds of kudos" below), and **invitation-only registration for the closed pilot** with an operator tool for the invitation list and the pre-pilot clear-down (see "Closed pilot" below)**.
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
@@ -376,6 +376,26 @@ off wholesale, leaving "fractures" as `fractur` while "fracture" stayed whole, s
 whose singular ends in `e` — knee, muscle, fracture, rupture — silently failed to match its
 own plural. The same function runs over tag names and article text, so symmetry is the only
 property that matters. The verify script pins nine plural pairs against regression.
+
+### Re-tagging only what changed
+
+Migration `0064` moved 16 retired tags, 14 new ones and two renames without a full reclassify,
+which at 300,000 papers would be hours of the job that took the API down in September. It
+works because **same-named tags carry the same matches**: retiring a copy takes nothing from its
+survivor, so its rows can be deleted, and a new copy of an existing tag matches what its twin
+does, so its rows can be copied, in SQL, in the migration. Keep `tag_count` in step.
+
+Only genuinely new wording needs the classifier, and only for the papers that mention it:
+
+```bash
+flyctl ssh console -a askapeer-api -C 'node dist/cli/pilot.js reclassify-matching "ligamentum flavum" "ligamenta flava" iliopsoas'           # dry run
+flyctl ssh console -a askapeer-api -C 'node dist/cli/pilot.js reclassify-matching "ligamentum flavum" "ligamenta flava" iliopsoas --execute'
+```
+
+⚠️ **Prove it before trusting it.** Run every local paper through `classify` read-only and diff
+against `article_tags`. For 0064 that was 18,861 papers: it would remove nothing, add only those
+two names' matches, and after `reclassify-matching` the diff was zero. A change to how matching
+works, a synonym on a tag with many papers, or a scope term still needs a full reclassify.
 
 ### Running a reclassify
 
@@ -971,6 +991,14 @@ Research had become the better way to search the literature anyway. So the combi
   Unlike My Research, a URL whose criteria don't survive is the plain list, not an empty search.
 - **Infinite scroll is keyed by the criteria**, as on My Research: a search pages by offset and
   the list by keyset, and replaying one's cursors against the other splices in the wrong pages.
+
+**Same-named tags (Andrew, November 2026).** 83 names are used by more than one tag. Each copy has
+a `label` shown through `tagText` on cards and in the picker: *Foot (muscles)*, *Foot
+(conditions)*. Display only: `name` is what matches a paper, so never qualify a name to
+disambiguate it (Knee MCL went from 25 papers to 2). Nine names (Foot, Thigh, Forearm, Sacrum,
+Ilium, Ischium, Coccyx, Pubis, Acetabulum) are one area with `search_area` set, so picking any copy
+searches them all; Disc bulge in the neck and lumbar spine stay separate. An admin adding a
+same-named tag must add a label too: the guard for that is in `0065`, not in the admin screen.
 
 **Tags are half the recall, not a filter bolted on the side.** The corpus says "knee" in 4
 posts while 10 are *tagged* somewhere under the knee; folding tag and category names into

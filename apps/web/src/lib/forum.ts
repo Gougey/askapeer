@@ -15,7 +15,7 @@ export type AuthorBlock = {
 /** The two kinds of kudos (API migration 0057). */
 export type KudosKind = 'insightful' | 'useful';
 
-export type TagRef = { id: string; name: string };
+export type TagRef = { id: string; name: string; label: string | null };
 
 /**
  * A category as it appears attached to a post. `colour` is a design-token key
@@ -100,6 +100,8 @@ export type Category = {
 export type Tag = {
   id: string;
   name: string;
+  /** Tells same-named tags apart on screen. Read it through `tagText`. */
+  label: string | null;
   facet: 'region' | 'muscle' | 'structure' | 'pathology';
   parentId: string | null;
   region: string;

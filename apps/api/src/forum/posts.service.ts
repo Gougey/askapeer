@@ -49,7 +49,7 @@ export type AuthorBlock = {
 /** A post's or a comment's kudos by kind. `kudosCount` beside it stays their sum. */
 export type KudosCounts = { insightfulCount: number; usefulCount: number };
 
-export type TagRef = { id: string; name: string };
+export type TagRef = { id: string; name: string; label: string | null };
 
 /** The list/card DTO (EPIC-C §13.2, gap G-17). Shared by every list surface. */
 export type PostCard = {
@@ -635,7 +635,7 @@ export class PostsService {
     if (postIds.length === 0) return grouped;
 
     const rows = await this.db
-      .select({ postId: postTags.postId, id: tags.id, name: tags.name })
+      .select({ postId: postTags.postId, id: tags.id, name: tags.name, label: tags.label })
       .from(postTags)
       .innerJoin(tags, eq(postTags.tagId, tags.id))
       .where(inArray(postTags.postId, postIds))
@@ -643,7 +643,7 @@ export class PostsService {
 
     for (const row of rows) {
       const list = grouped.get(row.postId) ?? [];
-      list.push({ id: row.id, name: row.name });
+      list.push({ id: row.id, name: row.name, label: row.label });
       grouped.set(row.postId, list);
     }
     return grouped;
