@@ -39,7 +39,7 @@ DOCS=(
   "body-part-condition-synonym-list|$REPO_ROOT/docs/body-part-condition-and-synonym-list.md|Body Parts, Conditions & Synonyms (Andrew, Aug 2026)|Andrew Renshaw's 98-page clinical vocabulary, re-formatted from the source PDF: anatomy and conditions by region, 350 preferred terms mapped to their synonyms, and the assessment/treatment vocabulary — plus what it would mean for the 588-tag taxonomy.|Review"
   "development|$REPO_ROOT/DEVELOPMENT.md|Development Setup|Running the monorepo locally: prerequisites, migrations, and how the simulated verification providers stand in for HCPC and Onfido.|Build"
   "closed-pilot-plan|$REPO_ROOT/docs/2026-10-18-closed-pilot-plan.md|Closed Pilot — Plan of Action|Getting about fifteen of Andrew's colleagues onto live: the decisions taken, what is built (invitation-only registration, the clear-down, the welcome guide), and what is still to do before and during the pilot.|Pilot"
-  "search-abbreviations-draft|$REPO_ROOT/docs/2026-10-21-search-abbreviations-draft.md|Search Vocabulary & Tags — For Andrew to Decide|Andrew's abbreviation decisions are recorded, and 291 links are in search. What remains is six questions on the 79 tag names used more than once, with the proposed labels for each.|Review"
+  "search-abbreviations-draft|$REPO_ROOT/docs/2026-10-21-search-abbreviations-draft.md|Search Vocabulary & Tags — Decided|Andrew's decisions on the search abbreviations and the tags that share a name, and what changed in the app as a result.|Review"
   "pilot-invitation-email|$REPO_ROOT/docs/2026-10-18-pilot-invitation-email.md|Pilot — Invitation Email (draft)|The email Andrew sends each colleague from his own address, linking to the welcome guide — with notes on why it is sent personally and kept short.|Pilot"
 )
 

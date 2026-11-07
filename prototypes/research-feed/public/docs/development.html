@@ -30,8 +30,8 @@ collapsed notifications when it moves, and the mute that turns them
 off), </strong>a search panel at the top of Discussions** (keyword,
 tags, type and sort — see “Search and tag filtering” below; the combined
 magnifying-glass search is gone), and Andrew’s clinical vocabulary Parts
-1 and 2 loaded into the taxonomy (S18b — now 1,230 live tags across
-seven roots, 175 carrying search synonyms), and editing your own
+1 and 2 loaded into the taxonomy (S18b — now 1,274 live tags across
+seven roots, 179 carrying search synonyms), and editing your own
 contributions (a question, an answer or a published case, until
 something responds to it and within 24 hours — see “The edit window”
 below), and My Research rebuilt around a criteria panel (keyword, type
@@ -568,6 +568,27 @@ muscle, fracture, rupture — silently failed to match its own plural. The
 same function runs over tag names and article text, so symmetry is the
 only property that matters. The verify script pins nine plural pairs
 against regression.</p>
+<h3 id="re-tagging-only-what-changed">Re-tagging only what changed</h3>
+<p>Migration <code>0064</code> moved 16 retired tags, 14 new ones and
+two renames without a full reclassify, which at 300,000 papers would be
+hours of the job that took the API down in September. It works because
+<strong>same-named tags carry the same matches</strong>: retiring a copy
+takes nothing from its survivor, so its rows can be deleted, and a new
+copy of an existing tag matches what its twin does, so its rows can be
+copied, in SQL, in the migration. Keep <code>tag_count</code> in
+step.</p>
+<p>Only genuinely new wording needs the classifier, and only for the
+papers that mention it:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&#39;node dist/cli/pilot.js reclassify-matching &quot;ligamentum flavum&quot; &quot;ligamenta flava&quot; iliopsoas&#39;</span>           <span class="co"># dry run</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&#39;node dist/cli/pilot.js reclassify-matching &quot;ligamentum flavum&quot; &quot;ligamenta flava&quot; iliopsoas --execute&#39;</span></span></code></pre></div>
+<p>⚠️ <strong>Prove it before trusting it.</strong> Run every local
+paper through <code>classify</code> read-only and diff against
+<code>article_tags</code>. For 0064 that was 18,861 papers: it would
+remove nothing, add only those two names’ matches, and after
+<code>reclassify-matching</code> the diff was zero. A change to how
+matching works, a synonym on a tag with many papers, or a scope term
+still needs a full reclassify.</p>
 <h3 id="running-a-reclassify">Running a reclassify</h3>
 <p>A reclassify re-tags the stored corpus in place. It is the tuning
 loop — a synonym, a classifier rule or a taxonomy migration changes what
@@ -579,12 +600,12 @@ document’s history was measured on a 1,290-article corpus and no longer
 holds; assume an hour and plan around being interrupted.</p>
 <p><strong>Start it</strong> from <code>/admin/research-feed</code>, or
 without a token:</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> https://askapeer-api.fly.dev/health <span class="op">&gt;</span> /dev/null   <span class="co"># wake the machine first</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&#39;node -e &quot;</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="st">  const {Queue}=require(\&quot;bullmq\&quot;); const R=require(\&quot;ioredis\&quot;);</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="st">  const q=new Queue(\&quot;research-ingestion\&quot;,{connection:new R(process.env.REDIS_URL,{maxRetriesPerRequest:null})});</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="st">  q.add(\&quot;reclassify\&quot;,{}).then(j=&gt;{console.log(j.id);process.exit(0)})&quot;&#39;</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> https://askapeer-api.fly.dev/health <span class="op">&gt;</span> /dev/null   <span class="co"># wake the machine first</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&#39;node -e &quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="st">  const {Queue}=require(\&quot;bullmq\&quot;); const R=require(\&quot;ioredis\&quot;);</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="st">  const q=new Queue(\&quot;research-ingestion\&quot;,{connection:new R(process.env.REDIS_URL,{maxRetriesPerRequest:null})});</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="st">  q.add(\&quot;reclassify\&quot;,{}).then(j=&gt;{console.log(j.id);process.exit(0)})&quot;&#39;</span></span></code></pre></div>
 <p><strong>Watch it</strong> on <code>/admin/research-feed</code>, which
 leads with a progress line while a run is in flight. That line is
 load-bearing: mid-run the counts beneath it describe <em>how far the
@@ -1427,6 +1448,17 @@ don’t survive is the plain list, not an empty search.</li>
 Research: a search pages by offset and the list by keyset, and replaying
 one’s cursors against the other splices in the wrong pages.</li>
 </ul>
+<p><strong>Same-named tags (Andrew, November 2026).</strong> 83 names
+are used by more than one tag. Each copy has a <code>label</code> shown
+through <code>tagText</code> on cards and in the picker: <em>Foot
+(muscles)</em>, <em>Foot (conditions)</em>. Display only:
+<code>name</code> is what matches a paper, so never qualify a name to
+disambiguate it (Knee MCL went from 25 papers to 2). Nine names (Foot,
+Thigh, Forearm, Sacrum, Ilium, Ischium, Coccyx, Pubis, Acetabulum) are
+one area with <code>search_area</code> set, so picking any copy searches
+them all; Disc bulge in the neck and lumbar spine stay separate. An
+admin adding a same-named tag must add a label too: the guard for that
+is in <code>0065</code>, not in the admin screen.</p>
 <p><strong>Tags are half the recall, not a filter bolted on the
 side.</strong> The corpus says “knee” in 4 posts while 10 are
 <em>tagged</em> somewhere under the knee; folding tag and category names
@@ -1918,8 +1950,8 @@ onto a sign-in screen.</li>
 <p>Icons are generated from the brand <strong>mark</strong> (a wordmark
 is illegible at 192px) and are committed, so this only runs when the
 brand artwork changes:</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install Pillow <span class="kw">&amp;&amp;</span> <span class="ex">python3</span> apps/web/scripts/generate-pwa-icons.py</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install Pillow <span class="kw">&amp;&amp;</span> <span class="ex">python3</span> apps/web/scripts/generate-pwa-icons.py</span></code></pre></div>
 <blockquote>
 <p><strong>Known issue — signing in to the installed app on
 iOS.</strong> An installed iOS web app has its own cookie store,
@@ -1999,12 +2031,12 @@ sign-in shortcut, and needs Playwright installed outside the repo.</p>
 machine</h3>
 <p>The production image has compiled code only, and Redis is reachable
 only inside Fly, so it runs where both credentials already are:</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> https://askapeer-api.fly.dev/health <span class="op">&gt;</span>/dev/null   <span class="co"># wake the machine first</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&quot;node dist/cli/pilot.js allowlist list&quot;</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&quot;node dist/cli/pilot.js allowlist add a@x.com,b@y.com&quot;</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&quot;node dist/cli/pilot.js allowlist remove a@x.com&quot;</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&quot;node dist/cli/pilot.js clear-down&quot;</span>   <span class="co"># dry run</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> https://askapeer-api.fly.dev/health <span class="op">&gt;</span>/dev/null   <span class="co"># wake the machine first</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&quot;node dist/cli/pilot.js allowlist list&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&quot;node dist/cli/pilot.js allowlist add a@x.com,b@y.com&quot;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&quot;node dist/cli/pilot.js allowlist remove a@x.com&quot;</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> ssh console <span class="at">-a</span> askapeer-api <span class="at">-C</span> <span class="st">&quot;node dist/cli/pilot.js clear-down&quot;</span>   <span class="co"># dry run</span></span></code></pre></div>
 <p>Locally: <code>npm run pilot -w apps/api -- allowlist list</code>.
 <code>allowlist list</code> shows each email’s verification status and
 <strong>never a handle</strong>. Email beside handle is a
@@ -2119,9 +2151,9 @@ being stuck silently in <code>pending</code></li>
 <p>The timeout is <code>verification.onfido_timeout_hours</code> in
 <code>config.app_meta</code> (EPIC-J config), defaulting to 48h. To
 watch it fire without waiting two days:</p>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode sql"><code class="sourceCode sql"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">insert</span> <span class="kw">into</span> config.app_meta (<span class="kw">key</span>, <span class="fu">value</span>) <span class="kw">values</span> (<span class="st">&#39;verification.onfido_timeout_hours&#39;</span>, <span class="st">&#39;0.0011&#39;</span>)</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">on</span> conflict (<span class="kw">key</span>) do <span class="kw">update</span> <span class="kw">set</span> <span class="fu">value</span> <span class="op">=</span> excluded.<span class="fu">value</span>;   <span class="co">-- ~4 seconds</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">insert</span> <span class="kw">into</span> config.app_meta (<span class="kw">key</span>, <span class="fu">value</span>) <span class="kw">values</span> (<span class="st">&#39;verification.onfido_timeout_hours&#39;</span>, <span class="st">&#39;0.0011&#39;</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">on</span> conflict (<span class="kw">key</span>) do <span class="kw">update</span> <span class="kw">set</span> <span class="fu">value</span> <span class="op">=</span> excluded.<span class="fu">value</span>;   <span class="co">-- ~4 seconds</span></span></code></pre></div>
 <p>Delete that row to restore the default. From
 <code>needs_more_info</code> the applicant can restart the pipeline
 themselves via the holding page’s “Try again”
@@ -2970,8 +3002,8 @@ is a closed set, the recipient is the only free field, and both admin
 guards plus an hourly rate limit sit in front of it.</p>
 <p><strong>To actually send</strong>, two Fly secrets are needed —
 neither is set yet:</p>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> secrets set POSTMARK_TOKEN=... EMAIL_PROVIDER=postmark <span class="at">-a</span> askapeer-api</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">flyctl</span> secrets set POSTMARK_TOKEN=... EMAIL_PROVIDER=postmark <span class="at">-a</span> askapeer-api</span></code></pre></div>
 <p><code>EMAIL_FROM</code> already defaults to
 <code>AskaPeer &lt;no-reply@mail.askapeer.co.uk&gt;</code>, and that
 domain is verified in Postmark (DKIM + Return-Path confirmed live
@@ -3245,8 +3277,8 @@ stretch, and revisit at the AWS migration.</p>
 <p><code>GET /health</code> (unprefixed) probes both dependencies and
 returns <strong>503</strong> if either is down, so a missing one is
 visible rather than silent:</p>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;status&quot;</span><span class="fu">:</span><span class="st">&quot;ok&quot;</span><span class="fu">,</span><span class="dt">&quot;db&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">,</span><span class="dt">&quot;migrationsApplied&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">},</span><span class="dt">&quot;redis&quot;</span><span class="fu">:{</span><span class="dt">&quot;reachable&quot;</span><span class="fu">:</span><span class="kw">true</span><span class="fu">}}</span></span></code></pre></div>
 <h2 id="conventions-established-at-s0">Conventions established at
 S0</h2>
 <ul>

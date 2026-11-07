@@ -11,6 +11,7 @@
  * have matched all 25 on all six tags.
  */
 import { classify, prepareTaxonomy, tokenise, type ClassifiableTag } from '../src/research-feed/classifier';
+import { toClassifiable } from '../src/research-feed/taxonomy-query';
 
 /**
  * A plural must stem to whatever its singular stems to, or a tag never matches the form the
@@ -118,6 +119,17 @@ for (const c of CASES) {
   if (!ok) failed += 1;
   console.log(`${ok ? 'pass' : 'FAIL'}  ${c.name}`);
   if (!ok) console.log(`        expected [${want.join(', ')}] but got [${got.join(', ')}]`);
+}
+
+// A database row has to reach the classifier with its scope terms. The first cut of
+// `reclassify-matching` passed rows straight in, so `scope_terms` was silently ignored and every
+// scoped tag matched as if it had none. The type could not see it: the rows were untyped.
+{
+  const row = { id: 'x', name: 'Knee MCL', synonyms: null, scope_terms: ['knee'], depth: '4' };
+  const [prepared] = prepareTaxonomy([toClassifiable(row)]);
+  const ok = prepared.scopes.length === 1 && prepared.depth === 4;
+  if (!ok) failed += 1;
+  console.log(`${ok ? 'pass' : 'FAIL'}  a database row keeps its scope terms and depth`);
 }
 
 console.log(failed === 0 ? "PASS" : `FAIL — ${failed} check(s)`);

@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { searchQuery } from '../search/query';
 import { SpellingService } from '../search/spelling.service';
-import type { PostCard } from './posts.service';
+import type { PostCard, TagRef } from './posts.service';
 
 const DEFAULT_PAGE_SIZE = 20;
 /**
@@ -169,10 +169,19 @@ export class SearchService {
      * via `post_tags_tag_idx`, otherwise the category via `posts_category_idx`. The outer
      * WHERE still applies every filter, so this only ever has to be a superset.
      */
+    /*
+     * ⚠️ **An area is searched whole.** Foot is two headings, muscles and conditions, and Andrew
+     * rightly reads it as one place, so picking either finds everything under both
+     * (`tags.search_area`). Disc bulge in the neck and in the lumbar spine are not one place, so
+     * this is only for the names marked.
+     */
+    const chosen = sql.join(tagFilters.map((id) => sql`${id}`), sql`, `);
     const subtree = sql`
       with recursive subtree as (
         select id from community.tags
-         where id in (${sql.join(tagFilters.map((id) => sql`${id}`), sql`, `)})
+         where id in (${chosen})
+            or (search_area and name in (
+                  select name from community.tags where search_area and id in (${chosen})))
         union all
         select c.id from community.tags c join subtree s on c.parent_id = s.id
       )`;
@@ -384,11 +393,16 @@ export class SearchService {
     };
   }
 
-  private async tagsFor(postIds: string[]): Promise<Map<string, { id: string; name: string }[]>> {
-    const grouped = new Map<string, { id: string; name: string }[]>();
+  private async tagsFor(postIds: string[]): Promise<Map<string, TagRef[]>> {
+    const grouped = new Map<string, TagRef[]>();
     if (postIds.length === 0) return grouped;
-    const { rows } = await this.db.execute<{ post_id: string; id: string; name: string }>(sql`
-      select pt.post_id, t.id, t.name
+    const { rows } = await this.db.execute<{
+      post_id: string;
+      id: string;
+      name: string;
+      label: string | null;
+    }>(sql`
+      select pt.post_id, t.id, t.name, t.label
       from community.post_tags pt
       join community.tags t on t.id = pt.tag_id
       where pt.post_id in (${sql.join(postIds.map((id) => sql`${id}`), sql`, `)})
@@ -396,7 +410,7 @@ export class SearchService {
     `);
     for (const row of rows) {
       const list = grouped.get(row.post_id) ?? [];
-      list.push({ id: row.id, name: row.name });
+      list.push({ id: row.id, name: row.name, label: row.label });
       grouped.set(row.post_id, list);
     }
     return grouped;

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/db.module';
+import { TAXONOMY_QUERY, toClassifiable, type TaxonomyRow } from './taxonomy-query';
 import { articleTags, articles, ingestionCursors, reclassifyState } from '../db/schema';
 import { SpellingService } from '../search/spelling.service';
 import { SettingsService } from '../settings/settings.service';
@@ -338,37 +339,10 @@ export class IngestionService {
    */
   /** Shared with the backfill. */
   async taxonomy(): Promise<PreparedTag[]> {
-    const { rows } = await this.db.execute<{
-      id: string;
-      name: string;
-      synonyms: string[] | null;
-      scope_terms: string[] | null;
-      depth: number;
-    }>(sql`
-      with recursive walk as (
-        select id, name, synonyms, scope_terms, navigational, 0 as depth
-        from community.tags where parent_id is null and retired_at is null
-        union all
-        select t.id, t.name, t.synonyms, t.scope_terms, t.navigational, w.depth + 1
-        from community.tags t join walk w on t.parent_id = w.id
-        where t.retired_at is null
-      )
-      -- Navigational nodes are filtered *here*, not in the recursion: the walk still
-      -- descends through them, so their children classify normally. Excluding them from the
-      -- CTE itself would silently drop every joint beneath a body-part group.
-      select id, name, synonyms, scope_terms, depth from walk where not navigational
-    `);
+    const { rows } = await this.db.execute<TaxonomyRow>(sql.raw(TAXONOMY_QUERY));
     // Prepared here so each tag's match forms are resolved once per run rather than once
     // per article — and so the ambiguous-base check sees the whole taxonomy at once.
-    return prepareTaxonomy(
-      rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        synonyms: r.synonyms ?? [],
-        scopeTerms: r.scope_terms ?? [],
-        depth: Number(r.depth),
-      })),
-    );
+    return prepareTaxonomy(rows.map(toClassifiable));
   }
 
   /** Shared with the backfill, so both ask the literature the same questions. */

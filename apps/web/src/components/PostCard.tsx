@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { AuthorBlock, PostCard as PostCardDto, TagRef } from '@/lib/forum';
+import { tagText } from '@/lib/tag-text';
 import { PostedAt } from './PostedAt';
 import { CaseCross, Stat } from './StatIcons';
 
@@ -60,7 +61,7 @@ export function TagList({ tags }: { tags: TagRef[] }) {
             color: 'var(--color-muted)',
           }}
         >
-          {tag.name}
+          {tagText(tag)}
         </li>
       ))}
     </ul>
