@@ -1698,6 +1698,14 @@ papers. The rewrite itself is about 5 ms.</li>
 when the exact search is empty, and an expanded query is empty less
 often. <em>“rehab ti sport”</em> now finds the one paper with “rehab”,
 “ti” and “sport” instead of correcting to “rehab sport”.</li>
+<li>⚠️ <strong>S&amp;C cannot be a row</strong> (migration
+<code>0063</code>). “S&amp;C”, “S+C” and “S and C” all parse to the
+lexeme <code>c</code>, so a row would attach strength and conditioning
+to “vitamin C”. <code>search_tsquery</code> turns those spellings into a
+quoted phrase before parsing. Keep it one phrase: websearch
+<code>or</code> does not group, so <code>"a" or "b" rehab</code> stops
+requiring rehab. Try a change in a transaction with a word either
+side.</li>
 <li><strong>Adding a pair is an insert</strong> into
 <code>community.search_abbreviations</code>; it takes effect on the next
 search, with nothing to reindex. There is no admin screen for it yet.

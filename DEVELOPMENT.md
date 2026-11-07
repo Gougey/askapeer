@@ -1151,6 +1151,10 @@ every keyword search rewrites its query through them. Locally: *Achilles rehab* 
 - **Spelling correction runs less often.** It only runs when the exact search is empty, and an
   expanded query is empty less often. *"rehab ti sport"* now finds the one paper with "rehab",
   "ti" and "sport" instead of correcting to "rehab sport".
+- ⚠️ **S&C cannot be a row** (migration `0063`). "S&C", "S+C" and "S and C" all parse to the lexeme
+  `c`, so a row would attach strength and conditioning to "vitamin C". `search_tsquery` turns those
+  spellings into a quoted phrase before parsing. Keep it one phrase: websearch `or` does not group,
+  so `"a" or "b" rehab` stops requiring rehab. Try a change in a transaction with a word either side.
 - **Adding a pair is an insert** into `community.search_abbreviations`; it takes effect on the
   next search, with nothing to reindex. There is no admin screen for it yet.
   The first two added this way came from Andrew's testing (migration `0061`): *shin splints ↔
