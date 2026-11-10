@@ -37,10 +37,23 @@ URL="$(flyctl ssh console -a askapeer-api -C "printenv DATABASE_URL" 2>/dev/null
   | grep -o 'postgres://[^[:space:]]*' | sed -E 's#@[^/]+/#@host.docker.internal:15432/#' || true)"
 [ -n "$URL" ] || { echo "could not read DATABASE_URL from askapeer-api" >&2; exit 1; }
 
-flyctl proxy 15432:5432 -a askapeer-db >/dev/null 2>&1 &
+# ⚠️ Wait for the tunnel to listen rather than for a fixed time. It usually takes about 3 s, but
+# right after a heavy write it took longer than the 6 s this used to sleep, and psql then failed
+# with a bare "connection refused" that looked like the tunnel was unreachable.
+PROXY_LOG="$(mktemp -t live-db-proxy)"
+flyctl proxy 15432:5432 -a askapeer-db >"$PROXY_LOG" 2>&1 &
 PROXY=$!
-trap 'kill $PROXY 2>/dev/null || true' EXIT
-sleep 6
+trap 'kill $PROXY 2>/dev/null || true; rm -f "$PROXY_LOG"' EXIT
+for _ in $(seq 1 60); do
+  lsof -nP -iTCP:15432 -sTCP:LISTEN >/dev/null 2>&1 && break
+  kill -0 "$PROXY" 2>/dev/null || break
+  sleep 1
+done
+if ! lsof -nP -iTCP:15432 -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "the database tunnel did not start:" >&2
+  cat "$PROXY_LOG" >&2
+  exit 1
+fi
 
 { echo 'begin transaction read only;'; printf '%s\n' "$BODY"; echo ';'; echo 'rollback;'; } \
   | docker run --rm -i -e PGOPTIONS='-c default_transaction_read_only=on' \
