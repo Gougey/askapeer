@@ -6,6 +6,13 @@ Sent personally rather than by the platform, for two reasons. A message from a c
 
 **Before sending:** each colleague's address must already be on the invitation list. Registration refuses any address that is not, and they must register with the exact address this email was sent to.
 
+**When sending** (added 11 November 2026, after the first test send to the founders):
+
+- **Send one email per colleague.** Never put several invitees in To or CC: everyone would see everyone else's address, and a list of exactly who is in a pilot of about fifteen undoes much of the anonymity the platform promises. If one email is unavoidable, put the addresses in BCC and open with "Hi all,".
+- **Replace [first name]** with the colleague's name before sending.
+- **Paste as plain text.** In Outlook use *Keep Text Only*, or ⇧⌘V on a Mac. Copying from this page brings its formatting along: viewed in dark mode, the text arrives light grey on white, and the spacing around the bold lines can be lost.
+- **Ask them to check junk.** Invitations from optimalpp.com can be filtered, especially for anyone whose mail is forwarded, because the domain is not yet set up with DKIM and DMARC.
+
 ---
 
 **Subject:** An invitation to try Askapeer
