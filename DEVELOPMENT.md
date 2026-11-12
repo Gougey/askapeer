@@ -4,6 +4,9 @@ The Askapeer application: a TypeScript monorepo (npm workspaces) — a NestJS AP
 
 **Build approach:** *prove-then-migrate* — develop locally + deploy to Fly.io (London) for the early slices; migrate to AWS `eu-west-2` before real practitioners. See the architecture spec (`docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md`).
 
+
+> ⚠️ **Live holds real member data from 10 November 2026.** Every change to live schema or data, migrations included, needs Adrian's explicit confirmation first. See "Live data" in `CLAUDE.md`. The clear-down's `--execute` and `seed:demo` refuse any non-local database.
+
 ## Layout
 
 ```
@@ -297,8 +300,8 @@ The order matters, and step 9 is the one people skip.
    hides its whole subtree; posts and articles already carrying the tag keep it.
    ⚠️ The picker never offers a retired tag, so a post keeping one shows a chip nobody can search
    by: "Knee Joint" on a card, "Knee joints" (a different tag) in the picker. Migration `0062`
-   moved the test data to live parents as a one-off; once real posts exist, retiring a tag in use
-   needs the same decision.
+   moved the test data to live parents as a one-off. **Real posts exist now (from 10 November
+   2026)**, so retiring a tag in use needs that decision made with Adrian, before the migration.
 4. ⚠️ **Qualify the synonyms whenever you qualify a name.** A tag matches on its name *or any
    synonym*, so a bare synonym outlives the name it hung off and goes on matching everything the
    rename was meant to stop. This defeated 0038 completely — three renamed tags went on matching
@@ -1405,6 +1408,8 @@ immutable. **The backup taken first is what keeps those recoverable.**
   Postgres refuses rather than widening the wipe.
 - `--execute` also needs `--confirm=<db>@<host>`, exactly as the dry run prints it, so a command
   pasted into the wrong terminal does nothing.
+
+**Run on live on 10 November 2026**, and refused there since: `--execute` stops on any non-local database, because live now holds real member data (the dry run still works).
 
 **The run, in order:** take a Fly Postgres backup → dry run → read the counts →
 `clear-down --execute --confirm=…` → check the output says "all now 0" and "counts unchanged" →

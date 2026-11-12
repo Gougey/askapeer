@@ -78,6 +78,17 @@ export const KEEP = [
   'research.spelling_dictionary',
 ] as const;
 
+/**
+ * ⚠️ **Live holds real member data from 10 November 2026**, when the pilot clear-down ran and
+ * the founders and Andrew's colleagues began registering. Nothing that empties or rebuilds member
+ * content may run anywhere but a local database: the clear-down's `--execute` and the demo seeder
+ * both check this. Clearing live again would take a deliberate code change, agreed with Adrian.
+ */
+export function isLocalDatabase(url: string): boolean {
+  const host = new URL(url).hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]';
+}
+
 /** Background queues whose jobs are only ever about members, so they go with them. */
 export const QUEUES_TO_EMPTY = ['verification', 'notifications'] as const;
 /** Redis keys that cache member data. `rl:*` (rate limits) expire on their own. */

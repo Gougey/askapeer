@@ -8,7 +8,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { admission } from '../src/auth/pilot-allowlist.service';
-import { CLEAR, KEEP, SCHEMAS, unclassified } from '../src/cli/clear-down-plan';
+import { CLEAR, KEEP, SCHEMAS, isLocalDatabase, unclassified } from '../src/cli/clear-down-plan';
 
 let failures = 0;
 function check(name: string, actual: unknown, expected: unknown) {
@@ -60,6 +60,11 @@ const created = readdirSync(drizzle)
   .filter((name) => (SCHEMAS as readonly string[]).includes(name.split('.')[0]));
 check('the migrations create at least the tables on the lists', created.length >= all.length, true);
 check('every table the migrations create is cleared or kept', unclassified(created), { unknown: [], missing: [] });
+
+// Live holds real member data: the clear-down and the demo seeder only write locally.
+check('a local database may be cleared', isLocalDatabase('postgres://a:b@localhost:5432/askapeer'), true);
+check('the live database may not', isLocalDatabase('postgres://a:b@askapeer-db.flycast:5432/askapeer_api'), false);
+check('nor live through a tunnel', isLocalDatabase('postgres://a:b@host.docker.internal:15432/askapeer_api'), false);
 
 if (failures > 0) {
   console.error(`\n${failures} pilot check(s) failed.`);
