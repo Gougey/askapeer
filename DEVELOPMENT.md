@@ -32,10 +32,10 @@ npm run db:migrate          # apply migrations (creates the config schema + app_
 
 ```bash
 npm run dev:api             # API  -> http://localhost:4000  (health: /health)
-npm run dev:web             # web  -> http://localhost:3000
+npm run dev:web             # web  -> http://localhost:3200
 ```
 
-Open http://localhost:3000 — the home page shows live system health fetched from the API (a green tick per check confirms the stack is wired end-to-end).
+Open http://localhost:3200 (not 3000, which other projects tend to claim) — the home page shows live system health fetched from the API (a green tick per check confirms the stack is wired end-to-end).
 
 ## Database (Drizzle)
 
