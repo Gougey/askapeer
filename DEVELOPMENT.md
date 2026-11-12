@@ -1333,6 +1333,15 @@ pip install Pillow && python3 apps/web/scripts/generate-pwa-icons.py
 > the three of us are testing; a short numeric sign-in code is the fix, and is scheduled
 > before phase 2 (see FD-3 in the PRD).
 
+## Versions and releases (from 0.9.0, 12 November 2026)
+
+One version number for the whole app, in the root `package.json`, starting at **0.9.0** for the pilot. It is raised per release, not per commit: a release is a change worth telling the pilot group about. 1.0 is for the end of the pilot or the move to AWS.
+
+- **Where it shows:** the foot of Profile ("Askapeer 0.9.0 · build a3f30f4 · 12 Nov 2026") and the API's `/health` (`version`, and `build.sha` and `build.date`). Locally, Profile says "local build".
+- **How the build gets in:** the deploy workflow passes `GIT_SHA` and `BUILD_DATE` as Docker build arguments, which become runtime environment in both images. The web app takes `version` from `package.json` at build (`next.config.mjs`); the API reads it at start (`health/build-info.ts`).
+- ⚠️ **The deploy checks what live is serving.** After deploying the API, the workflow polls `/health` until `build.sha` is the commit it just deployed, and fails if it never is. That is the check "verify what is served, not the deploy job" asked for, after a delayed GitHub event once shipped an older commit over a newer one with both jobs green.
+- **To release:** `npm version <x.y.z> --no-git-tag-version --workspaces-update=false` at the root, add a section to `docs/CHANGELOG.md` ("What's new", on the docs site), and merge. Live-data rules still apply: check activity first, and no migration without Adrian's yes.
+
 ## Closed pilot — the invitation list and the clear-down (October 2026)
 
 About 15 of Andrew's colleagues are coming onto live. Two pieces make that safe:

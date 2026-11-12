@@ -41,6 +41,7 @@ DOCS=(
   "closed-pilot-plan|$REPO_ROOT/docs/2026-10-18-closed-pilot-plan.md|Closed Pilot — Plan of Action|Getting about fifteen of Andrew's colleagues onto live: the decisions taken, what is built (invitation-only registration, the clear-down, the welcome guide), and what is still to do before and during the pilot.|Pilot"
   "search-abbreviations-draft|$REPO_ROOT/docs/2026-10-21-search-abbreviations-draft.md|Search Vocabulary & Tags — Decided|Andrew's decisions on the search abbreviations and the tags that share a name, and what changed in the app as a result.|Review"
   "pilot-invitation-email|$REPO_ROOT/docs/2026-10-18-pilot-invitation-email.md|Pilot — Invitation Email (draft)|The email Andrew sends each colleague from his own address, linking to the welcome guide — with notes on why it is sent personally and kept short.|Pilot"
+  "changelog|$REPO_ROOT/docs/CHANGELOG.md|What's New in Askapeer|Each release and what it changed, starting with 0.9.0, the version the pilot launched on. The version and build are shown at the foot of the Profile screen.|Pilot"
 )
 
 # Pages that are already HTML and are copied verbatim rather than rendered from markdown —
