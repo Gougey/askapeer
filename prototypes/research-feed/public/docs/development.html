@@ -54,6 +54,13 @@ develop locally + deploy to Fly.io (London) for the early slices;
 migrate to AWS <code>eu-west-2</code> before real practitioners. See the
 architecture spec
 (<code>docs/superpowers/specs/2026-07-14-askapeer-architecture-design.md</code>).</p>
+<blockquote>
+<p>⚠️ <strong>Live holds real member data from 10 November
+2026.</strong> Every change to live schema or data, migrations included,
+needs Adrian’s explicit confirmation first. See “Live data” in
+<code>CLAUDE.md</code>. The clear-down’s <code>--execute</code> and
+<code>seed:demo</code> refuse any non-local database.</p>
+</blockquote>
 <h2 id="layout">Layout</h2>
 <pre><code>apps/
   api/   NestJS modular monolith (module-per-epic); Drizzle ORM + drizzle-kit; Postgres
@@ -462,8 +469,9 @@ posts and articles already carrying the tag keep it. ⚠️ The picker never
 offers a retired tag, so a post keeping one shows a chip nobody can
 search by: “Knee Joint” on a card, “Knee joints” (a different tag) in
 the picker. Migration <code>0062</code> moved the test data to live
-parents as a one-off; once real posts exist, retiring a tag in use needs
-the same decision.</p></li>
+parents as a one-off. <strong>Real posts exist now (from 10 November
+2026)</strong>, so retiring a tag in use needs that decision made with
+Adrian, before the migration.</p></li>
 <li><p>⚠️ <strong>Qualify the synonyms whenever you qualify a
 name.</strong> A tag matches on its name <em>or any synonym</em>, so a
 bare synonym outlives the name it hung off and goes on matching
@@ -2078,6 +2086,9 @@ to a cleared one, Postgres refuses rather than widening the wipe.</li>
 prints it, so a command pasted into the wrong terminal does
 nothing.</li>
 </ul>
+<p><strong>Run on live on 10 November 2026</strong>, and refused there
+since: <code>--execute</code> stops on any non-local database, because
+live now holds real member data (the dry run still works).</p>
 <p><strong>The run, in order:</strong> take a Fly Postgres backup → dry
 run → read the counts → <code>clear-down --execute --confirm=…</code> →
 check the output says “all now 0” and “counts unchanged” →

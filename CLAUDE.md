@@ -91,6 +91,17 @@ These are unresolved and must not be assumed closed. See Section 15 of the PRD f
 | FD-7 | Brand name "Askapeer" and .com domain — trademark search required |
 | FD-8 | Competitive landscape refresh before committing to development investment |
 
+## Live data (from 10 November 2026)
+
+**Live holds real data.** Since the pilot clear-down on 10 November 2026, everything in the live database comes from real people: registered practitioners' real names, email addresses and registration numbers, and real clinical discussion. The build is far from finished and may move to AWS, but for data and privacy the live database is production. Treat it that way:
+
+- **Adrian confirms every change to live schema or data, before it happens.** That covers every migration, whether it changes structure or rows, and any script, SQL, CLI command or admin action that writes to live data. State exactly what will change, ask, and wait for his explicit yes for that change. Approval of one change does not cover the next. Merging a PR deploys its migrations automatically, so a PR containing a migration is not merged without that yes.
+- **Nothing is test data any more.** Never justify a change with "it's only test data". A taxonomy change must carry members' posts, tags and interests with it; retiring a tag that posts use needs a plan agreed with Adrian.
+- **Back up before anything destructive:** a Fly volume snapshot (kept only 5 days) and an export to `~/askapeer-backups`, never into the repo, which is public.
+- **Read as little as possible.** `scripts/live-db-read.sh` is read-only. Prefer counts and aggregates. Never select or print names, email addresses, registration numbers or post text unless Adrian asks for a specific purpose, and never put an email address and a handle in the same output: that link is the de-anonymisation the platform exists to prevent.
+- **Audit logs are immutable again.** The 10 November clear-down was the one agreed exception.
+- **Local-only tools stay local.** `clear-down --execute` and `seed:demo` refuse any database that is not on this machine (`isLocalDatabase`, pinned by `verify:pilot`). Do not weaken that without Adrian.
+
 ## Rules
 - Whenever writing or amending a .md file, always create an html version and add it to the docs html site, amending the front index page if necessary
 - On any deploy (merge to `main`, or a manual `flyctl deploy`), check whether the shipped change has made the status-tracking docs stale — primarily `README.md` (the "Status" section and repo table) and `DEVELOPMENT.md` (the "which slices are in" line and per-slice notes), and the memory index. Update any that no longer reflect reality, rebuild the docs site (`prototypes/research-feed/scripts/build-docs-site.sh`) if a doc that appears there changed, and redeploy it. Report what you found even if nothing needed changing.

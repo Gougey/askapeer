@@ -2,7 +2,9 @@
  * Rebuild the demo corpus: wipe community content, insert a fresh, realistic one.
  *
  * Run:  npm run seed:demo -w apps/api            (local)
- *       DATABASE_URL=… npm run seed:demo -w apps/api   (any other environment)
+ *
+ * ⚠️ **Local only.** It refuses any database that is not on this machine: live has held real
+ * member data since 10 November 2026, and this deletes every post on whatever it points at.
  *
  * **This deletes every post, answer, kudos, report and moderation action.** It does *not*
  * touch `identity.members`, `community.handles`, the categories, or the 588-node clinical
@@ -30,6 +32,7 @@
  * Deterministic: the same seed value produces the same corpus, so a search result that
  * changes between runs is a code change rather than fresh dice.
  */
+import { isLocalDatabase } from '../src/cli/clear-down-plan';
 import { resolve } from 'node:path';
 import * as dotenv from 'dotenv';
 import { sql } from 'drizzle-orm';
@@ -354,10 +357,12 @@ const REPLIES = [
 ];
 
 async function main(): Promise<void> {
-  const pool = new Pool({
-    connectionString:
-      process.env.DATABASE_URL ?? 'postgres://askapeer:askapeer@localhost:5432/askapeer',
-  });
+  const url = process.env.DATABASE_URL ?? 'postgres://askapeer:askapeer@localhost:5432/askapeer';
+  if (!isLocalDatabase(url)) {
+    console.error('seed:demo deletes every post and only runs against a local database. Nothing was changed.');
+    process.exit(1);
+  }
+  const pool = new Pool({ connectionString: url });
   const db = drizzle(pool);
 
   // ---- wipe content, keep accounts and vocabulary -------------------------------------

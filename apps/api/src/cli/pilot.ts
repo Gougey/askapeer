@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import { Pool } from 'pg';
-import { CLEAR, KEEP, QUEUES_TO_EMPTY, REDIS_PATTERNS, SCHEMAS, unclassified } from './clear-down-plan';
+import { CLEAR, KEEP, QUEUES_TO_EMPTY, REDIS_PATTERNS, SCHEMAS, isLocalDatabase, unclassified } from './clear-down-plan';
 import { classify, prepareTaxonomy } from '../research-feed/classifier';
 import { TAXONOMY_QUERY, toClassifiable, type TaxonomyRow } from '../research-feed/taxonomy-query';
 
@@ -150,6 +150,11 @@ async function clearDown(pool: Pool, url: string, args: string[]): Promise<void>
       console.log(`\nDry run — nothing changed. To run it:\n  clear-down --execute --confirm=${target}`);
       await Promise.all(queues.map((q) => q.close()));
       return;
+    }
+    // Live holds real member data now. The dry run above still works there; emptying it does not.
+    if (!isLocalDatabase(url)) {
+      console.error(`\n${target} is not a local database, and live has held real member data since 10 November 2026. Nothing was changed.`);
+      process.exit(1);
     }
     // The confirmation names the database, so a command pasted into the wrong terminal fails.
     if (confirm !== target) {
