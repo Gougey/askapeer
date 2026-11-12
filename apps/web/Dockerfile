@@ -19,6 +19,10 @@ RUN npm run build -w apps/web
 FROM node:24-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+# Stamped by the deploy workflow, so the running app can say exactly what it is running.
+ARG GIT_SHA=local
+ARG BUILD_DATE=
+ENV GIT_SHA=$GIT_SHA BUILD_DATE=$BUILD_DATE
 # Next standalone output (monorepo-aware: server at apps/web/server.js).
 COPY --from=build /app/apps/web/.next/standalone ./
 COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static

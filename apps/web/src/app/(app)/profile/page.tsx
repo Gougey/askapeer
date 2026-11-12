@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { API_ORIGIN } from '@/lib/api';
 import { requireAppAccess } from '@/lib/onboarding';
 import { STAT_COLOUR, StatIcon } from '@/components/StatIcons';
+import { buildInfo } from '@/lib/build-info';
 
 type Profile = {
   handleId: string;
@@ -80,6 +81,15 @@ export default async function ProfilePage() {
         </Link>
       )}
 
+      {/* Which release this is, so a problem report can name it. Muted: it is for support. */}
+      <p className="text-center text-xs" style={{ color: 'var(--color-muted)' }}>
+        {(() => {
+          const build = buildInfo();
+          return build.date
+            ? t('version', { version: build.version, build: build.sha, date: build.date })
+            : t('versionLocal', { version: build.version });
+        })()}
+      </p>
     </main>
   );
 }

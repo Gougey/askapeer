@@ -59,9 +59,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy . --config apps/api/fly.toml --remote-only
+      - run: >-
+          flyctl deploy . --config apps/api/fly.toml --remote-only
+          --build-arg GIT_SHA=${{ github.sha }}
+          --build-arg BUILD_DATE=$(date -u +%Y-%m-%d)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      # A green deploy job once shipped an older commit over a newer one (a delayed GitHub push
+      # event). So ask the running API what it is: /health reports the commit it was built from.
+      - name: Is live serving this commit?
+        run: |
+          for _ in $(seq 1 24); do
+            served=$(curl -s https://askapeer-api.fly.dev/health | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).build.sha)}catch{console.log('')}})")
+            if [ "$served" = "$GITHUB_SHA" ]; then echo "live is serving $served"; exit 0; fi
+            sleep 5
+          done
+          echo "::error::live is serving '${served}', not ${GITHUB_SHA}"
+          exit 1
 
   deploy-web:
     name: Deploy Web
@@ -72,6 +86,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy . --config apps/web/fly.toml --remote-only
+      - run: >-
+          flyctl deploy . --config apps/web/fly.toml --remote-only
+          --build-arg GIT_SHA=${{ github.sha }}
+          --build-arg BUILD_DATE=$(date -u +%Y-%m-%d)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

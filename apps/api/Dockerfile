@@ -12,6 +12,10 @@ RUN npm run build -w apps/api
 FROM node:24-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# Stamped by the deploy workflow, so the running app can say exactly what it is running.
+ARG GIT_SHA=local
+ARG BUILD_DATE=
+ENV GIT_SHA=$GIT_SHA BUILD_DATE=$BUILD_DATE
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json

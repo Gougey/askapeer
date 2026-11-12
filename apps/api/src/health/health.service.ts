@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { BUILD_INFO } from './build-info';
 import { eq, sql } from 'drizzle-orm';
 import type { Redis } from 'ioredis';
 import { DRIZZLE, type Database } from '../db/db.module';
@@ -26,7 +27,10 @@ function withTimeout<T>(work: Promise<T>, ms = PROBE_TIMEOUT_MS): Promise<T> {
 export type HealthReport = {
   status: 'ok' | 'degraded';
   service: string;
+  /** The release, "0.9.0". */
   version: string;
+  /** The exact build: the commit and the day it was built. */
+  build: { sha: string; date: string | null };
   time: string;
   db: { reachable: boolean; migrationsApplied: boolean };
   redis: { reachable: boolean };
@@ -53,7 +57,8 @@ export class HealthService {
     return {
       status: db.reachable && db.migrationsApplied && redis.reachable ? 'ok' : 'degraded',
       service: 'askapeer-api',
-      version: db.version,
+      version: BUILD_INFO.version,
+      build: { sha: BUILD_INFO.sha, date: BUILD_INFO.date },
       time: new Date().toISOString(),
       db: { reachable: db.reachable, migrationsApplied: db.migrationsApplied },
       redis,

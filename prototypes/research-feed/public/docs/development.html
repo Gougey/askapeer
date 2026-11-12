@@ -81,10 +81,10 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="
 <h2 id="run">Run</h2>
 <div class="sourceCode" id="cb3"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run dev:api             <span class="co"># API  -&gt; http://localhost:4000  (health: /health)</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run dev:web             <span class="co"># web  -&gt; http://localhost:3000</span></span></code></pre></div>
-<p>Open http://localhost:3000 — the home page shows live system health
-fetched from the API (a green tick per check confirms the stack is wired
-end-to-end).</p>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run dev:web             <span class="co"># web  -&gt; http://localhost:3200</span></span></code></pre></div>
+<p>Open http://localhost:3200 (not 3000, which other projects tend to
+claim) — the home page shows live system health fetched from the API (a
+green tick per check confirms the stack is wired end-to-end).</p>
 <h2 id="database-drizzle">Database (Drizzle)</h2>
 <ul>
 <li>Schema lives in <code>apps/api/src/db/schema/</code> — one file per
@@ -1970,6 +1970,36 @@ refresh cookie makes this survivable while the three of us are testing;
 a short numeric sign-in code is the fix, and is scheduled before phase 2
 (see FD-3 in the PRD).</p>
 </blockquote>
+<h2 id="versions-and-releases-from-0.9.0-12-november-2026">Versions and
+releases (from 0.9.0, 12 November 2026)</h2>
+<p>One version number for the whole app, in the root
+<code>package.json</code>, starting at <strong>0.9.0</strong> for the
+pilot. It is raised per release, not per commit: a release is a change
+worth telling the pilot group about. 1.0 is for the end of the pilot or
+the move to AWS.</p>
+<ul>
+<li><strong>Where it shows:</strong> the foot of Profile (“Askapeer
+0.9.0 · build a3f30f4 · 12 Nov 2026”) and the API’s <code>/health</code>
+(<code>version</code>, and <code>build.sha</code> and
+<code>build.date</code>). Locally, Profile says “local build”.</li>
+<li><strong>How the build gets in:</strong> the deploy workflow passes
+<code>GIT_SHA</code> and <code>BUILD_DATE</code> as Docker build
+arguments, which become runtime environment in both images. The web app
+takes <code>version</code> from <code>package.json</code> at build
+(<code>next.config.mjs</code>); the API reads it at start
+(<code>health/build-info.ts</code>).</li>
+<li>⚠️ <strong>The deploy checks what live is serving.</strong> After
+deploying the API, the workflow polls <code>/health</code> until
+<code>build.sha</code> is the commit it just deployed, and fails if it
+never is. That is the check “verify what is served, not the deploy job”
+asked for, after a delayed GitHub event once shipped an older commit
+over a newer one with both jobs green.</li>
+<li><strong>To release:</strong>
+<code>npm version &lt;x.y.z&gt; --no-git-tag-version --workspaces-update=false</code>
+at the root, add a section to <code>docs/CHANGELOG.md</code> (“What’s
+new”, on the docs site), and merge. Live-data rules still apply: check
+activity first, and no migration without Adrian’s yes.</li>
+</ul>
 <h2
 id="closed-pilot-the-invitation-list-and-the-clear-down-october-2026">Closed
 pilot — the invitation list and the clear-down (October 2026)</h2>

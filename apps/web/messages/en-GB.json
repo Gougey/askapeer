@@ -100,7 +100,9 @@
       "memberSince": "Member since {year}",
       "identityNote": "This is everything other members can see about you.",
       "adminConsole": "Admin console",
-      "settings": "Settings"
+      "settings": "Settings",
+      "version": "Askapeer {version} · build {build} · {date}",
+      "versionLocal": "Askapeer {version} · local build"
     },
     "unreadNotifications": "{count, plural, one {# unread notification} other {# unread notifications}}",
     "back": "Back",
