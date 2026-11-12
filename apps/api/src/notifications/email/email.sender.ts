@@ -29,7 +29,7 @@ export class EmailSender {
    */
   private get ctx(): { webOrigin: string; replyTo: string | null } {
     return {
-      webOrigin: this.config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000',
+      webOrigin: this.config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3200',
       replyTo: this.config.get<string>('EMAIL_REPLY_TO') ?? null,
     };
   }

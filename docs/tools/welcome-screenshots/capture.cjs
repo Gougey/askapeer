@@ -6,7 +6,7 @@
  *
  *   npm run seed:demo -w apps/api            # the demo corpus
  *   npm run pilot -w apps/api -- allowlist add guide.capture@example.org
- *   npm run dev                               # API on :4000, web on :3000
+ *   npm run dev                               # API on :4000, web on :3200
  *   npm i playwright                          # anywhere outside the repo
  *   NODE_PATH=<that dir>/node_modules CHROMIUM=<path to a Chromium> \
  *     node docs/tools/welcome-screenshots/capture.cjs
@@ -17,7 +17,7 @@
 const path = require('node:path');
 const { chromium } = require('playwright');
 
-const WEB = process.env.WEB ?? 'http://localhost:3000';
+const WEB = process.env.WEB ?? 'http://localhost:3200';
 const API = process.env.API ?? 'http://localhost:4000/v1';
 const OUT = path.resolve(__dirname, '../../../apps/web/public/guide');
 const DEMO_EMAIL = 'tendontom@demo.askapeer.invalid';

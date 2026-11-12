@@ -2,9 +2,22 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "askapeer-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:web"
+      ],
+      "port": 3200
+    },
+    {
       "name": "askapeer",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5178"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5178"
+      ],
       "cwd": "prototypes/mobile-lookfeel",
       "port": 5178
     }
