@@ -8,6 +8,7 @@
 #     slip in between statements;
 #   - the session runs with default_transaction_read_only=on, inside BEGIN READ ONLY … ROLLBACK,
 #     so even a data-modifying CTE is refused by Postgres itself.
+# psql runs in Docker when Docker is up, otherwise Node runs the same SQL (live-db-read.cjs).
 # The database URL is read from the API machine and never printed. Connection details:
 # askapeer-live-ops in the project memory.
 set -euo pipefail
@@ -33,9 +34,13 @@ for stmt in text.split(";"):
 if [ -n "$BAD" ]; then echo "$BAD" >&2; echo "refused: read-only queries only" >&2; exit 2; fi
 
 curl -s https://askapeer-api.fly.dev/health >/dev/null || true   # wake the API machine
+# psql in Docker when Docker is running; otherwise the Node route, which needs nothing installed.
+# They reach the tunnel by different hosts: Docker's VM sees the Mac as host.docker.internal.
+if docker info >/dev/null 2>&1; then ROUTE=docker; TUNNEL_HOST=host.docker.internal; else ROUTE=node; TUNNEL_HOST=127.0.0.1; fi
+[ -n "${LIVE_DB_READ_ROUTE:-}" ] && { ROUTE="$LIVE_DB_READ_ROUTE"; [ "$ROUTE" = node ] && TUNNEL_HOST=127.0.0.1; }
 URL="$(flyctl ssh console -a askapeer-api -C "printenv DATABASE_URL" 2>/dev/null \
-  | grep -o 'postgres://[^[:space:]]*' | sed -E 's#@[^/]+/#@host.docker.internal:15432/#' || true)"
-[ -n "$URL" ] || { echo "could not read DATABASE_URL from askapeer-api" >&2; exit 1; }
+  | grep -o 'postgres://[^[:space:]]*' | sed -E "s#@[^/]+/#@${TUNNEL_HOST}:15432/#" || true)"
+[ -n "$URL" ] || { echo "could not read DATABASE_URL from askapeer-api (is flyctl logged in?)" >&2; exit 1; }
 
 # ⚠️ Wait for the tunnel to listen rather than for a fixed time. It usually takes about 3 s, but
 # right after a heavy write it took longer than the 6 s this used to sleep, and psql then failed
@@ -55,6 +60,12 @@ if ! lsof -nP -iTCP:15432 -sTCP:LISTEN >/dev/null 2>&1; then
   exit 1
 fi
 
-{ echo 'begin transaction read only;'; printf '%s\n' "$BODY"; echo ';'; echo 'rollback;'; } \
-  | docker run --rm -i -e PGOPTIONS='-c default_transaction_read_only=on' \
-      postgres:16-alpine psql "$URL" -P pager=off -v ON_ERROR_STOP=1
+if [ "$ROUTE" = docker ]; then
+  { echo 'begin transaction read only;'; printf '%s\n' "$BODY"; echo ';'; echo 'rollback;'; } \
+    | docker run --rm -i -e PGOPTIONS='-c default_transaction_read_only=on' \
+        postgres:16-alpine psql "$URL" -P pager=off -v ON_ERROR_STOP=1
+else
+  echo "(reading through Node, not Docker)" >&2
+  REPO="$(cd "$(dirname "$0")/.." && pwd)"
+  printf '%s\n' "$BODY" | RO_URL="$URL" NODE_PATH="$REPO/node_modules" node "$REPO/scripts/live-db-read.cjs"
+fi
