@@ -11,6 +11,17 @@
       "port": 3200
     },
     {
+      "name": "askapeer-api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "-w",
+        "apps/api"
+      ],
+      "port": 4000
+    },
+    {
       "name": "askapeer",
       "runtimeExecutable": "python",
       "runtimeArgs": [

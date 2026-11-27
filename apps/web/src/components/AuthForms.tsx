@@ -24,15 +24,46 @@ const button =
  * storage container separate from that browser — so the link signs you in somewhere the
  * installed app cannot see, and it still shows you signed out. Confirmed on a real device.
  * Typing the code keeps sign-in in the context that asked for it.
+ *
+ * ⚠️ **It says where the code went.** The API answers an address with no account exactly as it
+ * answers one with an account, so nobody can probe who is registered, and sends nothing. A
+ * pilot member who typed his personal address instead of the invited work one waited for a
+ * code that was never coming, with nothing on screen to say why (November 2026). Echoing the
+ * address back reveals nothing, because it is what he typed.
  */
-function SentNotice({ devLink, email }: { devLink?: string; email?: string }) {
+function SentNotice({
+  devLink,
+  email,
+  changeHref,
+}: {
+  devLink?: string;
+  email?: string;
+  /** Where "use a different address" goes; only on sign-in, where the address can be wrong. */
+  changeHref?: string;
+}) {
   const t = useTranslations('auth');
   const [state, action, pending] = useActionState(verifyCodeAction, { status: 'sent', email });
 
   return (
     <div className="space-y-3 text-sm">
       <p className="font-medium">{t('checkEmailTitle')}</p>
+      {email && (
+        <p>
+          {t.rich('sentTo', {
+            email,
+            address: (chunks) => <strong className="break-all">{chunks}</strong>,
+          })}
+        </p>
+      )}
       <p style={{ color: 'var(--color-muted)' }}>{t('checkEmailBody')}</p>
+      {changeHref && (
+        <p style={{ color: 'var(--color-muted)' }}>
+          {t('onlyRegistered')}{' '}
+          <a href={changeHref} className="underline" style={{ color: 'var(--color-accent)' }}>
+            {t('changeAddress')}
+          </a>
+        </p>
+      )}
 
       <form action={action} className="space-y-3">
         <input type="hidden" name="email" value={state.email ?? email ?? ''} />
@@ -80,7 +111,9 @@ function SentNotice({ devLink, email }: { devLink?: string; email?: string }) {
 export function SignInForm() {
   const t = useTranslations('auth');
   const [state, action, pending] = useActionState(requestLinkAction, initial);
-  if (state.status === 'sent') return <SentNotice devLink={state.devLink} email={state.email} />;
+  // A full navigation, not state: it resets the form, so the address can be typed afresh.
+  if (state.status === 'sent')
+    return <SentNotice devLink={state.devLink} email={state.email} changeHref="/" />;
   return (
     <form action={action} className="space-y-3">
       <label className="block space-y-1 text-sm">
